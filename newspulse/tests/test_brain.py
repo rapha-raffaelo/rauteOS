@@ -49,6 +49,7 @@ from newspulse import (
     config,
     i18n,
     outreach,
+    plan,
     prose,
 )
 from newspulse.models import (
@@ -62,7 +63,10 @@ from newspulse.models import (
     BrainOverride,
     Category,
     Client,
+    MarketSignal,
     Outreach,
+    PlanHook,
+    SignalKind,
 )
 from newspulse.pitch import PitchTarget
 from newspulse.schemas import AngleDraft, PersonalMessage
@@ -381,6 +385,8 @@ CARRIED_BEFORE = {
     # and a missing key would fail the map test rather than record one.
     "visibility_panel.txt": set(),
     "visibility_read.txt": set(),
+    # New with UHR-06, so there is no "before" to carry either.
+    "plan_hooks.txt": set(),
 }
 
 #: Standards a prompt did *not* carry before and now does. Every one is a
@@ -466,6 +472,17 @@ ADDED_IN_MIGRATION = {
     # block's "Empfehlung mit Begründung" clauses address a recommender, which a
     # reader is not.
     "visibility_read.txt": {"no_invention"},
+    # The plan's prose writer (UHR-06, DEC-4 A). no_invention is the whole
+    # safety posture of the prompt — the model is told the dates and the
+    # evidence are already fixed, and the block is what says a guessed date or
+    # number is invention. house_style, because the reason lines land verbatim
+    # on a page a client reads in the retainer conversation. refusal is absent
+    # on purpose: the prompt's own instruction for a candidate without a
+    # tenable reason is an empty "reason", and the hook stands either way —
+    # the block's "empty answer" clauses would read as permission to drop
+    # candidates, which is not the model's call to make. journalistic_value
+    # and position address a text aimed at an editor, which this is not.
+    "plan_hooks.txt": {"no_invention", "house_style"},
 }
 
 #: Phrases that only appear in a prompt if somebody wrote a standard out again
@@ -1623,6 +1640,35 @@ def _store_an_asset(session) -> Asset:
     return assets.store(session, fmt, client, angle, draft)
 
 
+def _store_a_hook(session) -> PlanHook:
+    """Drive ``plan`` the way the sweep does: one recompute off a stored signal.
+
+    A market signal with a future date is the cheapest evidenced candidate to
+    seed, so the harness is about the stamp rather than about a year of archive.
+    """
+    client = _a_mandate(session)
+    session.add(
+        MarketSignal(
+            client_id=client.id,
+            kind=SignalKind.REGULIERUNG,
+            title="Verordnung tritt in Kraft",
+            url="https://example.org/verordnung",
+            effective_at=dt.datetime.now(dt.UTC) + dt.timedelta(days=30),
+        )
+    )
+    session.commit()
+    hooks = plan.recompute(
+        session,
+        client,
+        invoke=lambda *a, **k: json.dumps(
+            {"hooks": [{"ref": "K1", "reason": "Der Termin betrifft das Mandat.",
+                        "format": "statement"}]}
+        ),
+    )
+    assert hooks
+    return hooks[0]
+
+
 #: Every generator in the tool, each paired with a call that drives its real
 #: generate-then-store path. The point of the list is that it is exhaustive, and
 #: the test below it is what keeps it that way: a stamp on the two generators
@@ -1635,6 +1681,10 @@ GENERATORS = [
     # a press release goes out under the client's name, so it is the last
     # artefact that should be unable to say which standards produced it.
     ("assets", _store_an_asset),
+    # The plan's hooks: dates and evidence come from the database, but the
+    # reason a client reads in the retainer conversation is model prose, and
+    # model prose a consultant forwards is exactly what the stamp is about.
+    ("plan", _store_a_hook),
 ]
 
 
