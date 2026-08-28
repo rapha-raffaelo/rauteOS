@@ -37,6 +37,7 @@ from ... import assets, config, pitch, profile
 from ...db import get_session
 from ...models import Angle, Asset, CheckState, Client, ClientFact
 from ..app import get_db
+from ..runlock import SWEEP_RUNNING as _sweep_running
 from ..runlock import guard as _run_guard
 
 router = APIRouter()
@@ -109,10 +110,11 @@ _BUSY = (
 #: takes it that way, so a click during a sweep sat on it for the length of a full
 #: run with every button out and a progress notice naming a format that nothing
 #: was writing. A sentence the reader can act on is the honest version of that.
-_SWEEP_RUNNING = (
-    "Es läuft gerade ein Sammellauf. Der Auftrag wurde nicht angenommen: "
-    "warten Sie, bis er durch ist, und klicken Sie dann noch einmal."
-)
+#:
+#: The sentence itself lives beside the guard, because the editorial plan's
+#: recompute button says the same thing for the same reason and two copies of one
+#: German string are two keys in the translation table.
+_SWEEP_RUNNING = _sweep_running
 
 
 def _remember(angle_id: int, key: str, reason: str) -> None:
@@ -401,18 +403,30 @@ def page_context(
     angles: list[Angle],
     targets: dict[int, list[pitch.PitchTarget]],
     letters: dict[int, list],
+    *,
+    preselect: str = "",
 ) -> dict[str, object]:
     """Everything the impulse page needs about the package, as one merge.
 
     One call rather than four, so ``advisory`` does not have to know that a strip,
     a progress record, a lock and a note are separate things here — and so a fifth
     of them arrives without that route changing.
+
+    ``preselect`` is a format key whose tick box the page opens with already
+    ticked. It exists for the surfaces that arrive here *carrying* an occasion
+    and a suggestion — the editorial plan's "Text schreiben" hands over the
+    format its hook proposes — so the reader lands on one press and confirms it,
+    rather than hunting the row the previous page just recommended. Nothing is
+    written by it: a tick is a tick, and the write button is still a second
+    press. A key the registry does not know is dropped rather than passed
+    through, so a hand-edited query string cannot tick a row that does not exist.
     """
     return {
         "packages": package(session, client, angles, targets, letters),
         "asset_progress": progress_for(client.id),
         "asset_busy": busy(),
         "asset_notes": {angle.id: package_note(angle.id) for angle in angles},
+        "asset_preselect": preselect if preselect in assets.REGISTRY else "",
     }
 
 
