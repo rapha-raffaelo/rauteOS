@@ -1739,11 +1739,7 @@ def _fact_lines(facts: dict[str, ClientFact]) -> str:
     different sentences when it is empty: the writer is told to claim nothing,
     the checker is told that every claim it finds is unbacked.
     """
-    return "\n".join(
-        f"{field.label}: {facts[field.key].value}"
-        for field in profile.FIELDS
-        if field.key in facts and facts[field.key].value.strip()
-    )
+    return profile.as_prompt_lines(facts, for_outside=True)
 
 
 def _facts_block(facts: dict[str, ClientFact]) -> str:
@@ -1814,7 +1810,8 @@ def _speaker(fmt: FormatDef, facts: dict[str, ClientFact]) -> str:
     if not fmt.speaker_key:
         return ""
     fact = facts.get(fmt.speaker_key)
-    return fact.value.strip() if fact else ""
+    from .twin import externally_blocked
+    return fact.value.strip() if fact and not externally_blocked(fact) else ""
 
 
 def _guide_items(text: str) -> list[str]:
@@ -2023,7 +2020,8 @@ def prompt_for(
 def _crisis_contact(facts: dict[str, ClientFact]) -> str:
     """Who is reachable in the evening, exactly as the profile holds it."""
     fact = facts.get(_CRISIS_CONTACT_KEY)
-    return fact.value.strip() if fact else ""
+    from .twin import externally_blocked
+    return fact.value.strip() if fact and not externally_blocked(fact) else ""
 
 
 def _crisis_evidence_block(session: Session, client: Client, crisis: Crisis) -> str:

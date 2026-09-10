@@ -3,9 +3,9 @@
 "Wenn wir morgens ins System gehen, brauchen wir keinen Newsfeed oder eine
 Artikelliste, sondern ein echtes Arbeitsdashboard."
 
-Two routes and no logic: :mod:`newspulse.desk` assembles the page and this hands
-it to a template. The second route is the one thing the Desk writes — an action
-that happened outside the tool, logged so the contractual count is not
+The built React page reads the Desk API; an unbuilt checkout uses the classic
+template. Both use :mod:`newspulse.desk` for the figures. The second route is
+the one thing the Desk writes — an action that happened outside the tool, logged so the contractual count is not
 systematically short.
 """
 
@@ -20,8 +20,8 @@ from sqlalchemy.orm import Session
 
 from ... import desk
 from ...models import Client, ClientAction
-from .. import redirects
-from ..app import get_db, templates
+from .. import frontend, redirects
+from ..app import get_db, templates, translator
 from ..mandates import mandate_or_404
 from .today import _fetch_last_run, _local_tz
 
@@ -33,12 +33,15 @@ _SEE_OTHER = 303
 @router.get("/desk", response_class=HTMLResponse)
 def desk_view(request: Request, session: Session = Depends(get_db)) -> HTMLResponse:
     """The morning page. Every figure on it is read from rows written elsewhere."""
-    board = desk.build(session)
+    assets = frontend.desk_assets() if request.query_params.get("view") != "classic" else None
+    board = None if assets else desk.build(session)
     return templates.TemplateResponse(
         request,
-        "desk.html",
+        "desk_react.html" if assets else "desk.html",
         {
             "board": board,
+            "frontend": assets,
+            "desk_translations": frontend.desk_translations(translator(request)) if assets else {},
             "last_run": _fetch_last_run(session),
             "header_date": dt.datetime.now(_local_tz()).date(),
         },

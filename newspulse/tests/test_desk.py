@@ -321,8 +321,8 @@ def test_the_twin_names_which_part_is_thin_rather_than_only_a_percentage(session
     twin = desk.build(session, now=_NOW).rows[0].twin
 
     assert twin.percent == 0
-    assert "Kein Kommunikationsguide" in twin.gaps
-    assert "Kickoff unvollständig" in twin.gaps
+    assert any("Pflichtfelder unbeantwortet" in gap for gap in twin.gaps)
+    assert twin.required_total == 127
 
 
 def test_a_guide_moves_the_twin_and_clears_its_own_gap(session):
@@ -332,7 +332,7 @@ def test_a_guide_moves_the_twin_and_clears_its_own_gap(session):
 
     assert twin.has_guide
     assert "Kein Kommunikationsguide" not in twin.gaps
-    assert twin.percent == round(100 * desk.TWIN_WEIGHTS["guide"])
+    assert twin.percent == 0  # A guide alone answers no required workbook fields.
 
 
 # --- Decisions ---------------------------------------------------------------------
@@ -379,7 +379,7 @@ def test_the_desk_states_the_contract_beside_the_delivery(web, factory):
         _letter(session, client, angle, released_at=dt.datetime.now(dt.UTC),
                 state=OutreachState.RAUS)
 
-    body = web.get("/desk").text
+    body = web.get("/desk?view=classic").text
 
     assert "Mandantenüberblick" in body
     assert "10 / 1" in body
@@ -466,7 +466,88 @@ def test_the_ledger_form_cannot_be_used_to_leave_the_site(web, factory):
 
 
 def test_an_empty_portfolio_says_so_rather_than_rendering_an_empty_grid(web):
-    body = web.get("/desk").text
+    body = web.get("/desk?view=classic").text
 
     assert "Noch kein Mandant angelegt" in body
     assert "/mandant/neu" in body
+
+
+# The React page consumes this contract; counts remain domain responsibilities.
+def test_api_keeps_delivery_provenance_and_missing_contract_distinct(web, factory):
+    with factory() as session:
+        client = _mandate(session, comms_guide="PRIVATE STRATEGY")
+        angle = _angle(session, client)
+        _letter(session, client, angle)  # not a delivery
+        _letter(session, client, angle, released_at=dt.datetime.now(dt.UTC),
+                state=OutreachState.RAUS)
+        session.add(ClientAction(client_id=client.id, title="Briefing",
+                                happened_at=dt.datetime.now(dt.UTC), logged_at=dt.datetime.now(dt.UTC)))
+        _mandate(session, "Competitor", is_competitor=True)
+        _mandate(session, "Archived", active=False)
+        _mandate(session, "Zero", actions_per_quarter=0)
+        session.commit()
+    response = web.get("/api/v1/desk")
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
+    body = response.json()
+    assert body["clients_active"] == 2
+    assert body["actions_month"] == 2
+    row, zero = body["rows"]
+    assert row["actions_month"] == {"released": 1, "logged": 1, "total": 2}
+    assert row["promised_quarter"] is None and row["on_track"] is None
+    assert zero["promised_quarter"] == 0 and zero["on_track"] is True
+    assert set(row["client"]) == {"id", "name", "industry"}
+    assert "PRIVATE STRATEGY" not in response.text
+    assert body["generated_at"].endswith("Z")
+    assert body["timezone"]
+    assert body["decisions_open"] == len(body["decisions"])
+    assert body["decisions"][0]["href"].startswith("/client/")
+    assert body["in_flight"][0]["state"] == "raus"
+
+
+def test_api_empty_portfolio_is_a_valid_contract(web):
+    body = web.get("/api/v1/desk").json()
+    assert body["rows"] == body["decisions"] == body["in_flight"] == []
+    assert body["clients_active"] == body["twin_average"] == 0
+
+
+def test_api_shares_basic_auth(web, monkeypatch):
+    from newspulse import config
+    monkeypatch.setattr(config, "AUTH_USER", "reader")
+    monkeypatch.setattr(config, "AUTH_PASSWORD", "secret")
+    assert web.get("/api/v1/desk").status_code == 401
+    assert web.get("/api/v1/desk", auth=("reader", "secret")).status_code == 200
+
+
+def test_api_expired_google_session_returns_401_without_login_html(web, monkeypatch):
+    from newspulse.web import google_auth
+    monkeypatch.setattr(google_auth, "is_configured", lambda: True)
+    monkeypatch.setattr(google_auth, "read_session", lambda cookie: None)
+    response = web.get("/api/v1/desk", headers={"Accept": "application/json"}, follow_redirects=False)
+    assert response.status_code == 401
+    assert "location" not in response.headers
+
+
+def test_react_shell_uses_built_manifest_and_shared_chrome(web, tmp_path, monkeypatch):
+    import json
+    from newspulse.web import frontend
+    (tmp_path / '.vite').mkdir()
+    (tmp_path / 'desk.js').write_text('')
+    (tmp_path / 'desk.css').write_text('')
+    (tmp_path / '.vite/manifest.json').write_text(json.dumps({
+        'src/desk.jsx': {'file': 'desk.js', 'css': ['desk.css']}
+    }))
+    monkeypatch.setattr(frontend, 'BUILD_DIR', tmp_path)
+    body = web.get('/desk').text
+    assert 'id="react-desk"' in body
+    assert '/static/react/desk.js' in body and '/static/react/desk.css' in body
+    assert 'Ask RAUTE' in body and 'class="side__' in body
+    assert 'id="react-desk"' not in web.get('/desk?view=classic').text
+    (tmp_path / 'desk.js').unlink()
+    assert 'Noch kein Mandant angelegt.' in web.get('/desk').text
+
+
+def test_unbuilt_checkout_keeps_a_working_desk(web, tmp_path, monkeypatch):
+    from newspulse.web import frontend
+    monkeypatch.setattr(frontend, 'BUILD_DIR', tmp_path)
+    assert 'Noch kein Mandant angelegt.' in web.get('/desk').text

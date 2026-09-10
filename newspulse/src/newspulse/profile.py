@@ -216,29 +216,40 @@ def checked(at: dt.datetime | None, *, now: dt.datetime) -> Checked:
     return Checked(at=at, days=max(days, 0))
 
 
+class FactCollection(dict):
+    """Canonical fields for old editors, plus every statement for prompt readers."""
+    def __init__(self, rows):
+        from .twin import CATALOG, INACTIVE
+        super().__init__()
+        self.statements = rows
+        for row in rows:
+            if row.fact_status not in INACTIVE:
+                self.setdefault(row.key, row)
+        for field in CATALOG:
+            if field["legacy_key"] and field["key"] in self:
+                self.setdefault(field["legacy_key"], self[field["key"]])
+
+
 def stored(session: Session, client_id: int) -> dict[str, ClientFact]:
-    """Everything on file for this mandate, keyed by field."""
-    rows = session.scalars(
-        select(ClientFact).where(ClientFact.client_id == client_id)
-    ).all()
-    return {row.key: row for row in rows}
+    from .twin import all_statements
+    return FactCollection(all_statements(session, client_id))
 
 
-def as_prompt_lines(facts: dict[str, ClientFact]) -> str:
-    """The stored profile as prompt lines: one per filled field, profile order.
-
-    What a downstream prompt may rest on is exactly what is on file — nothing
-    is summarised, reordered or padded here, so a consumer (the stakeholder
-    proposal is the first) can say "gestützt auf die Profilzeilen" and mean
-    these lines. An empty profile yields the empty string, which is the
-    caller's signal that there is nothing to propose *from*: a mandate without
-    profile entries gets no invented anything.
-    """
+def as_prompt_lines(facts: dict[str, ClientFact], *, for_outside: bool = False) -> str:
+    from .twin import CATALOG_BY_KEY, INACTIVE, prompt_line
+    from .evidence import Confidentiality, ExternalUse
+    rows = getattr(facts, "statements", list(facts.values()))
     lines = []
-    for field in FIELDS:
-        row = facts.get(field.key)
-        if row is not None and row.value.strip():
-            lines.append(f"- {field.label}: {row.value.strip()}")
+    for row in rows:
+        if row.fact_status in INACTIVE or not row.value.strip():
+            continue
+        if for_outside and (row.external_use == ExternalUse.INTERNAL_ONLY or row.confidentiality in
+                            {Confidentiality.CLIENT_CONFIDENTIAL, Confidentiality.RAUTE_INTERNAL,
+                             Confidentiality.HIGHLY_RESTRICTED}):
+            continue
+        field = FIELDS_BY_KEY.get(row.key)
+        label = field.label if field else CATALOG_BY_KEY.get(row.key, {}).get("label", row.key)
+        lines.append(prompt_line(row, label))
     return "\n".join(lines)
 
 
@@ -308,7 +319,7 @@ def save(
         return None
     existing = session.scalars(
         select(ClientFact).where(
-            ClientFact.client_id == client.id, ClientFact.key == key
+            ClientFact.client_id == client.id, ClientFact.key == key, ClientFact.is_primary.is_(True)
         )
     ).first()
     value = (value or "").strip()
@@ -318,6 +329,22 @@ def save(
             session.commit()
         return None
     row = existing or ClientFact(client_id=client.id, key=key)
+    from . import twin
+    from .evidence import Confidence, EvidenceType, FactStatus, SourceType
+    changed = existing is None or (existing.value, existing.source_url, existing.source_title) != (
+        value, source_url.strip(), source_title.strip())
+    if existing is not None and changed:
+        twin.remember(session, existing, filled_by)
+    if changed:
+        row.evidence_type = (EvidenceType.CLIENT_STATEMENT if filled_by in (BY_HAND, "Kickoff-Fragebogen")
+                             else EvidenceType.EXTERNAL_OBSERVATION)
+        row.source_type = SourceType.OTHER if filled_by == BY_HAND else SourceType.AI_RESEARCH
+        row.confidence = Confidence.UNKNOWN
+        row.fact_status = FactStatus.NEEDS_VERIFICATION
+        row.verified_at = None
+        row.verified_by = None
+        row.verification_note = ""
+        row.as_of = None
     if existing is not None:
         if supersede:
             _supersede(row, value, filled_by)
@@ -342,7 +369,7 @@ def forget_superseded(session: Session, client_id: int, key: str) -> ClientFact 
     """
     row = session.scalars(
         select(ClientFact).where(
-            ClientFact.client_id == client_id, ClientFact.key == key
+            ClientFact.client_id == client_id, ClientFact.key == key, ClientFact.is_primary.is_(True)
         )
     ).first()
     if row is None:

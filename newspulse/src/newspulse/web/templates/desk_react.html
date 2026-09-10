@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}{{ translator(request)("Desk") }} · RauteOS{% endblock %}
+{% block content %}
+{% set t = translator(request) %}
+{% for href in frontend.css %}<link rel="stylesheet" href="{{ href }}">{% endfor %}
+<div id="react-desk"><p role="status">{{ t("Desk wird geladen…") }}</p>
+  <p><a href="/desk?view=classic">{{ t("Klassischen Desk öffnen") }}</a></p>
+</div>
+<script id="desk-translations" type="application/json">{{ desk_translations | tojson }}</script>
+<script type="module" src="{{ frontend.script }}"></script>
+{% endblock %}

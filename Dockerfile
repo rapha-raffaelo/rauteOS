@@ -4,6 +4,13 @@
 # shell out to it (subscription-first, never an API key baked in). Its
 # credentials are NOT in the image: they live in the config directory mounted at
 # runtime, so the image holds no secret and can be rebuilt freely.
+FROM node:22.22.3-slim AS frontend
+WORKDIR /build/frontend
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+COPY frontend/ ./
+RUN npm run build
+
 FROM python:3.11-slim
 
 # curl for the CLI installer and the healthcheck; ca-certificates so the feed
@@ -25,6 +32,7 @@ RUN npm install -g @anthropic-ai/claude-code && npm cache clean --force
 WORKDIR /app
 COPY newspulse/pyproject.toml newspulse/uv.lock newspulse/README.md ./
 COPY newspulse/src ./src
+COPY --from=frontend /build/newspulse/src/newspulse/web/static/react ./src/newspulse/web/static/react
 COPY newspulse/migrations ./migrations
 COPY newspulse/alembic.ini ./
 

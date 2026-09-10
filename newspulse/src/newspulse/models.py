@@ -1368,13 +1368,15 @@ class ClientFact(Base):
     page it was read from, and the consultant can overrule it with one that has no
     source at all — his own knowledge, which outranks both.
 
-    Keyed on (client, key): a mandate has one CEO field, and filling it again
-    replaces the answer rather than growing a list of guesses.
+    Each field can hold several statements with independent provenance. One
+    primary row per field keeps the existing profile editor compatible.
     """
 
     __tablename__ = "client_facts"
     __table_args__ = (
-        UniqueConstraint("client_id", "key", name="uq_client_facts_key"),
+        Index("uq_client_facts_primary", "client_id", "key", unique=True,
+              sqlite_where=text("is_primary = 1"), postgresql_where=text("is_primary = true")),
+        Index("uq_client_facts_import", "client_id", "import_hash", unique=True),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -1445,6 +1447,18 @@ class ClientFact(Base):
     # alt und nicht frisch; ``updated_at`` allein kann das nicht sagen.
     as_of: Mapped[dt.datetime | None] = mapped_column(UTCDateTime, nullable=True)
 
+    # One canonical slot remains for legacy editors; additional statements are
+    # independent evidence rows, never concatenated into a single stored value.
+    is_primary: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="1")
+    revision: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
+    note: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
+    verification_note: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
+    verified_by: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    verified_at: Mapped[dt.datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+    import_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+
+    __mapper_args__ = {"version_id_col": revision}
+
     @property
     def is_disputed(self) -> bool:
         """Whether an older value is still standing beside this one.
@@ -1455,6 +1469,28 @@ class ClientFact(Base):
         line beside it and never decides whether the line is shown.
         """
         return bool(self.superseded_value.strip())
+
+
+class ClientFactHistory(Base):
+    """An immutable snapshot before each edit, including evidence metadata."""
+    __tablename__ = "client_fact_history"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    client_id: Mapped[int] = mapped_column(ForeignKey("clients.id", ondelete="CASCADE"), index=True)
+    fact_id: Mapped[int | None] = mapped_column(ForeignKey("client_facts.id", ondelete="SET NULL"), index=True)
+    changed_at: Mapped[dt.datetime] = mapped_column(UTCDateTime(), default=_utcnow)
+    changed_by: Mapped[str] = mapped_column(String(200))
+    snapshot: Mapped[dict] = mapped_column(JSON)
+
+
+class TwinImportPreview(Base):
+    """Validated import held for explicit selection; never changes live facts on upload."""
+    __tablename__ = "twin_import_previews"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    client_id: Mapped[int] = mapped_column(ForeignKey("clients.id", ondelete="CASCADE"), index=True)
+    created_at: Mapped[dt.datetime] = mapped_column(UTCDateTime(), default=_utcnow)
+    expires_at: Mapped[dt.datetime] = mapped_column(UTCDateTime())
+    committed_at: Mapped[dt.datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+    payload: Mapped[dict] = mapped_column(JSON)
 
 
 #: Who a hand-typed kick-off answer is attributed to. DEC-1 option A: the

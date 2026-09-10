@@ -229,7 +229,11 @@ def _guide_for(session: Session, client_id: int | None) -> str:
     if client_id is None:
         return ""
     client = session.get(Client, client_id)
-    return guide.for_prompt(client) if client is not None else ""
+    if client is None:
+        return ""
+    from ... import profile
+    statements = profile.as_prompt_lines(profile.stored(session, client_id))
+    return guide.for_prompt(client) + ("\n\nCLIENT TWIN\n" + statements if statements else "")
 
 
 def _build_prompt(

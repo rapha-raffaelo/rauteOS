@@ -1,7 +1,7 @@
 """FastAPI application factory for the NewsPulse dashboard.
 
-Server-rendered (Jinja + HTMX, no build step) per DEC-3. The app is created by
-``create_app()`` so tests can build a fresh instance and override the database
+Shared Jinja + HTMX shell with a progressively migrated React Desk. The app is
+created by ``create_app()`` so tests can build a fresh instance and override the database
 session dependency to point at a seeded fixture database — nothing here reaches
 for the process-wide engine at import time.
 """
@@ -359,7 +359,7 @@ def create_app() -> FastAPI:
     # modules import ``get_db``/``templates`` from this module.
     from .routes import (
         advisory, archive, assets_view, assistant, client, contacts,
-        crisis_view, desk_view, guide_routes, issues_view,
+        crisis_view, desk_api, desk_view, twin_api, twin_view, guide_routes, issues_view,
         language, login, onboarding as onboarding_routes,
         opportunity_view,
         plan_view, profile as profile_routes, report as report_routes,
@@ -377,6 +377,9 @@ def create_app() -> FastAPI:
     # First, so the sign-in pages exist before anything that needs a session.
     app.include_router(login.router)
     app.include_router(desk_view.router)
+    app.include_router(desk_api.router)
+    app.include_router(twin_api.router)
+    app.include_router(twin_view.router)
     app.include_router(today.router)
     app.include_router(client.router)
     app.include_router(archive.router)

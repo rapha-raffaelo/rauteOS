@@ -206,6 +206,9 @@ def may_replace(facts: Mapping[str, ClientFact], key: str) -> bool:
     So both the review page and the accept route ask this one question. An
     invariant enforced where the page renders is not enforced.
     """
+    candidates = [r for r in getattr(facts, "statements", []) if r.key == key]
+    if any(r.filled_by in (profile.BY_HAND, onboarding.SOURCE_NAME) for r in candidates):
+        return False
     fact = facts.get(key)
     if fact is None:
         return True

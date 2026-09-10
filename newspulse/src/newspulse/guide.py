@@ -226,17 +226,7 @@ def _record_text(session: Session, client: Client) -> str:
         lines.append(f"BRANCHE: {client.industry}")
     lines.append("")
     lines.append("PROFIL")
-    recorded = 0
-    for field in profiles.FIELDS:
-        fact = facts.get(field.key)
-        if fact and fact.value.strip():
-            recorded += 1
-            lines.append(f"- {field.label}: {fact.value.strip()}")
-    if not recorded:
-        # Said rather than left blank: an empty block reads as a block the
-        # builder forgot, and the model should know it is working from coverage
-        # alone rather than quietly filling the gap.
-        lines.append("- (keine Angaben hinterlegt)")
+    lines.append(profiles.as_prompt_lines(facts) or "- (keine Angaben hinterlegt)")
 
     rows = session.execute(
         select(Article.published_at, Article.source, Article.title, Analysis.summary)

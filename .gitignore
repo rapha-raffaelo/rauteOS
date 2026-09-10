@@ -19,3 +19,6 @@ OUT-*/
 # the database (web/google_auth.secret_path) and never shared: a committed one
 # lets anyone with repository access mint a cookie for an allow-listed address.
 .session-secret
+
+frontend/node_modules/
+newspulse/src/newspulse/web/static/react/

@@ -32,8 +32,10 @@ uv run alembic upgrade head      # create the SQLite database from migrations
 
 ## Run the dashboard
 
-The Today view is served by a small FastAPI app (server-rendered Jinja + HTMX,
-no build step). Start it with either:
+The dashboard is served by FastAPI. Most pages use Jinja + HTMX; the Desk uses
+React when its assets are built. See [frontend setup](../frontend/README.md)
+for the build commands. Docker builds them automatically; a Python-only checkout
+uses the classic Desk. Start the server with either:
 
 ```sh
 uv run newspulse-web            # console script

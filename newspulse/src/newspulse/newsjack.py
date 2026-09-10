@@ -292,12 +292,7 @@ def _archive_lines(session: Session, client: Client) -> str:
 def _fact_lines(session: Session, client: Client) -> str:
     """The filled profile fields, or the honest sentence that none exist."""
     facts = profile.stored(session, client.id)
-    lines = [
-        f"{field.label}: {facts[field.key].value}"
-        for field in profile.FIELDS
-        if field.key in facts and facts[field.key].value.strip()
-    ]
-    return "\n".join(lines) or "Noch nichts hinterlegt."
+    return profile.as_prompt_lines(facts) or "Noch nichts hinterlegt."
 
 
 def _story_lines(members: tuple[_Radar, ...], origin: _Radar) -> str:

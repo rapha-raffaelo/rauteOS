@@ -4,6 +4,7 @@
 {% block pagetitle %}{% include "partials/client_title.html" %}{% endblock %}
 
 {% block content %}
+<p><a class="btn" href="/client/{{ client.id }}/twin">Twin · Aussagen und Fragebogen-Import →</a></p>
 {% set t = translator(request) %}
 {% set active = 'profile' %}
 {% include '_client_tabs.html' %}

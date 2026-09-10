@@ -266,7 +266,7 @@
     </div>
     <div class="pane__b">
       {% for row in board.rows if row.twin.gaps %}
-        <a class="row" href="/client/{{ row.client.id }}/profil">
+        <a class="row" href="/client/{{ row.client.id }}/twin">
           <div class="row__t">{{ row.client.name }}</div>
           <div class="row__d">{{ row.twin.gaps | join(' · ') }}</div>
           <div class="row__age">{{ t("Twin") }} {{ row.twin.percent }} %</div>

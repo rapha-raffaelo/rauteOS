@@ -99,6 +99,9 @@ class Twin:
     kickoff_settled: int
     kickoff_total: int
     has_guide: bool
+    required_filled: int | None = None
+    required_total: int | None = None
+    required_missing: list[str] = field(default_factory=list)
 
     @property
     def gaps(self) -> list[str]:
@@ -107,6 +110,8 @@ class Twin:
         Named rather than numbered: "Kickoff unvollständig" tells a consultant
         what to do next, and "72 %" does not.
         """
+        if self.required_total is not None:
+            return self.required_missing
         missing: list[tuple[float, str]] = []
         if self.profile_total:
             share = self.profile_filled / self.profile_total
@@ -292,21 +297,19 @@ def _twin(session: Session, client: Client) -> Twin:
     facts = profiles.stored(session, client.id)
     kickoff = onboarding.completeness(session, client.id)
     has_guide = bool((client.comms_guide or "").strip())
-    shares = {
-        "profil": (len(facts) / profiles.FILLABLE) if profiles.FILLABLE else 0.0,
-        "kickoff": (kickoff.settled / kickoff.total) if kickoff.total else 0.0,
-        "guide": 1.0 if has_guide else 0.0,
-    }
-    percent = round(
-        100 * sum(min(1.0, shares[part]) * weight for part, weight in TWIN_WEIGHTS.items())
-    )
+    from . import twin
+    progress = twin.completeness(facts.statements)
     return Twin(
-        percent=percent,
-        profile_filled=len(facts),
+        percent=progress["percent"],
+        profile_filled=sum(f.key in facts for f in profiles.FIELDS),
         profile_total=profiles.FILLABLE,
         kickoff_settled=kickoff.settled,
         kickoff_total=kickoff.total,
         has_guide=has_guide,
+        required_filled=progress["required_filled"],
+        required_total=progress["required_total"],
+        required_missing=([f"{len(progress['missing'])} Pflichtfelder unbeantwortet"]
+                          if progress["missing"] else []),
     )
 
 

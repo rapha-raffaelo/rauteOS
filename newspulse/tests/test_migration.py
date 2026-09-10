@@ -660,3 +660,28 @@ def test_no_enum_column_is_dropped_without_its_check(tmp_path):
     assert not offenders, "these downgrades drop a column and keep its CHECK: " + (
         "; ".join(offenders)
     )
+
+
+def test_twin_migration_preserves_existing_evidence_and_allows_additional_statements(tmp_path, monkeypatch):
+    db_path = tmp_path / 'twin-upgrade.db'
+    monkeypatch.setattr(config, 'DATABASE_PATH', db_path)
+    command.upgrade(_alembic_config(), '0057_fact_evidence')
+    engine = create_engine(f'sqlite:///{db_path}')
+    with engine.begin() as conn:
+        conn.execute(text("INSERT INTO clients (id,name,aliases,industry,country,keywords,alert_topics,active,created_at) "
+                          "VALUES (1,'Demo','[]','','DE','[]','[]',1,'2026-09-09')"))
+        conn.execute(text("INSERT INTO client_facts (id,client_id,key,value,source_url,source_title,filled_by,updated_at,"
+                          "evidence_type,confidence,fact_status) VALUES "
+                          "(1,1,'ceo','Original','https://example.org','Register','mensch','2026-09-09',"
+                          "'External Observation','Unknown','Needs Verification')"))
+    command.upgrade(_alembic_config(), 'head')
+    with engine.begin() as conn:
+        row = conn.execute(text('SELECT value,source_title,evidence_type,is_primary,revision FROM client_facts')).one()
+        assert tuple(row) == ('Original','Register','External Observation',1,1)
+        conn.execute(text("INSERT INTO client_facts (client_id,key,value,source_url,source_title,filled_by,updated_at,is_primary) "
+                          "VALUES (1,'ceo','Second','','Other','mensch','2026-09-09',0)"))
+    with pytest.raises(RuntimeError, match='multiple statements'):
+        command.downgrade(_alembic_config(), '0057_fact_evidence')
+    with engine.connect() as conn:
+        assert conn.execute(text('SELECT COUNT(*) FROM client_facts')).scalar() == 2
+    engine.dispose()

@@ -1,0 +1,3053 @@
+[
+  {
+    "key": "A01.01",
+    "section": "A. Client Facts",
+    "group": "A01 Unternehmen",
+    "label": "Wie lautet der vollständige offizielle Unternehmensname?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A01.02",
+    "section": "A. Client Facts",
+    "group": "A01 Unternehmen",
+    "label": "Welche Marken, Produktmarken oder Subbrands gehören zum Unternehmen?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A01.03",
+    "section": "A. Client Facts",
+    "group": "A01 Unternehmen",
+    "label": "Wann wurde das Unternehmen gegründet?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": "gruendung"
+  },
+  {
+    "key": "A01.04",
+    "section": "A. Client Facts",
+    "group": "A01 Unternehmen",
+    "label": "Wo befindet sich der Hauptsitz?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": "sitz"
+  },
+  {
+    "key": "A01.05",
+    "section": "A. Client Facts",
+    "group": "A01 Unternehmen",
+    "label": "Welche weiteren relevanten Standorte gibt es?",
+    "requirement": "Optional",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A01.06",
+    "section": "A. Client Facts",
+    "group": "A01 Unternehmen",
+    "label": "In welchen Ländern und Regionen ist das Unternehmen heute aktiv?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A01.07",
+    "section": "A. Client Facts",
+    "group": "A01 Unternehmen",
+    "label": "Wie viele Mitarbeiter beschäftigt das Unternehmen aktuell?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": "mitarbeiter"
+  },
+  {
+    "key": "A01.08",
+    "section": "A. Client Facts",
+    "group": "A01 Unternehmen",
+    "label": "Wie hoch ist der aktuelle Umsatz beziehungsweise welche Umsatzgrößenordnung kann intern oder extern verwendet werden?",
+    "requirement": "Optional",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": "umsatz"
+  },
+  {
+    "key": "A01.09",
+    "section": "A. Client Facts",
+    "group": "A01 Unternehmen",
+    "label": "Wem gehört das Unternehmen?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": "eigentuemer"
+  },
+  {
+    "key": "A01.10",
+    "section": "A. Client Facts",
+    "group": "A01 Unternehmen",
+    "label": "Welche Muttergesellschaften, Tochtergesellschaften, Beteiligungen oder Joint Ventures sind relevant?",
+    "requirement": "Optional",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A01.11",
+    "section": "A. Client Facts",
+    "group": "A01 Unternehmen",
+    "label": "Was sind die wichtigsten Stationen der Unternehmensentwicklung?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A01.12",
+    "section": "A. Client Facts",
+    "group": "A01 Unternehmen",
+    "label": "Welche Ereignisse waren für die Entwicklung des Unternehmens besonders relevant?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A02.01",
+    "section": "A. Client Facts",
+    "group": "A02 Geschäftsmodell",
+    "label": "Was verkauft das Unternehmen konkret?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": "geschaeftsfeld"
+  },
+  {
+    "key": "A02.02",
+    "section": "A. Client Facts",
+    "group": "A02 Geschäftsmodell",
+    "label": "Wie verdient das Unternehmen Geld?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A02.03",
+    "section": "A. Client Facts",
+    "group": "A02 Geschäftsmodell",
+    "label": "Wer bezahlt für die Leistung?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A02.04",
+    "section": "A. Client Facts",
+    "group": "A02 Geschäftsmodell",
+    "label": "Wer nutzt das Produkt oder die Leistung tatsächlich?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A02.05",
+    "section": "A. Client Facts",
+    "group": "A02 Geschäftsmodell",
+    "label": "Welches Produkt beziehungsweise welcher Service ist heute wirtschaftlich am wichtigsten?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A02.06",
+    "section": "A. Client Facts",
+    "group": "A02 Geschäftsmodell",
+    "label": "Welches Produkt beziehungsweise welcher Service soll künftig wirtschaftlich am wichtigsten werden?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A02.07",
+    "section": "A. Client Facts",
+    "group": "A02 Geschäftsmodell",
+    "label": "Welche Produkte, Kundengruppen oder Märkte treiben aktuell das Wachstum?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A02.08",
+    "section": "A. Client Facts",
+    "group": "A02 Geschäftsmodell",
+    "label": "Wie sehen typische Vertrags-, Lizenz-, Subscription- oder Projektmodelle aus?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A02.09",
+    "section": "A. Client Facts",
+    "group": "A02 Geschäftsmodell",
+    "label": "Wie hoch ist ein typischer Kundenwert beziehungsweise Vertragswert?",
+    "requirement": "Optional",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A02.10",
+    "section": "A. Client Facts",
+    "group": "A02 Geschäftsmodell",
+    "label": "Wie lange dauert eine typische Kaufentscheidung?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A02.11",
+    "section": "A. Client Facts",
+    "group": "A02 Geschäftsmodell",
+    "label": "Welche Produkte, Services oder Kundengruppen sind besonders profitabel?",
+    "requirement": "Optional",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A02.12",
+    "section": "A. Client Facts",
+    "group": "A02 Geschäftsmodell",
+    "label": "Welche Teile des Angebots sind aus Kundensicht weitgehend austauschbar?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A02.13",
+    "section": "A. Client Facts",
+    "group": "A02 Geschäftsmodell",
+    "label": "Welche Teile des Angebots sind tatsächlich besonders oder schwer austauschbar?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A03.01",
+    "section": "A. Client Facts",
+    "group": "A03 Produkte und Services",
+    "label": "Wie lautet der Produkt- oder Servicename?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A03.02",
+    "section": "A. Client Facts",
+    "group": "A03 Produkte und Services",
+    "label": "Was ist das Produkt beziehungsweise die Leistung?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A03.03",
+    "section": "A. Client Facts",
+    "group": "A03 Produkte und Services",
+    "label": "Welches konkrete Problem löst das Produkt?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A03.04",
+    "section": "A. Client Facts",
+    "group": "A03 Produkte und Services",
+    "label": "Für wen wurde es entwickelt?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A03.05",
+    "section": "A. Client Facts",
+    "group": "A03 Produkte und Services",
+    "label": "Wie funktioniert es?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A03.06",
+    "section": "A. Client Facts",
+    "group": "A03 Produkte und Services",
+    "label": "Welches konkrete Ergebnis entsteht beim Kunden?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A03.07",
+    "section": "A. Client Facts",
+    "group": "A03 Produkte und Services",
+    "label": "Welchen wirtschaftlichen Nutzen erzeugt das Produkt?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A03.08",
+    "section": "A. Client Facts",
+    "group": "A03 Produkte und Services",
+    "label": "Welche Funktionen oder Eigenschaften unterscheiden das Produkt tatsächlich?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A03.09",
+    "section": "A. Client Facts",
+    "group": "A03 Produkte und Services",
+    "label": "Warum entscheiden sich Kunden für das Produkt?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A03.10",
+    "section": "A. Client Facts",
+    "group": "A03 Produkte und Services",
+    "label": "Warum entscheiden sich Interessenten dagegen?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A03.11",
+    "section": "A. Client Facts",
+    "group": "A03 Produkte und Services",
+    "label": "Welche Alternativen besitzt ein Kunde?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A03.12",
+    "section": "A. Client Facts",
+    "group": "A03 Produkte und Services",
+    "label": "Wie ist das Produkt preislich positioniert?",
+    "requirement": "Optional",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A03.13",
+    "section": "A. Client Facts",
+    "group": "A03 Produkte und Services",
+    "label": "Welche wesentlichen Weiterentwicklungen sind geplant?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A04.01",
+    "section": "A. Client Facts",
+    "group": "A04 Kunden und Zielgruppen",
+    "label": "Welche Kundengruppe betrachten wir?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A04.02",
+    "section": "A. Client Facts",
+    "group": "A04 Kunden und Zielgruppen",
+    "label": "In welchen Branchen befindet sie sich?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A04.03",
+    "section": "A. Client Facts",
+    "group": "A04 Kunden und Zielgruppen",
+    "label": "Welche Unternehmensgrößen sind relevant?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A04.04",
+    "section": "A. Client Facts",
+    "group": "A04 Kunden und Zielgruppen",
+    "label": "Welche Regionen sind relevant?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A04.05",
+    "section": "A. Client Facts",
+    "group": "A04 Kunden und Zielgruppen",
+    "label": "Wer trifft die Kaufentscheidung?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A04.06",
+    "section": "A. Client Facts",
+    "group": "A04 Kunden und Zielgruppen",
+    "label": "Wer besitzt das Budget?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A04.07",
+    "section": "A. Client Facts",
+    "group": "A04 Kunden und Zielgruppen",
+    "label": "Wer beeinflusst die Entscheidung?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A04.08",
+    "section": "A. Client Facts",
+    "group": "A04 Kunden und Zielgruppen",
+    "label": "Wer arbeitet mit dem Produkt?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A04.09",
+    "section": "A. Client Facts",
+    "group": "A04 Kunden und Zielgruppen",
+    "label": "Wer kann den Kauf verhindern?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A04.10",
+    "section": "A. Client Facts",
+    "group": "A04 Kunden und Zielgruppen",
+    "label": "Was ist das größte Problem dieser Zielgruppe?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A04.11",
+    "section": "A. Client Facts",
+    "group": "A04 Kunden und Zielgruppen",
+    "label": "Welche wirtschaftlichen oder operativen Folgen entstehen, wenn dieses Problem nicht gelöst wird?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A04.12",
+    "section": "A. Client Facts",
+    "group": "A04 Kunden und Zielgruppen",
+    "label": "Was löst typischerweise die Kaufentscheidung aus?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A04.13",
+    "section": "A. Client Facts",
+    "group": "A04 Kunden und Zielgruppen",
+    "label": "Nach welchen Kriterien werden Anbieter bewertet?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A04.14",
+    "section": "A. Client Facts",
+    "group": "A04 Kunden und Zielgruppen",
+    "label": "Welche Einwände treten regelmäßig auf?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A04.15",
+    "section": "A. Client Facts",
+    "group": "A04 Kunden und Zielgruppen",
+    "label": "Mit welchen Begriffen beschreibt die Zielgruppe ihr Problem selbst?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A04.16",
+    "section": "A. Client Facts",
+    "group": "A04 Kunden und Zielgruppen",
+    "label": "Wo informiert sich diese Zielgruppe?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A05.01",
+    "section": "A. Client Facts",
+    "group": "A05 Kaufrealität",
+    "label": "Warum kaufen Kunden tatsächlich?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A05.02",
+    "section": "A. Client Facts",
+    "group": "A05 Kaufrealität",
+    "label": "Warum gewinnt das Unternehmen Deals?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A05.03",
+    "section": "A. Client Facts",
+    "group": "A05 Kaufrealität",
+    "label": "Warum verliert das Unternehmen Deals?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A05.04",
+    "section": "A. Client Facts",
+    "group": "A05 Kaufrealität",
+    "label": "Welche Einwände hört Sales regelmäßig?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A05.05",
+    "section": "A. Client Facts",
+    "group": "A05 Kaufrealität",
+    "label": "Warum kündigen Kunden?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A05.06",
+    "section": "A. Client Facts",
+    "group": "A05 Kaufrealität",
+    "label": "Welche positiven Aussagen von Kunden treten wiederholt auf?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A05.07",
+    "section": "A. Client Facts",
+    "group": "A05 Kaufrealität",
+    "label": "Welche Kritik tritt wiederholt auf?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A05.08",
+    "section": "A. Client Facts",
+    "group": "A05 Kaufrealität",
+    "label": "Welche Vorteile schätzen Kunden stärker als das Unternehmen selbst erwartet hatte?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A05.09",
+    "section": "A. Client Facts",
+    "group": "A05 Kaufrealität",
+    "label": "Welche intern stark betonten Vorteile sind Kunden vergleichsweise unwichtig?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A05.10",
+    "section": "A. Client Facts",
+    "group": "A05 Kaufrealität",
+    "label": "Wie würden gute Kunden das Unternehmen in eigenen Worten beschreiben?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A05.11",
+    "section": "A. Client Facts",
+    "group": "A05 Kaufrealität",
+    "label": "Warum würden Kunden das Unternehmen anderen empfehlen?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A06.01",
+    "section": "A. Client Facts",
+    "group": "A06 Problemraum",
+    "label": "Welches konkrete Problem löst das Unternehmen unmittelbar?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A06.02",
+    "section": "A. Client Facts",
+    "group": "A06 Problemraum",
+    "label": "Welches größere wirtschaftliche oder gesellschaftliche Problem steckt dahinter?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A06.03",
+    "section": "A. Client Facts",
+    "group": "A06 Problemraum",
+    "label": "Warum existiert dieses Problem?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A06.04",
+    "section": "A. Client Facts",
+    "group": "A06 Problemraum",
+    "label": "Warum wird das Problem größer oder relevanter?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A06.05",
+    "section": "A. Client Facts",
+    "group": "A06 Problemraum",
+    "label": "Wer ist von dem Problem betroffen?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A06.06",
+    "section": "A. Client Facts",
+    "group": "A06 Problemraum",
+    "label": "Welche Kosten oder anderen negativen Folgen entstehen?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A06.07",
+    "section": "A. Client Facts",
+    "group": "A06 Problemraum",
+    "label": "Warum lösen bestehende Ansätze das Problem nicht ausreichend?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A06.08",
+    "section": "A. Client Facts",
+    "group": "A06 Problemraum",
+    "label": "Was wird an diesem Problem häufig falsch verstanden?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A06.09",
+    "section": "A. Client Facts",
+    "group": "A06 Problemraum",
+    "label": "Welche Ursache wird im Markt unterschätzt?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A06.10",
+    "section": "A. Client Facts",
+    "group": "A06 Problemraum",
+    "label": "Welche Konsequenz wird unterschätzt?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A06.11",
+    "section": "A. Client Facts",
+    "group": "A06 Problemraum",
+    "label": "Welches größere Problem würde das Unternehmen gerne kommunikativ besitzen?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A07.01",
+    "section": "A. Client Facts",
+    "group": "A07 Fähigkeiten und Differenzierung",
+    "label": "Was kann das Unternehmen objektiv besonders gut?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A07.02",
+    "section": "A. Client Facts",
+    "group": "A07 Fähigkeiten und Differenzierung",
+    "label": "Welche besonderen Technologien besitzt das Unternehmen?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A07.03",
+    "section": "A. Client Facts",
+    "group": "A07 Fähigkeiten und Differenzierung",
+    "label": "Welche proprietären Daten besitzt das Unternehmen?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A07.04",
+    "section": "A. Client Facts",
+    "group": "A07 Fähigkeiten und Differenzierung",
+    "label": "Welche Expertise ist besonders ausgeprägt?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A07.05",
+    "section": "A. Client Facts",
+    "group": "A07 Fähigkeiten und Differenzierung",
+    "label": "Welche Prozesse oder Methoden unterscheiden das Unternehmen?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A07.06",
+    "section": "A. Client Facts",
+    "group": "A07 Fähigkeiten und Differenzierung",
+    "label": "Wo ist das Unternehmen schneller?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A07.07",
+    "section": "A. Client Facts",
+    "group": "A07 Fähigkeiten und Differenzierung",
+    "label": "Wo besitzt es strukturelle Kostenvorteile?",
+    "requirement": "Optional",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A07.08",
+    "section": "A. Client Facts",
+    "group": "A07 Fähigkeiten und Differenzierung",
+    "label": "Wo ist die Qualität nachweislich besser?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A07.09",
+    "section": "A. Client Facts",
+    "group": "A07 Fähigkeiten und Differenzierung",
+    "label": "Wo ist das Angebot besser skalierbar?",
+    "requirement": "Optional",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A07.10",
+    "section": "A. Client Facts",
+    "group": "A07 Fähigkeiten und Differenzierung",
+    "label": "Welche besonderen Netzwerke oder Beziehungen besitzt das Unternehmen?",
+    "requirement": "Optional",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A07.11",
+    "section": "A. Client Facts",
+    "group": "A07 Fähigkeiten und Differenzierung",
+    "label": "Welche Partnerschaften schaffen einen strukturellen Vorteil?",
+    "requirement": "Optional",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A07.12",
+    "section": "A. Client Facts",
+    "group": "A07 Fähigkeiten und Differenzierung",
+    "label": "Welche besondere Kundenbasis besitzt das Unternehmen?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A07.13",
+    "section": "A. Client Facts",
+    "group": "A07 Fähigkeiten und Differenzierung",
+    "label": "Welche historische Erfahrung schafft Glaubwürdigkeit?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A07.14",
+    "section": "A. Client Facts",
+    "group": "A07 Fähigkeiten und Differenzierung",
+    "label": "Welche Fähigkeiten oder Assets sind für Wettbewerber besonders schwer kopierbar?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A07.15",
+    "section": "A. Client Facts",
+    "group": "A07 Fähigkeiten und Differenzierung",
+    "label": "Welche Aussage könnte ein Wettbewerber nicht glaubwürdig übernehmen, selbst wenn er die Website des Kunden kopieren würde?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A08.01",
+    "section": "A. Client Facts",
+    "group": "A08 Schwächen und Grenzen",
+    "label": "In welchen Bereichen sind relevante Wettbewerber stärker?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A08.02",
+    "section": "A. Client Facts",
+    "group": "A08 Schwächen und Grenzen",
+    "label": "Welche relevanten Features oder Fähigkeiten fehlen?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A08.03",
+    "section": "A. Client Facts",
+    "group": "A08 Schwächen und Grenzen",
+    "label": "Wo ist das Unternehmen teurer?",
+    "requirement": "Optional",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A08.04",
+    "section": "A. Client Facts",
+    "group": "A08 Schwächen und Grenzen",
+    "label": "Wo fehlt Marktbekanntheit?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A08.05",
+    "section": "A. Client Facts",
+    "group": "A08 Schwächen und Grenzen",
+    "label": "In welchen Märkten fehlt Erfahrung oder Präsenz?",
+    "requirement": "Optional",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A08.06",
+    "section": "A. Client Facts",
+    "group": "A08 Schwächen und Grenzen",
+    "label": "Welche gewünschte Aussage kann heute noch nicht ausreichend belegt werden?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A08.07",
+    "section": "A. Client Facts",
+    "group": "A08 Schwächen und Grenzen",
+    "label": "Welche Schwächen nennen Kunden regelmäßig?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A09.01",
+    "section": "A. Client Facts",
+    "group": "A09 Proof Points",
+    "label": "Bitte erfassen: belastbare Umsatzdaten oder Umsatzgrößenordnung.",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A09.02",
+    "section": "A. Client Facts",
+    "group": "A09 Proof Points",
+    "label": "Bitte erfassen: belastbare Wachstumsdaten.",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A09.03",
+    "section": "A. Client Facts",
+    "group": "A09 Proof Points",
+    "label": "Bitte erfassen: aktuelle Kundenzahl.",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A09.04",
+    "section": "A. Client Facts",
+    "group": "A09 Proof Points",
+    "label": "Bitte erfassen: aktuelle Nutzerzahl.",
+    "requirement": "Optional",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A09.05",
+    "section": "A. Client Facts",
+    "group": "A09 Proof Points",
+    "label": "Bitte erfassen: belegbare Marktanteile.",
+    "requirement": "Optional",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A09.06",
+    "section": "A. Client Facts",
+    "group": "A09 Proof Points",
+    "label": "Bitte erfassen: messbare Produktperformance.",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A09.07",
+    "section": "A. Client Facts",
+    "group": "A09 Proof Points",
+    "label": "Bitte erfassen: belegbaren ROI beim Kunden.",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A09.08",
+    "section": "A. Client Facts",
+    "group": "A09 Proof Points",
+    "label": "Bitte erfassen: belegbare Kosteneinsparungen.",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A09.09",
+    "section": "A. Client Facts",
+    "group": "A09 Proof Points",
+    "label": "Bitte erfassen: belegbare Zeitersparnis.",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A09.10",
+    "section": "A. Client Facts",
+    "group": "A09 Proof Points",
+    "label": "Bitte erfassen: vorhandene Case Studies.",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A09.11",
+    "section": "A. Client Facts",
+    "group": "A09 Proof Points",
+    "label": "Bitte erfassen: nennbare Referenzkunden.",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A09.12",
+    "section": "A. Client Facts",
+    "group": "A09 Proof Points",
+    "label": "Bitte erfassen: freigegebene Testimonials.",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A09.13",
+    "section": "A. Client Facts",
+    "group": "A09 Proof Points",
+    "label": "Bitte erfassen: relevante Patente.",
+    "requirement": "Optional",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A09.14",
+    "section": "A. Client Facts",
+    "group": "A09 Proof Points",
+    "label": "Bitte erfassen: relevante Zertifizierungen.",
+    "requirement": "Optional",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A09.15",
+    "section": "A. Client Facts",
+    "group": "A09 Proof Points",
+    "label": "Bitte erfassen: wissenschaftliche Evidenz.",
+    "requirement": "Optional",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A09.16",
+    "section": "A. Client Facts",
+    "group": "A09 Proof Points",
+    "label": "Bitte erfassen: eigene oder externe Studien als Proof.",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A09.17",
+    "section": "A. Client Facts",
+    "group": "A09 Proof Points",
+    "label": "Bitte erfassen: proprietäre Datenbestände als Proof.",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A09.18",
+    "section": "A. Client Facts",
+    "group": "A09 Proof Points",
+    "label": "Bitte erfassen: relevante Partnerschaften als Proof.",
+    "requirement": "Optional",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A09.19",
+    "section": "A. Client Facts",
+    "group": "A09 Proof Points",
+    "label": "Bitte erfassen: relevante Awards oder Auszeichnungen.",
+    "requirement": "Optional",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A09.20",
+    "section": "A. Client Facts",
+    "group": "A09 Proof Points",
+    "label": "Welche weiteren belastbaren Beweise existieren?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A10.01",
+    "section": "A. Client Facts",
+    "group": "A10 Proprietäre Daten",
+    "label": "Welche proprietären Daten besitzt das Unternehmen?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A10.02",
+    "section": "A. Client Facts",
+    "group": "A10 Proprietäre Daten",
+    "label": "Wie groß ist der Datenbestand?",
+    "requirement": "Optional",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A10.03",
+    "section": "A. Client Facts",
+    "group": "A10 Proprietäre Daten",
+    "label": "Seit wann werden die Daten erhoben?",
+    "requirement": "Optional",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A10.04",
+    "section": "A. Client Facts",
+    "group": "A10 Proprietäre Daten",
+    "label": "Wie häufig werden sie aktualisiert?",
+    "requirement": "Optional",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A10.05",
+    "section": "A. Client Facts",
+    "group": "A10 Proprietäre Daten",
+    "label": "Welche Regionen können analysiert werden?",
+    "requirement": "Optional",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A10.06",
+    "section": "A. Client Facts",
+    "group": "A10 Proprietäre Daten",
+    "label": "Welche Branchen können analysiert werden?",
+    "requirement": "Optional",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A10.07",
+    "section": "A. Client Facts",
+    "group": "A10 Proprietäre Daten",
+    "label": "Welche zeitlichen Entwicklungen können analysiert werden?",
+    "requirement": "Optional",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A10.08",
+    "section": "A. Client Facts",
+    "group": "A10 Proprietäre Daten",
+    "label": "Welche Daten dürfen öffentlich genutzt werden?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A10.09",
+    "section": "A. Client Facts",
+    "group": "A10 Proprietäre Daten",
+    "label": "Welche Daten dürfen aggregiert veröffentlicht werden?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A10.10",
+    "section": "A. Client Facts",
+    "group": "A10 Proprietäre Daten",
+    "label": "Welche Marktfragen könnte das Unternehmen mit diesen Daten beantworten?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A11.01",
+    "section": "A. Client Facts",
+    "group": "A11 Management und Sprecher",
+    "label": "Name der relevanten Person.",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A11.02",
+    "section": "A. Client Facts",
+    "group": "A11 Management und Sprecher",
+    "label": "Funktion der Person.",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A11.03",
+    "section": "A. Client Facts",
+    "group": "A11 Management und Sprecher",
+    "label": "Verantwortungsbereich der Person.",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A11.04",
+    "section": "A. Client Facts",
+    "group": "A11 Management und Sprecher",
+    "label": "Kurzvita der Person.",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A11.05",
+    "section": "A. Client Facts",
+    "group": "A11 Management und Sprecher",
+    "label": "Welche fachliche Expertise besitzt die Person?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A11.06",
+    "section": "A. Client Facts",
+    "group": "A11 Management und Sprecher",
+    "label": "Welche relevante Branchenerfahrung besitzt die Person?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A11.07",
+    "section": "A. Client Facts",
+    "group": "A11 Management und Sprecher",
+    "label": "Welche besonderen Erfahrungen schaffen Glaubwürdigkeit?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A11.08",
+    "section": "A. Client Facts",
+    "group": "A11 Management und Sprecher",
+    "label": "Welche früheren Arbeitgeber sind relevant?",
+    "requirement": "Optional",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A11.09",
+    "section": "A. Client Facts",
+    "group": "A11 Management und Sprecher",
+    "label": "Welche Ausbildung ist relevant?",
+    "requirement": "Optional",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A11.10",
+    "section": "A. Client Facts",
+    "group": "A11 Management und Sprecher",
+    "label": "Welche persönlichen Themen sind kommunikativ relevant?",
+    "requirement": "Optional",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A11.11",
+    "section": "A. Client Facts",
+    "group": "A11 Management und Sprecher",
+    "label": "Zu welchen Themen tritt die Person öffentlich auf?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A11.12",
+    "section": "A. Client Facts",
+    "group": "A11 Management und Sprecher",
+    "label": "Zu welchen Themen sollte die Person gegenüber Medien sprechen?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A11.13",
+    "section": "A. Client Facts",
+    "group": "A11 Management und Sprecher",
+    "label": "Zu welchen Themen möchte oder darf die Person nicht sprechen?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A11.14",
+    "section": "A. Client Facts",
+    "group": "A11 Management und Sprecher",
+    "label": "Welche Medienerfahrung besitzt die Person?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A11.15",
+    "section": "A. Client Facts",
+    "group": "A11 Management und Sprecher",
+    "label": "In welchen Sprachen kann die Person kommunizieren?",
+    "requirement": "Optional",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A11.16",
+    "section": "A. Client Facts",
+    "group": "A11 Management und Sprecher",
+    "label": "Wie kommuniziert die Person typischerweise?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A11.17",
+    "section": "A. Client Facts",
+    "group": "A11 Management und Sprecher",
+    "label": "Welche Faktoren machen die Person zu bestimmten Themen glaubwürdig?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A11.18",
+    "section": "A. Client Facts",
+    "group": "A11 Management und Sprecher",
+    "label": "Welche relevanten Medien- oder Journalistenbeziehungen bestehen?",
+    "requirement": "Optional",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A11.19",
+    "section": "A. Client Facts",
+    "group": "A11 Management und Sprecher",
+    "label": "Warum sollte ein relevanter externer Stakeholder gerade dieser Person zu einem bestimmten Thema zuhören?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A12.01",
+    "section": "A. Client Facts",
+    "group": "A12 Unternehmens- und Founder Story",
+    "label": "Warum wurde das Unternehmen gegründet?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A12.02",
+    "section": "A. Client Facts",
+    "group": "A12 Unternehmens- und Founder Story",
+    "label": "Welches konkrete Ereignis oder Problem führte zur Gründung?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A12.03",
+    "section": "A. Client Facts",
+    "group": "A12 Unternehmens- und Founder Story",
+    "label": "Wie haben sich die Gründer kennengelernt?",
+    "requirement": "Optional",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A12.04",
+    "section": "A. Client Facts",
+    "group": "A12 Unternehmens- und Founder Story",
+    "label": "Welche persönliche Erfahrung steht hinter dem Unternehmen?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A12.05",
+    "section": "A. Client Facts",
+    "group": "A12 Unternehmens- und Founder Story",
+    "label": "Welche relevanten Rückschläge gab es?",
+    "requirement": "Optional",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A12.06",
+    "section": "A. Client Facts",
+    "group": "A12 Unternehmens- und Founder Story",
+    "label": "Welche Entscheidungen oder Ereignisse waren Wendepunkte?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A12.07",
+    "section": "A. Client Facts",
+    "group": "A12 Unternehmens- und Founder Story",
+    "label": "Welche bewussten Entscheidungen hat das Unternehmen entgegen der üblichen Marktlogik getroffen?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "A12.08",
+    "section": "A. Client Facts",
+    "group": "A12 Unternehmens- und Founder Story",
+    "label": "Welche Teile der Geschichte dürfen öffentlich verwendet werden?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "B01.01",
+    "section": "B. Client Perspective",
+    "group": "B01 Unternehmensambition",
+    "label": "Wo soll das Unternehmen in drei Jahren stehen?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B01.02",
+    "section": "B. Client Perspective",
+    "group": "B01 Unternehmensambition",
+    "label": "Wo soll das Unternehmen in fünf Jahren stehen?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B01.03",
+    "section": "B. Client Perspective",
+    "group": "B01 Unternehmensambition",
+    "label": "Welche Wachstumsziele verfolgt das Unternehmen?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B01.04",
+    "section": "B. Client Perspective",
+    "group": "B01 Unternehmensambition",
+    "label": "Welche Produkte sollen künftig besonders wachsen?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B01.05",
+    "section": "B. Client Perspective",
+    "group": "B01 Unternehmensambition",
+    "label": "Welche Kundengruppen sollen künftig wichtiger werden?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B01.06",
+    "section": "B. Client Perspective",
+    "group": "B01 Unternehmensambition",
+    "label": "Welche geografischen Märkte sollen erschlossen werden?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B01.07",
+    "section": "B. Client Perspective",
+    "group": "B01 Unternehmensambition",
+    "label": "Welche neuen Geschäftsfelder sind geplant?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B01.08",
+    "section": "B. Client Perspective",
+    "group": "B01 Unternehmensambition",
+    "label": "Welche strategischen Partnerschaften sind denkbar?",
+    "requirement": "Optional",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B01.09",
+    "section": "B. Client Perspective",
+    "group": "B01 Unternehmensambition",
+    "label": "Welche M&A- oder Beteiligungsambitionen bestehen?",
+    "requirement": "Optional",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B01.10",
+    "section": "B. Client Perspective",
+    "group": "B01 Unternehmensambition",
+    "label": "Welche Rolle soll das Unternehmen langfristig in seinem Markt spielen?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B02.01",
+    "section": "B. Client Perspective",
+    "group": "B02 Gewünschte Wahrnehmung",
+    "label": "Wie wird das Unternehmen heute aus Sicht des Managements wahrgenommen?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B02.02",
+    "section": "B. Client Perspective",
+    "group": "B02 Gewünschte Wahrnehmung",
+    "label": "Wie soll das Unternehmen künftig wahrgenommen werden?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B02.03",
+    "section": "B. Client Perspective",
+    "group": "B02 Gewünschte Wahrnehmung",
+    "label": "Welche drei Eigenschaften sollen mit dem Unternehmen verbunden werden?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B02.04",
+    "section": "B. Client Perspective",
+    "group": "B02 Gewünschte Wahrnehmung",
+    "label": "Welche drei Aussagen sollen nach einem Kontakt mit dem Unternehmen hängen bleiben?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B02.05",
+    "section": "B. Client Perspective",
+    "group": "B02 Gewünschte Wahrnehmung",
+    "label": "Was sollen Kunden über das Unternehmen sagen?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B02.06",
+    "section": "B. Client Perspective",
+    "group": "B02 Gewünschte Wahrnehmung",
+    "label": "Was sollen Journalisten über das Unternehmen sagen?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B02.07",
+    "section": "B. Client Perspective",
+    "group": "B02 Gewünschte Wahrnehmung",
+    "label": "Was sollen Investoren über das Unternehmen sagen?",
+    "requirement": "Optional",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B02.08",
+    "section": "B. Client Perspective",
+    "group": "B02 Gewünschte Wahrnehmung",
+    "label": "Was sollen potenzielle Mitarbeiter über das Unternehmen sagen?",
+    "requirement": "Optional",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B02.09",
+    "section": "B. Client Perspective",
+    "group": "B02 Gewünschte Wahrnehmung",
+    "label": "Mit welchen Unternehmen oder Marken würde das Management gerne verglichen werden?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B02.10",
+    "section": "B. Client Perspective",
+    "group": "B02 Gewünschte Wahrnehmung",
+    "label": "Mit welchen Unternehmen oder Kategorien möchte es nicht verglichen werden?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B02.11",
+    "section": "B. Client Perspective",
+    "group": "B02 Gewünschte Wahrnehmung",
+    "label": "Welche heutige Wahrnehmung soll bewusst verändert oder beendet werden?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B03.01",
+    "section": "B. Client Perspective",
+    "group": "B03 Positionierungsambition",
+    "label": "Welche Positionierungsambition besteht? Z. B. Kategorie stärker besetzen, differenzieren, Premium, Technologieführerschaft, Challenger, Thought Leader, neue Kategorie etc.",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B03.02",
+    "section": "B. Client Perspective",
+    "group": "B03 Positionierungsambition",
+    "label": "Wie groß darf die Positionierung gedacht werden?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B03.03",
+    "section": "B. Client Perspective",
+    "group": "B03 Positionierungsambition",
+    "label": "Darf die Positionierung der heutigen Realität bewusst etwas vorausgreifen, wenn sie zur Unternehmensstrategie passt?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B03.04",
+    "section": "B. Client Perspective",
+    "group": "B03 Positionierungsambition",
+    "label": "Wie mutig darf die Positionierung sein?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B03.05",
+    "section": "B. Client Perspective",
+    "group": "B03 Positionierungsambition",
+    "label": "Wie kontrovers darf sie sein?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B03.06",
+    "section": "B. Client Perspective",
+    "group": "B03 Positionierungsambition",
+    "label": "Wie direkt dürfen Wettbewerber oder bestehende Marktlogiken herausgefordert werden?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B03.07",
+    "section": "B. Client Perspective",
+    "group": "B03 Positionierungsambition",
+    "label": "Wie politisch darf die Positionierung sein?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B04.01",
+    "section": "B. Client Perspective",
+    "group": "B04 Management Beliefs",
+    "label": "Was verändert sich gerade fundamental im Markt?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B04.02",
+    "section": "B. Client Perspective",
+    "group": "B04 Management Beliefs",
+    "label": "Was verstehen viele Marktteilnehmer falsch?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B04.03",
+    "section": "B. Client Perspective",
+    "group": "B04 Management Beliefs",
+    "label": "Welche verbreitete Branchenmeinung hältst Du für falsch?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B04.04",
+    "section": "B. Client Perspective",
+    "group": "B04 Management Beliefs",
+    "label": "Welche verbreitete Best Practice funktioniert aus Deiner Sicht nicht?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B04.05",
+    "section": "B. Client Perspective",
+    "group": "B04 Management Beliefs",
+    "label": "Welche Entwicklung wird derzeit überschätzt?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B04.06",
+    "section": "B. Client Perspective",
+    "group": "B04 Management Beliefs",
+    "label": "Welche Entwicklung wird unterschätzt?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B04.07",
+    "section": "B. Client Perspective",
+    "group": "B04 Management Beliefs",
+    "label": "Was wird in fünf Jahren offensichtlich sein, das heute noch kaum jemand sieht?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B04.08",
+    "section": "B. Client Perspective",
+    "group": "B04 Management Beliefs",
+    "label": "Welche Unternehmen oder Geschäftsmodelle werden künftig gewinnen und warum?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B04.09",
+    "section": "B. Client Perspective",
+    "group": "B04 Management Beliefs",
+    "label": "Welche werden verlieren und warum?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B04.10",
+    "section": "B. Client Perspective",
+    "group": "B04 Management Beliefs",
+    "label": "Welche unbequeme Wahrheit würdest Du Kunden sagen?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B04.11",
+    "section": "B. Client Perspective",
+    "group": "B04 Management Beliefs",
+    "label": "Welche Aussage von Wettbewerbern hältst Du für falsch oder irreführend?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B04.12",
+    "section": "B. Client Perspective",
+    "group": "B04 Management Beliefs",
+    "label": "Welches Problem wird im Markt falsch definiert?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B04.13",
+    "section": "B. Client Perspective",
+    "group": "B04 Management Beliefs",
+    "label": "Welche Entscheidung treffen Kunden heute regelmäßig falsch?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B04.14",
+    "section": "B. Client Perspective",
+    "group": "B04 Management Beliefs",
+    "label": "Welche starke fachliche These würdest Du öffentlich vertreten?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B05.01",
+    "section": "B. Client Perspective",
+    "group": "B05 Veränderungsanspruch",
+    "label": "Was soll sich im Markt durch das Unternehmen verändern?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B05.02",
+    "section": "B. Client Perspective",
+    "group": "B05 Veränderungsanspruch",
+    "label": "Welche bisherige Arbeitsweise sollte verschwinden?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B05.03",
+    "section": "B. Client Perspective",
+    "group": "B05 Veränderungsanspruch",
+    "label": "Welche neue Arbeitsweise sollte Standard werden?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B05.04",
+    "section": "B. Client Perspective",
+    "group": "B05 Veränderungsanspruch",
+    "label": "Welches Verhalten von Unternehmen oder Kunden soll sich verändern?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B05.05",
+    "section": "B. Client Perspective",
+    "group": "B05 Veränderungsanspruch",
+    "label": "Welche Denkweise soll sich verändern?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B05.06",
+    "section": "B. Client Perspective",
+    "group": "B05 Veränderungsanspruch",
+    "label": "Welche bestehende Marktregel hält das Unternehmen für falsch?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B05.07",
+    "section": "B. Client Perspective",
+    "group": "B05 Veränderungsanspruch",
+    "label": "Welchen Status quo lehnt das Unternehmen grundsätzlich ab?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B06.01",
+    "section": "B. Client Perspective",
+    "group": "B06 Themenambition",
+    "label": "Zu welchen Themen möchte das Unternehmen öffentlich sprechen?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B06.02",
+    "section": "B. Client Perspective",
+    "group": "B06 Themenambition",
+    "label": "Welche Themen sind für das Geschäft besonders wichtig?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B06.03",
+    "section": "B. Client Perspective",
+    "group": "B06 Themenambition",
+    "label": "Welche Themen soll insbesondere der CEO besetzen?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B06.04",
+    "section": "B. Client Perspective",
+    "group": "B06 Themenambition",
+    "label": "Welche Themen können andere Sprecher besetzen?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B06.05",
+    "section": "B. Client Perspective",
+    "group": "B06 Themenambition",
+    "label": "Welche Zukunftsthemen möchte das Unternehmen früh besetzen?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B06.06",
+    "section": "B. Client Perspective",
+    "group": "B06 Themenambition",
+    "label": "Zu welchen fünf Themen soll ein Journalist künftig idealerweise beim Unternehmen anrufen?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B06.07",
+    "section": "B. Client Perspective",
+    "group": "B06 Themenambition",
+    "label": "Welche Themen möchte das Unternehmen bewusst nicht besitzen?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B07.01",
+    "section": "B. Client Perspective",
+    "group": "B07 Grenzen und No-Gos",
+    "label": "Mit welchen Kategorien möchte das Unternehmen nicht verbunden werden?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B07.02",
+    "section": "B. Client Perspective",
+    "group": "B07 Grenzen und No-Gos",
+    "label": "Welche Begriffe sollen nicht verwendet werden?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B07.03",
+    "section": "B. Client Perspective",
+    "group": "B07 Grenzen und No-Gos",
+    "label": "Welche bestehenden Stakeholder dürfen durch eine neue Positionierung nicht entfremdet werden?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B07.04",
+    "section": "B. Client Perspective",
+    "group": "B07 Grenzen und No-Gos",
+    "label": "Welche Geschäftsbereiche müssen zwingend berücksichtigt werden?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B07.05",
+    "section": "B. Client Perspective",
+    "group": "B07 Grenzen und No-Gos",
+    "label": "Welche Partnerbeziehungen begrenzen mögliche Positionierungen?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B07.06",
+    "section": "B. Client Perspective",
+    "group": "B07 Grenzen und No-Gos",
+    "label": "Welche politischen Themen oder Positionen sind tabu?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B07.07",
+    "section": "B. Client Perspective",
+    "group": "B07 Grenzen und No-Gos",
+    "label": "Welche regulatorischen Grenzen müssen berücksichtigt werden?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B07.08",
+    "section": "B. Client Perspective",
+    "group": "B07 Grenzen und No-Gos",
+    "label": "Welche internen strategischen Spannungen müssen berücksichtigt werden?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B07.09",
+    "section": "B. Client Perspective",
+    "group": "B07 Grenzen und No-Gos",
+    "label": "Welche Position wäre dem Management zu aggressiv?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B07.10",
+    "section": "B. Client Perspective",
+    "group": "B07 Grenzen und No-Gos",
+    "label": "Welche Position wäre zu defensiv?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B07.11",
+    "section": "B. Client Perspective",
+    "group": "B07 Grenzen und No-Gos",
+    "label": "Welche strategischen Entwicklungen dürfen noch nicht öffentlich berücksichtigt werden?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B08.01",
+    "section": "B. Client Perspective",
+    "group": "B08 Bestehende Positionierung",
+    "label": "Wie beschreibt sich das Unternehmen aktuell?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B08.02",
+    "section": "B. Client Perspective",
+    "group": "B08 Bestehende Positionierung",
+    "label": "Wie lautet der aktuelle Elevator Pitch?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B08.03",
+    "section": "B. Client Perspective",
+    "group": "B08 Bestehende Positionierung",
+    "label": "Wie beschreibt Sales das Unternehmen?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B08.04",
+    "section": "B. Client Perspective",
+    "group": "B08 Bestehende Positionierung",
+    "label": "Wie wird das Unternehmen gegenüber Investoren beschrieben?",
+    "requirement": "Optional",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B08.05",
+    "section": "B. Client Perspective",
+    "group": "B08 Bestehende Positionierung",
+    "label": "Wie wird das Unternehmen gegenüber Medien beschrieben?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B08.06",
+    "section": "B. Client Perspective",
+    "group": "B08 Bestehende Positionierung",
+    "label": "Welche Claims werden heute verwendet?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B08.07",
+    "section": "B. Client Perspective",
+    "group": "B08 Bestehende Positionierung",
+    "label": "Welche Tagline wird verwendet?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B08.08",
+    "section": "B. Client Perspective",
+    "group": "B08 Bestehende Positionierung",
+    "label": "Was davon soll unbedingt erhalten bleiben?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B08.09",
+    "section": "B. Client Perspective",
+    "group": "B08 Bestehende Positionierung",
+    "label": "Was soll sich unbedingt verändern?",
+    "requirement": "Pflicht",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "B08.10",
+    "section": "B. Client Perspective",
+    "group": "B08 Bestehende Positionierung",
+    "label": "Welche Positionierungen oder Botschaften wurden bereits versucht und haben nicht funktioniert?",
+    "requirement": "Empfohlen",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "C01.01",
+    "section": "C. RAUTE Perspective",
+    "group": "C01 Beraterdiagnose",
+    "label": "Wie würden wir das Unternehmen nach unserer Analyse in einem Satz beschreiben?",
+    "requirement": "Pflicht",
+    "input_owner": "RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "C01.02",
+    "section": "C. RAUTE Perspective",
+    "group": "C01 Beraterdiagnose",
+    "label": "Welches Geschäft betreibt das Unternehmen aus unserer Sicht tatsächlich?",
+    "requirement": "Pflicht",
+    "input_owner": "RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "C01.03",
+    "section": "C. RAUTE Perspective",
+    "group": "C01 Beraterdiagnose",
+    "label": "Welches Problem löst es aus unserer Sicht tatsächlich?",
+    "requirement": "Pflicht",
+    "input_owner": "RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "C01.04",
+    "section": "C. RAUTE Perspective",
+    "group": "C01 Beraterdiagnose",
+    "label": "Was ist der stärkste tatsächliche Differenzierungsfaktor?",
+    "requirement": "Pflicht",
+    "input_owner": "RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "C01.05",
+    "section": "C. RAUTE Perspective",
+    "group": "C01 Beraterdiagnose",
+    "label": "Welche bestehende Positionierungsbehauptung halten wir für besonders schwach?",
+    "requirement": "Pflicht",
+    "input_owner": "RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "C01.06",
+    "section": "C. RAUTE Perspective",
+    "group": "C01 Beraterdiagnose",
+    "label": "Wo sehen wir die größte kommunikative und strategische Chance?",
+    "requirement": "Pflicht",
+    "input_owner": "RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "C01.07",
+    "section": "C. RAUTE Perspective",
+    "group": "C01 Beraterdiagnose",
+    "label": "Wo sehen wir die größte Lücke zwischen Unternehmensrealität und heutiger Wahrnehmung?",
+    "requirement": "Pflicht",
+    "input_owner": "RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "C01.08",
+    "section": "C. RAUTE Perspective",
+    "group": "C01 Beraterdiagnose",
+    "label": "Welches vorhandene Asset wird aus unserer Sicht kommunikativ zu wenig genutzt?",
+    "requirement": "Empfohlen",
+    "input_owner": "RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "C01.09",
+    "section": "C. RAUTE Perspective",
+    "group": "C01 Beraterdiagnose",
+    "label": "Welches intern stark betonte Asset halten wir für überschätzt?",
+    "requirement": "Empfohlen",
+    "input_owner": "RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "C02.01",
+    "section": "C. RAUTE Perspective",
+    "group": "C02 Positionierungshypothesen",
+    "label": "Welche potenziellen Positionierungs-White-Spaces sehen wir?",
+    "requirement": "Empfohlen",
+    "input_owner": "RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "C02.02",
+    "section": "C. RAUTE Perspective",
+    "group": "C02 Positionierungshypothesen",
+    "label": "Welches Problem könnte der Kunde glaubwürdig besitzen?",
+    "requirement": "Empfohlen",
+    "input_owner": "RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "C02.03",
+    "section": "C. RAUTE Perspective",
+    "group": "C02 Positionierungshypothesen",
+    "label": "Sehen wir eine sinnvolle Möglichkeit, die Kategorie anders oder neu zu definieren?",
+    "requirement": "Empfohlen",
+    "input_owner": "RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "C02.04",
+    "section": "C. RAUTE Perspective",
+    "group": "C02 Positionierungshypothesen",
+    "label": "Welche glaubwürdige Gegenposition zum Markt könnte der Kunde einnehmen?",
+    "requirement": "Empfohlen",
+    "input_owner": "RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "C02.05",
+    "section": "C. RAUTE Perspective",
+    "group": "C02 Positionierungshypothesen",
+    "label": "Welche Thought-Leadership-Territories sehen wir?",
+    "requirement": "Empfohlen",
+    "input_owner": "RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "C02.06",
+    "section": "C. RAUTE Perspective",
+    "group": "C02 Positionierungshypothesen",
+    "label": "Welche Marktveränderung könnte der Kunde kommunikativ besonders gut besitzen?",
+    "requirement": "Empfohlen",
+    "input_owner": "RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "C02.07",
+    "section": "C. RAUTE Perspective",
+    "group": "C02 Positionierungshypothesen",
+    "label": "Welche persönliche Position könnte der CEO glaubwürdig einnehmen?",
+    "requirement": "Empfohlen",
+    "input_owner": "RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "C02.08",
+    "section": "C. RAUTE Perspective",
+    "group": "C02 Positionierungshypothesen",
+    "label": "Welche Positionierung könnte besonders stark auf den Vertrieb einzahlen?",
+    "requirement": "Empfohlen",
+    "input_owner": "RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "C02.09",
+    "section": "C. RAUTE Perspective",
+    "group": "C02 Positionierungshypothesen",
+    "label": "Welche Positionierung könnte zur langfristigen Unternehmensentwicklung passen?",
+    "requirement": "Empfohlen",
+    "input_owner": "RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "C03.01",
+    "section": "C. RAUTE Perspective",
+    "group": "C03 Strategische Spannungen",
+    "label": "Wo unterscheidet sich die externe Wahrnehmung von der tatsächlichen Realität?",
+    "requirement": "Empfohlen",
+    "input_owner": "RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "C03.02",
+    "section": "C. RAUTE Perspective",
+    "group": "C03 Strategische Spannungen",
+    "label": "Wo passt die heutige Marke nicht zur Unternehmensstrategie?",
+    "requirement": "Empfohlen",
+    "input_owner": "RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "C03.03",
+    "section": "C. RAUTE Perspective",
+    "group": "C03 Strategische Spannungen",
+    "label": "Wo passt die Kommunikation nicht zum Produkt?",
+    "requirement": "Empfohlen",
+    "input_owner": "RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "C03.04",
+    "section": "C. RAUTE Perspective",
+    "group": "C03 Strategische Spannungen",
+    "label": "Wo unterscheiden sich Sales Story und Corporate Story?",
+    "requirement": "Empfohlen",
+    "input_owner": "RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "C03.05",
+    "section": "C. RAUTE Perspective",
+    "group": "C03 Strategische Spannungen",
+    "label": "Wo unterscheidet sich das Managementbild von der Kundenwahrnehmung?",
+    "requirement": "Empfohlen",
+    "input_owner": "RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "C03.06",
+    "section": "C. RAUTE Perspective",
+    "group": "C03 Strategische Spannungen",
+    "label": "Wo besteht die größte Spannung zwischen heutigem Unternehmen und zukünftiger Ambition?",
+    "requirement": "Empfohlen",
+    "input_owner": "RAUTE",
+    "legacy_key": null
+  },
+  {
+    "key": "D01.01",
+    "section": "D. External Reality",
+    "group": "D01 Markt",
+    "label": "Marktdefinition recherchieren und dokumentieren.",
+    "requirement": "Pflicht",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D01.02",
+    "section": "D. External Reality",
+    "group": "D01 Markt",
+    "label": "Marktgröße recherchieren und dokumentieren.",
+    "requirement": "Empfohlen",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D01.03",
+    "section": "D. External Reality",
+    "group": "D01 Markt",
+    "label": "Relevante Marktsegmente identifizieren.",
+    "requirement": "Empfohlen",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D01.04",
+    "section": "D. External Reality",
+    "group": "D01 Markt",
+    "label": "Marktwachstum und Dynamik erfassen.",
+    "requirement": "Empfohlen",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D01.05",
+    "section": "D. External Reality",
+    "group": "D01 Markt",
+    "label": "Relevante Markttrends erfassen.",
+    "requirement": "Pflicht",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D01.06",
+    "section": "D. External Reality",
+    "group": "D01 Markt",
+    "label": "Technologische Veränderungen erfassen.",
+    "requirement": "Pflicht",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D01.07",
+    "section": "D. External Reality",
+    "group": "D01 Markt",
+    "label": "Wirtschaftliche Veränderungen erfassen.",
+    "requirement": "Empfohlen",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D01.08",
+    "section": "D. External Reality",
+    "group": "D01 Markt",
+    "label": "Gesellschaftliche Veränderungen erfassen.",
+    "requirement": "Empfohlen",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D01.09",
+    "section": "D. External Reality",
+    "group": "D01 Markt",
+    "label": "Politische Entwicklungen erfassen.",
+    "requirement": "Empfohlen",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D01.10",
+    "section": "D. External Reality",
+    "group": "D01 Markt",
+    "label": "Regulatorische Entwicklungen erfassen.",
+    "requirement": "Pflicht",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D01.11",
+    "section": "D. External Reality",
+    "group": "D01 Markt",
+    "label": "Strukturelle Marktverschiebungen identifizieren.",
+    "requirement": "Pflicht",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D01.12",
+    "section": "D. External Reality",
+    "group": "D01 Markt",
+    "label": "Neue oder veränderte Geschäftsmodelle identifizieren.",
+    "requirement": "Empfohlen",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D01.13",
+    "section": "D. External Reality",
+    "group": "D01 Markt",
+    "label": "Relevante Zukunftsszenarien erfassen.",
+    "requirement": "Empfohlen",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D02.01",
+    "section": "D. External Reality",
+    "group": "D02 Wettbewerb",
+    "label": "Relevante Wettbewerber identifizieren.",
+    "requirement": "Pflicht",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D02.02",
+    "section": "D. External Reality",
+    "group": "D02 Wettbewerb",
+    "label": "Kategorie der Wettbewerber erfassen.",
+    "requirement": "Pflicht",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D02.03",
+    "section": "D. External Reality",
+    "group": "D02 Wettbewerb",
+    "label": "Wettbewerberpositionierungen erfassen.",
+    "requirement": "Pflicht",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D02.04",
+    "section": "D. External Reality",
+    "group": "D02 Wettbewerb",
+    "label": "Claims der Wettbewerber erfassen.",
+    "requirement": "Pflicht",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D02.05",
+    "section": "D. External Reality",
+    "group": "D02 Wettbewerb",
+    "label": "Kernbotschaften der Wettbewerber erfassen.",
+    "requirement": "Empfohlen",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D02.06",
+    "section": "D. External Reality",
+    "group": "D02 Wettbewerb",
+    "label": "Relevante Produkte der Wettbewerber erfassen.",
+    "requirement": "Empfohlen",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D02.07",
+    "section": "D. External Reality",
+    "group": "D02 Wettbewerb",
+    "label": "Zielgruppen der Wettbewerber erfassen.",
+    "requirement": "Empfohlen",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D02.08",
+    "section": "D. External Reality",
+    "group": "D02 Wettbewerb",
+    "label": "Kommunikativ besetzte Themen erfassen.",
+    "requirement": "Pflicht",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D02.09",
+    "section": "D. External Reality",
+    "group": "D02 Wettbewerb",
+    "label": "Thought-Leadership-Territories erfassen.",
+    "requirement": "Pflicht",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D02.10",
+    "section": "D. External Reality",
+    "group": "D02 Wettbewerb",
+    "label": "CEO-Positionierungen erfassen.",
+    "requirement": "Empfohlen",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D02.11",
+    "section": "D. External Reality",
+    "group": "D02 Wettbewerb",
+    "label": "Medienpräsenz erfassen.",
+    "requirement": "Empfohlen",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D02.12",
+    "section": "D. External Reality",
+    "group": "D02 Wettbewerb",
+    "label": "GEO / AI Visibility erfassen.",
+    "requirement": "Empfohlen",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D02.13",
+    "section": "D. External Reality",
+    "group": "D02 Wettbewerb",
+    "label": "Proof Points der Wettbewerber erfassen.",
+    "requirement": "Empfohlen",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D02.14",
+    "section": "D. External Reality",
+    "group": "D02 Wettbewerb",
+    "label": "Erkennbare Stärken erfassen.",
+    "requirement": "Empfohlen",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D02.15",
+    "section": "D. External Reality",
+    "group": "D02 Wettbewerb",
+    "label": "Erkennbare Schwächen erfassen.",
+    "requirement": "Empfohlen",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D02.16",
+    "section": "D. External Reality",
+    "group": "D02 Wettbewerb",
+    "label": "Erkennbare strategische Richtung erfassen.",
+    "requirement": "Pflicht",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D03.01",
+    "section": "D. External Reality",
+    "group": "D03 Competitive White Space",
+    "label": "Von Wettbewerbern stark besetzte Positionen identifizieren.",
+    "requirement": "Pflicht",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D03.02",
+    "section": "D. External Reality",
+    "group": "D03 Competitive White Space",
+    "label": "Überfüllte oder generische Claims identifizieren.",
+    "requirement": "Pflicht",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D03.03",
+    "section": "D. External Reality",
+    "group": "D03 Competitive White Space",
+    "label": "Kommunikative Gleichförmigkeit im Markt identifizieren.",
+    "requirement": "Empfohlen",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D03.04",
+    "section": "D. External Reality",
+    "group": "D03 Competitive White Space",
+    "label": "Wenig besetzte, aber relevante Positionen identifizieren.",
+    "requirement": "Pflicht",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D03.05",
+    "section": "D. External Reality",
+    "group": "D03 Competitive White Space",
+    "label": "Freie Themenfelder identifizieren.",
+    "requirement": "Pflicht",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D03.06",
+    "section": "D. External Reality",
+    "group": "D03 Competitive White Space",
+    "label": "Freie Thought-Leadership-Territories identifizieren.",
+    "requirement": "Pflicht",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D03.07",
+    "section": "D. External Reality",
+    "group": "D03 Competitive White Space",
+    "label": "Potenzielle Gegenpositionen identifizieren.",
+    "requirement": "Empfohlen",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D03.08",
+    "section": "D. External Reality",
+    "group": "D03 Competitive White Space",
+    "label": "Potenzielle Category Opportunities identifizieren.",
+    "requirement": "Empfohlen",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D04.01",
+    "section": "D. External Reality",
+    "group": "D04 Kunden- und Marktstimmen",
+    "label": "Relevante Reviews erfassen.",
+    "requirement": "Empfohlen",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D04.02",
+    "section": "D. External Reality",
+    "group": "D04 Kunden- und Marktstimmen",
+    "label": "Relevante Diskussionen in Foren erfassen.",
+    "requirement": "Optional",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D04.03",
+    "section": "D. External Reality",
+    "group": "D04 Kunden- und Marktstimmen",
+    "label": "Öffentliche Kundenkommentare erfassen.",
+    "requirement": "Empfohlen",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D04.04",
+    "section": "D. External Reality",
+    "group": "D04 Kunden- und Marktstimmen",
+    "label": "Relevante Social Conversations erfassen.",
+    "requirement": "Empfohlen",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D04.05",
+    "section": "D. External Reality",
+    "group": "D04 Kunden- und Marktstimmen",
+    "label": "Relevante Fachcommunity-Diskussionen erfassen.",
+    "requirement": "Optional",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D04.06",
+    "section": "D. External Reality",
+    "group": "D04 Kunden- und Marktstimmen",
+    "label": "Analystenmeinungen erfassen.",
+    "requirement": "Empfohlen",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D04.07",
+    "section": "D. External Reality",
+    "group": "D04 Kunden- und Marktstimmen",
+    "label": "Expertenmeinungen erfassen.",
+    "requirement": "Empfohlen",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D04.08",
+    "section": "D. External Reality",
+    "group": "D04 Kunden- und Marktstimmen",
+    "label": "Relevante Marktstudien erfassen.",
+    "requirement": "Pflicht",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D04.09",
+    "section": "D. External Reality",
+    "group": "D04 Kunden- und Marktstimmen",
+    "label": "Verfügbare Kundenbefragungen erfassen.",
+    "requirement": "Empfohlen",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D04.10",
+    "section": "D. External Reality",
+    "group": "D04 Kunden- und Marktstimmen",
+    "label": "Veröffentlichte oder erkennbare Buying Criteria erfassen.",
+    "requirement": "Empfohlen",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D05.01",
+    "section": "D. External Reality",
+    "group": "D05 Medienrealität",
+    "label": "Aktuelle Medienwahrnehmung des Unternehmens erfassen.",
+    "requirement": "Pflicht",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D05.02",
+    "section": "D. External Reality",
+    "group": "D05 Medienrealität",
+    "label": "Historische Medienwahrnehmung erfassen.",
+    "requirement": "Empfohlen",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D05.03",
+    "section": "D. External Reality",
+    "group": "D05 Medienrealität",
+    "label": "Häufige mediale Beschreibungen erfassen.",
+    "requirement": "Pflicht",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D05.04",
+    "section": "D. External Reality",
+    "group": "D05 Medienrealität",
+    "label": "Mediale Themenzuordnung erfassen.",
+    "requirement": "Pflicht",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D05.05",
+    "section": "D. External Reality",
+    "group": "D05 Medienrealität",
+    "label": "Mediale CEO-Wahrnehmung erfassen.",
+    "requirement": "Empfohlen",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D05.06",
+    "section": "D. External Reality",
+    "group": "D05 Medienrealität",
+    "label": "Mediale Wahrnehmung relevanter Wettbewerber erfassen.",
+    "requirement": "Empfohlen",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D05.07",
+    "section": "D. External Reality",
+    "group": "D05 Medienrealität",
+    "label": "Relevante journalistische Debatten erfassen.",
+    "requirement": "Pflicht",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D05.08",
+    "section": "D. External Reality",
+    "group": "D05 Medienrealität",
+    "label": "Relevante Mediennarrative erfassen.",
+    "requirement": "Pflicht",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D05.09",
+    "section": "D. External Reality",
+    "group": "D05 Medienrealität",
+    "label": "Aktuelle journalistische Interessen erfassen.",
+    "requirement": "Empfohlen",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D06.01",
+    "section": "D. External Reality",
+    "group": "D06 Search Reality",
+    "label": "Relevante Suchbegriffe erfassen.",
+    "requirement": "Empfohlen",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D06.02",
+    "section": "D. External Reality",
+    "group": "D06 Search Reality",
+    "label": "Relevante Suchtrends erfassen.",
+    "requirement": "Empfohlen",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D06.03",
+    "section": "D. External Reality",
+    "group": "D06 Search Reality",
+    "label": "Relevante Problemqueries erfassen.",
+    "requirement": "Pflicht",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D06.04",
+    "section": "D. External Reality",
+    "group": "D06 Search Reality",
+    "label": "Relevante Kategoriequeries erfassen.",
+    "requirement": "Pflicht",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D06.05",
+    "section": "D. External Reality",
+    "group": "D06 Search Reality",
+    "label": "Relevante Wettbewerberqueries erfassen.",
+    "requirement": "Empfohlen",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D06.06",
+    "section": "D. External Reality",
+    "group": "D06 Search Reality",
+    "label": "Häufig gestellte Fragen erfassen.",
+    "requirement": "Empfohlen",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D06.07",
+    "section": "D. External Reality",
+    "group": "D06 Search Reality",
+    "label": "Verändertes Suchverhalten identifizieren.",
+    "requirement": "Optional",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D06.08",
+    "section": "D. External Reality",
+    "group": "D06 Search Reality",
+    "label": "Neue Begriffe und Kategorien im Markt identifizieren.",
+    "requirement": "Empfohlen",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D07.01",
+    "section": "D. External Reality",
+    "group": "D07 GEO / AI Perception",
+    "label": "AI Visibility erfassen.",
+    "requirement": "Empfohlen",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D07.02",
+    "section": "D. External Reality",
+    "group": "D07 GEO / AI Perception",
+    "label": "AI Perception erfassen.",
+    "requirement": "Pflicht",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D07.03",
+    "section": "D. External Reality",
+    "group": "D07 GEO / AI Perception",
+    "label": "Topic Associations erfassen.",
+    "requirement": "Pflicht",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D07.04",
+    "section": "D. External Reality",
+    "group": "D07 GEO / AI Perception",
+    "label": "Category Associations erfassen.",
+    "requirement": "Pflicht",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D07.05",
+    "section": "D. External Reality",
+    "group": "D07 GEO / AI Perception",
+    "label": "Recommendation Share erfassen.",
+    "requirement": "Empfohlen",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D07.06",
+    "section": "D. External Reality",
+    "group": "D07 GEO / AI Perception",
+    "label": "AI Visibility relevanter Wettbewerber erfassen.",
+    "requirement": "Empfohlen",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D07.07",
+    "section": "D. External Reality",
+    "group": "D07 GEO / AI Perception",
+    "label": "Relevante Citation Sources erfassen.",
+    "requirement": "Empfohlen",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D07.08",
+    "section": "D. External Reality",
+    "group": "D07 GEO / AI Perception",
+    "label": "Positioning Gaps im generativen Umfeld erfassen.",
+    "requirement": "Pflicht",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D07.09",
+    "section": "D. External Reality",
+    "group": "D07 GEO / AI Perception",
+    "label": "Falschinformationen oder veraltete AI-Aussagen erfassen.",
+    "requirement": "Empfohlen",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D07.10",
+    "section": "D. External Reality",
+    "group": "D07 GEO / AI Perception",
+    "label": "Entity Confusion erfassen.",
+    "requirement": "Empfohlen",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D07.11",
+    "section": "D. External Reality",
+    "group": "D07 GEO / AI Perception",
+    "label": "Relevante Query Cluster erfassen.",
+    "requirement": "Empfohlen",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D08.01",
+    "section": "D. External Reality",
+    "group": "D08 Gesellschaft und Politik",
+    "label": "Relevante politische Debatten erfassen.",
+    "requirement": "Empfohlen",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D08.02",
+    "section": "D. External Reality",
+    "group": "D08 Gesellschaft und Politik",
+    "label": "Relevante regulatorische Entwicklungen erfassen.",
+    "requirement": "Pflicht",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D08.03",
+    "section": "D. External Reality",
+    "group": "D08 Gesellschaft und Politik",
+    "label": "Relevante gesellschaftliche Konflikte erfassen.",
+    "requirement": "Empfohlen",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D08.04",
+    "section": "D. External Reality",
+    "group": "D08 Gesellschaft und Politik",
+    "label": "Relevante NGO-Positionen erfassen.",
+    "requirement": "Optional",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D08.05",
+    "section": "D. External Reality",
+    "group": "D08 Gesellschaft und Politik",
+    "label": "Relevante Verbände und Positionen erfassen.",
+    "requirement": "Empfohlen",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D08.06",
+    "section": "D. External Reality",
+    "group": "D08 Gesellschaft und Politik",
+    "label": "Relevante wissenschaftliche Debatten erfassen.",
+    "requirement": "Optional",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D08.07",
+    "section": "D. External Reality",
+    "group": "D08 Gesellschaft und Politik",
+    "label": "Relevante gesellschaftliche Trends erfassen.",
+    "requirement": "Empfohlen",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "D08.08",
+    "section": "D. External Reality",
+    "group": "D08 Gesellschaft und Politik",
+    "label": "Relevante Stakeholderpositionen erfassen.",
+    "requirement": "Empfohlen",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  }
+]

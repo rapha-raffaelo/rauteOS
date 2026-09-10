@@ -1,0 +1,206 @@
+import React, { useEffect, useState } from 'react';
+import { twinRequest } from '../twin-api.js';
+
+const labels = {evidence_type: 'Herkunft', source_type: 'Quellentyp', confidence: 'Confidence',
+  confidentiality: 'Vertraulichkeit', external_use: 'Externe Nutzung', fact_status: 'Status', input_owner: 'Verantwortlich'};
+const defaults = {evidence_type: 'Client Statement', source_type: 'Other', confidence: 'Unknown',
+  confidentiality: 'Client Confidential', external_use: 'Approval Required', fact_status: 'Needs Verification', input_owner: 'RAUTE'};
+
+export function TwinPage({clientId}) {
+  const [data, setData] = useState(null);
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [query, setQuery] = useState('');
+  const [section, setSection] = useState('');
+  const [filter, setFilter] = useState('all');
+  const [limit, setLimit] = useState(20);
+  const [editing, setEditing] = useState(null);
+  const [importing, setImporting] = useState(false);
+  const load = async () => setData(await twinRequest(clientId));
+  useEffect(() => {
+    const controller = new AbortController();
+    twinRequest(clientId, '', {signal: controller.signal}).then(setData).catch(err => {
+      if (!controller.signal.aborted) setError(err.message);
+    });
+    return () => controller.abort();
+  }, [clientId]);
+  async function mutate(path, payload, method = 'POST') {
+    setBusy(true); setError(''); setNotice('');
+    try {
+      const result = await twinRequest(clientId, path, {method, body: JSON.stringify(payload)});
+      setEditing(null);
+      await load();
+      setNotice('Gespeichert.');
+      return result;
+    } catch (err) { setError(err.message); return null; }
+    finally {setBusy(false);}
+  }
+  const refresh = async () => {try {await load(); setError('');} catch (err) {setError(err.message);}};
+  const errors = error && <div role="alert" className="twin-error"><p>{error}</p>
+    <button className="btn" onClick={refresh}>Neu laden</button> <a href={`/login?next=/client/${clientId}/twin`}>Anmelden</a></div>;
+  if (!data) return <div className="twin-page">{errors || <p role="status">Twin wird geladen…</p>}</div>;
+  const statements = (key) => data.statements.filter(row => row.key === key);
+  const active = (row) => !['Rejected', 'Archived'].includes(row.fact_status);
+  const visible = data.fields.filter(field => {
+    const rows = statements(field.key);
+    return (!section || field.section === section) &&
+      (!query || `${field.key} ${field.label} ${rows.map(r => r.value).join(' ')}`.toLowerCase().includes(query.toLowerCase())) &&
+      (filter === 'all' || filter === 'required' && field.requirement === 'Pflicht' ||
+       filter === 'missing' && data.progress.missing.includes(field.key) ||
+       filter === 'answered' && rows.some(active) || filter === 'review' && rows.some(r => active(r) && !r.verified_at));
+  });
+  return <div className="twin-page">
+    <header><p className="twin-eyebrow">CLIENT TWIN · {data.client.name}</p><h1>Was wir wissen. Und woher.</h1>
+      <p>Jede Aussage mit ihrer Quelle, ihrem Stand und ihrer Freigabe.</p>
+      <div className="twin-toolbar"><button className="btn" onClick={() => setImporting(!importing)}>Fragebogen importieren</button>
+        <a href={`/client/${clientId}/profil`}>Profil, Kickoff & Kommunikationsguide →</a></div>
+    </header>
+    <section className="twin-progress" aria-label="Vollständigkeit">
+      <strong>{data.progress.percent} % vollständig</strong>
+      <progress max="100" value={data.progress.percent} aria-label="Beantwortete Pflichtfelder" />
+      <span>{data.progress.required_filled} / {data.progress.required_total} Pflichtfelder beantwortet</span>
+      <span>{data.progress.verified} Aussagen unabhängig bestätigt</span>
+      <small>Vollständigkeit misst beantwortete Pflichtfelder. Sie ist keine Bestätigung ihrer Richtigkeit.</small>
+    </section>
+    {errors}{notice && <p role="status">{notice}</p>}
+    {importing && <ImportPanel clientId={clientId} onImported={async result => {
+      await load(); setNotice(`${result.created} Aussagen importiert; ${result.skipped} bereits vorhanden.`);
+    }} />}
+    {editing && <StatementEditor key={editing.row?.id ?? editing.field.key} field={editing.field} row={editing.row}
+      options={data.options} busy={busy} onCancel={() => setEditing(null)} onSave={payload => mutate(
+        editing.row ? `/statements/${editing.row.id}` : '/statements',
+        {...payload, ...(editing.row ? {revision: editing.row.revision} : {})}, editing.row ? 'PUT' : 'POST')} />}
+    <div className="twin-toolbar twin-filters">
+      <label>Suche<input type="search" value={query} onChange={e => {setQuery(e.target.value); setLimit(20);}} placeholder="Feld oder Aussage suchen" /></label>
+      <label>Bereich<select aria-label="Bereich" value={section} onChange={e => {setSection(e.target.value); setLimit(20);}}>
+        <option value="">Alle Bereiche</option>{[...new Set(data.fields.map(f => f.section))].map(s => <option key={s}>{s}</option>)}</select></label>
+      <label>Anzeige<select aria-label="Anzeige" value={filter} onChange={e => {setFilter(e.target.value); setLimit(20);}}>
+        <option value="all">Alle Felder</option><option value="required">Pflichtfelder</option><option value="missing">Fehlende Pflichtfelder</option>
+        <option value="answered">Mit Aussagen</option><option value="review">Bestätigung offen</option></select></label>
+    </div>
+    <p className="twin-muted">{visible.length} Felder · mehrere Aussagen je Feld möglich</p>
+    {visible.slice(0, limit).map(field => <section className="twin-field" key={field.key}>
+      <div className="twin-field-head"><div><small>{field.key} · {field.group} · {field.requirement}</small><h2>{field.label}</h2></div>
+        <button className="btn" onClick={() => setEditing({field})}>Aussage ergänzen</button></div>
+      {!statements(field.key).length && <p className="twin-muted">Noch keine Aussage hinterlegt.</p>}
+      {statements(field.key).map(row => <Statement key={row.id} row={row} clientId={clientId} busy={busy}
+        onEdit={() => setEditing({field, row})} onAction={(action, note = '') => mutate(`/statements/${row.id}/${action}`, {revision: row.revision, note})} />)}
+    </section>)}
+    {!visible.length && <p>Keine passenden Felder.</p>}
+    {limit < visible.length && <button className="btn" onClick={() => setLimit(limit + 20)}>Weitere Felder anzeigen</button>}
+  </div>;
+}
+
+function Statement({row, clientId, busy, onEdit, onAction}) {
+  const [confirming, setConfirming] = useState(false);
+  const [note, setNote] = useState('');
+  const [history, setHistory] = useState(null);
+  const [historyError, setHistoryError] = useState('');
+  useEffect(() => {setHistory(null);}, [row.revision]);
+  const inactive = ['Rejected', 'Archived'].includes(row.fact_status);
+  return <article className={`twin-statement ${inactive ? 'twin-inactive' : ''}`}>
+    <div className="twin-badges"><span>{row.evidence_type || 'Herkunft unbekannt'}</span><span>{row.fact_status || 'Needs Verification'}</span>
+      <span>{row.verified_at && !inactive ? 'Unabhängig bestätigt' : 'Nicht unabhängig bestätigt'}</span></div>
+    <p className="twin-value">{row.value}</p>
+    <dl className="twin-metadata">
+      <div><dt>Quelle</dt><dd>{/^https?:\/\//i.test(row.source_url) ? <a href={row.source_url} target="_blank" rel="noreferrer">{row.source_title || row.source_url}</a> : row.source_title || 'Nicht hinterlegt'}</dd></div>
+      <div><dt>Stand</dt><dd>{row.as_of?.slice(0, 10) || 'Unbekannt'}</dd></div>
+      <div><dt>Confidence</dt><dd>{row.confidence || 'Unknown'}</dd></div>
+      <div><dt>Vertraulichkeit</dt><dd>{row.confidentiality || 'Unbekannt'}</dd></div>
+      <div><dt>Externe Nutzung</dt><dd>{row.external_use || 'Freigabe erforderlich'}</dd></div>
+    </dl>
+    {row.note && <p>{row.note}</p>}{row.verified_at && <p className="twin-muted">Geprüft von {row.verified_by}: {row.verification_note}</p>}
+    <div className="twin-toolbar"><button className="btn" disabled={busy} onClick={onEdit}>Bearbeiten</button>
+      {!inactive && <><button className="btn" disabled={busy} onClick={() => setConfirming(!confirming)}>Bestätigen</button>
+        <button className="btn" disabled={busy} onClick={() => onAction('reject')}>Verwerfen</button>
+        <button className="btn" disabled={busy} onClick={() => onAction('archive')}>Archivieren</button></>}
+      <button className="btn" onClick={async () => {
+        if (history) {setHistory(null); return;}
+        try {setHistory(await twinRequest(clientId, `/statements/${row.id}/history`)); setHistoryError('');}
+        catch (err) {setHistoryError(err.message);}
+      }}>Historie</button></div>
+    {confirming && <form className="twin-confirm" onSubmit={async e => {e.preventDefault(); if (await onAction('confirm', note)) setConfirming(false);}}>
+      <p>Als unabhängig belegten Fakt bestätigen. Eine Quelle vom Typ Media, External Research, Study oder Public Database muss hinterlegt sein. Die externe Freigabe bleibt separat.</p>
+      <label>Prüfvermerk<textarea aria-label="Prüfvermerk" required value={note} maxLength={5000} onChange={e => setNote(e.target.value)} /></label>
+      <button className="btn" disabled={busy}>Unabhängige Bestätigung speichern</button>
+    </form>}
+    {historyError && <p role="alert">{historyError}</p>}
+    {history && <div className="twin-history"><h3>Frühere Fassungen</h3>{history.length ? history.map((item, i) => <div key={i}>
+      <small>{item.changed_at} · {item.changed_by}</small><p>{item.snapshot.value}</p>
+      <p>{item.snapshot.evidence_type || 'Unbekannt'} · {item.snapshot.fact_status || 'Needs Verification'} · {item.snapshot.source_title || item.snapshot.source_url || 'Ohne Quelle'}</p>
+    </div>) : <p>Noch keine Änderungen.</p>}</div>}
+  </article>;
+}
+
+function StatementEditor({field, row, options, busy, onCancel, onSave}) {
+  const [values, setValues] = useState(() => ({key: field.key, value: row?.value || '', source_title: row?.source_title || '',
+    source_url: row?.source_url || '', as_of: row?.as_of?.slice(0, 10) || '', note: row?.note || '',
+    verification_note: row?.verification_note || '', ...Object.fromEntries(Object.keys(labels).map(key => [key, row?.[key] || (key === 'input_owner' ? field.input_owner : key === 'evidence_type' && field.key.startsWith('C') ? 'RAUTE Hypothesis' : key === 'evidence_type' && field.key.startsWith('D') ? 'External Observation' : defaults[key])]))}));
+  const input = (key) => ({'aria-label': labels[key] || ({value:'Aussage',source_title:'Quelle / Dokument',source_url:'Quellen-URL',as_of:'Stand der Aussage',note:'Notizen'})[key], value: values[key], onChange: e => setValues({...values, [key]: e.target.value})});
+  return <form className="twin-editor" aria-label="Aussage bearbeiten" onSubmit={e => {e.preventDefault(); onSave({...values, as_of: values.as_of || null});}}>
+    <h2>{row ? 'Aussage bearbeiten' : 'Neue Aussage'} · {field.key}</h2><p>{field.label}</p>
+    {row?.verified_at && <p>Ändern hebt die bisherige Bestätigung auf. Danach die Aussage erneut prüfen.</p>}
+    <label>Aussage<textarea autoFocus required maxLength={20000} {...input('value')} /></label>
+    <div className="twin-form-grid">
+      <label>Quelle / Dokument<input maxLength={2000} {...input('source_title')} /></label>
+      <label>Quellen-URL<input type="url" maxLength={2000} {...input('source_url')} /></label>
+      <label>Stand der Aussage<input type="date" {...input('as_of')} /></label>
+      {Object.entries(labels).map(([key, label]) => <label key={key}>{label}<select {...input(key)}>
+        {options[key].map(value => <option key={value}>{value}</option>)}</select></label>)}
+    </div>
+    <label>Notizen<textarea maxLength={5000} {...input('note')} /></label>
+    <div className="twin-toolbar"><button className="btn" disabled={busy}>{busy ? 'Speichert…' : 'Aussage speichern'}</button>
+      <button className="btn" type="button" disabled={busy} onClick={onCancel}>Abbrechen</button></div>
+  </form>;
+}
+
+export function ImportPanel({clientId, onImported}) {
+  const [file, setFile] = useState(null);
+  const [preview, setPreview] = useState(null);
+  const [mapping, setMapping] = useState({});
+  const [selected, setSelected] = useState([]);
+  const [dirty, setDirty] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  async function review() {
+    if (!file) return;
+    setBusy(true); setError('');
+    try {
+      const form = new FormData(); form.append('file', file); form.append('mapping', JSON.stringify(mapping));
+      const result = await twinRequest(clientId, '/import/preview', {method: 'POST', body: form});
+      setPreview(result); setMapping(result.mapping); setSelected(result.rows.filter(r => r.state === 'ready').map(r => r.index)); setDirty(false);
+    } catch (err) {setError(err.message); setDirty(true);}
+    finally {setBusy(false);}
+  }
+  return <section className="twin-import"><h2>Fragebogen importieren</h2>
+    <p>RAUTE-Arbeitsmappe (.xlsx) oder CSV, bis 5 MB. Die Vorschau verändert noch keine Aussagen. Vorhandene Aussagen bleiben erhalten.</p>
+    <label>Datei<input type="file" accept=".xlsx,.csv" onChange={e => {setFile(e.target.files[0]); setPreview(null); setMapping({}); setDirty(true);}} /></label>
+    <button className="btn" disabled={!file || busy} onClick={review}>{busy ? 'Prüft…' : 'Vorschau erstellen'}</button>
+    {error && <p role="alert">{error}</p>}
+    {preview && <>
+      <details><summary>Spalten zuordnen</summary><div className="twin-form-grid">
+        {Object.entries(preview.mapping).map(([key]) => <label key={key}>{({key:'Feld-ID', value:'Antwort', source_title:'Quelle / Dokument', source_url:'Quellen-URL', as_of:'Datum', note:'Notizen', ...labels})[key] || key}
+          <select value={mapping[key] || ''} onChange={e => {setMapping({...mapping, [key]: e.target.value}); setDirty(true);}}>
+            <option value="">Nicht zugeordnet</option>{preview.columns.map(column => <option key={column}>{column}</option>)}</select></label>)}
+      </div><button className="btn" onClick={review} disabled={busy}>Zuordnung prüfen</button></details>
+      <p>{selected.length} ausgewählt · {preview.rows.filter(r => r.state === 'error').length} Fehler · {preview.rows.filter(r => r.state === 'empty').length} unbeantwortet · {preview.rows.filter(r => r.state === 'duplicate').length} doppelt</p>
+      <div className="twin-import-rows">{preview.rows.filter(row => row.state !== 'empty').map(row => <article key={row.index}>
+        <label>{row.state === 'ready' && <input type="checkbox" checked={selected.includes(row.index)} onChange={e => setSelected(e.target.checked ? [...selected, row.index] : selected.filter(i => i !== row.index))} />}
+          {row.sheet}, Zeile {row.line} · {row.data?.key || 'Nicht zugeordnet'}</label>
+        <p className="twin-value">{row.data?.value}</p><p>{row.message}</p>
+        {row.data && <details><summary>Herkunft und Metadaten prüfen</summary><dl className="twin-metadata">{Object.entries(row.data).filter(([key]) => !['key','value'].includes(key)).map(([key,value]) =>
+          <div key={key}><dt>{labels[key] || key}</dt><dd>{value || 'Nicht hinterlegt'}</dd></div>)}</dl></details>}
+      </article>)}</div>
+      {dirty && <p>Zuordnung geändert. Vorschau vor dem Import erneut prüfen.</p>}
+      <button className="btn" disabled={busy || dirty || !selected.length} onClick={async () => {
+        setBusy(true); setError('');
+        try {
+          const result = await twinRequest(clientId, '/import/commit', {method:'POST', body:JSON.stringify({preview_id:preview.id, selected})});
+          setPreview(null); setSelected([]); await onImported(result);
+        } catch (err) {setError(err.message);}
+        finally {setBusy(false);}
+      }}>Ausgewählte Aussagen importieren</button>
+    </>}
+  </section>;
+}

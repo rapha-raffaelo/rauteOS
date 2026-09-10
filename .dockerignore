@@ -29,3 +29,6 @@
 newspulse/tests
 features
 **/.DS_Store
+
+**/node_modules
+newspulse/src/newspulse/web/static/react

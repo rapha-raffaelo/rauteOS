@@ -123,9 +123,8 @@ def _run_research_all() -> None:
                         profile_refresh.adopt(
                             session, client, proposed_by=config.review_model()
                         )
-                        if len(profiles.stored(session, client.id)) >= len(
-                            profiles.FIELDS
-                        ):
+                        facts = profiles.stored(session, client.id)
+                        if all(f.key in facts for f in profiles.FIELDS):
                             continue
                         _errors.pop(client.id, None)
                         found = profile_refresh.refresh(session, client, now=now)
@@ -271,7 +270,7 @@ def render(
             "client": client,
             "fields": profiles.FIELDS,
             "facts": facts,
-            "filled": len(facts),
+            "filled": sum(f.key in facts for f in profiles.FIELDS),
             "fillable": profiles.FILLABLE,
             "proposals": pending,
             # How much of this mandate's own foundation exists. On the profile
