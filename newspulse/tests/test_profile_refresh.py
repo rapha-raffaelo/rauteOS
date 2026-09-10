@@ -1202,7 +1202,7 @@ def test_the_client_list_carries_the_check_age_too(web_factory, web):
         _client(session, name="Alt", checked=dt.datetime.now(dt.UTC) - dt.timedelta(days=84))
         _client(session, name="Nie", checked=None)
 
-    body = web.get("/clients").text
+    body = web.get("/clients?view=classic").text
 
     assert "Zuletzt geprüft vor 84 Tagen" in body
     assert "Noch nie geprüft" in body

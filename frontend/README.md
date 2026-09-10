@@ -60,3 +60,10 @@ run only after explicit requests; sentence evidence links, warnings and stale
 checks remain visible beside editable text. Existing pitch approval and sending
 are linked from the saved pitch. Draft activity does not increase Desk delivery
 counts.
+
+The primary React destinations are `/desk`, `/clients`, `/assets`, `/ask`,
+`/client/{id}/overview`, `/client/{id}/actions`, `/client/{id}/opportunities` and
+`/client/{id}/twin`. Clients retains `/clients?view=classic` as a fallback.
+Ask uses the existing SSE endpoint with explicit global/client/opportunity/asset
+context, separate browser-session threads and read-only suggestions. The header
+and saved text links supply context; no model request runs just by opening a page.

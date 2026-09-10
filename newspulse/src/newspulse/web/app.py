@@ -226,12 +226,12 @@ def assistant_context(request) -> dict:
         segment = path.split("/")[2] if len(path.split("/")) > 2 else ""
         if segment.isdigit():
             params["client_id"] = segment
-    if path == "/":
+    if path in {"/", "/today", "/archive"}:
         day = request.query_params.get("date")
         if day:
             params["date"] = day
     client = request.query_params.get("client")
-    if path == "/" and client and client.isdigit():
+    if path in {"/", "/today", "/archive"} and client and client.isdigit():
         params["client_id"] = client
     return params
 
@@ -358,7 +358,7 @@ def create_app() -> FastAPI:
     # Imported here (not at module top) to avoid a circular import: the route
     # modules import ``get_db``/``templates`` from this module.
     from .routes import (
-        advisory, archive, assets_view, assistant, client, contacts,
+        advisory, archive, assets_view, assistant, client, contacts, workbench,
         crisis_view, desk_api, desk_view, twin_api, twin_view, journalists_api, journalists_view, opportunities_api, opportunities_view, activation_api, guide_routes, issues_view,
         language, login, onboarding as onboarding_routes,
         opportunity_view,
@@ -376,6 +376,7 @@ def create_app() -> FastAPI:
 
     # First, so the sign-in pages exist before anything that needs a session.
     app.include_router(login.router)
+    app.include_router(workbench.router)
     app.include_router(desk_view.router)
     app.include_router(desk_api.router)
     app.include_router(twin_api.router)

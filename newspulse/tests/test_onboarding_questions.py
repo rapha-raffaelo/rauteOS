@@ -1423,7 +1423,7 @@ def test_the_client_list_carries_the_completeness_line(factory, web):
         client = _client(session)
         _kickoff(session, client)
 
-    body = web.get("/clients").text
+    body = web.get("/clients?view=classic").text
 
     assert f"5/{onboarding.TOTAL}" in body
     assert "Fundament" in body
@@ -1433,7 +1433,7 @@ def test_the_client_list_says_plainly_when_there_is_no_questionnaire(factory, we
     with factory() as session:
         _client(session)
 
-    body = web.get("/clients").text
+    body = web.get("/clients?view=classic").text
 
     assert "kein Fragebogen" in body
 

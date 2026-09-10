@@ -475,7 +475,6 @@ def _portfolio_counts(
 # always which one. The day view keeps its own address at /today for the mornings
 # when the question really is "what happened anywhere".
 @router.get("/", response_class=HTMLResponse)
-@router.get("/clients", response_class=HTMLResponse)
 def clients_index(
     request: Request, session: Session = Depends(get_db)
 ) -> HTMLResponse:

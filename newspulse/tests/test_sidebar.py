@@ -139,7 +139,7 @@ def test_the_current_mandate_is_marked(factory, client):
     for path in (f"/client/{alpha_id}", f"/client/{alpha_id}/advice",
                  f"/client/{alpha_id}/profil"):
         side = _sidebar(client.get(path).text)
-        row = [ln for ln in side.splitlines() if f'href="/client/{alpha_id}/heute"' in ln]
+        row = [ln for ln in side.splitlines() if f'href="/client/{alpha_id}/overview"' in ln]
         assert row and "is-on" in row[0], path
 
 

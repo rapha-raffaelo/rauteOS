@@ -231,7 +231,7 @@ def _request(path: str, db=None, **query: str):
     ("path", "area"),
     [
         ("/", "Portfolio"),
-        ("/clients", "Portfolio"),
+        ("/clients", "Clients"),
         ("/today", "Heute"),
         ("/archive", "Archiv"),
         ("/contacts", "Kontakte"),
@@ -339,36 +339,22 @@ def test_the_field_keeps_the_term_while_the_archive_is_the_page(web, mandate):
 # --- Ask RAUTE --------------------------------------------------------------------
 
 
-def test_ask_raute_opens_the_assistant_that_already_runs(web, mandate):
-    """No new page and no new route: the href is this page with the drawer
-    unfolded, which is how the layout has opened it all along."""
+def test_ask_raute_opens_the_react_destination(web, mandate):
     bar = _topbar(web.get("/today").text)
-    assert "Ask RAUTE" in bar
-    target = next(url for url in _links(bar) if "assistant=1" in url)
-
-    opened = web.get(target)
-    assert opened.status_code == 200
-    drawer = opened.text.split('id="assistant-drawer"', 1)[1].split(">", 1)[0]
-    assert "hidden" not in drawer, "the drawer should be unfolded on arrival"
+    target = next(url for url in _links(bar) if url.startswith("/ask?"))
+    assert web.get(target).status_code == 200
 
 
-def test_ask_raute_keeps_the_page_it_was_pressed_on(web, mandate):
-    """Pressed on a filtered archive, it must come back to that archive — a
-    control that drops the reader's filters is a control that gets avoided."""
-    bar = _topbar(web.get("/archive", params={"q": "Netzentgelte"}).text)
-    target = next(url for url in _links(bar) if "assistant=1" in url)
-    assert target.startswith("/archive?")
-    assert "q=Netzentgelte" in target
+def test_ask_raute_keeps_the_mandate_context(web, mandate):
+    bar = _topbar(web.get(f"/client/{mandate.id}/heute").text)
+    target = next(url for url in _links(bar) if url.startswith("/ask?"))
+    assert f"client_id={mandate.id}" in target
 
 
-def test_ask_raute_does_not_stack_up_when_it_is_pressed_twice(web, mandate):
-    """Without JavaScript the link lands on a page that already carries
-    ?assistant, where the bar renders the link again. It has to *set* the flag
-    rather than append it, or the URL grows one &assistant=1 per press."""
-    page = web.get("/archive", params={"q": "Netzentgelte", "assistant": "1"}).text
-    target = next(url for url in _links(_topbar(page)) if "assistant=1" in url)
-    assert target.count("assistant=1") == 1, target
-    assert "q=Netzentgelte" in target, "and it still keeps the filter underneath"
+def test_classic_assistant_drawer_remains_available(web, mandate):
+    page = web.get("/archive", params={"assistant": "1"}).text
+    drawer = page.split('id="assistant-drawer"', 1)[1].split(">", 1)[0]
+    assert "hidden" not in drawer
 
 
 # --- The tab strip ----------------------------------------------------------------
@@ -434,8 +420,8 @@ def test_the_sidebar_keeps_its_rows_and_only_changes_how_they_look(web, mandate)
     page = web.get("/today").text
     side = page.split('<aside class="side">', 1)[1].split("</aside>", 1)[0]
     rows = re.findall(r'<a href="([^"]+)" class="side__row', side)
-    assert rows[:6] == ["/desk", "/today", "/", "/archive", "/journalists", "/contacts"]
-    assert f"/client/{mandate.id}/heute" in side
+    assert rows[:9] == ["/desk", "/clients", "/assets", "/ask", "/today", "/", "/archive", "/journalists", "/contacts"]
+    assert f"/client/{mandate.id}/overview" in side
     assert "/settings" in side
 
 

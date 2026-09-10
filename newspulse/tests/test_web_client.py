@@ -424,7 +424,7 @@ def test_clients_index_lists_portfolio_with_counts(factory, client):
         )
         s.commit()
 
-    body = client.get("/clients").text
+    body = client.get("/clients?view=classic").text
 
     assert "Alpha AG" in body
     assert "Beta AG" in body
@@ -450,7 +450,7 @@ def test_clients_index_lists_portfolio_with_counts(factory, client):
 def test_clients_index_excludes_irrelevant_and_handles_empty(factory, client):
     """A relevance_score=0 pair is not counted, and no clients renders an empty
     state rather than an error."""
-    assert "Noch keine Mandanten" in client.get("/clients").text
+    assert "Noch keine Mandanten" in client.get("/clients?view=classic").text
 
     with factory() as s:
         c = _seed_client(s, name="Alpha AG")
@@ -460,7 +460,7 @@ def test_clients_index_excludes_irrelevant_and_handles_empty(factory, client):
         )
         s.commit()
 
-    body = client.get("/clients").text
+    body = client.get("/clients?view=classic").text
     # A dismissed match must not be counted anywhere on the row.
     assert _counts(_content(body).split("Alpha AG", 1)[1]) == ["0", "0", "0"]
 
@@ -558,7 +558,7 @@ def test_a_client_card_carries_no_nested_links(factory, client):
         a.competitors.append(b)
         s.commit()
 
-    body = client.get("/clients").text
+    body = client.get("/clients?view=classic").text
     card_start = body.index('class="pcard')
     card_end = body.index("</a>", card_start)
     card = body[card_start:card_end]

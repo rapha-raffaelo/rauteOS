@@ -50,7 +50,7 @@ export function DeskPage({ translations = {}, language = 'de' }) {
           {['Mandant', 'Twin', 'Actions (Monat)', 'Vertrag / geliefert', 'Opportunities', 'Status'].map((label) =>
             <th scope="col" key={label}>{t(label)}</th>)}
         </tr></thead><tbody>{board.rows.map((row) => <tr key={row.client.id}>
-          <td><a className="board__nm" href={`/client/${row.client.id}/heute`}>{row.client.name}</a>
+          <td><a className="board__nm" href={`/client/${row.client.id}/overview`}>{row.client.name}</a>
             {row.client.industry && <div className="board__sec">{row.client.industry.slice(0, 44)}</div>}</td>
           <td><div className="twin" title={row.twin.required_total != null ? `${row.twin.required_filled}/${row.twin.required_total} Pflichtfelder beantwortet` : `${t('Profil')} ${row.twin.profile_filled}/${row.twin.profile_total}`}>
             <span className="twin__n">{row.twin.percent} %</span>

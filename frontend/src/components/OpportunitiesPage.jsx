@@ -23,7 +23,7 @@ export function OpportunityWorkspace({clientId,kind,identity,onChanged}){
     setNotice(activate?'Gelegenheit aktiviert. Wählen Sie den nächsten Arbeitsschritt.':'Auswahl gespeichert.');onChanged?.();
   }catch(e){setError(e.message);}finally{setBusy(false);}}
   if(!data)return <><ErrorMessage error={error}/>{!error&&<p role="status">Workspace wird geladen…</p>}</>;
-  return <div><p className="twin-eyebrow">{kind==='detected'?'Erkannte Gelegenheit':'Entwickelte Gelegenheit'} · {statusLabels[data.status]} · {data.evidence_type}</p><h2 className="opportunity-title">{data.title}</h2>
+  return <div><p className="twin-eyebrow">{kind==='detected'?'Erkannte Gelegenheit':'Entwickelte Gelegenheit'} · {statusLabels[data.status]} · {data.evidence_type}</p><h2 className="opportunity-title">{data.title}</h2><p><a href={`/ask?scope=opportunity&client_id=${clientId}&opportunity_kind=${kind}&opportunity_id=${identity}`}>Ask RAUTE zu dieser Opportunity</a></p>
     <div className="opportunity-grid"><section className="twin-field"><h3>Was ist die Chance?</h3><p>{data.situation}</p><h3>Warum relevant?</h3><p>{data.relevance}</p></section>
       <section className="twin-field"><h3>Warum jetzt?</h3><p>{data.why_now}</p>{data.window_ends_at?<p>Nachrichtenfenster bis {date(data.window_ends_at)}</p>:<p>{data.proposed_window_days?`Vorgeschlagenes Planungsfenster: ${data.proposed_window_days} Tage. Keine bestätigte externe Frist.`:'Kein bestätigtes Zeitfenster.'}</p>}
         <h3>Empfohlene Maßnahmen</h3><ul>{data.recommended_actions.map(a=><li key={a}>{actionLabels[a]||a}</li>)}</ul></section></div>

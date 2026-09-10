@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}{{ page | title }} · RauteOS{% endblock %}
+{% block pagetitle %}{{ 'Ask RAUTE' if page == 'ask' else page | title }}{% endblock %}
+{% block content %}
+{% set t = translator(request) %}
+{% if client %}{% set active = 'client_overview' if page == 'overview' else page %}{% include '_client_tabs.html' %}{% endif %}
+{% if frontend %}
+{% for href in frontend.css %}<link rel="stylesheet" href="{{ href }}">{% endfor %}
+<div id="react-workbench" data-page="{{ page }}" data-client-id="{{ client.id if client else '' }}"><p role="status">Ansicht wird geladen…</p></div>
+<script type="module" src="{{ frontend.script }}"></script>
+{% else %}<p>Die Oberfläche ist noch nicht gebaut.</p>{% endif %}
+<p><a href="/desk?view=classic">Klassischen Desk öffnen</a></p>
+{% endblock %}

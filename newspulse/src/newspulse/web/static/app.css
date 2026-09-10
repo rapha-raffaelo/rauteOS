@@ -3166,3 +3166,9 @@ button:disabled { opacity: .55; cursor: default; }
   .sheet { padding: var(--s3); }
   .sheet__b { padding: var(--s4); }
 }
+
+/* Keep the primary client workflow visible, with older tools still reachable. */
+.subtabs-legacy {position:relative;}
+.subtabs-legacy summary {cursor:pointer;padding:10px;white-space:nowrap;}
+.subtabs-legacy[open] {display:flex;flex-wrap:wrap;gap:8px;}
+.subtabs-legacy a {display:inline-flex;padding:10px;}

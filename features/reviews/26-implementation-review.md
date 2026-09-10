@@ -226,3 +226,43 @@ email creation, claim warnings, editing, rechecking, selected-recipient pitches,
 reload and a 390px layout without overflow or JavaScript errors. Browser model
 responses were explicit fixtures in an isolated database; no live model or
 provider requests, approvals or sends were performed.
+
+
+## Phase 5 implementation — 10 September 2026
+
+Primary navigation is Desk, Clients, Assets and Ask RAUTE. Client workspaces
+link Overview, Opportunities, Twin, Actions, Ask RAUTE and opportunity development.
+Older client tools remain in an expandable group; the old portfolio is available
+at `/` and `/clients?view=classic`. The Desk and sidebar open the React Overview.
+
+React Clients and Overview reuse Desk promises, actual delivery counts and Twin
+gaps. Assets lists recent drafts and released texts and opens the owning
+opportunity workspace where available. Actions combines existing released texts,
+released reports and off-tool action records. Each history list explicitly caps
+results at 100; the quarter summary still counts every qualifying delivery.
+
+Ask RAUTE is a React streaming conversation with global, client, opportunity and
+saved-asset scopes. It uses Twin provenance, delivery gaps, sources, opportunity
+choices, dated journalist research and historical checks. Scoped IDs are validated
+before streaming, and database transactions end before model calls. Context
+switches close outstanding streams and isolate browser-session conversations.
+The header follows the selected opportunity; asset editors link the saved text.
+Answers remain suggestions: there is no new save, approval or send operation.
+
+Validation: 28 React tests and the production build pass. The full Python run
+had 3,203 passes and five assertions from the old navigation test definitions
+loaded before the navigation changes. All 66 current shell, sidebar and primary
+read-model tests passed afterward; all five focused context tests also pass.
+The wider targeted run passed 289 tests, with its one client-context failure
+fixed by retaining the client through the existing `/heute` redirect.
+Chromium exercised every new destination, opportunity and asset Ask contexts,
+header context, conversation reload/switching, workspace asset links and 390px
+layouts without JavaScript errors or overflow. Streaming used an explicit fixture
+in the isolated demo database.
+
+All six planned implementation phases now have working local paths. Live model
+and news-provider behavior still needs an environment with configured credentials;
+no remote deployment, sending or production database changes were performed.
+Keyword-based journalist matching, bounded research samples and automatic
+evidence comparisons retain the limitations documented above. The UI migration
+keeps legacy specialist tools available rather than rewriting those engines.

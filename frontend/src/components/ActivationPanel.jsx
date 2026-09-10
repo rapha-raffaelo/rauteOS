@@ -18,7 +18,7 @@ function EvidenceReview({text}){
    </li>)}</ol>}</>}
  </div>;
 }
-function TextEditor({text,path,onSaved,onCheck,busy}){
+function TextEditor({text,clientId,path,onSaved,onCheck,busy}){
  const [title,setTitle]=useState(text.title),[body,setBody]=useState(text.body),[error,setError]=useState(''),[saving,setSaving]=useState(false),[notice,setNotice]=useState('');
  async function save(event){event.preventDefault();setSaving(true);setError('');try{onSaved(await request(`${path}/${text.type}/${text.id}`,{method:'PUT',body:JSON.stringify({digest:text.digest,title,body})}));}catch(e){setError(e.message);}finally{setSaving(false);}}
  async function copy(){try{await navigator.clipboard.writeText(`${title}\n\n${body}`);setNotice('Text kopiert.');}catch{setNotice('Bitte den Text im Feld markieren und kopieren.');}}
@@ -27,8 +27,9 @@ function TextEditor({text,path,onSaved,onCheck,busy}){
   <form onSubmit={save}><label>Betreff / Titel<input aria-label={`Titel ${text.id}`} value={title} onChange={e=>setTitle(e.target.value)} disabled={Boolean(text.released_at)}/></label>
    <label>Text<textarea aria-label={`Text ${text.id}`} value={body} onChange={e=>setBody(e.target.value)} disabled={Boolean(text.released_at)} rows={12}/></label>
    <div className="twin-toolbar">{!text.released_at&&<button className="btn" disabled={saving||busy}>Änderungen speichern</button>}
+    <a className="btn" href={`/ask?scope=asset&client_id=${clientId}&asset_type=${text.type}&asset_id=${text.id}`}>Ask RAUTE zum gespeicherten Text</a>
     <button type="button" className="btn" onClick={copy}>Text kopieren</button>
-    <button type="button" className="btn" disabled={busy||title!==text.title||body!==text.body} onClick={()=>onCheck(text)}>Aussagen prüfen</button>
+    <button type="button" className="btn" disabled={Boolean(text.released_at)||busy||title!==text.title||body!==text.body} onClick={()=>onCheck(text)}>Aussagen prüfen</button>
     {text.type==='outreach'&&<a className="btn" href={text.href}>Kundenfreigabe und Versand öffnen</a>}</div>
   </form><EvidenceReview text={{...text,quality_stale:text.quality_stale||title!==text.title||body!==text.body}}/>
  </article>;
@@ -49,7 +50,7 @@ export function ActivationPanel({clientId,kind,identity,contacts=[],onCompleted}
    <label>{format==='custom'?'Ihr Auftrag':'Ergänzender Auftrag (optional)'}<textarea aria-label="Ergänzender Auftrag" required={format==='custom'} value={instruction} onChange={e=>setInstruction(e.target.value)}/></label>
    <button className="btn btn--go" disabled={busy||running}>{running?'Text und Prüfung in Arbeit…':'Entwurf erstellen'}</button></form>
    {data.latest&&<p role="status">{data.latest.status==='running'?'In Arbeit':data.latest.status==='complete'?'Arbeitsschritt abgeschlossen':data.latest.status==='stale'?'Prüfung veraltet':'Arbeitsschritt fehlgeschlagen'}{data.latest.note&&` · ${data.latest.note}`}</p>}
-   {data.texts.map(text=><TextEditor key={`${text.type}-${text.id}-${text.digest}`} text={text} path={path} busy={busy||running} onSaved={value=>{setData(value);onCompleted?.();}} onCheck={check}/>)}
+   {data.texts.map(text=><TextEditor clientId={clientId} key={`${text.type}-${text.id}-${text.digest}`} text={text} path={path} busy={busy||running} onSaved={value=>{setData(value);onCompleted?.();}} onCheck={check}/>)}
   </>}
  </section>;
 }

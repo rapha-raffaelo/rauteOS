@@ -116,6 +116,10 @@ class NavPath:
 #: breadcrumb ends up naming a place the navigation does not. First match wins,
 #: and no prefix here is a prefix of another.
 _AREAS: tuple[tuple[str, str], ...] = (
+    ("/desk", "Desk"),
+    ("/clients", "Clients"),
+    ("/assets", "Assets"),
+    ("/ask", "Ask RAUTE"),
     ("/today", "Heute"),
     ("/archive", "Archiv"),
     ("/journalists", "Journalisten"),
