@@ -977,6 +977,54 @@ class JournalistResearch(Base):
     note: Mapped[str] = mapped_column(Text, default="")
 
 
+
+class OpportunityWorkspace(Base):
+    """Saved choices around an existing detected opportunity or positioning angle."""
+    __tablename__ = "opportunity_workspaces"
+    __table_args__ = (UniqueConstraint("client_id", "context_kind", "context_id", name="uq_opportunity_workspace_context"),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    client_id: Mapped[int] = mapped_column(ForeignKey("clients.id", ondelete="CASCADE"), index=True)
+    context_kind: Mapped[str] = mapped_column(String(16))
+    context_id: Mapped[int] = mapped_column(Integer)
+    angle_id: Mapped[int | None] = mapped_column(ForeignKey("angles.id", ondelete="CASCADE"), nullable=True)
+    data: Mapped[dict] = mapped_column(JSON, default=dict)
+    storyline: Mapped[str] = mapped_column(Text, default="")
+    speaker_statement_id: Mapped[int | None] = mapped_column(ForeignKey("client_facts.id", ondelete="SET NULL"), nullable=True)
+    contact_ids: Mapped[list] = mapped_column(JSON, default=list)
+    status: Mapped[str] = mapped_column(String(16), default="draft")
+    revision: Mapped[int] = mapped_column(Integer, default=1)
+    created_at: Mapped[dt.datetime] = mapped_column(UTCDateTime(), default=_utcnow)
+    __mapper_args__ = {"version_id_col": revision}
+
+
+class OpportunityDevelopment(Base):
+    """An explicit request to develop ideas, including research gaps and sources."""
+    __tablename__ = "opportunity_developments"
+    __table_args__ = (Index("uq_opportunity_development_running", "client_id", unique=True,
+        sqlite_where=text("status = 'running'"), postgresql_where=text("status = 'running'")),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    client_id: Mapped[int] = mapped_column(ForeignKey("clients.id", ondelete="CASCADE"), index=True)
+    focus: Mapped[str] = mapped_column(String(300))
+    status: Mapped[str] = mapped_column(String(24), default="running")
+    started_at: Mapped[dt.datetime] = mapped_column(UTCDateTime(), default=_utcnow)
+    finished_at: Mapped[dt.datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+    queries: Mapped[list] = mapped_column(JSON, default=list)
+    sources: Mapped[list] = mapped_column(JSON, default=list)
+    workspace_ids: Mapped[list] = mapped_column(JSON, default=list)
+    note: Mapped[str] = mapped_column(Text, default="")
+    brain_version: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+
+class OpportunityEvent(Base):
+    """Opportunity activity, distinct from the delivery ledger."""
+    __tablename__ = "opportunity_events"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    workspace_id: Mapped[int] = mapped_column(ForeignKey("opportunity_workspaces.id", ondelete="CASCADE"), index=True)
+    kind: Mapped[str] = mapped_column(String(40))
+    detail: Mapped[dict] = mapped_column(JSON, default=dict)
+    actor: Mapped[str] = mapped_column(String(200), default="mensch")
+    created_at: Mapped[dt.datetime] = mapped_column(UTCDateTime(), default=_utcnow)
+
 class TopicHit(Base):
     """One market article the topic radar surfaced for one client.
 

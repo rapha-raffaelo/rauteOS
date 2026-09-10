@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Opportunities · {{ client.name }} · RauteOS{% endblock %}
+{% block pagetitle %}Opportunities{% endblock %}
+{% block content %}
+{% set t = translator(request) %}{% set active = 'opportunities' %}
+{% include '_client_tabs.html' %}
+{% if frontend %}
+{% for href in frontend.css %}<link rel="stylesheet" href="{{ href }}">{% endfor %}
+<div id="react-opportunities" data-client-id="{{ client.id }}"><p role="status">Opportunities werden geladen…</p></div>
+<script type="module" src="{{ frontend.script }}"></script>
+{% else %}<p>Die Opportunity-Oberfläche ist noch nicht verfügbar.</p>{% endif %}
+<p><a href="/client/{{ client.id }}/heute">Aktuelle Nachrichten öffnen</a></p>
+{% endblock %}

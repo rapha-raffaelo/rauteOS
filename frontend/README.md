@@ -46,3 +46,10 @@ research link includes its client, kind and ID. Only an explicit POST starts
 provider calls; GET reads the latest dated result. Research metadata is separate
 from coverage. Failed or unconfigured providers remain visible in the result.
 Run migration `0059_journalist_intelligence` before using this page.
+
+The opportunity list and workspace are at `/client/{id}/opportunities`.
+`?kind=detected&context={newsjack_id}` or `?kind=developed&context={angle_id}` opens
+one opportunity. Development and activation require explicit POSTs. A GET never
+creates an angle or starts a model/provider call. Migration
+`0060_opportunity_workspace` stores research attempts, selections and activity;
+activity does not count as delivered work on the Desk.

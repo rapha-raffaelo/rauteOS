@@ -166,3 +166,33 @@ The full Python regression run had 3,172 passes and one outdated sidebar-order
 assertion. After updating that assertion for the new Journalists destination
 and adding its breadcrumb, all 74 affected journalist/shell tests passed,
 including two additional worker lifecycle tests.
+
+## Phase 3 implementation — 10 September 2026
+
+- React opportunity list and unified workspace at `/client/{id}/opportunities`,
+  linked from the client tabs and existing detected-opportunity dossier.
+- Explicit development requests consult the Twin and positioning, then research
+  market, competitors, politics/regulation, studies/data and media coverage using
+  configured keyword-search providers. Each area retains provider availability,
+  failures and sampled source metadata. The model can return no viable idea.
+- Development works without a news article. Ideas remain `RAUTE Hypothesis`,
+  with risks, dated sources, proposed storylines, recommendations and snapshots
+  of cited Twin statements. Unknown source indices or statement IDs reject the
+  model result. Recent ideas enter the prompt; exact duplicate titles are skipped.
+- Migration `0060_opportunity_workspace` adds development runs, saved workspace
+  choices and opportunity activity. Existing detected records and positioning
+  angles remain the anchors; activation reuses the existing one-angle-per-news
+  constraint rather than creating a second opportunity domain.
+- Storyline, an available Twin speaker and selected journalists persist with
+  optimistic revisions. Closed news windows cannot be activated. Activation is
+  recorded as activity and does not count as delivery on the Desk.
+- The workspace shows rationale, timing, sources, evidence gaps, research,
+  choices, history and existing texts. The customer-email-first asset actions
+  and complete context transfer to generation are the next Phase 4 work.
+
+Validation: **85 targeted Python tests** passed for workspace, migrations and
+existing dossiers, then **66 workspace/shell tests** after bounding the Twin
+prompt; **20 React tests** and the production build pass. Chromium verified
+explicit generation, choice persistence, activation, reload and unchanged delivery
+counts, with no JavaScript errors or overflow at 390px. Browser generation used
+an explicitly stubbed model and disabled providers in an isolated database.

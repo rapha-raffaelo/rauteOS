@@ -31,6 +31,7 @@
   </div>
   {# The workspace, in the order a morning runs: what happened, what to say about
      it, who else is being written about, and then the standing material. #}
+  <a href="/client/{{ client.id }}/opportunities"{% if active == 'opportunities' %} class="active" aria-current="page"{% endif %}>Opportunities</a>
   <a href="/client/{{ client.id }}/twin"{% if active == 'twin' %} class="active" aria-current="page"{% endif %}>Twin</a>
   <a href="/client/{{ client.id }}/heute"{% if active == 'heute' %} class="active" aria-current="page"{% endif %}><svg class="ico subtabs__ico" aria-hidden="true"><use href="#ico-heute"></use></svg>{{ t("Heute") }}</a>
   {# One tab for everything drafted here. Impulse and Berichte were two, and read
