@@ -83,3 +83,32 @@ def test_opportunity_chat_carries_dated_journalist_research(db):
         opportunity_kind='developed',opportunity_id=1)
     assert 'Reporter Example' in text and 'https://example.org/story' in text
     assert 'archive_only' in text and 'not_configured' in text
+
+
+def test_developed_opportunities_and_activity_are_visible_without_inflating_delivery(web,db):
+    from newspulse.models import OpportunityWorkspace, OpportunityEvent
+    workspace=OpportunityWorkspace(client_id=1,context_kind='developed',context_id=1,angle_id=1,status='active')
+    db.add(workspace);db.flush()
+    db.add(OpportunityEvent(workspace_id=workspace.id,kind='activated',actor='Consultant',detail={'contact_ids':[7,8]}))
+    db.commit()
+    data=web.get('/api/v1/workbench/clients/1').json()
+    assert data['summary']['opportunities']==1
+    assert data['summary']['actions_quarter']['total']==0
+    assert data['activity'][0]['kind']=='activated'
+    assert data['activity'][0]['selected_journalists']==2
+    assert web.get('/api/v1/workbench/clients/2').json()['activity']==[]
+    workspace.status='closed';db.commit()
+    assert web.get('/api/v1/workbench/clients/1').json()['summary']['opportunities']==0
+
+
+def test_detected_angle_is_not_counted_twice_and_dismissed_ideas_are_excluded(db):
+    from newspulse import desk
+    from newspulse.models import Article, NewsjackOpportunity, Standing
+    now=dt.datetime.now(dt.UTC)
+    article=Article(title='News',url='https://example.org/test-count',source='Paper',published_at=now,title_hash='test-count')
+    db.add(article);db.flush()
+    detected=NewsjackOpportunity(client_id=1,article_id=article.id,standing=Standing.BELEGT,reason='Fits',window_ends_at=now+dt.timedelta(days=1))
+    db.add(detected);db.flush()
+    db.add(Angle(client_id=1,newsjack_id=detected.id,subject='Detected angle',message='Proposal',context='News'))
+    db.get(Angle,1).dismissed_at=now;db.commit()
+    assert desk._opportunity_counts(db,now)[1]==1

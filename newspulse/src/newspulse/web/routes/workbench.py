@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from ... import desk, workspaces
-from ...models import Client, Asset, Outreach, ClientAction, Report, OpportunityWorkspace
+from ...models import Client, Asset, Outreach, ClientAction, Report, OpportunityWorkspace, OpportunityEvent
 from .. import frontend
 from ..app import get_db, templates
 from ..mandates import mandate_or_404
@@ -82,7 +82,16 @@ def overview(client_id: int, response: Response, session: Session = Depends(get_
     reports = [dict(id=r.id, title=f'Bericht {r.period_start:%m.%Y}', happened_at=r.released_at)
         for r in session.scalars(select(Report).where(Report.client_id == client_id,
             Report.released_at.is_not(None)).order_by(Report.released_at.desc()).limit(100))]
+    activity = [dict(id=event.id, kind=event.kind, actor=event.actor,
+        happened_at=event.created_at, title=event.detail.get('title', ''),
+        format=event.detail.get('kind', ''),
+        selected_journalists=len(event.detail.get('contact_ids', [])),
+        href=f'/client/{client_id}/opportunities?kind={workspace.context_kind}&context={workspace.context_id}')
+        for event, workspace in session.execute(select(OpportunityEvent, OpportunityWorkspace)
+            .join(OpportunityWorkspace, OpportunityWorkspace.id == OpportunityEvent.workspace_id)
+            .where(OpportunityWorkspace.client_id == client_id)
+            .order_by(OpportunityEvent.created_at.desc(), OpportunityEvent.id.desc()).limit(100))]
     return dict(client={'id': client.id, 'name': client.name},
         summary=MandateSummary.model_validate(summary) if summary else None,
         opportunities=workspaces.listings(session, client_id)[:30], texts=items,
-        logged_actions=actions, released_reports=reports, released_texts=texts(session, client_id, released_only=True), limit=100)
+        activity=activity, logged_actions=actions, released_reports=reports, released_texts=texts(session, client_id, released_only=True), limit=100)

@@ -72,3 +72,16 @@ from the supplied PDF; current screenshots were captured in Chromium. The email
 PDF and its images are not added to the repository.
 
 No deployment, customer-record edits, approvals or messages were performed.
+
+## Deployment readiness follow-up
+
+The two functional P1 findings are now fixed: Desk includes open developed
+opportunities without double-counting detected anchors, and Actions shows
+workspace activation/drafting history separately from delivered work. Regression
+checks verify dismissal/closure, client scoping and unchanged delivery totals.
+The broader visual differences remain documented above.
+
+Pre-deployment checks: 3,216 Python tests, 28 React tests and the frontend build
+passed. A SQLite online backup was saved on the production volume, and migrations
+0057 through 0061 were rehearsed on a copy. Integrity checks passed and existing
+client, statement, article, analysis, asset, outreach and contact counts matched.

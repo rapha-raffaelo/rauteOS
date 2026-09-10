@@ -52,6 +52,7 @@ from .models import (
     ClientAction,
     Crisis,
     NewsjackOpportunity,
+    OpportunityWorkspace,
     Outreach,
     OutreachState,
     ProfileProposal,
@@ -350,7 +351,21 @@ def _opportunity_counts(session: Session, now: dt.datetime) -> dict[int, int]:
         )
         .group_by(NewsjackOpportunity.client_id)
     ).all()
-    return {client_id: count for client_id, count in rows}
+    counts = {client_id: count for client_id, count in rows}
+    # Standalone angles are the same developed opportunities shown in the list.
+    # An angle anchored to detected news is already counted above.
+    closed_workspace = select(OpportunityWorkspace.id).where(
+        OpportunityWorkspace.client_id == Angle.client_id,
+        OpportunityWorkspace.context_kind == "developed",
+        OpportunityWorkspace.context_id == Angle.id,
+        OpportunityWorkspace.status == "closed",
+    ).exists()
+    developed = session.execute(select(Angle.client_id, func.count()).where(
+        Angle.newsjack_id.is_(None), Angle.dismissed_at.is_(None), ~closed_workspace,
+    ).group_by(Angle.client_id)).all()
+    for client_id, count in developed:
+        counts[client_id] = counts.get(client_id, 0) + count
+    return counts
 
 
 # --- What is waiting on a person ---------------------------------------------------
