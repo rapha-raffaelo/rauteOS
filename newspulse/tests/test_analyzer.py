@@ -389,3 +389,37 @@ def test_cli_error_envelope_is_a_batch_failure():
 
     assert results == []
     assert run.call_count == 2
+
+
+@pytest.mark.parametrize('message', [
+    'Claude Code 2.1.243 does not support this model; version 2.1.251 or newer is required.',
+    'Usage limit reached. Try again later.',
+])
+def test_nonzero_cli_json_errors_remain_actionable(message):
+    from newspulse.analyzer import BackendError, invoke_claude_cli
+    from newspulse.quota import is_quota_error
+    with patch.object(subprocess, 'run') as run:
+        run.return_value = _completed(json.dumps({'is_error': True, 'result': message}), returncode=1)
+        with pytest.raises(BackendError, match=message.split(';')[0]) as caught:
+            invoke_claude_cli('Test')
+    assert is_quota_error(caught.value) == ('Usage limit' in message)
+
+
+def test_nonzero_exit_never_accepts_a_success_envelope():
+    from newspulse.analyzer import BackendError, invoke_claude_cli
+    with patch.object(subprocess, 'run') as run:
+        run.return_value = _completed(json.dumps({'is_error': False, 'result': 'OK'}), returncode=1)
+        with pytest.raises(BackendError):
+            invoke_claude_cli('Test')
+
+
+def test_weekly_limit_in_nonzero_stdout_activates_configured_fallback(monkeypatch):
+    from newspulse import analyzer, config, gemini
+    monkeypatch.setattr(config, 'gemini_configured', lambda: True)
+    calls=[]
+    monkeypatch.setattr(gemini, 'generate', lambda prompt, **kwargs: calls.append(prompt) or 'Fallback answer')
+    with patch.object(subprocess, 'run') as run:
+        run.return_value = _completed(json.dumps({'is_error':True,
+            'result':"You've hit your weekly limit · resets 12pm (UTC)"}), returncode=1)
+        assert analyzer.invoke_with_fallback('A real question')=='Fallback answer'
+    assert calls==['A real question']

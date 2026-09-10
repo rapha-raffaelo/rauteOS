@@ -365,6 +365,15 @@ def invoke_claude_cli(prompt: str, *, timeout: float = _SUBPROCESS_TIMEOUT_SECON
         raise BackendError("claude CLI not found on PATH") from exc
     if completed.returncode != 0:
         stderr = (completed.stderr or "").strip()[:500]
+        # Recent CLI versions put actionable errors (including quota failures)
+        # in the JSON result while leaving stderr empty on a non-zero exit.
+        try:
+            envelope = json.loads(completed.stdout or "")
+        except json.JSONDecodeError:
+            envelope = None
+        if (isinstance(envelope, dict) and envelope.get("is_error")
+                and isinstance(envelope.get("result"), str)):
+            stderr = f"{envelope['result'][:500]} {stderr}".strip()
         raise BackendError(f"claude -p exited {completed.returncode}: {stderr}")
     return _extract_cli_result(completed.stdout)
 

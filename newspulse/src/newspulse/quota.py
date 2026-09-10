@@ -28,6 +28,7 @@ import re
 # "authentication", which means the login is broken — falling back there would
 # mask exactly the misconfiguration we spent so long diagnosing on the server.
 _QUOTA_SIGNALS: tuple[str, ...] = (
+    "hit your weekly limit",
     "usage limit",
     "usage_limit",
     "rate limit",

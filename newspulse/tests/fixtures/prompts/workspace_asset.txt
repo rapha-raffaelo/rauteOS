@@ -1,6 +1,9 @@
 Schreibe das Format $format_name für das folgende Mandat. Es ist ein Entwurf,
 keine Freigabe und kein Versand. Schreibe auf Deutsch und gib ausschließlich
 JSON mit title, body und speaker zurück. Erfinde keine Person und keine Zusage.
+Alle drei Felder müssen Strings sein, niemals null. Wenn das Format keinen
+Sprecher braucht, ist speaker der leere String "". Ausgabeform:
+{"title": "Betreff oder Titel", "body": "Der Entwurf", "speaker": ""}
 
 MANDANT
 $client_profile

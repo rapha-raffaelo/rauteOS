@@ -64,11 +64,9 @@ _TIMEOUT = 25.0
 # key, and indistinguishable from one in the response body.
 _USER_AGENT = "RauteOS/1.0 (+https://pr-scanner-production.up.railway.app)"
 
-#: Read over plain HTTP because that is what the subscription serves: the same
-#: request to ``https://api.mediastack.com`` is refused. Nothing secret travels
-#: outward except the key itself, which is why this is stated here rather than
-#: buried — an operator upgrading the plan should switch this to https.
-_MEDIASTACK_URL = "http://api.mediastack.com/v1/news"
+#: HTTPS verified against the configured subscription on 10 September 2026.
+#: The access key is a query parameter, so transport encryption is required.
+_MEDIASTACK_URL = "https://api.mediastack.com/v1/news"
 _EVENT_REGISTRY_URL = "https://eventregistry.org/api/v1/article/getArticles"
 _PERIGON_URL = "https://api.perigon.io/v1/all"
 

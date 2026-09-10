@@ -336,3 +336,12 @@ def test_a_financial_portal_carrying_a_press_release_is_kept():
     items = newsapis.mediastack(_SINCE, fetched_at=_NOW, get=lambda *a, **k: body)
 
     assert [i.source for i in items] == ["FinanzNachrichten.de"]
+
+
+def test_mediastack_sends_credentials_only_over_https():
+    from urllib.parse import urlsplit, parse_qs
+    captured=[]
+    newsapis.mediastack(_SINCE, fetched_at=_NOW, get=lambda url: captured.append(url) or {'data':[]})
+    url=urlsplit(captured[0])
+    assert url.scheme=='https' and url.netloc=='api.mediastack.com'
+    assert parse_qs(url.query)['access_key']==['ms-key']
