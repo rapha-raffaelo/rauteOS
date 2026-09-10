@@ -53,3 +53,10 @@ one opportunity. Development and activation require explicit POSTs. A GET never
 creates an angle or starts a model/provider call. Migration
 `0060_opportunity_workspace` stores research attempts, selections and activity;
 activity does not count as delivered work on the Desk.
+
+The opportunity activation panel defaults to a customer email and offers ten
+formats. Migration `0061_opportunity_assets` is required. Draft and check jobs
+run only after explicit requests; sentence evidence links, warnings and stale
+checks remain visible beside editable text. Existing pitch approval and sending
+are linked from the saved pitch. Draft activity does not increase Desk delivery
+counts.

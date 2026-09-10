@@ -1025,6 +1025,25 @@ class OpportunityEvent(Base):
     actor: Mapped[str] = mapped_column(String(200), default="mensch")
     created_at: Mapped[dt.datetime] = mapped_column(UTCDateTime(), default=_utcnow)
 
+
+class OpportunityAssetRun(Base):
+    """A draft/check attempt with the exact opportunity context it used."""
+    __tablename__ = "opportunity_asset_runs"
+    __table_args__ = (Index("uq_opportunity_asset_running", "workspace_id", unique=True,
+        sqlite_where=text("status = 'running'"), postgresql_where=text("status = 'running'")),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    workspace_id: Mapped[int] = mapped_column(ForeignKey("opportunity_workspaces.id", ondelete="CASCADE"), index=True)
+    kind: Mapped[str] = mapped_column(String(40))
+    status: Mapped[str] = mapped_column(String(16), default="running")
+    asset_id: Mapped[int | None] = mapped_column(ForeignKey("assets.id", ondelete="SET NULL"), nullable=True)
+    outreach_id: Mapped[int | None] = mapped_column(ForeignKey("outreach.id", ondelete="SET NULL"), nullable=True)
+    context: Mapped[dict] = mapped_column(JSON, default=dict)
+    quality: Mapped[dict] = mapped_column(JSON, default=dict)
+    text_digest: Mapped[str] = mapped_column(String(64), default="")
+    note: Mapped[str] = mapped_column(Text, default="")
+    started_at: Mapped[dt.datetime] = mapped_column(UTCDateTime(), default=_utcnow)
+    finished_at: Mapped[dt.datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+
 class TopicHit(Base):
     """One market article the topic radar surfaced for one client.
 

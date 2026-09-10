@@ -83,7 +83,7 @@ class PitchTarget:
     evidence: tuple[str, ...]
     #: How often they have written about this client. Zero is the interesting
     #: case: the outlet covers the field and has never mentioned the mandate.
-    about_client: int
+    about_client: int | None
     #: The contact-book entry for this byline, if the consultant has recorded one.
     #: Never derived — see the module docstring — only looked up.
     contact_id: int | None = None

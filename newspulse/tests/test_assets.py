@@ -297,9 +297,9 @@ def test_every_declared_format_has_a_definition_and_a_prompt_file():
     stored text nothing can describe."""
     assert set(assets.REGISTRY) | set(assets.CRISIS_REGISTRY) == {
         kind.value for kind in AssetKind
-    }
+    } | {fmt.key for fmt in assets.WORKSPACE_FORMATS}
     assert not set(assets.REGISTRY) & set(assets.CRISIS_REGISTRY)
-    for fmt in (*assets.FORMATS, *assets.CRISIS_FORMATS):
+    for fmt in (*assets.FORMATS, *assets.WORKSPACE_FORMATS, *assets.CRISIS_FORMATS):
         assert fmt.template().template.strip(), f"{fmt.key} has an empty prompt"
         assert fmt.structure, f"{fmt.key} declares no structure"
 
@@ -1842,6 +1842,6 @@ def test_every_format_name_and_description_has_an_english_entry():
     """The chrome switches language; a card that stays German in an English UI
     reads as broken rather than as untranslated. Both registries, so the crisis
     surface story inherits translated formats the way the impulse strip did."""
-    for fmt in (*assets.FORMATS, *assets.CRISIS_FORMATS):
+    for fmt in (*assets.FORMATS, *assets.WORKSPACE_FORMATS, *assets.CRISIS_FORMATS):
         assert i18n.translate(fmt.name, "en"), fmt.name
         assert i18n.translate(fmt.description, "en") != fmt.description, fmt.key

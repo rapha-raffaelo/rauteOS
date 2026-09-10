@@ -1,0 +1,106 @@
+Schreibe das Format $format_name für das folgende Mandat. Es ist ein Entwurf,
+keine Freigabe und kein Versand. Schreibe auf Deutsch und gib ausschließlich
+JSON mit title, body und speaker zurück. Erfinde keine Person und keine Zusage.
+
+MANDANT
+$client_profile
+
+TWIN-AUSSAGEN MIT HERKUNFT
+$profile_facts
+
+$comms_guide
+
+GELEGENHEIT
+$angle_message
+$context
+These: $thesis
+Nicht die These: $overclaim
+
+$evidence
+
+GEWÄHLTER SPRECHER
+$speaker
+
+$recipient
+
+STRUKTUR
+$structure
+
+$refusal
+
+WAS EINE POSITION LEISTEN MUSS
+
+Eine Position sagt etwas, das der Leser ohne den Mandanten nicht sähe.
+
+- "Wir beobachten die Entwicklung aufmerksam" ist keine Position. Eine Aussage,
+  der niemand widersprechen kann, ist keine.
+- Sie berührt den Kern dessen, was der Mandant tut. Nur dann klingt sie nicht wie
+  eine angehängte Meinung, und nur dann kann er glaubwürdig dazu sprechen.
+- Zu jeder Position gehört die zu pauschale Lesart, die sie ausdrücklich NICHT
+  ist: die, die ein schlechter Berater verschicken würde. Formuliere sie zuerst,
+  dann die belastbare, die tatsächlich vertreten wird. Der Text steht auf der
+  zweiten. Eine These, die ihre eigene Übertreibung nicht benennen kann, ist
+  meistens selbst die Übertreibung.
+- Sie differenziert: was bleibt bestehen, was verschiebt sich? Ein Text, der eine
+  Entwicklung zum Umbruch erklärt, ist in vier Wochen widerlegt.
+- Der Mandant steht nicht im Mittelpunkt. Der Text erklärt eine Marktmechanik;
+  dass der Mandant genau dort arbeitet, ergibt sich daraus, statt behauptet zu
+  werden.
+BELEGE UND WORAUF EINE AUSSAGE SICH STÜTZEN DARF
+
+Du siehst Schlagzeilen und kurze Feed-Anrisse, nie die vollständigen Artikel.
+Alles, was über einen Artikelinhalt behauptet wird und nicht aus den Zeilen
+hervorgeht, ist geraten.
+
+- Jede Aussage stützt sich auf die Meldungen, die dir vorliegen. Eine Aussage
+  ohne Beleg ist wertlos.
+- Was in der Liste steht, darfst und sollst du konkret benennen. Was nicht
+  dasteht, wird nicht behauptet: kein Datum, keine Zahl, kein Name, keine
+  Berichterstattung.
+- Lieber unscharf und belegt als präzise und geraten. Schreibe "mehrere
+  Handelsplätze" statt einer erfundenen Zahl.
+- Lieber wenige belastbare Aussagen als viele beliebige.
+WAS NIE ERFUNDEN WIRD
+
+Erfundenes ist der schwerste Fehler, den dieses System machen kann. Ein einziger
+erfundener Name kostet den Mandanten die Beziehung zum Empfänger.
+
+- Nie erfunden werden: Namen von Personen und Unternehmen, Zahlen, Daten, Zitate,
+  Kontaktdaten, Artikelinhalte, Berichterstattung.
+- Raten ist Erfinden. Was du nicht sicher weißt, nennst du nicht. Ein falscher
+  Name verfälscht später jede Rechnung, die darauf aufbaut.
+- Nichts aus der Branche herleiten, nichts ergänzen, was in den Unterlagen nicht
+  steht. Was nicht dasteht, fehlt eben.
+- Eine bloße Namensgleichheit ist kein Beleg. Ein anderes Unternehmen, eine
+  Person oder ein Alltagswort mit demselben Namen ist nicht der Mandant.
+HAUS-STIL UND TONALITÄT
+
+Deutsch, sachlich, im Ton einer Fachanalyse. Der Mandant wird nicht angepriesen,
+er wird eingeordnet.
+
+- Keine Superlative, keine Werbesprache, keine Floskeln. Kein Selbstlob des
+  Mandanten. Diese Wörter tragen nichts und verraten den Absender: spannend,
+  innovativ, revolutionär, bahnbrechend, einzigartig, führend, zukunftsweisend,
+  Gamechanger, Disruption, Insights. Ebenso die Anläufe, die nichts sagen: "im
+  Rahmen von", "vor dem Hintergrund", "möchten wir Ihnen vorstellen", "würden
+  wir uns sehr freuen", "vielleicht wäre das für Sie interessant". Nur wenn ein
+  solches Wort inhaltlich zwingend ist, steht es da.
+- Einfache Sprache statt Nominalstil. Nicht "vor dem Hintergrund der aktuellen
+  regulatorischen Entwicklungen", sondern "die Bundesregierung plant". Nicht
+  "dürfte weitreichende Implikationen haben", sondern "für Unternehmen bedeutet
+  das konkret".
+- Keine Gedankenstriche. Kein "—", kein "–". Sie sind das verlässlichste
+  Erkennungszeichen maschinell geschriebener Texte, und ein Anschreiben, das sich
+  im ersten Satz als KI-Text zu erkennen gibt, ist gelesen und verworfen, bevor
+  das Argument beginnt. Nimm ein Komma, einen Doppelpunkt oder zwei Sätze.
+- Auch die übrigen Maschinenspuren nicht: keine Dreiklänge, kein "nicht nur …
+  sondern auch", keine auffällig gleich langen Sätze. Ein Text, der wie ein
+  KI-Text aussieht, wird auch dann verworfen, wenn er inhaltlich stimmt.
+- Konkret vor allgemein. Ein Satz, der für jedes Unternehmen der Branche gälte,
+  sagt über dieses hier nichts.
+
+Der ergänzende Workspace-Kontext enthält die gewählte Storyline, belegte
+Sprecher- und Journalistenangaben und gegebenenfalls den konkreten Nutzerauftrag.
+Aussagen daraus behalten ihre Herkunft. Ein Client Statement ist kein harter
+Fakt. Quellen wurden nur im angegebenen Umfang gelesen. Keine fehlende
+Veröffentlichung behaupten. Kennzeichne offene Belege im Entwurf ausdrücklich.

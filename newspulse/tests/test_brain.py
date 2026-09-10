@@ -409,6 +409,8 @@ CARRIED_BEFORE = {
     "response_options.txt": set(),
     # New with RIS-05: the decision paper. No "before" to carry.
     "decision_packet.txt": set(),
+    # New workspace formats have no predecessor.
+    "workspace_asset.txt": set(),
 }
 
 #: Standards a prompt did *not* carry before and now does. Every one is a
@@ -417,6 +419,9 @@ CARRIED_BEFORE = {
 #: standard nobody chose for them. Together with CARRIED_BEFORE this accounts for
 #: every include in every prompt, so an addition cannot arrive as a side effect.
 ADDED_IN_MIGRATION = {
+    # Workspace drafts use the same positioning, evidence and prose standards
+    # as existing assets; the format-specific refusal remains supplied by caller.
+    "workspace_asset.txt": {"position", "evidence", "no_invention", "house_style"},
     # What the move gives the seven, and why each is wanted.
     #
     # All six formats gain the standards they leaned on without stating: they are
@@ -2069,7 +2074,29 @@ def _store_an_issue_signal(session) -> IssueSignal:
     )
 
 
+def _store_a_developed_opportunity(session):
+    from newspulse import opportunity_development
+    from newspulse.models import OpportunityDevelopment, OpportunityWorkspace
+
+    client = _a_mandate(session)
+    job = OpportunityDevelopment(client_id=client.id, focus="Verwahrung")
+    session.add(job)
+    session.commit()
+    proposal = dict(title="Verwahrung prüfen", situation="Offene Datenlage",
+                    relevance="Mandat betrifft Verwahrung", why_now="Prüfauftrag",
+                    thesis="Transparenz prüfen", storylines=["Daten vergleichen"],
+                    recommended_actions=["kundenmail"], risks=["Belege fehlen"])
+    opportunity_development.develop(
+        session, job.id, providers=[],
+        invoke=lambda *args, **kwargs: json.dumps({"ideas": [proposal], "note": "Hypothese"}),
+    )
+    session.refresh(job)
+    workspace = session.get(OpportunityWorkspace, job.workspace_ids[0])
+    return session.get(Angle, workspace.angle_id)
+
+
 GENERATORS = [
+    ("opportunity_development", _store_a_developed_opportunity),
     ("angles", _store_an_angle),
     ("outreach", _store_a_letter),
     ("advisor", _store_an_advisory),

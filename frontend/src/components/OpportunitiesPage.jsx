@@ -1,9 +1,10 @@
 import React,{useEffect,useState} from 'react';
 import {journalistRequest as request} from '../journalists-api.js';
 import {ResearchPanel} from './JournalistsPage.jsx';
+import {ActivationPanel} from './ActivationPanel.jsx';
 const date=value=>value ? new Date(value).toLocaleString('de-DE',{dateStyle:'medium',timeStyle:'short'}) : 'Nicht festgelegt';
 const statusLabels={draft:'Entwurf',active:'Aktiviert',closed:'Abgeschlossen'};
-const eventLabels={idea_developed:'Idee entwickelt',choices_saved:'Auswahl gespeichert',activated:'Aktiviert'};
+const eventLabels={idea_developed:'Idee entwickelt',choices_saved:'Auswahl gespeichert',activated:'Aktiviert',text_created:'Text erstellt',text_checked:'Aussagen geprüft',text_edited:'Text bearbeitet'};
 const actionLabels={kundenmail:'Kundenmail',pitch:'Journalistenpitch',statement:'Statement',pressemitteilung:'Pressemitteilung',qa:'Q&A',gastbeitrag:'Gastbeitrag',interviewangebot:'Interviewangebot',linkedin:'LinkedIn-Post',briefing:'Briefing',custom:'Eigene Aktion'};
 function ErrorMessage({error}){return error ? <p className="twin-error" role="alert">{error}</p>:null;}
 function ResearchSources({queries,sources}){return <details><summary>Recherche und Quellen ({sources.length})</summary>
@@ -42,9 +43,10 @@ export function OpportunityWorkspace({clientId,kind,identity,onChanged}){
         <button className="btn btn--go" disabled={busy||!storyline.trim()} onClick={()=>save(true)}>{data.status==='active'?'Aktivierung aktualisieren':'ACTIVATE'}</button></div>}
       {data.status==='active'&&<p><a className="btn btn--go" href={data.legacy_href}>Texte und Freigaben öffnen</a></p>}
     </section>
+    {data.id && data.status!=='closed' && <ActivationPanel clientId={clientId} kind={kind} identity={identity} contacts={data.contacts.filter(c=>data.contact_ids.includes(c.id))} onCompleted={()=>request(path).then(value=>setData(old=>({...old,events:value.events,assets:value.assets}))).catch(e=>setError(e.message))}/>}
     <ResearchPanel clientId={clientId} contextKind={kind} contextId={identity} onContact={(id,person)=>{window.location.href=id?`/journalists?contact=${id}`:`/journalists?client=${clientId}&kind=${kind}&context=${identity}`;}}/>
     <section className="twin-field"><h3>Aktivität dieser Gelegenheit</h3><p>Entwicklung und Aktivierung sind noch keine ausgelieferte Kundenleistung.</p>
-      {data.events.length?<ul>{data.events.map(e=><li key={e.id}>{date(e.created_at)} · {eventLabels[e.kind]||e.kind} · {e.actor}{e.detail.contact_ids&&` · ${e.detail.contact_ids.length} Journalisten ausgewählt`}</li>)}</ul>:<p>Noch keine Aktivität hinterlegt.</p>}
+      {data.events.length?<ul>{data.events.map(e=><li key={e.id}>{date(e.created_at)} · {eventLabels[e.kind]||e.kind} · {e.actor}{e.detail.kind&&` · ${actionLabels[e.detail.kind]||e.detail.kind}`}{e.detail.contact_ids&&` · ${e.detail.contact_ids.length} Journalisten ausgewählt`}</li>)}</ul>:<p>Noch keine Aktivität hinterlegt.</p>}
       <h3>Texte</h3>{data.assets.length?<ul>{data.assets.map(a=><li key={a.id}><a href={a.href}>{a.title||a.kind}</a> · {a.released_at?'Freigegeben':'Entwurf'} · {date(a.generated_at)}</li>)}</ul>:<p>Noch keine Texte erstellt.</p>}</section>
   </div>;
 }

@@ -196,3 +196,33 @@ prompt; **20 React tests** and the production build pass. Chromium verified
 explicit generation, choice persistence, activation, reload and unchanged delivery
 counts, with no JavaScript errors or overflow at 390px. Browser generation used
 an explicitly stubbed model and disabled providers in an isolated database.
+
+
+## Phase 4 implementation — 10 September 2026
+
+The React opportunity workspace now starts with a customer email proposal and
+offers ten formats, including existing journalist pitches. Generation receives
+the saved storyline, selected Twin speaker, dated journalist context, positioning
+and evidence provenance. Drafting, editing, copying and rechecking are explicit
+actions; existing customer approval and sending remain on the pitch workflow.
+
+Migration `0061_opportunity_assets` records generation and checking attempts.
+Workers release database transactions during model calls, retain a draft when a
+checker fails, and reject late results or concurrent edits. Released text cannot
+be edited or rechecked here. Draft events do not count as delivered work.
+
+Sentence-level checks show exact excerpts, linked Twin statements and external
+sources, contradictions, literal No-Go references and evidence-age warnings.
+Server rules preserve Client Statement and RAUTE Hypothesis provenance; an
+automatic comparison cannot turn them into independently verified facts. Edits
+or changed context mark results stale. These checks remain advisory.
+
+Validation: 25 React tests and the production build pass. The full Python suite
+returned 3,197 passes and five prompt-accounting failures. The new prompt and
+generator were added to the standards inventory, including version-stamp tests;
+all 403 affected brain/activation tests then passed. Earlier targeted asset,
+outreach and migration checks passed (162 tests). Chromium exercised customer
+email creation, claim warnings, editing, rechecking, selected-recipient pitches,
+reload and a 390px layout without overflow or JavaScript errors. Browser model
+responses were explicit fixtures in an isolated database; no live model or
+provider requests, approvals or sends were performed.

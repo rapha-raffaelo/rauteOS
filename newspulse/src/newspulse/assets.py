@@ -1449,7 +1449,26 @@ FORMATS: tuple[FormatDef, ...] = (
     ),
 )
 
-REGISTRY: dict[str, FormatDef] = {fmt.key: fmt for fmt in FORMATS}
+# These formats are initiated in the opportunity workspace. Existing ordinary
+# and crisis pickers keep their established contracts and format groups.
+WORKSPACE_FORMATS: tuple[FormatDef, ...] = (
+    FormatDef(kind="kundenmail", name="Kundenmail", description="Die Chance erklären und einen nächsten Schritt zur Freigabe vorschlagen.",
+        prompt="prompts/workspace_asset.txt", requires=(), structure=(
+            "Persönliche oder neutrale Anrede ohne erfundenen Namen.",
+            "Die Chance, ihre Relevanz und einen konkreten Vorschlag knapp erklären.",
+            "Eine klare Bitte um Rückmeldung oder Freigabe, keine behauptete Zusage."),title_label="Betreff"),
+    FormatDef(kind="linkedin", name="LinkedIn-Post", description="Eine belegte Position für LinkedIn.",
+        prompt="prompts/workspace_asset.txt", requires=(), structure=(
+            "Ein klarer Einstieg und eine nachvollziehbare Position.",
+            "Kurze Absätze; keine erfundenen Zahlen, Zitate oder Hashtag-Ketten.")),
+    FormatDef(kind="interviewangebot", name="Interviewangebot", description="Ein konkretes Gesprächsangebot an eine Redaktion.",
+        prompt="prompts/workspace_asset.txt", requires=(Requirement(Source.PROFIL,"ceo"),Requirement(Source.EMPFAENGER,"outlet")),
+        structure=("Belegte Person, Thema und redaktionellen Nutzen nennen.","Keine Verfügbarkeit oder Zusage erfinden."),
+        speaker_key="ceo",title_label="Betreff"),
+    FormatDef(kind="custom", name="Eigene Aktion", description="Ein Text nach Ihrem konkreten Auftrag.",
+        prompt="prompts/workspace_asset.txt", requires=(), structure=("Den zusätzlichen Nutzerauftrag erfüllen, innerhalb der Evidenz- und Freigabegrenzen.",)),
+)
+REGISTRY: dict[str, FormatDef] = {fmt.key: fmt for fmt in (*FORMATS, *WORKSPACE_FORMATS)}
 
 
 #: The two crisis formats (UHR-02): the same :class:`FormatDef` contract, in a
@@ -1917,7 +1936,9 @@ def _recipient_block(target: PitchTarget | None, headlines: tuple[str, ...]) -> 
         lines.append(
             "Kein Name belegt, nur die Redaktion. Erfinde keine:n Journalist:in."
         )
-    if target.about_client:
+    if target.about_client is None:
+        lines.append("Die bisherige Berichterstattung ist nicht vollständig bekannt. Keine Aussage über fehlende Veröffentlichungen machen.")
+    elif target.about_client:
         lines.append(
             f"Hat in den letzten Monaten {target.about_client}× über den Mandanten "
             "geschrieben."
@@ -2284,6 +2305,10 @@ def write(
     *,
     invoke: Callable[..., str] = invoke_with_fallback,
     note: Callable[[str], None] | None = None,
+    facts: dict[str, ClientFact] | None = None,
+    target: Recipient = _UNRESOLVED,
+    extra_context: str = "",
+    headlines: tuple[str, ...] | None = None,
 ) -> AssetDraft:
     """Write ``fmt`` for this mandate off this impulse.
 
@@ -2308,18 +2333,22 @@ def write(
     ``invoke`` is injectable so the tests drive the whole path, prompt to stored
     row, without a subprocess.
     """
-    facts = profile.stored(session, client.id)
-    target = _resolved(session, fmt, client, angle, _UNRESOLVED)
+    if facts is None:
+        facts = profile.stored(session, client.id)
+    target = _resolved(session, fmt, client, angle, target)
     readiness = requirements_met(session, fmt, client, angle, facts=facts, target=target)
     if not readiness.ok:
         _log.info("%s refused for %r: %s", fmt.key, client.name, readiness.reason)
         refused = RequirementsMissing(fmt, readiness)
         _tell(note, str(refused))
         raise refused
-    headlines = _headlines(session, target)
+    if headlines is None:
+        headlines = _headlines(session, target)
     prompt = prompt_for(
         session, fmt, client, angle, facts=facts, target=target, headlines=headlines
     )
+    if extra_context:
+        prompt += "\n" + extra_context
     # Captured beside the prompt it describes, not after the call: an override
     # saved while the model is thinking belongs to the next text, and a stamp
     # read afterwards would file this one under standards it never saw.
@@ -2720,6 +2749,7 @@ def store(
     angle: Angle,
     draft: AssetDraft,
     checked: Checked | None = None,
+    *, commit: bool = True,
 ) -> Asset:
     """Persist one generated text against the impulse it argues.
 
@@ -2744,11 +2774,11 @@ def store(
     row = _replaceable(session, angle.id, fmt.key) or Asset(
         client_id=client.id, angle_id=angle.id, kind=fmt.key
     )
-    return _persist(session, row, draft, checked)
+    return _persist(session, row, draft, checked, commit=commit)
 
 
 def _persist(
-    session: Session, row: Asset, draft: AssetDraft, checked: Checked | None
+    session: Session, row: Asset, draft: AssetDraft, checked: Checked | None, *, commit: bool = True
 ) -> Asset:
     """Write one draft onto its row and commit — the shared half of both stores."""
     # House style, enforced rather than requested: the prompts ask for no dashes
@@ -2767,7 +2797,10 @@ def _persist(
     row.edited_at = None
     _apply_checks(row, checked)
     session.add(row)
-    session.commit()
+    if commit:
+        session.commit()
+    else:
+        session.flush()
     return row
 
 

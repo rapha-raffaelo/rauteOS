@@ -504,6 +504,14 @@ _EN: dict[str, str] = {
     # it fails the moment a seventh format is defined without an English name.
     # Landing the guard with the registry means the surface story inherits six
     # translated formats instead of discovering six German ones.
+    "Kundenmail": "Client email",
+    "Interviewangebot": "Interview offer",
+    "Eigene Aktion": "Custom action",
+    "LinkedIn-Post": "LinkedIn post",
+    "Die Chance erklären und einen nächsten Schritt zur Freigabe vorschlagen.": "Explain the opportunity and propose a next step for approval.",
+    "Eine belegte Position für LinkedIn.": "An evidence-based position for LinkedIn.",
+    "Ein konkretes Gesprächsangebot an eine Redaktion.": "A specific interview offer for an editorial team.",
+    "Ein Text nach Ihrem konkreten Auftrag.": "A draft based on your specific request.",
     "Pressemitteilung": "Press release",
     "Die offizielle Meldung des Mandanten, zitierfähig und datiert.":
         "The client's official announcement, quotable and dated.",

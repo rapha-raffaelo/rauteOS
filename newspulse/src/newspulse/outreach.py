@@ -145,7 +145,9 @@ def _recipient_block(target: PitchTarget | None) -> str:
         )
     who = target.journalist or "Kein Name bekannt (nur die Redaktion)"
     lines = [f"Journalist/in: {who}", f"Medium: {target.outlet}"]
-    if target.about_client == 0:
+    if target.about_client is None:
+        lines.append("Die bisherige Berichterstattung ist nicht vollständig bekannt. Keine Aussage über fehlende Veröffentlichungen machen.")
+    elif target.about_client == 0:
         lines.append(
             "Hat über diesen Mandanten noch nie geschrieben — das ist der Grund "
             "für den Pitch, aber kein Vorwurf und kein Thema der Nachricht."
@@ -239,6 +241,7 @@ def draft(
     target: PitchTarget | None = None,
     *,
     invoke=invoke_with_fallback,
+    extra_context: str = "",
 ) -> PersonalMessage:
     """Write the message for ``angle``, aimed at ``target`` if there is one.
 
@@ -266,6 +269,8 @@ def draft(
         recipient_work=_recipient_work(target),
         own_coverage=_own_coverage_block(session, client.id),
     )
+    if extra_context:
+        prompt += "\n" + extra_context
     message = _parse(invoke(prompt, timeout=config.ANALYZER_TIMEOUT))
     return message.model_copy(update={"brain_version": written_under})
 
@@ -509,6 +514,7 @@ def store(
     reviewed_by: str = "",
     guide_verdict: GuideVerdict | None = None,
     guide_checked_by: str = "",
+    *, commit: bool = True,
 ) -> Outreach:
     """Persist one message. Re-writing for the same recipient replaces the old
     one *while it is still a draft*: two drafts at the same journalist are two
@@ -528,6 +534,7 @@ def store(
     a written rule that arrives as one more line in a list of style notes has
     been diluted rather than checked.
     """
+    finish = session.commit if commit else session.flush
     journalist = (target.journalist or "") if target else ""
     outlet = (target.outlet or "") if target else ""
     fields = _message_fields(
@@ -566,7 +573,7 @@ def store(
             .values(**fields)
             .execution_options(synchronize_session=False)
         ).rowcount
-        session.commit()
+        finish()
         if claimed:
             session.refresh(draft_row)
             return draft_row
@@ -578,7 +585,7 @@ def store(
         **fields,
     )
     session.add(row)
-    session.commit()
+    finish()
     return row
 
 
