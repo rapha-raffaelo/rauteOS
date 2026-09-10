@@ -7,7 +7,7 @@ export default defineConfig({
     outDir: '../newspulse/src/newspulse/web/static/react',
     emptyOutDir: true,
     manifest: true,
-    rolldownOptions: { input: {desk: fileURLToPath(new URL('./src/desk.jsx', import.meta.url)), twin: fileURLToPath(new URL('./src/twin.jsx', import.meta.url))} },
+    rolldownOptions: { input: {journalists: fileURLToPath(new URL('./src/journalists.jsx', import.meta.url)), desk: fileURLToPath(new URL('./src/desk.jsx', import.meta.url)), twin: fileURLToPath(new URL('./src/twin.jsx', import.meta.url))} },
   },
   test: { environment: 'jsdom', setupFiles: ['./src/test-setup.js'] },
 });

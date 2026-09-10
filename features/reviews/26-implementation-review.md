@@ -129,3 +129,40 @@ creating two statements in one field, CSV preview/commit, editing, independent
 confirmation and history. No JavaScript errors or horizontal page overflow at
 390px. The migration was also run on an isolated empty database; an upgrade test
 preserves old evidence and refuses a downgrade that would discard extra statements.
+
+## Phase 2 implementation — 10 September 2026
+
+- React journalist workspace at `/journalists`, linked from the sidebar and
+  every detected opportunity's media section. Existing contacts remain the
+  identity records; contact details are never generated from bylines.
+- Persistent topics, specialties, story types, companies, source aliases,
+  preferences, relationship status and manual last interaction. Released
+  outreach and responses supply the existing cross-mandate relationship timeline.
+- Profile and contact edits reject stale revisions, including edits made through
+  the legacy contact book. Article history requires both byline and outlet;
+  additional outlet spellings must be explicitly maintained in the profile.
+- Opportunity-specific research calls configured Perigon, Event Registry and
+  mediastack providers only after a user request. Six-week results name article
+  URLs, publication dates, matched terms and known approach preferences. This
+  first ranking is evidence-based keyword matching, not a claim of semantic or
+  comprehensive media coverage.
+- Provider failures and missing configuration are retained individually. An
+  archive-only result is labelled accordingly; absent hits never become a claim
+  that a journalist has not published. Provider metadata is stored separately
+  from client coverage, with bounded excerpts and no full-body scraping.
+- Migration `0059_journalist_intelligence` adds profiles, research evidence and
+  dated research attempts. A database constraint permits only one running attempt
+  per opportunity. Interrupted jobs can be retried; late workers cannot replace
+  a superseded attempt. Network calls do not hold a database transaction.
+
+Validation: **16 React tests** and the Vite build pass; **71 Python tests** for
+journalists and opportunity integration passed in the targeted runs,
+followed by **35 journalist/migration tests**. Chromium exercised opportunity
+research, archive-only status, creating a suggested contact, editing and reloading
+its profile, a new research run using the saved approach, article links and a
+390px viewport without overflow or JavaScript errors. Browser provider keys were
+disabled; live third-party responses have not been smoke-tested with real keys.
+The full Python regression run had 3,172 passes and one outdated sidebar-order
+assertion. After updating that assertion for the new Journalists destination
+and adding its breadcrumb, all 74 affected journalist/shell tests passed,
+including two additional worker lifecycle tests.

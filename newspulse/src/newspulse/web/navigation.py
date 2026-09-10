@@ -118,6 +118,7 @@ class NavPath:
 _AREAS: tuple[tuple[str, str], ...] = (
     ("/today", "Heute"),
     ("/archive", "Archiv"),
+    ("/journalists", "Journalisten"),
     ("/contacts", "Kontakte"),
     ("/settings", "Einstellungen"),
 )

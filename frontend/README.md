@@ -1,6 +1,6 @@
 # RauteOS frontend
 
-React renders the Desk content inside the existing FastAPI/Jinja shell. The
+React renders the Desk, Twin and journalist pages inside the existing FastAPI/Jinja shell. The
 sidebar, authentication, language cookie, Ask RAUTE and navigation remain owned
 by the server. All requests use the same origin.
 
@@ -39,3 +39,10 @@ The Twin is the second React page, at `/client/{id}/twin`. Run
 `/api/v1/clients/{id}/twin` and its statement/import endpoints. The catalogue in
 `newspulse/twin_catalog.json` contains questionnaire definitions, not client data.
 Old profile, kickoff and guide tools remain linked from the Twin.
+
+The journalist workspace is at `/journalists`. It uses the existing contact book
+plus persistent topics, preferences and relationships. From an opportunity, the
+research link includes its client, kind and ID. Only an explicit POST starts
+provider calls; GET reads the latest dated result. Research metadata is separate
+from coverage. Failed or unconfigured providers remain visible in the result.
+Run migration `0059_journalist_intelligence` before using this page.

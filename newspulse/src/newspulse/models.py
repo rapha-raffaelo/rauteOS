@@ -928,6 +928,55 @@ class Contact(Base):
         return bool(self.email or self.phone or self.beat or self.notes)
 
 
+class JournalistProfile(Base):
+    """Human-maintained intelligence, separate from a particular pitch."""
+    __tablename__ = "journalist_profiles"
+    contact_id: Mapped[int] = mapped_column(ForeignKey("contacts.id", ondelete="CASCADE"), primary_key=True)
+    topics: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    specialties: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    story_types: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    companies: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    source_aliases: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    preferences: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    relationship_status: Mapped[str] = mapped_column(String(40), nullable=False, default="Unbekannt")
+    last_interaction_at: Mapped[dt.datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+    revision: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    __mapper_args__ = {"version_id_col": revision}
+
+
+class JournalistEvidence(Base):
+    """Bylined provider metadata retained for journalist research, never coverage."""
+    __tablename__ = "journalist_evidence"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    url: Mapped[str] = mapped_column(String(2048), unique=True)
+    title: Mapped[str] = mapped_column(Text)
+    source: Mapped[str] = mapped_column(String(255))
+    author: Mapped[str] = mapped_column(String(255))
+    published_at: Mapped[dt.datetime] = mapped_column(UTCDateTime(), index=True)
+    fetched_at: Mapped[dt.datetime] = mapped_column(UTCDateTime())
+    snippet: Mapped[str] = mapped_column(Text, default="")
+    provider: Mapped[str] = mapped_column(String(40))
+
+
+class JournalistResearch(Base):
+    """One dated research attempt for a detected or developed opportunity."""
+    __tablename__ = "journalist_research"
+    __table_args__ = (Index("uq_journalist_research_running", "client_id", "context_kind", "context_id",
+                           unique=True, sqlite_where=text("status = 'running'"),
+                           postgresql_where=text("status = 'running'")),)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    client_id: Mapped[int] = mapped_column(ForeignKey("clients.id", ondelete="CASCADE"), index=True)
+    context_kind: Mapped[str] = mapped_column(String(16))
+    context_id: Mapped[int] = mapped_column(Integer)
+    query: Mapped[str] = mapped_column(String(300))
+    status: Mapped[str] = mapped_column(String(16), default="running")
+    started_at: Mapped[dt.datetime] = mapped_column(UTCDateTime(), default=_utcnow)
+    finished_at: Mapped[dt.datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+    providers: Mapped[dict] = mapped_column(JSON, default=dict)
+    results: Mapped[list] = mapped_column(JSON, default=list)
+    note: Mapped[str] = mapped_column(Text, default="")
+
+
 class TopicHit(Base):
     """One market article the topic radar surfaced for one client.
 

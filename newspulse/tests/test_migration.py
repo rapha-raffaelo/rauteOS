@@ -685,3 +685,23 @@ def test_twin_migration_preserves_existing_evidence_and_allows_additional_statem
     with engine.connect() as conn:
         assert conn.execute(text('SELECT COUNT(*) FROM client_facts')).scalar() == 2
     engine.dispose()
+
+
+def test_journalist_migration_preserves_contacts_and_serializes_running_research(tmp_path, monkeypatch):
+    path=tmp_path/'journalists.db'
+    monkeypatch.setattr(config,'DATABASE_PATH',path)
+    command.upgrade(_alembic_config(),'0058_twin_statements')
+    engine=create_engine(f'sqlite:///{path}')
+    with engine.begin() as conn:
+        conn.execute(text("INSERT INTO contacts (name,outlet,email,phone,beat,notes,created_at,updated_at) "
+                          "VALUES ('Anna Beispiel','Paper','anna@example.org','','','','2026-09-09','2026-09-09')"))
+    command.upgrade(_alembic_config(),'head')
+    with engine.connect() as conn:
+        assert conn.execute(text('SELECT email FROM contacts')).scalar()=='anna@example.org'
+        assert conn.execute(text('SELECT COUNT(*) FROM journalist_profiles')).scalar()==0
+    indexes={i['name']:i for i in inspect(engine).get_indexes('journalist_research')}
+    assert indexes['uq_journalist_research_running']['unique']
+    command.downgrade(_alembic_config(),'0058_twin_statements')
+    with engine.connect() as conn:
+        assert conn.execute(text('SELECT email FROM contacts')).scalar()=='anna@example.org'
+    engine.dispose()
