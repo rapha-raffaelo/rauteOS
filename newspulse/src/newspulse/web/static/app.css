@@ -443,7 +443,7 @@ a:hover { text-decoration: underline; }
      the offset the toolbar sticks at would be wrong. Neither bar sticks. The
      wrap and the unsticking stay in one block on purpose: they are one
      decision, and apart it is easy to change the first and miss the second. */
-  .topbar { flex-wrap: wrap; }
+  .topbar { flex-wrap: wrap; height: auto; min-height: var(--topbar-h); }
   .topsearch__in { width: 110px; }
   .topbar, .tbar { position: static; }
   .side { position: static; height: auto; flex-direction: row; flex-wrap: wrap; align-items: center; overflow: visible; }
@@ -2969,10 +2969,17 @@ button:disabled { opacity: .55; cursor: default; }
 }
 
 /* Keep the primary client workflow visible, with older tools still reachable. */
-.subtabs-legacy {position:relative;}
-.subtabs-legacy summary {cursor:pointer;padding:10px;white-space:nowrap;}
-.subtabs-legacy[open] {display:flex;flex-wrap:wrap;gap:8px;}
-.subtabs-legacy a {display:inline-flex;padding:10px;}
+/* Specialist navigation expands into its own grid, never into the tab row. */
+.subtabs-legacy {flex-basis:100%;min-width:0;margin-bottom:8px;}
+.subtabs-legacy > summary {cursor:pointer;padding:10px;color:var(--muted);font-size:var(--t-subhead);width:fit-content;border-radius:var(--radius-s);}
+.subtabs-legacy > summary:hover {color:var(--ink);background:var(--fill-2);}
+.subtabs-tools {display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:4px;padding:8px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);margin:4px 0 8px;}
+.subtabs-legacy:not([open]) > .subtabs-tools {display:none;}
+.subtabs-tools a {display:flex;align-items:center;gap:8px;padding:12px;border-radius:var(--radius-s);color:var(--muted);font-size:var(--t-subhead);text-decoration:none;min-width:0;}
+.subtabs-tools a:hover {background:var(--fill-2);color:var(--ink);}
+.subtabs-tools a.active {background:var(--fill-2);color:var(--tint);font-weight:600;}
+.subtabs-tools a.subtabs__hot {color:var(--alert);font-weight:600;}
+@media(max-width:600px){.subtabs{gap:2px}.subtabs > a{padding:10px 8px}.subtabs-tools{grid-template-columns:repeat(2,minmax(0,1fr))}.subtabs-tools a{padding:10px 6px;overflow-wrap:anywhere;}}
 
 [hidden]{display:none!important}
 body:has([id^="react-"]) .tbar__l{display:none} body:has([id^="react-"]) .tbar{padding-top:4px;padding-bottom:4px;min-height:0;justify-content:flex-end} body:has([id^="react-"]) .content{padding-top:16px}

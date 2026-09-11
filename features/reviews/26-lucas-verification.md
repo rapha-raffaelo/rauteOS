@@ -113,3 +113,17 @@ Visual captures remain local under /tmp/raute-lucas-guide/refined-*.png.
 These are structural refinements toward the references, not pixel-identical
 reproductions: mockup-only scores, fabricated recommendations and imagery are
 not presented as real data.
+
+### Navigation consolidation — 2026-09-11
+
+Client navigation now has four primary destinations: Overview, Opportunities,
+Twin and Actions. Removed the repeated Ask RAUTE and development links from this
+menu; the header assistant and development control on Opportunities remain.
+Specialist links expand into a separate responsive grid instead of extending the
+tab row. The grid opens on specialist pages and marks the current destination.
+React page titles suppress the duplicate server header directly in the template.
+The wrapping mobile top bar now grows with its contents to prevent overlap.
+
+Validation: 92 shell/style/workbench tests passed; Chromium at 1440px and 390px
+confirmed navigation, collapse/expand behavior, active specialist routes, absence
+of duplicate heading/Ask entry, no page errors and no horizontal overflow.

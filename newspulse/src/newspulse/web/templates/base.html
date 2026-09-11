@@ -156,7 +156,7 @@
       {# The toolbar: what this page is, what the data is worth, and the two
          actions that belong to no page in particular. #}
       <header class="tbar">
-        <div class="tbar__l">
+        <div class="tbar__l"{% if frontend %} hidden{% endif %}>
           <h1 class="tbar__title">{%- block pagetitle -%}{%- endblock -%}</h1>
           {% include "partials/runmeta.html" %}
         </div>

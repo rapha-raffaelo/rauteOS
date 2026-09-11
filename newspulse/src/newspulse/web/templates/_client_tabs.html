@@ -31,13 +31,12 @@
   </div>
   {# The workspace, in the order a morning runs: what happened, what to say about
      it, who else is being written about, and then the standing material. #}
-  <a href="/client/{{ client.id }}/overview"{% if active == 'client_overview' %} class="active"{% endif %}>Overview</a>
+  <a href="/client/{{ client.id }}/overview"{% if active == 'client_overview' %} class="active" aria-current="page"{% endif %}>Overview</a>
   <a href="/client/{{ client.id }}/opportunities"{% if active == 'opportunities' %} class="active" aria-current="page"{% endif %}>Opportunities</a>
   <a href="/client/{{ client.id }}/twin"{% if active == 'twin' %} class="active" aria-current="page"{% endif %}>Twin</a>
-  <a href="/client/{{ client.id }}/actions"{% if active == 'actions' %} class="active"{% endif %}>Actions</a>
-  <a href="/ask?scope=client&amp;client_id={{ client.id }}">Ask RAUTE</a>
-  <a href="/client/{{ client.id }}/opportunities?develop=1">Opportunity entwickeln</a>
-  <details class="subtabs-legacy"><summary>Weitere Werkzeuge</summary>
+  <a href="/client/{{ client.id }}/actions"{% if active == 'actions' %} class="active" aria-current="page"{% endif %}>Actions</a>
+  <details class="subtabs-legacy"{% if active not in ('client_overview', 'opportunities', 'twin', 'actions') %} open{% endif %}><summary>Weitere Werkzeuge{% if active not in ('client_overview', 'opportunities', 'twin', 'actions') %} · aktive Ansicht{% endif %}</summary>
+  <div class="subtabs-tools">
   <a href="/client/{{ client.id }}/heute"{% if active == 'heute' %} class="active" aria-current="page"{% endif %}><svg class="ico subtabs__ico" aria-hidden="true"><use href="#ico-heute"></use></svg>{{ t("Heute") }}</a>
   {# One tab for everything drafted here. Impulse and Berichte were two, and read
      as two products doing the same thing at different rhythms: RauteOS drafts,
@@ -78,7 +77,7 @@
      weekly rather than every morning: what an assistant answers when somebody
      asks about this market (DEC-3). #}
   <a href="/client/{{ client.id }}/ki"{% if active == 'visibility' %} class="active" aria-current="page"{% endif %}><svg class="ico subtabs__ico" aria-hidden="true"><use href="#ico-ki"></use></svg>{{ t("KI-Sichtbarkeit") }}</a>
-  </details>
+  </div></details>
 </nav>
 {# DEC-1's offer, on the Mandantenkarte as well as on Heute: the question and
    its two answers, and nothing else changes until one of them is pressed.
