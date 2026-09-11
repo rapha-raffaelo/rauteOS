@@ -36,3 +36,19 @@ Git-based releases need to include these commits and the new migrations.
 No customer emails, approvals or external messages were sent. The broader visual
 layout differences from Lucas's PDF remain in `26-lucas-verification.md`; the
 Desk-count and Actions-history functional findings are resolved in this release.
+
+## Ask RAUTE and visual refinement release — 2026-09-11
+
+Deployed source commit `0196dcf` from a clean git archive to the same production
+service. Railway deployment `dd84ee29-01cf-4345-ae24-b82a921d767b` reached SUCCESS.
+Ask RAUTE is absent from the global sidebar and remains in the top-right header;
+the Captain drawer and avatar are removed. This release also includes the
+workspace/Desk/journalist/evidence layout refinements recorded in the Lucas audit.
+
+Post-deployment read-only checks confirmed five rendered React pages with one
+header Ask entry, no sidebar Ask entry and no Captain drawer. All seven active
+client read models passed. Fourteen public asset/auth checks passed; source
+hashes matched the reviewed release. SQLite quick_check is ok, schema unchanged
+at 0061. Clients (12), statements (94), assets (1), outreach (4) and contacts (1)
+remain present; the ongoing news collection has 3,867 articles / 3,472 analyses.
+No customer messages or release approvals were issued by this verification.
