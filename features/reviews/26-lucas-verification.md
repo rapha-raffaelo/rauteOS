@@ -85,3 +85,31 @@ Pre-deployment checks: 3,216 Python tests, 28 React tests and the frontend build
 passed. A SQLite online backup was saved on the production volume, and migrations
 0057 through 0061 were rehearsed on a copy. Integrity checks passed and existing
 client, statement, article, analysis, asset, outreach and contact counts matched.
+
+## Visual refinements and assistant consolidation — 2026-09-11
+
+Removed the Captain Comms drawer, floating button, avatar and palette. Ask RAUTE
+is the single assistant, reached from the top-right header and contextual links;
+its redundant global sidebar entry was removed at the user's request. Existing
+client/portfolio session conversations migrate only into the matching Ask scope.
+Browser dictation and explicit read-aloud now live in Ask; Escape, context changes
+and leaving the page stop voice activity. Streaming and provider fallback remain.
+
+The React shell suppresses duplicate page titles and collapses specialist tools.
+Desk adds a factual decisions/Twin-gaps rail. Opportunity workspaces use separate
+views for overview, strategy, journalist research, texts/evidence and history;
+mounted panels preserve unsaved edits across view changes. Development and text
+creation use disclosures. Evidence sits beside the selected text editor, and
+asset links open the text view and the requested saved text. Journalist research
+uses a comparison table; profiles show their summary before the editing form.
+No invented fit percentages or automatic approvals/sending were added.
+
+Validation: 30 React tests and production build passed. The full Python run had
+3,209 passes and one old palette-reference failure; after fixing that reference,
+all 146 targeted styles/shell/assistant/i18n/auth/workbench tests passed. Chromium
+checks passed at 1440px and 390px with no page errors or horizontal overflow,
+including contextual Ask streaming, asset deep links and retained workspace edits.
+Visual captures remain local under /tmp/raute-lucas-guide/refined-*.png.
+These are structural refinements toward the references, not pixel-identical
+reproductions: mockup-only scores, fabricated recommendations and imagery are
+not presented as real data.

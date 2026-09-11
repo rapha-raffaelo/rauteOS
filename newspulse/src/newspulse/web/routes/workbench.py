@@ -47,7 +47,7 @@ def texts(session, client_id=None, released_only=False):
             workspace = session.scalar(select(OpportunityWorkspace).where(
                 OpportunityWorkspace.client_id == row.client_id,
                 OpportunityWorkspace.angle_id == row.angle_id)) if row.angle_id else None
-            href = (f'/client/{row.client_id}/opportunities?kind={workspace.context_kind}&context={workspace.context_id}'
+            href = (f'/client/{row.client_id}/opportunities?kind={workspace.context_kind}&context={workspace.context_id}&view=assets&text={kind}-{row.id}'
                 if workspace else f'/client/{row.client_id}/advice?eintrag=anlass-{row.angle_id}'
                 if row.angle_id else f'/client/{row.client_id}/krise')
             items.append(dict(id=row.id, type=kind, client_id=row.client_id, client=name,

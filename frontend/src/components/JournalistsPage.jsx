@@ -37,7 +37,7 @@ function ProfileEditor({data, onSaved}) {
       onSaved(saved);
     } catch (e) {setError(e.message);} finally {setBusy(false);}
   }
-  return <><form onSubmit={save} className="twin-field"><h2>{data.contact.name}</h2>
+  return <><section className="twin-field journalist-summary"><p className="twin-eyebrow">Journalistenprofil</p><h2>{data.contact.name}</h2><p>{data.contact.outlet} · {data.contact.beat || 'Ressort offen'}</p><p>{data.profile.topics.join(' · ') || 'Noch keine Themen hinterlegt.'}</p><p>{data.profile.preferences || 'Ansprache noch nicht hinterlegt.'}</p><strong>{data.profile.relationship_status}</strong></section><details className="profile-edit"><summary>Profil bearbeiten</summary><form onSubmit={save} className="twin-field"><h2>{data.contact.name}</h2>
     <p>Kontaktangaben und Profilwissen werden von Ihnen gepflegt. E-Mail-Adressen werden nicht geraten.</p>
     <ErrorMessage error={error}/><div className="twin-form-grid">{Object.entries(contactLabels).map(([key,label]) => <label key={key}>{label}
       <input aria-label={label} required={key==='name'} value={contact[key]} onChange={e=>setContact({...contact,[key]:e.target.value})}/>
@@ -51,7 +51,7 @@ function ProfileEditor({data, onSaved}) {
     <label>Zusätzlicher letzter Kontakt (Datum)<input aria-label="Zusätzlicher letzter Kontakt" type="date" value={profile.last_interaction_at?.slice(0,10) || ''}
       onChange={e=>setProfile({...profile,last_interaction_at:e.target.value ? `${e.target.value}T12:00:00Z` : null})}/></label>
     <button className="btn btn--go" disabled={busy}>{busy ? 'Wird gespeichert…' : 'Profil speichern'}</button>
-  </form><section className="twin-field"><h2>Beziehung</h2><Relationship value={data.relationship}/></section>
+  </form></details><section className="twin-field"><h2>Beziehung</h2><Relationship value={data.relationship}/></section>
     <section className="twin-field"><h2>Artikelhistorie</h2><p>Zuordnung über Name und Medium bzw. ausdrücklich hinterlegte Quellenbezeichnungen.</p>
       {data.corpus_capped && <p>Es werden die neuesten 2.000 Artikel je Datenbestand berücksichtigt.</p>}<ArticleList articles={data.articles}/></section></>;
 }
@@ -88,13 +88,7 @@ export function ResearchPanel({clientId, contextKind, contextId, onContact}) {
       <p>Suchthema dieses Laufs: {research.query}</p><p>{research.note}</p>
       <ul>{Object.entries(research.providers).map(([name,value])=><li key={name}>{name}: {providerLabels[value.status]} · {value.articles} Artikel</li>)}</ul>
       {!running && research.results.length===0 && <p>Keine belegten Vorschläge aus dieser Recherche.</p>}
-      {research.results.map(person=><article key={`${person.name}-${person.outlet}`} className="journalist-candidate">
-        <h3>{person.name} · {person.outlet}</h3><p><strong>{person.fit}</strong> · {person.reason}</p><p>{person.approach}</p>
-        {person.contact_id ? <button className="btn" onClick={()=>onContact(person.contact_id)}>Profil öffnen</button>
-          : <button className="btn" onClick={()=>onContact(null,person)}>Kontakt hinterlegen</button>}
-        <details><summary>Artikelbelege ({person.article_count})</summary><ArticleList articles={person.evidence}/></details>
-        {person.relationship && <Relationship value={person.relationship}/>}
-      </article>)}</>}
+      <div className="research-table-wrap"><table className="research-table"><caption>Belegte Journalisten-Vorschläge</caption><thead><tr><th>Journalist / Medium</th><th>Relevanz für diese Gelegenheit</th><th>Aktuelle Belege & Beziehung</th><th>Profil</th></tr></thead><tbody>{research.results.map(person=><tr key={`${person.name}-${person.outlet}`}><td><strong>{person.name}</strong><small>{person.outlet}</small></td><td><strong>{person.fit}</strong><p>{person.reason}</p><details><summary>Ansprache</summary><p>{person.approach}</p></details></td><td><details><summary>Artikelbelege ({person.article_count})</summary><ArticleList articles={person.evidence}/></details>{person.relationship&&<Relationship value={person.relationship}/>}</td><td>{person.contact_id?<button className="btn" onClick={()=>onContact(person.contact_id)}>Profil öffnen</button>:<button className="btn" onClick={()=>onContact(null,person)}>Kontakt hinterlegen</button>}</td></tr>)}</tbody></table></div></>}
   </section>;
 }
 export function JournalistsPage({params = new URLSearchParams(window.location.search)}) {

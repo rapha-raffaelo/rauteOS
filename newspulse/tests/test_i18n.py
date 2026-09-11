@@ -102,7 +102,7 @@ def test_an_unknown_language_code_stores_the_default(client):
     "path,german,english",
     [
         ("/", "Heute", "Today"),
-        ("/clients", "Mandanten", "Clients"),
+        ("/clients?view=classic", "Mandanten", "Clients"),
         ("/archive", "Archiv", "Archive"),
         ("/settings", "Einstellungen", "Settings"),
     ],
@@ -181,11 +181,11 @@ def test_the_impulse_column_translates_its_chrome_but_not_the_draft(client, fact
     assert "Die aktuellen Schließungen zeigen die Schwächen der Struktur." in body
 
 
-def test_captain_comms_is_reachable_from_every_page(client):
+def test_ask_raute_is_reachable_from_every_page(client):
     for path in ("/", "/clients", "/archive", "/settings"):
         body = client.get(path).text
-        assert "Captain Comms" in body, path
-        assert "captain.svg" in body, path
+        assert "Ask RAUTE" in body, path
+        assert "captain.svg" not in body, path
 
 
 def test_category_labels_are_translated_but_the_stored_value_is_not(client, factory):

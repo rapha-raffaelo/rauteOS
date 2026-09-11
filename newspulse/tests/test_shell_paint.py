@@ -351,10 +351,11 @@ def test_ask_raute_keeps_the_mandate_context(web, mandate):
     assert f"client_id={mandate.id}" in target
 
 
-def test_classic_assistant_drawer_remains_available(web, mandate):
+def test_legacy_assistant_links_lead_to_ask_raute(web, mandate):
     page = web.get("/archive", params={"assistant": "1"}).text
-    drawer = page.split('id="assistant-drawer"', 1)[1].split(">", 1)[0]
-    assert "hidden" not in drawer
+    assert 'id="assistant-drawer"' not in page
+    assert 'data-drawer-open' not in page
+    assert 'href="/ask?' in page
 
 
 # --- The tab strip ----------------------------------------------------------------
@@ -420,7 +421,7 @@ def test_the_sidebar_keeps_its_rows_and_only_changes_how_they_look(web, mandate)
     page = web.get("/today").text
     side = page.split('<aside class="side">', 1)[1].split("</aside>", 1)[0]
     rows = re.findall(r'<a href="([^"]+)" class="side__row', side)
-    assert rows[:9] == ["/desk", "/clients", "/assets", "/ask", "/today", "/", "/archive", "/journalists", "/contacts"]
+    assert rows[:8] == ["/desk", "/clients", "/assets", "/today", "/", "/archive", "/journalists", "/contacts"]
     assert f"/client/{mandate.id}/overview" in side
     assert "/settings" in side
 

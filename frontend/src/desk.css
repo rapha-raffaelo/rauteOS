@@ -89,3 +89,7 @@
   .log__f input[name="title"] { flex: 1; min-width: 160px; }
 
 .twin__fill { display: block; }
+
+.desk-workspace{display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:20px;align-items:start}.desk-workspace>div{min-width:0}.desk-intelligence{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;position:sticky;top:20px}.desk-intelligence h2{font-size:18px}.desk-intelligence h3{font-size:14px;margin-top:24px}.desk-intelligence p,.desk-intelligence span{font-size:13px;color:var(--muted)}.desk-intelligence .row{padding:14px 0}.desk-intelligence strong,.desk-intelligence span,.desk-intelligence small{display:block;overflow-wrap:anywhere}.desk-intelligence .btn{margin-top:20px}.desk-workspace .panes{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media(max-width:1200px){.desk-workspace{grid-template-columns:1fr}.desk-intelligence{position:static}}
+@media(max-width:760px){.desk-workspace .panes{grid-template-columns:1fr}}

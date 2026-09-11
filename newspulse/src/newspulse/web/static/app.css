@@ -130,15 +130,6 @@
      coloured plane. */
   --warn-line: rgba(178, 80, 0, .25);
 
-  /* Captain Comms keeps his own palette — deep green and gold, not the accent —
-     so the assistant reads as a distinct presence inside a violet interface.
-     Declared here rather than in a second :root beside his own rules: one block
-     holds every value in this file, which is what makes the accent above a
-     one-line change instead of a search. */
-  --cc-deep: #14523c;
-  --cc-mid: #22815f;
-  --cc-gold: #f2b32e;
-
   /* The plan's hook classes: the four source classes its mock names, plus the
      fifth (a theme with measured resonance) that is a hook class in the engine
      and needs a swatch of its own rather than being folded into one of the
@@ -1624,175 +1615,6 @@ table.covmap th.covcol { min-width: 74px; vertical-align: bottom; }
 .langbtn--on { opacity: 1; border-color: var(--line); background: var(--card); }
 .nav-refresh--tight { margin-left: 8px; }
 
-/* --- Captain Comms -------------------------------------------------------- */
-.cc-icon { width: 18px; height: 18px; display: block; }
-.cc-icon--lg { width: 26px; height: 26px; }
-.drawer-open { display: inline-flex; align-items: center; gap: 8px; }
-.drawer__title { display: inline-flex; align-items: center; gap: 8px; }
-.drawer__a:empty { display: none; }
-
-/* --- Captain Comms drawer -------------------------------------------------- */
-/* He wears deep green and gold rather than the accent, so the assistant reads
-   as a distinct presence inside an otherwise violet interface. The three values
-   are declared with every other value in this file, at the top. */
-
-.drawer-open {
-  position: fixed; right: var(--s5); bottom: var(--s5); z-index: 40;
-  display: inline-flex; align-items: center; gap: var(--s2);
-  padding: 11px 18px;
-  font: inherit; font-size: var(--t-footnote); font-weight: 600;
-  background: var(--ink); color: var(--paper);
-  border: 0; border-radius: var(--radius); cursor: pointer;
-}
-.drawer-open:hover { background: var(--ink-2); }
-.cc-icon { width: 20px; height: 20px; display: block; }
-.cc-icon--lg { width: 30px; height: 30px; }
-
-.drawer {
-  position: fixed; top: 0; right: 0; bottom: 0; width: min(460px, 100vw);
-  z-index: 50; display: flex; flex-direction: column;
-  background: var(--bg); border-left: 1px solid var(--line);
-}
-.drawer[hidden] { display: none; }
-
-.drawer__head {
-  display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  padding: 15px 16px;
-  background: linear-gradient(135deg, var(--cc-mid), var(--cc-deep));
-  color: #fff;
-}
-.drawer__title { display: flex; align-items: center; gap: 11px; }
-.drawer__title strong { display: block; font-size: var(--t-subhead); letter-spacing: -0.01em; }
-.drawer__ctx { display: block; font-size: var(--t-caption2); opacity: .78; margin-top: 1px; }
-.drawer__acts { display: flex; align-items: center; gap: 4px; }
-.drawer__reset {
-  font: inherit; font-size: var(--t-caption2); font-weight: 600; color: #fff;
-  padding: 4px 10px; border: 1px solid rgba(255,255,255,.35);
-  border-radius: var(--radius); background: rgba(255,255,255,.10); cursor: pointer;
-}
-.drawer__reset:hover { background: rgba(255,255,255,.2); }
-.drawer__close {
-  font: inherit; font-size: var(--t-title2); line-height: 1; color: #fff;
-  background: none; border: none; cursor: pointer; padding: 0 5px; opacity: .8;
-}
-.drawer__close:hover { opacity: 1; }
-
-.drawer__body { flex: 1; overflow-y: auto; padding: 16px; }
-
-/* Empty state: his thesis first, so the drawer says what it is for. */
-.drawer__intro { padding: 4px 2px; }
-.drawer__intro[hidden] { display: none; }
-.drawer__motto {
-  font-size: var(--t-footnote); font-weight: 700; color: var(--cc-deep);
-  margin-bottom: 6px; letter-spacing: -0.01em;
-}
-.drawer__hint { font-size: var(--t-caption); color: var(--muted); line-height: 1.5; margin-bottom: 14px; }
-.drawer__chips { display: flex; flex-direction: column; gap: 7px; }
-.drawer__chip {
-  font: inherit; font-size: var(--t-footnote); text-align: left; line-height: 1.4;
-  padding: 10px 13px; border: 1px solid var(--line); border-radius: var(--radius);
-  background: var(--card); color: var(--ink); cursor: pointer;
-}
-.drawer__chip:hover { border-color: var(--cc-mid); color: var(--cc-deep); background: #f2f9f5; }
-
-/* Messages. The consultant's turn right, his left with the mark — the standard
-   chat reading order, so who said what needs no label. */
-.cc-msg { max-width: 88%; margin-bottom: 12px; font-size: var(--t-footnote); line-height: 1.55; }
-.cc-msg--q {
-  margin-left: auto; padding: 9px 13px; border-radius: 14px 14px 4px 14px;
-  background: var(--accent); color: #fff; font-weight: 500;
-}
-.cc-msg--a { display: flex; gap: 9px; max-width: 100%; }
-.cc-msg__avatar { width: 26px; height: 26px; flex: none; margin-top: 2px; }
-.cc-msg__text {
-  flex: 1; padding: 10px 13px; border-radius: 14px 14px 14px 4px;
-  background: var(--card); border: 1px solid var(--line);
-  /* pre-wrap: he writes paragraphs, and collapsing that turns a structured
-     answer into one block of prose. */
-  white-space: pre-wrap;
-}
-.cc-err { margin-top: 7px; font-size: var(--t-caption); color: var(--alert); white-space: normal; }
-
-/* Thinking indicator: three dots, because a spinner at 60 seconds reads as
-   stuck while movement reads as work. */
-.cc-status { display: inline-flex; gap: 4px; align-items: center; height: 18px; }
-.cc-status i {
-  width: 6px; height: 6px; border-radius: 50%; background: var(--cc-mid);
-  animation: cc-pulse 1.2s ease-in-out infinite;
-}
-.cc-status i:nth-child(2) { animation-delay: .18s; }
-.cc-status i:nth-child(3) { animation-delay: .36s; }
-@keyframes cc-pulse {
-  0%, 60%, 100% { opacity: .28; transform: translateY(0); }
-  30% { opacity: 1; transform: translateY(-3px); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .cc-status i { animation: none; opacity: .6; }
-  .drawer-open:hover { transform: none; }
-}
-
-.drawer__ask {
-  display: flex; gap: 8px; padding: 12px 16px;
-  border-top: 1px solid var(--line); background: var(--card);
-}
-.drawer__ask input {
-  flex: 1; font: inherit; font-size: var(--t-footnote); padding: 10px 13px;
-  border: 1px solid var(--line); border-radius: var(--radius);
-  background: var(--bg); color: var(--ink);
-}
-.drawer__ask input:focus { outline: none; border-color: var(--cc-mid); }
-.drawer__ask button {
-  width: 38px; height: 38px; flex: none;
-  font: inherit; font-size: var(--t-subhead); font-weight: 700;
-  border: none; border-radius: 50%; cursor: pointer;
-  background: linear-gradient(135deg, var(--cc-mid), var(--cc-deep)); color: #fff;
-}
-.drawer__ask button:disabled { opacity: .45; cursor: default; }
-
-/* Voice controls. Deliberately quieter than the send button: speaking is an
-   alternative way in, not the primary one, and the send button stays the thing
-   the eye lands on. */
-.drawer__ask .drawer__voice {
-  background: var(--bg);
-  color: var(--muted);
-  border: 1px solid var(--line);
-  font-size: var(--t-subhead);
-  font-weight: 400;
-  line-height: 1;
-}
-.drawer__ask .drawer__voice:hover { color: var(--ink); border-color: var(--cc-mid); }
-/* His green, not the app's indigo: these controls belong to the assistant. */
-.drawer__ask .drawer__voice--on {
-  color: var(--cc-deep);
-  border-color: var(--cc-mid);
-  background: #ecfdf5;
-}
-/* Listening. A ring rather than a colour change on the glyph, so the state is
-   readable at a glance and does not depend on the emoji rendering. */
-.drawer__ask .drawer__voice--live {
-  color: #b91c1c;
-  border-color: #fca5a5;
-  background: var(--alertbg);
-  animation: cc-listen 1.4s ease-in-out infinite;
-}
-@keyframes cc-listen {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, .45); }
-  50%      { box-shadow: 0 0 0 5px rgba(220, 38, 38, 0); }
-}
-/* Respect a reader who asked for less motion: the colour still carries the state. */
-@media (prefers-reduced-motion: reduce) {
-  .drawer__ask .drawer__voice--live { animation: none; }
-}
-
-/* The one line that says where the audio goes, plus recognition errors. */
-.drawer__voicenote {
-  margin: 0;
-  padding: 0 16px 10px;
-  font-size: var(--t-caption2);
-  color: var(--muted);
-  background: var(--card);
-}
-@media print { .drawer, .drawer-open { display: none; } }
 /* --- Diverging coverage bars ---------------------------------------------- */
 /* Two hues, one per side, with a neutral centre line — the diverging form, not
    a rainbow. Bars are thin and the axis recessive; the label carries identity so
@@ -1823,14 +1645,6 @@ table.covmap th.covcol { min-width: 74px; vertical-align: bottom; }
 .dnum--zero { color: var(--alert); font-weight: 700; }
 .fulltable { margin-top: 18px; }
 .fulltable > summary { cursor: pointer; font-size: var(--t-footnote); color: var(--accent); padding: 6px 0; }
-
-.drawer__pick {
-  margin-top: 3px; font: inherit; font-size: var(--t-caption2);
-  padding: 1px 5px; border-radius: var(--radius); cursor: pointer;
-  background: rgba(255,255,255,.14); color: #fff;
-  border: 1px solid rgba(255,255,255,.28); max-width: 190px;
-}
-.drawer__pick option { color: var(--ink); }
 
 /* --- A refusal, wherever it is shown -------------------------------------- */
 /* Used by the Impulse page and the profile: a generator that declined is a
@@ -2052,19 +1866,6 @@ button:disabled { opacity: .55; cursor: default; }
   padding: var(--s3) var(--s4); font-size: var(--t-subhead); color: var(--ink-2);
 }
 .notice--day { background: var(--tint-wash); border-color: transparent; color: var(--ink-2); }
-
-/* --- Captain Comms -------------------------------------------------------- */
-/* The one element in the app that floats, so it is the one that keeps a shadow. */
-.drawer-open {
-  background: var(--tint); color: #fff; border: 0; border-radius: var(--radius-pill);
-  padding: 10px 18px; font-size: var(--t-subhead); font-weight: 600;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, .20);
-}
-.drawer-open:hover { background: var(--tint); filter: brightness(var(--press)); }
-.cc-icon { width: 17px; height: 17px; display: block; }
-.cc-icon--lg { width: 24px; height: 24px; }
-.drawer__title { display: inline-flex; align-items: center; gap: var(--s2); }
-.drawer__a:empty { display: none; }
 
 /* Focus is visible everywhere, once. */
 :focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; }
@@ -3172,3 +2973,8 @@ button:disabled { opacity: .55; cursor: default; }
 .subtabs-legacy summary {cursor:pointer;padding:10px;white-space:nowrap;}
 .subtabs-legacy[open] {display:flex;flex-wrap:wrap;gap:8px;}
 .subtabs-legacy a {display:inline-flex;padding:10px;}
+
+[hidden]{display:none!important}
+body:has([id^="react-"]) .tbar__l{display:none} body:has([id^="react-"]) .tbar{padding-top:4px;padding-bottom:4px;min-height:0;justify-content:flex-end} body:has([id^="react-"]) .content{padding-top:16px}
+
+.side-tools>summary{cursor:pointer}.side-tools>summary::before{content:"▸ ";color:var(--tint)}.side-tools[open]>summary::before{content:"▾ "}

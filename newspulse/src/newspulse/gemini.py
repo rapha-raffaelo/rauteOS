@@ -9,7 +9,7 @@ The two shapes mirror the Claude paths exactly, so callers swap providers
 without learning a second vocabulary:
 
 * :func:`generate` — one prompt in, the model's text out (analyzer, advisor)
-* :func:`stream` — the same, yielding text deltas as they arrive (Captain Comms)
+* :func:`stream` — the same, yielding text deltas as they arrive (Ask RAUTE)
 
 Errors are raised as :class:`newspulse.analyzer.BackendError` so the existing
 retry and reporting logic treats a Gemini failure exactly like a Claude one.

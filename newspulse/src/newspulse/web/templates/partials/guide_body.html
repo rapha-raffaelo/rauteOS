@@ -46,10 +46,10 @@
   /* .btn and its variants come from app.css — declaring them again here is what
      let the two drift apart, and left every page that did not carry a copy with
      the browser's own button. */
-  .coach { background: var(--card); border: 1px solid var(--line); border-left: 3px solid var(--cc-mid);
+  .coach { background: var(--card); border: 1px solid var(--line); border-left: 3px solid var(--tint);
            border-radius: 10px; padding: 16px 20px; margin-top: 26px; }
   .coach__head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
-  .coach__badge { width: 26px; height: 26px; border-radius: 8px; background: var(--cc-deep); color: #fff;
+  .coach__badge { width: 26px; height: 26px; border-radius: 8px; background: var(--tint); color: #fff;
                   display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: var(--t-caption); }
   .coach__title { font-size: var(--t-subhead); font-weight: 700; }
   .coach__sub { font-size: var(--t-caption); color: var(--muted); }
@@ -202,7 +202,7 @@
         <button type="submit" class="btn">{{ t("Speichern") }}</button>
         <span class="guide__uses">
           {{ t("Wirkt auf") }}:
-          <span>{{ t("Impulse") }}</span><span>{{ t("Personalisierte Nachrichten") }}</span><span>{{ t("Captain Comms") }}</span>
+          <span>{{ t("Impulse") }}</span><span>{{ t("Personalisierte Nachrichten") }}</span><span>{{ t("Ask RAUTE") }}</span>
         </span>
       </div>
       <p class="drop__hint">
@@ -224,7 +224,7 @@
 </script>
 
 {# --- The coach ------------------------------------------------------------
-   Not a second assistant. Captain Comms answers questions; this answers one
+   Not a second assistant. Ask RAUTE answers questions; this answers one
    fixed question — does the guide hold up against what was actually written —
    and its findings are typed so a Monday morning can scan them. #}
 <section class="coach">

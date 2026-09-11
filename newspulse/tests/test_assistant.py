@@ -1,4 +1,4 @@
-"""Captain Comms: context building and conversation replay.
+"""Ask RAUTE: context building and conversation replay.
 
 ``claude -p`` is stateless per call, so continuity is the browser replaying the
 transcript. These tests pin the parsing of that replay — the failure that matters
@@ -55,7 +55,7 @@ def test_trimming_a_long_transcript_keeps_the_latest_exchange():
 
 def test_the_prompt_carries_the_strategy_frame_and_the_coverage():
     prompt = _build_prompt("Was tun?", "Zalando", "[0] Eine Meldung", [])
-    assert "Captain Comms" in prompt
+    assert "Ask RAUTE" in prompt
     assert "Zalando" in prompt
     assert "[0] Eine Meldung" in prompt
     assert "Was tun?" in prompt
@@ -188,75 +188,10 @@ def _page(path: str = "/", lang: str | None = None) -> str:
     return client.get(path).text
 
 
-def test_the_voice_controls_ship_on_every_page():
-    """The drawer lives in the shared layout, so voice follows it everywhere."""
+def test_ask_raute_replaces_the_drawer_on_every_page():
     for path in ("/", "/clients", "/archive", "/settings"):
         body = _page(path)
-        assert 'id="drawer-mic"' in body, path
-        assert 'id="drawer-speak"' in body, path
-
-
-def test_both_controls_start_hidden_so_no_dead_button_is_ever_shown():
-    """Web Speech is Chrome/Safari only and needs a secure context. The script
-    unhides each control after it confirms the API, so a browser without it shows
-    nothing rather than a button that does nothing."""
-    body = _page()
-    mic = body.split('id="drawer-mic"', 1)[1].split(">", 1)[0]
-    speak = body.split('id="drawer-speak"', 1)[1].split(">", 1)[0]
-    assert "hidden" in mic
-    assert "hidden" in speak
-    # And the feature detection that unhides them.
-    assert "webkitSpeechRecognition" in body
-    assert "speechSynthesis" in body
-
-
-def test_the_page_says_the_recognition_is_not_ours():
-    """A spoken question names mandates and strategy, and the audio leaves the
-    machine — Chrome to Google, Safari to Apple. Stating that is not optional.
-
-    The status line is matched on its umlaut-free tail: it reaches the page through
-    ``| tojson``, which escapes non-ASCII (``\\u00f6``), so the German spelling
-    would never match the rendered source.
-    """
-    body = _page()
-    assert "die Spracherkennung läuft im Browser, nicht in RauteOS" in body
-    assert "der Browser, nicht RauteOS" in body
-
-
-def test_reading_answers_aloud_is_off_until_it_is_switched_on():
-    """A tool that starts talking while a client is on the phone gets switched off.
-
-    The stored preference is read, never defaulted to on: only an explicit "1"
-    enables it.
-    """
-    body = _page()
-    assert 'localStorage.getItem(SPEAK_KEY) === "1"' in body
-    assert 'aria-pressed="false"' in body
-
-
-def test_the_recognizer_gets_a_full_locale_not_the_app_code():
-    """A recognizer handed "de" falls back to its default locale, which for a
-    German question means listening in English."""
-    body = _page()
-    assert '"en-GB" : "de-DE"' in body
-
-
-def test_the_voice_labels_translate():
-    body = _page(lang="en")
-    assert "Speak your question" in body
-    assert "Read answers aloud" in body
-    assert "Frage sprechen" not in body
-
-
-def test_escape_ends_voice_without_checking_whether_the_drawer_is_open():
-    """Regression: the guard skipped exactly the case it was written for.
-
-    The drawer's own Escape handler is registered first and hides the panel, so an
-    `if (!drawer.hidden)` guard on the voice teardown is always false by the time it
-    runs — Escape would close the drawer and leave the answer being read aloud and
-    the microphone open.
-    """
-    body = _page()
-    handler = body.split('if (e.key === "Escape") endVoice()', 1)
-    assert len(handler) == 2, "the unconditional Escape teardown is gone"
-    assert 'e.key === "Escape" && !drawer.hidden) endVoice' not in body
+        assert 'data-raute-open' in body
+        assert 'href="/ask?' in body
+        assert 'id="assistant-drawer"' not in body
+        assert 'captain.svg' not in body

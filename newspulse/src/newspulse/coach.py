@@ -4,7 +4,7 @@ The guide says what a mandate wants to stand for. The archive says what the pres
 made of it. Nobody compares the two — it is slow, it needs the whole month in one
 head, and it is exactly the work that gets postponed until a quarterly review.
 
-Not a second assistant. Captain Comms answers questions; this answers one fixed
+Not a second assistant. Ask RAUTE answers questions; this answers one fixed
 question, unasked, and its findings are typed rather than prose so a Monday
 morning can scan them: a claim the coverage does not carry, a quote drifting
 towards a No-Go, or a message that is visibly landing.

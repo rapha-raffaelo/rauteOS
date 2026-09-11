@@ -205,7 +205,7 @@ def test_asset_urls_are_root_relative_not_absolute():
         "url_for() yields an absolute URL including the scheme; use /static/... "
         "so the asset cannot be blocked as mixed content behind a TLS proxy"
     )
-    for asset in ("app.css", "htmx.min.js", "captain.svg"):
+    for asset in ("app.css", "htmx.min.js"):
         assert f"/static/{asset}" in base, f"{asset} link went missing"
     assert "http://" not in base, "no asset may be requested over plain http"
 

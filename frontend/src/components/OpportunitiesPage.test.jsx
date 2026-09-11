@@ -13,6 +13,7 @@ it('opens the workspace without activation and sends explicit choices',async()=>
  const fetch=vi.fn().mockImplementation((url,options)=>Promise.resolve(response(url.includes('journalist-research')?{context:{title:'Data story'},research:null}:options?.method?{...data,revision:1,status:'active'}:data)));
  vi.stubGlobal('fetch',fetch);render(<OpportunityWorkspace clientId={1} kind="developed" identity={1}/>);
  await screen.findByText('A study idea');expect(fetch.mock.calls.every(([,options])=>!options?.method)).toBe(true);
+ fireEvent.click(screen.getByRole('button',{name:'Strategie & Auswahl'}));
  fireEvent.change(screen.getByLabelText('Sprecher aus dem Twin'),{target:{value:'7'}});
  fireEvent.click(screen.getByRole('checkbox',{name:'A Journalist · Paper'}));
  fireEvent.click(screen.getByRole('button',{name:'ACTIVATE'}));
@@ -24,6 +25,7 @@ it('preserves unsaved storyline on a conflict',async()=>{
  vi.stubGlobal('fetch',vi.fn().mockImplementation((url,options)=>Promise.resolve(response(url.includes('journalist-research')?{context:{title:'Data story'},research:null}:options?.method?{detail:'Neu laden und vergleichen.'}:data,options?.method?409:200))));
  render(<OpportunityWorkspace clientId={1} kind="developed" identity={1}/>);
  fireEvent.change(await screen.findByLabelText('Gewählte Storyline'),{target:{value:'My unsaved angle'}});
+ fireEvent.click(screen.getByRole('button',{name:'Strategie & Auswahl'}));
  fireEvent.click(screen.getByRole('button',{name:'Auswahl speichern'}));await screen.findByRole('alert');
  expect(screen.getByLabelText('Gewählte Storyline').value).toBe('My unsaved angle');
 });

@@ -3,7 +3,7 @@
 Keywords describe what is written *about* a mandate. They say nothing about what
 it wants to say, what it never says, or in what register — and every generated
 text here needs exactly that. Without it the angle prompt, the advisory and
-Captain Comms each guess a voice, freshly, on every call.
+Ask RAUTE each guess a voice, freshly, on every call.
 
 Two ways in, one result. The consultant writes the guide himself, or uploads what
 the client already has — a brand guideline, a messaging house, a language policy —

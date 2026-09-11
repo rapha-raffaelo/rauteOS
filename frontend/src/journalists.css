@@ -8,3 +8,9 @@
 .journalist-articles p{font-size:13px;line-height:1.6}.journalist-candidate{padding:20px 0;border-top:1px solid var(--line);margin-top:20px}
 .journalists-page details{margin-top:16px}.journalists-page p{line-height:1.6;overflow-wrap:anywhere}
 @media(max-width:760px){.journalist-layout{grid-template-columns:1fr;gap:0}.journalist-layout>aside{position:static}.journalist-roster{max-height:220px}}
+
+.profile-edit>summary{padding:16px;cursor:pointer;color:var(--tint);font-weight:600}.journalist-summary{border-top:3px solid var(--tint)}
+
+.research-table-wrap{overflow:auto}.research-table{width:100%;border-collapse:collapse;font-size:13px}.research-table caption{text-align:left;font-weight:600;padding:16px 0}.research-table th{text-align:left;color:var(--muted);background:var(--fill-2)}.research-table td,.research-table th{padding:14px;vertical-align:top;border-bottom:1px solid var(--line);min-width:140px}.research-table small{display:block}.research-table td:nth-child(2){min-width:200px}
+
+.journalist-roster button{display:block}.journalist-roster button small{font-weight:400;color:var(--muted)}

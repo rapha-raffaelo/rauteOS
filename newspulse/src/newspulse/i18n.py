@@ -1034,7 +1034,7 @@ _EN: dict[str, str] = {
     "Noch keine Clients. Über das Formular oder den Import anlegen.":
         "No clients yet. Add one with the form or the import.",
     # --- Assistant drawer ----------------------------------------------------
-    "Captain Comms": "Captain Comms",
+    "Ask RAUTE": "Ask RAUTE",
     # Streaming status and failure text, read inside the drawer.
     "verbunden": "connected",
     "denkt nach": "thinking",
@@ -1052,9 +1052,9 @@ _EN: dict[str, str] = {
         "Communication strategy for the coverage on this page",
     "Zahlen sagen mehr als jede Selbstdarstellung.":
         "Numbers say more than any self-presentation.",
-    "Strategische Einordnung der Berichterstattung, die gerade auf dem Schirm ist — belegt aus dem Archiv. Captain Comms sieht Schlagzeilen und Kurzfassungen, nicht die vollständigen Artikel, und entscheidet nichts: er berät.":
+    "Strategische Einordnung der Berichterstattung, die gerade auf dem Schirm ist — belegt aus dem Archiv. Ask RAUTE sieht Schlagzeilen und Kurzfassungen, nicht die vollständigen Artikel, und entscheidet nichts: er berät.":
         "A strategic read of the coverage on screen — evidenced from the archive. "
-        "Captain Comms sees headlines and short summaries, not full articles, and "
+        "Ask RAUTE sees headlines and short summaries, not full articles, and "
         "decides nothing: he advises.",
     "Welches Narrativ setzt sich gerade durch — und wer treibt es?":
         "Which narrative is taking hold — and who is driving it?",
@@ -1228,7 +1228,7 @@ _EN: dict[str, str] = {
     "Tagen": "days",
     "Fragen": "Ask",
     "Frage stellen…": "Ask a question…",
-    # --- Captain Comms: voice ------------------------------------------------
+    # --- Ask RAUTE: voice ------------------------------------------------
     # The tooltip names where the audio goes. The browser does the recognition,
     # which means Chrome sends it to Google and Safari to Apple — not something to
     # bury, given a spoken question here names mandates.
@@ -1738,9 +1738,9 @@ _EN: dict[str, str] = {
     # The profile's proposal list, which now carries two kinds of proposal and
     # says on every row which one it is.
     "Vorschläge für das Profil": "Proposals for the profile",
-    "Was dieses Unternehmen ist, Zeile für Zeile. Jede Zeile speist die Impulse, die Anschreiben und Captain Comms — und jede sagt, woher sie stammt.":
+    "Was dieses Unternehmen ist, Zeile für Zeile. Jede Zeile speist die Impulse, die Anschreiben und Ask RAUTE — und jede sagt, woher sie stammt.":
         "What this company is, line by line. Every line feeds the openings, the "
-        "letters and Captain Comms, and every line says where it came from.",
+        "letters and Ask RAUTE, and every line says where it came from.",
     "Kickoff-Fragebogen": "Kick-off questionnaire",
     "Angabe des Mandanten": "The client's own statement",
     # A researched value the grounding API returned no source for. It stays on
