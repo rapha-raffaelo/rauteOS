@@ -52,3 +52,11 @@ hashes matched the reviewed release. SQLite quick_check is ok, schema unchanged
 at 0061. Clients (12), statements (94), assets (1), outreach (4) and contacts (1)
 remain present; the ongoing news collection has 3,867 articles / 3,472 analyses.
 No customer messages or release approvals were issued by this verification.
+
+### Navigation fix — 2026-09-11
+
+Source `d8703b9` deployed as `2cc8f393-c2d2-433e-9eda-340fe291bf09`
+(SUCCESS). Four primary client tabs, a separate specialist-tool grid, no Ask or
+Develop duplicates in the client menu, and corrected mobile top-bar height.
+Read-only production render checks passed; public stylesheet and server source
+match the reviewed release. Database integrity remains ok, schema unchanged.
