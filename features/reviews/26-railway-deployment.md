@@ -77,3 +77,12 @@ backend hashes match; read-only AI status requests work for all seven active
 mandates and grounded web research is configured. Database integrity is ok;
 no migration or production answer generation/commit was performed for the smoke
 check. The new workflow was exercised with synthetic data before deployment.
+
+### Simplified primary controls — 2026-09-12
+
+Source `6de080b` deployed as `ea411dc2-2a48-4da0-bbca-17b7dfed287e`
+(SUCCESS). Duplicate navigation/actions removed, secondary controls grouped, and
+React pages use a single header. Read-only production renders confirm one header
+Ask entry and no secondary toolbar across five workbench pages; source hashes and
+public Twin bundle match. Database integrity remains ok. No production content
+was modified during verification.
