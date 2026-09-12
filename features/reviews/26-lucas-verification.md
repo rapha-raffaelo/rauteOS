@@ -212,3 +212,23 @@ six primary and four legacy pages, including desktop/mobile overflow, single
 Settings trigger, profile save, Twin navigation, language access, source history
 and conditional Ask controls. Verification used isolated demo data; no production
 research, sending, collection or profile writes were triggered.
+
+### Focused workspace controls — 2026-09-12
+
+Removed the Desk's duplicate Intelligence rail: its decision and Twin links
+already appear in the three work lists. The mandate table and lists now use the
+available width. Asset titles open their saved text directly, without a repeated
+"Text öffnen" line. Removed the client list's legacy-portfolio management detour;
+Settings remains in the sidebar. Overview activity only offers "Alle" when its
+four-row preview omits events.
+
+Text selection appears only with multiple saved texts; a stale text ID falls back
+to the first available draft, keeping both editor and selector consistent.
+Opportunity type filtering appears when the list contains different types or a
+filter is already selected, so an active filter can always be cleared.
+
+Validation: 33 React tests, production build and 64 workbench/shell checks passed.
+Chromium verified six primary pages at desktop/mobile sizes and exercised single
+and multiple text selection, stale links, asset-title navigation and mixed-type
+opportunity filters with isolated responses. Desk screenshots reviewed. No
+production content mutations were used for verification.

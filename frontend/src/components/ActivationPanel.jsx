@@ -44,6 +44,8 @@ export function ActivationPanel({clientId,kind,identity,contacts=[],onCompleted}
  async function generate(event){event.preventDefault();setBusy(true);setError('');try{const job=await request(path,{method:'POST',body:JSON.stringify({kind:format,contact_id:needsContact&&contact?Number(contact):null,instruction})});setData(v=>({...v,latest:{...job,kind:format,started_at:new Date().toISOString()}}));}catch(e){setError(e.message);}finally{setBusy(false);}}
  async function check(text){setBusy(true);setError('');try{const job=await request(`${path}/${text.type}/${text.id}/check`,{method:'POST'});setData(v=>({...v,latest:{...job,started_at:new Date().toISOString()}}));}catch(e){setError(e.message);}finally{setBusy(false);}}
  const needsContact=['pitch','interviewangebot','interview_briefing'].includes(format);
+ const visibleText=data?.texts.find(text=>selectedText===`${text.type}-${text.id}`)||data?.texts[0];
+ const visibleTextKey=visibleText?`${visibleText.type}-${visibleText.id}`:'';
  return <section className="twin-field"><p className="twin-eyebrow">Activation</p><h2>Mit der Kundenmail beginnen</h2><p>Die Chance erklären, einen Vorschlag machen und Freigabe einholen. Danach können Sie weitere Texte aus derselben Gelegenheit erstellen.</p>
   {error&&<p className="twin-error" role="alert">{error}</p>}
   {data&&<><details open={!data.texts.length}><summary>Weiteren Text erstellen</summary><form onSubmit={generate}><label>Format<select aria-label="Format" value={format} onChange={e=>setFormat(e.target.value)}>{data.formats.map(f=><option key={f.key} value={f.key}>{f.label}</option>)}</select></label>
@@ -51,8 +53,8 @@ export function ActivationPanel({clientId,kind,identity,contacts=[],onCompleted}
    <label>{format==='custom'?'Ihr Auftrag':'Ergänzender Auftrag (optional)'}<textarea aria-label="Ergänzender Auftrag" required={format==='custom'} value={instruction} onChange={e=>setInstruction(e.target.value)}/></label>
    <button className="btn btn--go" disabled={busy||running}>{running?'Text und Prüfung in Arbeit…':'Entwurf erstellen'}</button></form></details>
    {data.latest&&<p role="status">{data.latest.status==='running'?'In Arbeit':data.latest.status==='complete'?'Arbeitsschritt abgeschlossen':data.latest.status==='stale'?'Prüfung veraltet':'Arbeitsschritt fehlgeschlagen'}{data.latest.note&&` · ${data.latest.note}`}</p>}
-   {data.texts.length>0&&<label>Gespeicherter Text<select aria-label="Gespeicherter Text" value={selectedText||`${data.texts[0].type}-${data.texts[0].id}`} onChange={e=>setSelectedText(e.target.value)}>{data.texts.map(text=><option key={`${text.type}-${text.id}`} value={`${text.type}-${text.id}`}>{text.title||text.kind} · {text.released_at?'Freigegeben':'Entwurf'}</option>)}</select></label>}
-   {data.texts.map((text,index)=><div key={`${text.type}-${text.id}`} hidden={selectedText?selectedText!==`${text.type}-${text.id}`:index!==0}><TextEditor clientId={clientId} key={`${text.type}-${text.id}-${text.digest}`} text={text} path={path} busy={busy||running} onSaved={value=>{setData(value);onCompleted?.();}} onCheck={check}/></div>)}
+   {data.texts.length>1&&<label>Gespeicherter Text<select aria-label="Gespeicherter Text" value={visibleTextKey} onChange={e=>setSelectedText(e.target.value)}>{data.texts.map(text=><option key={`${text.type}-${text.id}`} value={`${text.type}-${text.id}`}>{text.title||text.kind} · {text.released_at?'Freigegeben':'Entwurf'}</option>)}</select></label>}
+   {data.texts.map(text=><div key={`${text.type}-${text.id}`} hidden={visibleTextKey!==`${text.type}-${text.id}`}><TextEditor clientId={clientId} key={`${text.type}-${text.id}-${text.digest}`} text={text} path={path} busy={busy||running} onSaved={value=>{setData(value);onCompleted?.();}} onCheck={check}/></div>)}
   </>}
  </section>;
 }

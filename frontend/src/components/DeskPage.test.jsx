@@ -30,7 +30,7 @@ describe('Desk', () => {
     const {container} = render(<DeskPage />);
     await screen.findByText('nicht hinterlegt');
     expect(screen.getByText('Krise offen')).toBeTruthy();
-    expect(screen.getAllByText(row.client.name)).toHaveLength(4);
+    expect(screen.getAllByText(row.client.name)).toHaveLength(3);
     expect(container.querySelector('script')).toBeNull();
     expect(container.querySelector('td[title]').textContent).toBe('3');
     const form = container.querySelector('form');
