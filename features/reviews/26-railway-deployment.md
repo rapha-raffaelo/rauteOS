@@ -96,3 +96,12 @@ Post-deployment read-only checks passed for seven active clients and five render
 workbench pages. All checked backend/template hashes and public CSS match the
 reviewed source. Database integrity is ok and schema remains
 `0061_opportunity_assets`; no production content was changed for verification.
+
+### Focused workspace controls — 2026-09-12
+
+Source `cbcf8db` deployed as `aff13029-7670-4026-b5a1-ca853e2429ad`
+(SUCCESS). Desk duplicate task rail removed; saved-text and opportunity selectors
+appear only when useful. Text titles lead directly to their editor. All 12 public
+JS/CSS files match the reviewed build. Read-only checks passed for seven active
+clients and five workbench pages; backend hashes match and database integrity is
+ok. Schema unchanged; no production content mutations for verification.
