@@ -105,3 +105,14 @@ appear only when useful. Text titles lead directly to their editor. All 12 publi
 JS/CSS files match the reviewed build. Read-only checks passed for seven active
 clients and five workbench pages; backend hashes match and database integrity is
 ok. Schema unchanged; no production content mutations for verification.
+
+### Consolidated mandate navigation — 2026-09-12
+
+Source `0215df1` deployed as `2997ba61-770d-4e4b-9af4-2e33229a80e3`
+(SUCCESS). Six primary tabs replace the separate tool menu. Opportunities and
+Profil own their related views; Archiv and KI-Sichtbarkeit are primary tabs.
+Production renders verify the six labels, group selector and active parent on
+both workspaces. All 12 public built JS/CSS files, shared stylesheet and checked
+backend/template hashes match. Seven active clients remain readable; database
+integrity is ok and schema is unchanged. No production content mutations were
+performed during verification.
