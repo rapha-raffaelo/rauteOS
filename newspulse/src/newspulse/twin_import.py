@@ -154,6 +154,8 @@ def commit(session: Session, client_id: int, preview_id: str, selected: list[int
         raise ValueError('Vorschau ist abgelaufen. Datei erneut prüfen.')
     if record.committed_at:
         return dict(created=0, skipped=len(selected), already_committed=True)
+    if record.payload.get('kind') == 'ai-job':
+        raise ValueError('Zunächst die Antwortvorschläge prüfen.')
     rows = {r['index']: r for r in record.payload['rows']}
     if not selected or any(i not in rows or rows[i]['state'] != 'ready' for i in selected):
         raise ValueError('Nur gültige, ausgewählte Aussagen können importiert werden.')
@@ -164,14 +166,20 @@ def commit(session: Session, client_id: int, preview_id: str, selected: list[int
     if not changed:
         return dict(created=0, skipped=len(selected), already_committed=True)
     existing = set(session.scalars(select(ClientFact.import_hash).where(ClientFact.client_id == client_id)))
+    ai_import = record.payload.get('kind') == 'ai'
+    occupied = set(session.scalars(select(ClientFact.key).where(ClientFact.client_id == client_id,
+        (ClientFact.fact_status.is_(None) | ClientFact.fact_status.notin_(['Rejected', 'Archived']))))) if ai_import else set()
     created = skipped = 0
     for index in dict.fromkeys(selected):
         item = rows[index]
-        if item['fingerprint'] in existing:
+        if item['fingerprint'] in existing or (ai_import and item['data']['key'] in occupied):
             skipped += 1
             continue
         row = apply(session, client_id, StatementInput.model_validate(item['data']), person)
         row.import_hash = item['fingerprint']
+        if ai_import:
+            row.filled_by = 'ki'
+            occupied.add(row.key)
         session.flush()
         existing.add(item['fingerprint'])
         created += 1

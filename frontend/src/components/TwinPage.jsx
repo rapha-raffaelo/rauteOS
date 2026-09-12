@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { TwinAIImport } from './TwinAIImport.jsx';
 import { twinRequest } from '../twin-api.js';
 
 const labels = {evidence_type: 'Herkunft', source_type: 'Quellentyp', confidence: 'Confidence',
@@ -16,6 +17,7 @@ export function TwinPage({clientId}) {
   const [filter, setFilter] = useState('all');
   const [limit, setLimit] = useState(20);
   const [editing, setEditing] = useState(null);
+  const [aiImporting, setAIImporting] = useState(false);
   const [importing, setImporting] = useState(false);
   const load = async () => setData(await twinRequest(clientId));
   useEffect(() => {
@@ -53,7 +55,7 @@ export function TwinPage({clientId}) {
   return <div className="twin-page">
     <header><p className="twin-eyebrow">CLIENT TWIN · {data.client.name}</p><h1>Was wir wissen. Und woher.</h1>
       <p>Jede Aussage mit ihrer Quelle, ihrem Stand und ihrer Freigabe.</p>
-      <div className="twin-toolbar"><button className="btn" onClick={() => setImporting(!importing)}>Fragebogen importieren</button>
+      <div className="twin-toolbar"><button className="btn btn--go" aria-expanded={aiImporting} onClick={()=>setAIImporting(!aiImporting)}>Mit KI importieren</button><button className="btn" onClick={() => setImporting(!importing)}>Fragebogen importieren</button>
         <a href={`/client/${clientId}/profil`}>Profil, Kickoff & Kommunikationsguide →</a></div>
     </header>
     <section className="twin-progress" aria-label="Vollständigkeit">
@@ -64,6 +66,7 @@ export function TwinPage({clientId}) {
       <small>Vollständigkeit misst beantwortete Pflichtfelder. Sie ist keine Bestätigung ihrer Richtigkeit.</small>
     </section>
     {errors}{notice && <p role="status">{notice}</p>}
+    {aiImporting && <TwinAIImport clientId={clientId} fields={data.fields} onImported={async result=>{await load();setNotice(`${result.created} KI-Vorschläge übernommen; ${result.skipped} bereits beantwortet oder vorhanden.`);}}/>}
     {importing && <ImportPanel clientId={clientId} onImported={async result => {
       await load(); setNotice(`${result.created} Aussagen importiert; ${result.skipped} bereits vorhanden.`);
     }} />}

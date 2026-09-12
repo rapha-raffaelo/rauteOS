@@ -8,13 +8,14 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Resp
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.orm.exc import StaleDataError
 
-from ... import evidence, twin, twin_import
-from ...models import ClientFact, ClientFactHistory
+from ... import evidence, twin, twin_import, twin_ai
+from ...models import ClientFact, ClientFactHistory, TwinImportPreview
 from ..app import get_db
 from ..mandates import mandate_or_404
+from ..spawn import start_or_release
 
 router = APIRouter(prefix="/api/v1/clients/{client_id}/twin", tags=["twin"])
 
@@ -215,3 +216,65 @@ def import_commit(client_id: int, data: ImportCommit, request: Request, session:
     except (IntegrityError, StaleDataError):
         session.rollback()
         raise HTTPException(409, 'Gleichzeitiger Import. Vorschau erneut laden.') from None
+
+# AI drafts share the reviewed-import ledger; only explicit commit creates facts.
+
+
+class AIImportInput(BaseModel):
+    model_config = ConfigDict(extra='forbid', str_strip_whitespace=True)
+    text: str = Field(default='', max_length=30000)
+    source_title: str = Field(default='', max_length=300)
+    section: str = Field(default='', max_length=100)
+    web: bool = True
+
+
+def ai_failed(factory, identity, generation):
+    with factory() as session:
+        twin_ai.finish(session, identity, generation, dict(status='failed', preview_id=None,
+            note='Der KI-Import konnte nicht abgeschlossen werden. Bitte erneut versuchen.'))
+
+
+def ai_worker(factory, identity, generation):
+    try:
+        with factory() as session:
+            twin_ai.generate(session, identity, generation)
+    except Exception:
+        ai_failed(factory, identity, generation)
+
+
+@router.post('/ai-import', status_code=202)
+def ai_start(client_id: int, body: AIImportInput, response: Response, session: Session = Depends(get_db)):
+    mandate_or_404(session, client_id)
+    response.headers['Cache-Control'] = 'no-store'
+    if body.section and body.section not in {f['section'] for f in twin.CATALOG}:
+        raise HTTPException(422, 'Unbekannter Fragebogen-Bereich.')
+    try:
+        row = twin_ai.start(session, client_id, body.model_dump())
+    except (ValueError, IntegrityError):
+        session.rollback()
+        raise HTTPException(409, 'Für diesen Mandanten läuft bereits ein KI-Import.') from None
+    result = twin_ai.job_data(row)
+    factory = sessionmaker(bind=session.get_bind(), expire_on_commit=False)
+    try:
+        start_or_release(ai_worker, args=(factory, row.id, result['generation']), name=f'twin-ai-{client_id}',
+            release=lambda: ai_failed(factory, row.id, result['generation']))
+    except RuntimeError:
+        raise HTTPException(503, 'KI-Import konnte nicht gestartet werden.') from None
+    return result
+
+
+@router.get('/ai-import')
+def ai_status(client_id: int, response: Response, session: Session = Depends(get_db)):
+    mandate_or_404(session, client_id)
+    response.headers['Cache-Control'] = 'no-store'
+    row = session.get(TwinImportPreview, twin_ai.slot_id(client_id))
+    if not row:
+        return dict(job=None, preview=None)
+    job = twin_ai.job_data(row)
+    if job['status'] == 'running' and row.expires_at < dt.datetime.now(dt.UTC):
+        job.update(status='failed', note='Import unterbrochen oder Zeitlimit überschritten. Bitte erneut starten.')
+    preview = session.get(TwinImportPreview, job.get('preview_id')) if job.get('preview_id') else None
+    result = None
+    if preview and preview.client_id == client_id and not preview.committed_at and preview.expires_at > dt.datetime.now(dt.UTC):
+        result = dict(id=preview.id, **preview.payload)
+    return dict(job=job, preview=result)

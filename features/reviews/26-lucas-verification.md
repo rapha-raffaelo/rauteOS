@@ -142,3 +142,28 @@ passed. Chromium checks at 1800, 1280 and 390 pixels used long titles comparable
 to the reported screenshot, verified empty texts, opportunity navigation, no
 horizontal overflow or JavaScript errors. Existing Desk/Actions delivery checks
 also passed. Screenshots are local at /tmp/raute-overview-{width}.png.
+
+### AI Twin import — 2026-09-12
+
+Added “Mit KI importieren” to the Twin. A background job combines mandate data,
+active Twin statements, up to five stored guide documents, optional pasted source
+text, and optional grounded profile web research. Public web research receives
+only mandate metadata, not private source documents. The bounded mapping pass
+proposes up to 100 answers to currently empty catalogue fields with source IDs.
+Unknown fields/citations are discarded; unsupported questions remain open.
+
+A per-client job slot prevents concurrent requests and supports reload/resume.
+Results expire and use the existing reviewed import ledger; no schema change.
+Nothing enters the Twin until explicit selection and commit. Commit rechecks
+manual answers, is idempotent and keeps provenance. AI answers are Derived Insight,
+Needs Verification, not independently verified, and require external approval;
+stricter source confidentiality/internal-only restrictions propagate. No existing
+answer is replaced. Web failures and worker interruptions are visible.
+
+Validation: 76 targeted Twin/profile/auth tests passed, followed by all 11 AI
+import tests including source-permission propagation; 32 React tests and build
+passed. Chromium exercised start/background completion, reload/resume, explicit
+selection/commit and mobile overflow on isolated demo data. A live Gemini probe
+using only a fictional company and an in-memory database produced proposals;
+one selected answer was imported and remained unverified. No production Twin
+was changed during verification.
