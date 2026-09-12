@@ -60,3 +60,11 @@ Source `d8703b9` deployed as `2cc8f393-c2d2-433e-9eda-340fe291bf09`
 Develop duplicates in the client menu, and corrected mobile top-bar height.
 Read-only production render checks passed; public stylesheet and server source
 match the reviewed release. Database integrity remains ok, schema unchanged.
+
+### Client overview dashboard — 2026-09-12
+
+Source `ca5c717` deployed as `d4572910-6d37-4e65-9624-9759faefe243`
+(SUCCESS). New metric cards, opportunity cards, Twin rail, recent activity and
+text empty state replace the bare overview list. Live workbench JS/CSS contain
+the new dashboard component and layout. Read-only production renders passed;
+database integrity remains ok and schema is unchanged.
