@@ -68,3 +68,12 @@ Source `ca5c717` deployed as `d4572910-6d37-4e65-9624-9759faefe243`
 text empty state replace the bare overview list. Live workbench JS/CSS contain
 the new dashboard component and layout. Read-only production renders passed;
 database integrity remains ok and schema is unchanged.
+
+### Reviewed AI Twin import — 2026-09-12
+
+Source `bf3996c` deployed as `96feda25-79e0-43c4-b1ba-630e2994ea2b`
+(SUCCESS). Public Twin bundle contains the AI import control and routes. Deployed
+backend hashes match; read-only AI status requests work for all seven active
+mandates and grounded web research is configured. Database integrity is ok;
+no migration or production answer generation/commit was performed for the smoke
+check. The new workflow was exercised with synthetic data before deployment.
