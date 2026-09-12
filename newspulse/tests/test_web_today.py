@@ -547,12 +547,15 @@ def test_the_importance_score_is_not_shown_but_still_orders_the_feed(factory, cl
     assert feed.index("HOCH") < feed.index("NIEDRIG")
 
 
-def test_every_page_offers_a_refresh(client):
-    """Fetching news is wanted from anywhere, not three clicks deep in settings."""
-    for path in ("/", "/clients", "/archive", "/settings"):
+def test_manual_collection_is_available_once_in_settings(client):
+    """Routine pages stay focused; Settings retains the explicit collection action."""
+    for path in ("/", "/clients", "/archive", "/today"):
         body = client.get(path).text
-        assert 'action="/settings/run"' in body, path
-        assert "Aktualisieren" in body, path
+        assert 'action="/settings/run"' not in body, path
+        assert 'href="/settings"' in body, path
+    body = client.get("/settings").text
+    assert body.count('action="/settings/run"') == 1
+    assert "Jetzt aktualisieren" in body
 
 
 def test_a_stored_logo_survives_rendering_but_an_svg_never_does(client):

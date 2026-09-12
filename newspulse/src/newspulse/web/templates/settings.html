@@ -508,7 +508,7 @@
           {% else %}
             Lauf gestartet — läuft im Hintergrund.
           {% endif %}
-          Der Status oben rechts aktualisiert sich nach dem Neuladen.
+          Der Status im Seitenkopf aktualisiert sich nach dem Neuladen.
         </div>
       {% endif %}
       <form method="post" action="/settings/run" class="run-form">
@@ -521,7 +521,12 @@
             {% endfor %}
           </select>
         </div>
-        <button type="submit">{{ t("Jetzt aktualisieren") }}</button>
+        {% if run_active() %}
+          <button type="submit" class="btn btn--busy" disabled
+                  title="{{ t('Ein Lauf läuft bereits') }}"><span class="spinner" aria-hidden="true"></span>{{ t("Läuft…") }}</button>
+        {% else %}
+          <button type="submit">{{ t("Jetzt aktualisieren") }}</button>
+        {% endif %}
       </form>
       <p class="panel-hint">
         Ein Nachlauf erweitert nur das akzeptierte Zeitfenster — ein Feed liefert

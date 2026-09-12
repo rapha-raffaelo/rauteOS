@@ -193,3 +193,22 @@ checks passed. Chromium verified six primary pages at desktop/mobile sizes,
 secondary controls, history access, storyline selection, text-specific Ask context,
 conditional chat controls and manual-run access in Settings. No data was deleted
 or production actions invoked during this audit.
+
+### Legacy control consolidation — 2026-09-12
+
+Extended the audit to profile, news, archive and Settings. Removed the global
+news-collection button from legacy headers; Settings now has the single explicit
+run form, disabled while collection is active. Live run status and polling remain.
+Language selection uses the same sidebar control across both frontend families.
+Removed the profile's duplicate Twin link, all-client research action inside a
+single-client screen, and second submit button for the same profile form. A lone
+contradiction now has one discard action; bulk discard remains for multiple rows.
+Profile save, per-client research, questionnaire and provenance remain available.
+Removed unused header-button styles and fixed a mobile profile-label overflow.
+
+Validation: 290 targeted Python checks passed (281 unaffected checks plus all nine
+run-status checks after updating the legacy-header expectation). Chromium checked
+six primary and four legacy pages, including desktop/mobile overflow, single
+Settings trigger, profile save, Twin navigation, language access, source history
+and conditional Ask controls. Verification used isolated demo data; no production
+research, sending, collection or profile writes were triggered.

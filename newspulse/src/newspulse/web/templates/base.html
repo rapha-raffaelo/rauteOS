@@ -93,7 +93,7 @@
       </nav>
 
       <div class="side__foot">
-        {% if frontend %}<details class="quiet-actions side-language"><summary>{{ t("Sprache") }}</summary>          <div class="seg" role="group" aria-label="{{ t('Sprache') }}">
+        <details class="quiet-actions side-language"><summary>{{ t("Sprache") }}</summary>          <div class="seg" role="group" aria-label="{{ t('Sprache') }}">
             {% for code, label in [('de', 'DE'), ('en', 'EN')] %}
               <form method="post" action="/language/{{ code }}?next={{ request.url.path }}{% if request.url.query %}%3F{{ request.url.query | urlencode }}{% endif %}">
                 <button type="submit" class="seg__b{% if lang == code %} is-on{% endif %}"
@@ -101,7 +101,7 @@
               </form>
             {% endfor %}
           </div>
-</details>{% endif %}
+</details>
         <a href="/settings" class="side__row{% if request.url.path.startswith('/settings') %} is-on{% endif %}">{{ t("Einstellungen") }}</a>
         {# Only under Google sign-in: there is nothing to sign out of when the
            browser is holding a basic-auth credential, and a button that cannot
@@ -162,38 +162,11 @@
         </div>
       </div>
 
-      {# The toolbar: what this page is, what the data is worth, and the two
-         actions that belong to no page in particular. #}
+      {# Legacy page heading and live run status. Manual collection lives in Settings. #}
       {% if not frontend %}<header class="tbar">
         <div class="tbar__l"{% if frontend %} hidden{% endif %}>
           <h1 class="tbar__title">{%- block pagetitle -%}{%- endblock -%}</h1>
           {% include "partials/runmeta.html" %}
-        </div>
-        <div class="tbar__r">
-          {# A real segmented control, and the labels are words. A flag stands
-             for a country, not a language, which is why Apple never ships one
-             as a language switch. #}
-          <div class="seg" role="group" aria-label="{{ t('Sprache') }}">
-            {% for code, label in [('de', 'DE'), ('en', 'EN')] %}
-              <form method="post" action="/language/{{ code }}?next={{ request.url.path }}{% if request.url.query %}%3F{{ request.url.query | urlencode }}{% endif %}">
-                <button type="submit" class="seg__b{% if lang == code %} is-on{% endif %}"
-                        aria-pressed="{{ 'true' if lang == code else 'false' }}">{{ label }}</button>
-              </form>
-            {% endfor %}
-          </div>
-          <form method="post" action="/settings/run" class="nav-refresh">
-            <input type="hidden" name="redirect_to" value="{{ request.url.path }}{% if request.url.query %}?{{ request.url.query }}{% endif %}">
-            {# Disabled while a sweep is in flight: the trigger refuses a second
-               run anyway, and a button that looks clickable while the answer is
-               "nein" reads as a broken control. #}
-            {% if run_active() %}
-              <button type="submit" class="btn btn--busy" disabled
-                      title="{{ t('Ein Lauf läuft bereits') }}"><span class="spinner" aria-hidden="true"></span>{{ t("Läuft…") }}</button>
-            {% else %}
-              <button type="submit" class="btn btn--go"
-                      title="{{ t('Feeds jetzt abrufen und analysieren — läuft im Hintergrund') }}">{{ t("Aktualisieren") }}</button>
-            {% endif %}
-          </form>
         </div>
       </header>{% endif %}
 

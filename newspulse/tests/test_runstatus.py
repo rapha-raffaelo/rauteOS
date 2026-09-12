@@ -55,12 +55,12 @@ def test_idle_pages_show_neither_spinner_nor_poll(client):
 
     assert "spinner" not in body
     assert "/partials/runmeta" not in body
-    assert "Aktualisieren" in body
+    assert 'action="/settings/run"' not in body
 
 
-def test_a_running_sweep_turns_the_wheel_on_every_page(client, running):
-    """The header is in the shared layout, so the state follows it everywhere."""
-    for path in ("/", "/clients", "/archive", "/settings"):
+def test_a_running_sweep_keeps_legacy_page_status_visible(client, running):
+    """Removing the global trigger must preserve the live status and polling."""
+    for path in ("/", "/today", "/archive", "/settings"):
         body = client.get(path).text
         assert 'class="spinner"' in body, path
         assert "Aktualisierung läuft…" in body, path
@@ -74,13 +74,13 @@ def test_a_running_sweep_makes_the_header_poll_itself(client, running):
     assert "every 4s" in meta
 
 
-def test_the_refresh_button_is_disabled_while_a_sweep_runs(client, running):
+def test_the_settings_refresh_button_is_disabled_while_a_sweep_runs(client, running):
     """The trigger refuses a second run anyway; a button that looks clickable
     while the answer is "no" reads as a broken control."""
-    body = client.get("/today").text
+    body = client.get("/settings").text
 
     assert "btn--busy" in body
-    assert "disabled" in body.split("nav-refresh", 1)[1].split("</form>", 1)[0]
+    assert "disabled" in body.split('class="run-form"', 1)[1].split("</form>", 1)[0]
 
 
 def test_the_partial_keeps_polling_while_the_sweep_runs(client, running):

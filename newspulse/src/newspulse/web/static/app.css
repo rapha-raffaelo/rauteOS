@@ -292,7 +292,6 @@ body {
   color: #fff; font-size: var(--t-footnote); font-weight: 700; letter-spacing: 0;
 }
 .tbar__title:empty { display: none; }
-.tbar__r { display: flex; align-items: center; gap: var(--s2); flex: none; }
 .datemeta { color: var(--muted); font-size: var(--t-footnote); text-align: left; line-height: 1.4; }
 
 /* The segmented control, as AppKit draws it: a filled track, one raised knob. */
@@ -507,7 +506,6 @@ a:hover { text-decoration: underline; }
    it are that run's, and presenting them as current would be a small lie. */
 .runstale { color: var(--muted); }
 
-.nav-refresh__btn--busy { opacity: .75; cursor: default; }
 .runok { color: #16a34a; font-weight: 600; }
 .runbad { color: var(--alert); font-weight: 600; }
 .runempty { font-style: italic; }
@@ -1474,20 +1472,6 @@ table.sov th { font-size: var(--t-caption2); text-transform: uppercase; letter-s
    control layer above; this is the only thing the table adds. */
 .sov .linkbtn--danger { color: var(--alert); }
 
-/* --- Header refresh ------------------------------------------------------ */
-.nav-refresh { margin-left: auto; align-self: center; }
-.nav-refresh button {
-  font: inherit;
-  font-size: var(--t-footnote);
-  padding: 5px 12px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--card);
-  color: var(--accent);
-  cursor: pointer;
-}
-.nav-refresh button:hover { border-color: var(--accent); background: #eef0fb; }
-
 /* --- Score legend -------------------------------------------------------- */
 .score-legend { display: inline-flex; align-items: center; gap: 5px; }
 .score--legend { width: 20px; height: 20px; font-size: var(--t-caption2); border-radius: var(--radius); }
@@ -1613,7 +1597,6 @@ table.covmap th.covcol { min-width: 74px; vertical-align: bottom; }
 }
 .langbtn:hover { opacity: 0.85; }
 .langbtn--on { opacity: 1; border-color: var(--line); background: var(--card); }
-.nav-refresh--tight { margin-left: 8px; }
 
 /* --- Diverging coverage bars ---------------------------------------------- */
 /* Two hues, one per side, with a neutral centre line — the diverging form, not
