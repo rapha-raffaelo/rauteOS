@@ -11,7 +11,7 @@ function EvidenceReview({text}){
   {quality.findings?.length>0&&<><button className="btn" onClick={()=>setOpen(!open)} aria-expanded={open}>{open?'Prüfung schließen':'Aussage für Aussage prüfen'}</button>
    {open&&<ol>{quality.findings.map((f,i)=><li key={i}><blockquote>{f.quote}</blockquote><strong>{f.classification}</strong><p>{f.reason}</p>
     {f.warnings.length>0&&<ul>{f.warnings.map((warning,j)=><li key={j}>{warning}</li>)}</ul>}
-    {f.statement_ids.map(id=>{const source=text.evidence_statements.find(r=>r.id===id);return source&&<p key={id}>Twin: {source.value} · {source.evidence_type} · {source.source_title||'Quelle nicht benannt'}{source.source_url&&<> · <a href={source.source_url} target="_blank" rel="noreferrer">Quelle öffnen</a></>}</p>;})}
+    {f.statement_ids.map(id=>{const source=text.evidence_statements.find(r=>r.id===id);return source&&<p key={id}>Profil: {source.value} · {source.evidence_type} · {source.source_title||'Quelle nicht benannt'}{source.source_url&&<> · <a href={source.source_url} target="_blank" rel="noreferrer">Quelle öffnen</a></>}</p>;})}
     {f.source_ids.map(id=>{const source=text.evidence_sources[id];return source&&<p key={id}><a href={source.url} target="_blank" rel="noreferrer">{source.title}</a> · {source.source} · {source.published_at?.slice(0,10)}</p>;})}
     {f.contradiction_ids.map(id=>{const source=text.evidence_statements.find(r=>r.id===id);return source&&<p key={id}>Widerspruch prüfen gegen: {source.value} · {source.source_title||'Quelle nicht benannt'}</p>;})}
     {f.no_go_rules.map((rule,j)=><p key={j}>No-Go im Guide: {rule}</p>)}

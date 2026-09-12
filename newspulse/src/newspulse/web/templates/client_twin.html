@@ -1,17 +1,17 @@
 {% extends "base.html" %}
-{% block title %}Twin · {{ client.name }} · RauteOS{% endblock %}
-{% block pagetitle %}Twin{% endblock %}
+{% block title %}Profil · {{ client.name }} · RauteOS{% endblock %}
+{% block pagetitle %}Profil{% endblock %}
 {% block content %}
 {% set t = translator(request) %}
 {% set active = "twin" %}
 {% include "_client_tabs.html" %}
 {% if frontend %}
 {% for href in frontend.css %}<link rel="stylesheet" href="{{ href }}">{% endfor %}
-<div id="react-twin" data-client-id="{{ client.id }}"><p role="status">Twin wird geladen…</p>
+<div id="react-twin" data-client-id="{{ client.id }}"><p role="status">Profil wird geladen…</p>
 <p><a href="/client/{{ client.id }}/profil">Profil, Kickoff und Kommunikationsguide öffnen</a></p></div>
 <script type="module" src="{{ frontend.script }}"></script>
 {% else %}
-<h1>Twin</h1><p>Die Twin-Oberfläche ist noch nicht verfügbar.</p>
+<h1>Profil</h1><p>Die Profil-Oberfläche ist noch nicht verfügbar.</p>
 <p><a href="/client/{{ client.id }}/profil">Profil, Kickoff und Kommunikationsguide öffnen</a></p>
 {% endif %}
 {% endblock %}

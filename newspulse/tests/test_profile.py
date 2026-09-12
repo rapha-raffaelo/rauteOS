@@ -516,7 +516,7 @@ def test_the_day_tab_keeps_the_workspace_around_it(factory, web):
     scoped = web.get(f"/today?client={client_id}").text
     everyones = web.get("/today").text
 
-    assert f'/client/{client_id}/profil' in scoped, "the workspace strip is present"
+    assert f'/client/{client_id}/twin' in scoped, "the consolidated profile is present"
     assert "/profil" not in everyones
 
 

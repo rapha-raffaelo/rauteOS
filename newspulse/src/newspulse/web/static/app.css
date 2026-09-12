@@ -2953,16 +2953,14 @@ button:disabled { opacity: .55; cursor: default; }
 
 /* Keep the primary client workflow visible, with older tools still reachable. */
 /* Specialist navigation expands into its own grid, never into the tab row. */
-.subtabs-legacy {flex-basis:100%;min-width:0;margin-bottom:8px;}
-.subtabs-legacy > summary {cursor:pointer;padding:10px;color:var(--muted);font-size:var(--t-subhead);width:fit-content;border-radius:var(--radius-s);}
-.subtabs-legacy > summary:hover {color:var(--ink);background:var(--fill-2);}
-.subtabs-tools {display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:4px;padding:8px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);margin:4px 0 8px;}
-.subtabs-legacy:not([open]) > .subtabs-tools {display:none;}
-.subtabs-tools a {display:flex;align-items:center;gap:8px;padding:12px;border-radius:var(--radius-s);color:var(--muted);font-size:var(--t-subhead);text-decoration:none;min-width:0;}
-.subtabs-tools a:hover {background:var(--fill-2);color:var(--ink);}
-.subtabs-tools a.active {background:var(--fill-2);color:var(--tint);font-weight:600;}
-.subtabs-tools a.subtabs__hot {color:var(--alert);font-weight:600;}
-@media(max-width:600px){.subtabs{gap:2px}.subtabs > a{padding:10px 8px}.subtabs-tools{grid-template-columns:repeat(2,minmax(0,1fr))}.subtabs-tools a{padding:10px 6px;overflow-wrap:anywhere;}}
+/* Group-specific views, without a second toolbar of unrelated destinations. */
+.workspace-view{display:flex;align-items:center;gap:12px;margin:0 0 24px;flex-wrap:wrap}
+.workspace-view label{font-size:12px;color:var(--muted);font-weight:500}
+.workspace-view select{font:inherit;font-size:13px;min-width:200px;max-width:100%;padding:9px 32px 9px 12px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink)}
+.workspace-view noscript a{display:inline-block;margin:6px 12px 6px 0}
+.workspace-crisis{color:var(--alert);font-size:10px;border-radius:4px;padding:2px 5px;background:var(--fill-2)}
+@media(max-width:600px){.subtabs{gap:2px}.subtabs > a{padding:10px 8px}.workspace-view{align-items:flex-start;flex-direction:column;gap:6px}.workspace-view select{width:100%}}
+
 
 [hidden]{display:none!important}
 body:has([id^="react-"]) .content{padding-top:16px}

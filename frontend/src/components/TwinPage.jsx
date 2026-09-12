@@ -41,7 +41,7 @@ export function TwinPage({clientId}) {
   const refresh = async () => {try {await load(); setError('');} catch (err) {setError(err.message);}};
   const errors = error && <div role="alert" className="twin-error"><p>{error}</p>
     <button className="btn" onClick={refresh}>Neu laden</button> <a href={`/login?next=/client/${clientId}/twin`}>Anmelden</a></div>;
-  if (!data) return <div className="twin-page">{errors || <p role="status">Twin wird geladen…</p>}</div>;
+  if (!data) return <div className="twin-page">{errors || <p role="status">Profil wird geladen…</p>}</div>;
   const statements = (key) => data.statements.filter(row => row.key === key);
   const active = (row) => !['Rejected', 'Archived'].includes(row.fact_status);
   const visible = data.fields.filter(field => {
@@ -53,10 +53,10 @@ export function TwinPage({clientId}) {
        filter === 'answered' && rows.some(active) || filter === 'review' && rows.some(r => active(r) && !r.verified_at));
   });
   return <div className="twin-page">
-    <header><p className="twin-eyebrow">CLIENT TWIN · {data.client.name}</p><h1>Was wir wissen. Und woher.</h1>
+    <header><p className="twin-eyebrow">PROFIL · {data.client.name}</p><h1>Was wir wissen. Und woher.</h1>
       <p>Jede Aussage mit ihrer Quelle, ihrem Stand und ihrer Freigabe.</p>
       <div className="twin-toolbar"><button className="btn btn--go" aria-expanded={aiImporting} onClick={()=>setAIImporting(!aiImporting)}>Mit KI importieren</button><details className="quiet-actions"><summary>Weitere Eingaben</summary><div className="quiet-actions-body"><button className="btn" onClick={() => setImporting(!importing)}>Fragebogen importieren</button>
-        <a href={`/client/${clientId}/profil`}>Profil, Kickoff & Kommunikationsguide →</a></div></details></div>
+</div></details></div>
     </header>
     <section className="twin-progress" aria-label="Vollständigkeit">
       <strong>{data.progress.percent} % vollständig</strong>

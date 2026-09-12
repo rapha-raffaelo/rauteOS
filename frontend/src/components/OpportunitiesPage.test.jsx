@@ -14,7 +14,7 @@ it('opens the workspace without activation and sends explicit choices',async()=>
  vi.stubGlobal('fetch',fetch);render(<OpportunityWorkspace clientId={1} kind="developed" identity={1}/>);
  await screen.findByText('A study idea');expect(fetch.mock.calls.every(([,options])=>!options?.method)).toBe(true);
  fireEvent.click(screen.getByRole('button',{name:'Strategie & Auswahl'}));
- fireEvent.change(screen.getByLabelText('Sprecher aus dem Twin'),{target:{value:'7'}});
+ fireEvent.change(screen.getByLabelText('Sprecher aus dem Profil'),{target:{value:'7'}});
  fireEvent.click(screen.getByRole('checkbox',{name:'A Journalist · Paper'}));
  fireEvent.click(screen.getByRole('button',{name:'ACTIVATE'}));
  await screen.findByText('Gelegenheit aktiviert. Wählen Sie den nächsten Arbeitsschritt.');

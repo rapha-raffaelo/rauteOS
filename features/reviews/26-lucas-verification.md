@@ -232,3 +232,27 @@ Chromium verified six primary pages at desktop/mobile sizes and exercised single
 and multiple text selection, stale links, asset-title navigation and mixed-type
 opportunity filters with isolated responses. Desk screenshots reviewed. No
 production content mutations were used for verification.
+
+### Consolidated mandate navigation — 2026-09-12
+
+Implemented the requested six primary tabs: Overview, Opportunities, Profil,
+Actions, Archiv and KI-Sichtbarkeit. Removed the separate specialist-tool menu.
+Opportunities owns Chancen, Heute, Impulse, Issues and Plan; declared crises remain
+reachable there and an open crisis is flagged on the primary Opportunities tab.
+Profil owns the former Twin (Wissen & Aussagen), company/kickoff/guide material,
+Wettbewerb and Marktumfeld. A compact view selector shows only the current group's
+views, with a no-JavaScript link fallback. Each legacy route highlights its parent
+group; existing routes and content links remain valid.
+
+Renamed Twin in user-facing React views, the classic Desk, page title, progress
+labels, Ask suggestions and import/help text to Profil. Removed the duplicate
+legacy-profile link from the import toolbar now that the group selector owns it.
+Data models, field identities and import/approval behavior are unchanged.
+
+Validation: 33 React tests and production build passed. 158 targeted Python
+checks passed (95 unaffected checks plus 63 crisis/profile checks after updating
+translations and the consolidated destination expectation). Chromium visited 13
+mandate routes on desktop/mobile and exercised every Opportunities/Profile view
+selector destination. Verified primary selection, direct Archive/Visibility
+access, AI import access and the renamed overview. Screenshots reviewed. No
+production content was modified for verification.

@@ -2,7 +2,7 @@ import React, {useEffect, useRef, useState} from 'react';
 
 export function askHref(context) {return `/ask?${new URLSearchParams(context)}`;}
 const names={global:'Gesamtes Portfolio',client:'Mandant',opportunity:'Opportunity',asset:'Gespeicherter Text'};
-const suggestions={global:['Wo fehlen Leistungen?', 'Welche Opportunities verdienen Aufmerksamkeit?'],client:['Wo fehlen Belege im Twin?', 'Welche Story passt zur Positionierung?'],opportunity:['Wie belastbar ist diese Gelegenheit?', 'Welche Storyline und welcher Journalist passen?'],asset:['Schärfe diesen Entwurf.', 'Welche Aussagen brauchen bessere Belege?']};
+const suggestions={global:['Wo fehlen Leistungen?', 'Welche Opportunities verdienen Aufmerksamkeit?'],client:['Wo fehlen Belege im Profil?', 'Welche Story passt zur Positionierung?'],opportunity:['Wie belastbar ist diese Gelegenheit?', 'Welche Storyline und welcher Journalist passen?'],asset:['Schärfe diesen Entwurf.', 'Welche Aussagen brauchen bessere Belege?']};
 function promptHistory(turns){let budget=4000;const result=[];for(const turn of turns.slice(-12).reverse()){if(turn.text.length>budget)break;result.unshift(turn);budget-=turn.text.length;}return result;}
 function initialContext(){const p=new URLSearchParams(window.location.search);const result=Object.fromEntries(['date','scope','client_id','opportunity_kind','opportunity_id','asset_type','asset_id'].filter(k=>p.has(k)).map(k=>[k,p.get(k)]));return {...result,scope:result.scope||(result.client_id?'client':'global')};}
 export function AskRaute(){

@@ -366,36 +366,39 @@ def _strip(html: str) -> str:
     return html.split('class="subtabs"', 1)[1].split("</nav>", 1)[0]
 
 
-def test_the_tabs_keep_their_names_their_order_and_their_targets(web, mandate):
-    """The repaint is allowed to change how a tab looks and nothing else."""
+def test_the_primary_tabs_are_consolidated(web, mandate):
     strip = _strip(web.get(f"/client/{mandate.id}/heute").text)
-
-    seen = [label for label in re.findall(r"</svg>([^<]+)</a>", strip)]
-    assert seen == [label for label, _, _ in _TABS]
-
-    for label, suffix, _ in _TABS:
-        assert f'href="/client/{mandate.id}{suffix}"' in strip, label
-
-
-def test_every_tab_carries_its_own_symbol(web, mandate):
-    strip = _strip(web.get(f"/client/{mandate.id}/heute").text)
-    for label, _, symbol in _TABS:
-        assert f'href="#{symbol}"' in strip, f"{label} has no symbol"
-    assert strip.count("subtabs__ico") == len(_TABS)
+    assert re.findall(r'<a [^>]+>([^<]+)</a>', strip) == [
+        "Overview", "Opportunities", "Profil", "Actions", "Archiv", "KI-Sichtbarkeit"]
+    assert "subtabs-legacy" not in strip
+    for suffix in ("/overview", "/opportunities", "/twin", "/actions", "", "/ki"):
+        assert f'href="/client/{mandate.id}{suffix}"' in strip
 
 
-def test_the_symbols_are_drawn_once_in_the_layout(web, mandate):
-    """One sprite for the whole page, referenced by <use>: eleven tabs on twelve
-    pages should not cost a hundred and thirty-two copies of the geometry."""
-    page = web.get(f"/client/{mandate.id}/heute").text
-    assert page.count('<symbol id="ico-heute"') == 1
-    assert page.count('<use href="#ico-heute">') == 1
-
-
-def test_the_selected_tab_is_the_one_the_page_is(web, mandate):
-    strip = _strip(web.get(f"/client/{mandate.id}/profil").text)
+@pytest.mark.parametrize("suffix,parent", [
+    ("/heute", "/opportunities"), ("/advice", "/opportunities"),
+    ("/issues", "/opportunities"), ("/plan", "/opportunities"),
+    ("/opportunities", "/opportunities"), ("/twin", "/twin"),
+    ("/profil", "/twin"), ("/wettbewerb", "/twin"), ("/market", "/twin"),
+    ("/map", "/twin"), ("", ""), ("/ki", "/ki"),
+])
+def test_specialist_views_select_their_primary_workspace(web, mandate, suffix, parent):
+    strip = _strip(web.get(f"/client/{mandate.id}{suffix}").text)
     active = re.findall(r'<a href="([^"]+)"[^>]*class="active"', strip)
-    assert active == [f"/client/{mandate.id}/profil"]
+    assert active == [f"/client/{mandate.id}{parent}"]
+
+
+@pytest.mark.parametrize("suffix,options", [
+    ("/opportunities", ["/opportunities", "/heute", "/advice", "/issues", "/plan"]),
+    ("/twin", ["/twin", "/profil", "/wettbewerb", "/market"]),
+])
+def test_each_workspace_keeps_its_tools_reachable(web, mandate, suffix, options):
+    body = web.get(f"/client/{mandate.id}{suffix}").text
+    select = body.split('id="workspace-view"', 1)[1].split('</select>', 1)[0]
+    targets = re.findall(r'<option value="([^"]+)"', select)
+    assert targets == [f"/client/{mandate.id}{path}" for path in options]
+    for target in targets:
+        assert web.get(target).status_code == 200
 
 
 def test_a_tab_with_no_page_behind_it_is_not_in_the_strip(web, mandate):

@@ -35,9 +35,9 @@ export function OpportunityWorkspace({clientId,kind,identity,onChanged}){
     </div><div hidden={tab!=='strategy'}><section className="twin-field"><h3>Storyline und Sprecher</h3><ErrorMessage error={error}/>{notice&&<p role="status">{notice}</p>}
       {data.storylines.length>0&&<label>Storyline-Vorschlag übernehmen<select aria-label="Storyline-Vorschlag übernehmen" value="" onChange={e=>setStoryline(data.storylines[Number(e.target.value)])} disabled={data.status==='closed'}><option value="" disabled>Vorschlag auswählen …</option>{data.storylines.map((s,i)=><option key={i} value={i}>{s}</option>)}</select></label>}
       <label>Gewählte Storyline<textarea aria-label="Gewählte Storyline" value={storyline} onChange={e=>setStoryline(e.target.value)} disabled={data.status==='closed'}/></label>
-      <label>Sprecher aus dem Twin<select aria-label="Sprecher aus dem Twin" value={speaker} onChange={e=>setSpeaker(e.target.value)} disabled={data.status==='closed'}><option value="">Noch nicht gewählt</option>
+      <label>Sprecher aus dem Profil<select aria-label="Sprecher aus dem Profil" value={speaker} onChange={e=>setSpeaker(e.target.value)} disabled={data.status==='closed'}><option value="">Noch nicht gewählt</option>
         {data.speakers.map(s=><option key={s.id} value={s.id}>{s.value} · {s.evidence_type || 'Ungeprüft'}</option>)}</select></label>
-      <p><a href={`/client/${clientId}/twin`}>Sprecher und Freigabe im Twin pflegen</a></p>
+      <p><a href={`/client/${clientId}/twin`}>Sprecher und Freigabe im Profil pflegen</a></p>
       <fieldset disabled={data.status==='closed'}><legend>Journalisten auswählen</legend><div className="opportunity-contacts">{data.contacts.map(c=><label key={c.id}>
         <input type="checkbox" checked={contacts.includes(c.id)} onChange={e=>setContacts(e.target.checked?[...contacts,c.id]:contacts.filter(id=>id!==c.id))}/>{c.name} · {c.outlet}</label>)}</div>
         {!data.contacts.length&&<p>Noch keine Kontakte hinterlegt. Nutzen Sie „Medien & Journalisten“.</p>}</fieldset>
@@ -65,7 +65,7 @@ export function OpportunitiesPage({clientId,params=new URLSearchParams(window.lo
   async function develop(event){event.preventDefault();setBusy(true);setError('');try{const job=await request(path+'/develop',{method:'POST',body:JSON.stringify({focus})});setBoard(v=>({...v,development:job}));}catch(e){setError(e.message);}finally{setBusy(false);}}
   function open(row){setSelected({kind:row.context_kind,id:row.context_id});history.replaceState(null,'',`?kind=${row.context_kind}&context=${row.context_id}`);}
   return <main className="twin-page opportunities-page"><p className="twin-eyebrow">{board?.client.name}</p><h1>Opportunities</h1><ErrorMessage error={error}/>
-    <details className="twin-field development-panel" open={params.has('develop')||!board?.opportunities.length||running}><summary>Neue Kommunikationschance entwickeln</summary><p>Aus Twin, Positionierung und aktueller Recherche. Ein einzelner Nachrichtenanlass ist nicht nötig. Die Ideen bleiben Vorschläge zur Prüfung.</p>
+    <details className="twin-field development-panel" open={params.has('develop')||!board?.opportunities.length||running}><summary>Neue Kommunikationschance entwickeln</summary><p>Aus Profil, Positionierung und aktueller Recherche. Ein einzelner Nachrichtenanlass ist nicht nötig. Die Ideen bleiben Vorschläge zur Prüfung.</p>
       <form onSubmit={develop}><label>Recherchefokus<input aria-label="Recherchefokus" required minLength={3} maxLength={300} value={focus} onChange={e=>setFocus(e.target.value)} placeholder="Zum Beispiel: BioLNG im Schwerlastverkehr"/></label>
         <button className="btn btn--go" disabled={!board||busy||running}>{running?'Recherche und Entwicklung laufen…':'Chance entwickeln'}</button></form>
       {board?.development&&<div><p role="status">{({running:'In Arbeit',complete:'Ideen entwickelt',no_opportunity:'Keine neue tragfähige Idee',failed:'Entwicklung fehlgeschlagen'})[board.development.status]} · {date(board.development.finished_at||board.development.started_at)}</p>

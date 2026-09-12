@@ -99,7 +99,7 @@ def save_choices(session,client_id,kind,identity,body,actor,activate=False):
     if (row.revision if row else 0)!=body.revision:
         raise HTTPException(409,'Workspace wurde inzwischen geändert. Neu laden und vergleichen.')
     if body.speaker_statement_id and body.speaker_statement_id not in {r.id for r in workspaces.speakers(session,client_id)}:
-        raise HTTPException(422,'Sprecher ist nicht im verwendbaren Twin hinterlegt.')
+        raise HTTPException(422,'Sprecher ist nicht im verwendbaren Profil hinterlegt.')
     contacts=set(session.scalars(select(Contact.id).where(Contact.id.in_(body.contact_ids))))
     blocked=set(session.scalars(select(JournalistProfile.contact_id).where(JournalistProfile.contact_id.in_(body.contact_ids),
         JournalistProfile.relationship_status=='Nicht kontaktieren')))

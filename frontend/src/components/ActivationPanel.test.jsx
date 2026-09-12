@@ -20,7 +20,7 @@ it('shows the client-claim warning alongside its source',async()=>{
  vi.stubGlobal('fetch',vi.fn().mockResolvedValue(response(data)));render(<ActivationPanel clientId={1} kind="developed" identity={1}/>);
  fireEvent.click(await screen.findByRole('button',{name:'Aussage für Aussage prüfen'}));
  expect(screen.getByText('Client Statement')).toBeTruthy();expect(screen.getByText('Nicht unabhängig bestätigt')).toBeTruthy();
- expect(screen.getByText(/Twin: 400 % THG-Minderung/)).toBeTruthy();
+ expect(screen.getByText(/Profil: 400 % THG-Minderung/)).toBeTruthy();
 });
 it('marks a locally edited text as needing another check',async()=>{
  vi.stubGlobal('fetch',vi.fn().mockResolvedValue(response(data)));render(<ActivationPanel clientId={1} kind="developed" identity={1}/>);

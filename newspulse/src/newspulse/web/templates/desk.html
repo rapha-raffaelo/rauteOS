@@ -122,7 +122,7 @@
     <div class="kpi__v">{{ board.decisions_open }}</div>
   </div>
   <div class="kpi">
-    <div class="kpi__l">{{ t("Twins mit Lücken") }}</div>
+    <div class="kpi__l">{{ t("Profile mit Lücken") }}</div>
     <div class="kpi__v">{{ board.twins_with_gaps }}</div>
     <div class="kpi__n">{{ t("Schnitt") }} {{ board.twin_average }} %</div>
   </div>
@@ -139,7 +139,7 @@
       <thead>
         <tr>
           <th>{{ t("Mandant") }}</th>
-          <th>{{ t("Twin") }}</th>
+          <th>{{ t("Profil") }}</th>
           <th class="num">{{ t("Actions (Monat)") }}</th>
           <th class="num">{{ t("Vertrag / geliefert") }}</th>
           <th class="num">{{ t("Opportunities") }}</th>
@@ -261,7 +261,7 @@
 
   <div class="pane">
     <div class="pane__h">
-      <span class="pane__t">{{ t("Twins mit Wissenslücken") }}</span>
+      <span class="pane__t">{{ t("Profile mit Wissenslücken") }}</span>
       <span class="pane__n">{{ board.twins_with_gaps }}</span>
     </div>
     <div class="pane__b">
@@ -269,10 +269,10 @@
         <a class="row" href="/client/{{ row.client.id }}/twin">
           <div class="row__t">{{ row.client.name }}</div>
           <div class="row__d">{{ row.twin.gaps | join(' · ') }}</div>
-          <div class="row__age">{{ t("Twin") }} {{ row.twin.percent }} %</div>
+          <div class="row__age">{{ t("Profil") }} {{ row.twin.percent }} %</div>
         </a>
       {% else %}
-        <p class="pane__empty">{{ t("Jeder Twin ist vollständig.") }}</p>
+        <p class="pane__empty">{{ t("Jedes Profil ist vollständig.") }}</p>
       {% endfor %}
     </div>
   </div>

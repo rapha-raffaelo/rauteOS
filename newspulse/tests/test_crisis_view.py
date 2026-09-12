@@ -268,15 +268,16 @@ def _crisis_text(
 # --- The tab ----------------------------------------------------------------------
 
 
-def test_the_krise_tab_appears_only_after_a_declaration(web, session, mandate):
+def test_crisis_view_appears_in_opportunities_only_after_a_declaration(web, session, mandate):
     _trigger(session, mandate)
-    before = web.get(f"/client/{mandate.id}")
+    before = web.get(f"/client/{mandate.id}/opportunities")
     assert before.status_code == 200
-    assert ">Krise</a>" not in before.text
+    assert ">Krise</option>" not in before.text
 
     _declared(session, mandate)
-    after = web.get(f"/client/{mandate.id}")
-    assert ">Krise</a>" in after.text
+    after = web.get(f"/client/{mandate.id}/opportunities")
+    assert ">Krise</option>" in after.text
+    assert "Krise offen" in after.text
 
 
 def test_a_dismissed_proposal_creates_no_tab_and_no_page(web, session, mandate):
@@ -284,8 +285,8 @@ def test_a_dismissed_proposal_creates_no_tab_and_no_page(web, session, mandate):
     article = _trigger(session, mandate)
     crisis.dismiss(session, mandate, article, by="lucas")
 
-    page = web.get(f"/client/{mandate.id}")
-    assert ">Krise</a>" not in page.text
+    page = web.get(f"/client/{mandate.id}/opportunities")
+    assert ">Krise</option>" not in page.text
     assert web.get(f"/client/{mandate.id}/krise").status_code == 404
 
 

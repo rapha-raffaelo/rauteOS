@@ -31,7 +31,7 @@ export function DeskPage({ translations = {}, language = 'de' }) {
     ['Actions diesen Monat', board.actions_month, t('abgeliefert und nachgetragen')],
     ['Offene Opportunities', board.opportunities, t('Fenster noch offen')],
     ['Entscheidungen offen', board.decisions_open],
-    ['Twins mit Lücken', board.twins_with_gaps, `${t('Schnitt')} ${board.twin_average} %`],
+    ['Profile mit Lücken', board.twins_with_gaps, `${t('Schnitt')} ${board.twin_average} %`],
   ];
   return <>
     <div className="desk__h"><div className="desk__hi">{t('Guten Morgen.')}</div>
@@ -47,7 +47,7 @@ export function DeskPage({ translations = {}, language = 'de' }) {
         <span className="board__d">{t('Alle aktiven Mandanten auf einen Blick.')}</span></div>
       {board.rows.length ? <>
         <div className="board__wrap"><table><thead><tr>
-          {['Mandant', 'Twin', 'Actions (Monat)', 'Vertrag / geliefert', 'Opportunities', 'Status'].map((label) =>
+          {['Mandant', 'Profil', 'Actions (Monat)', 'Vertrag / geliefert', 'Opportunities', 'Status'].map((label) =>
             <th scope="col" key={label}>{t(label)}</th>)}
         </tr></thead><tbody>{board.rows.map((row) => <tr key={row.client.id}>
           <td><a className="board__nm" href={`/client/${row.client.id}/overview`}>{row.client.name}</a>
@@ -92,12 +92,12 @@ export function DeskPage({ translations = {}, language = 'de' }) {
         </a>)}
         {!board.in_flight.length && <p className="pane__empty">{t('Nichts unterwegs.')}</p>}
       </Pane>
-      <Pane title={t('Twins mit Wissenslücken')} count={board.twins_with_gaps}>
+      <Pane title={t('Profile mit Wissenslücken')} count={board.twins_with_gaps}>
         {board.rows.filter((row) => row.twin.gaps.length).map((row) => <a className="row" href={`/client/${row.client.id}/twin`} key={row.client.id}>
           <div className="row__t">{row.client.name}</div><div className="row__d">{row.twin.gaps.map(t).join(' · ')}</div>
-          <div className="row__age">{t('Twin')} {row.twin.percent} %</div>
+          <div className="row__age">{t('Profil')} {row.twin.percent} %</div>
         </a>)}
-        {!board.twins_with_gaps && <p className="pane__empty">{t('Jeder Twin ist vollständig.')}</p>}
+        {!board.twins_with_gaps && <p className="pane__empty">{t('Jedes Profil ist vollständig.')}</p>}
       </Pane>
     </div>
     </div></div>

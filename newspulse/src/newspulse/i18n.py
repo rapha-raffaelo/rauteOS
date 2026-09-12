@@ -31,6 +31,16 @@ COOKIE_MAX_AGE = 60 * 60 * 24 * 365
 
 # German source string -> English. Ordered roughly by where it appears.
 _EN: dict[str, str] = {
+    "Ansicht": "View",
+    "Krise offen": "Open crisis",
+    "Chancen": "Opportunities",
+    "Wissen & Aussagen": "Knowledge & statements",
+    "Unternehmen & Kommunikation": "Company & communication",
+    "Ansicht in Opportunities": "View in Opportunities",
+    "Ansicht im Profil": "View in Profile",
+    "Profile mit Lücken": "Profiles with gaps",
+    "Profile mit Wissenslücken": "Profiles with knowledge gaps",
+    "Jedes Profil ist vollständig.": "Every profile is complete",
     "Der Desk konnte nicht geladen werden.": "The Desk could not be loaded.",
     "Erneut versuchen": "Try again",
     "Klassischen Desk öffnen": "Open classic Desk",
