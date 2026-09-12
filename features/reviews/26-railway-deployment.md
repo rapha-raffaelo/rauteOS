@@ -86,3 +86,13 @@ React pages use a single header. Read-only production renders confirm one header
 Ask entry and no secondary toolbar across five workbench pages; source hashes and
 public Twin bundle match. Database integrity remains ok. No production content
 was modified during verification.
+
+### Legacy control consolidation — 2026-09-12
+
+Source `89be4cb` deployed as `a6c849fa-00b5-490c-9c0a-64bf3993b8d6`
+(SUCCESS). Manual collection is consolidated in Settings; legacy profile duplicate
+and all-client controls are removed. Language access is consistent across pages.
+Post-deployment read-only checks passed for seven active clients and five rendered
+workbench pages. All checked backend/template hashes and public CSS match the
+reviewed source. Database integrity is ok and schema remains
+`0061_opportunity_assets`; no production content was changed for verification.
