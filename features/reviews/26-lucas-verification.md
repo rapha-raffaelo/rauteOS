@@ -127,3 +127,18 @@ The wrapping mobile top bar now grows with its contents to prevent overlap.
 Validation: 92 shell/style/workbench tests passed; Chromium at 1440px and 390px
 confirmed navigation, collapse/expand behavior, active specialist routes, absence
 of duplicate heading/Ask entry, no page errors and no horizontal overflow.
+
+### Client overview dashboard — 2026-09-12
+
+Replaced the unstructured overview text/link list with a dedicated ClientOverview
+component: mandate header, four factual metric cards, opportunity cards with
+status and full titles, recent text rows with a designed empty state, a Twin
+progress/gaps panel, and recent activity. Counts retain existing delivery and
+unknown-contract semantics. The classic Desk fallback is shown only if the
+React bundle is unavailable. No backend data or provider behavior changed.
+
+Validation: production build, 30 React tests and seven workbench backend tests
+passed. Chromium checks at 1800, 1280 and 390 pixels used long titles comparable
+to the reported screenshot, verified empty texts, opportunity navigation, no
+horizontal overflow or JavaScript errors. Existing Desk/Actions delivery checks
+also passed. Screenshots are local at /tmp/raute-overview-{width}.png.

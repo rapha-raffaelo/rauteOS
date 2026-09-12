@@ -9,5 +9,5 @@
 <div id="react-workbench" data-page="{{ page }}" data-client-id="{{ client.id if client else '' }}"><p role="status">Ansicht wird geladen…</p></div>
 <script type="module" src="{{ frontend.script }}"></script>
 {% else %}<p>Die Oberfläche ist noch nicht gebaut.</p>{% endif %}
-<p><a href="/desk?view=classic">Klassischen Desk öffnen</a></p>
+{% if not frontend %}<p><a href="/desk?view=classic">Klassischen Desk öffnen</a></p>{% endif %}
 {% endblock %}
