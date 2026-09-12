@@ -24,7 +24,7 @@ export function OpportunityWorkspace({clientId,kind,identity,onChanged}){
     setNotice(activate?'Gelegenheit aktiviert. Wählen Sie den nächsten Arbeitsschritt.':'Auswahl gespeichert.');onChanged?.();
   }catch(e){setError(e.message);}finally{setBusy(false);}}
   if(!data)return <><ErrorMessage error={error}/>{!error&&<p role="status">Workspace wird geladen…</p>}</>;
-  return <div><p className="twin-eyebrow">{kind==='detected'?'Erkannte Gelegenheit':'Entwickelte Gelegenheit'} · {statusLabels[data.status]} · {data.evidence_type}</p><h2 className="opportunity-title">{data.title}</h2><p><a href={`/ask?scope=opportunity&client_id=${clientId}&opportunity_kind=${kind}&opportunity_id=${identity}`}>Ask RAUTE zu dieser Opportunity</a></p>
+  return <div><p className="twin-eyebrow">{kind==='detected'?'Erkannte Gelegenheit':'Entwickelte Gelegenheit'} · {statusLabels[data.status]} · {data.evidence_type}</p><h2 className="opportunity-title">{data.title}</h2>
     <nav className="workspace-tabs" aria-label="Workspace-Ansichten">{[['overview','Überblick'],['strategy','Strategie & Auswahl'],['media','Medien & Journalisten'],['assets','Texte & Belege'],['history','Aktivität']].map(([id,label])=><button className="btn" key={id} aria-pressed={tab===id} onClick={()=>setTab(id)}>{label}</button>)}</nav>
     <div hidden={tab!=='overview'} className="workspace-overview"><div className="opportunity-grid"><section className="twin-field"><h3>Was ist die Chance?</h3><p>{data.situation}</p><h3>Warum relevant?</h3><p>{data.relevance}</p></section>
       <section className="twin-field"><h3>Warum jetzt?</h3><p>{data.why_now}</p>{data.window_ends_at?<p>Nachrichtenfenster bis {date(data.window_ends_at)}</p>:<p>{data.proposed_window_days?`Vorgeschlagenes Planungsfenster: ${data.proposed_window_days} Tage. Keine bestätigte externe Frist.`:'Kein bestätigtes Zeitfenster.'}</p>}
@@ -33,21 +33,21 @@ export function OpportunityWorkspace({clientId,kind,identity,onChanged}){
       {data.proof_points.map(p=><p key={p.id}>{p.value} · {p.evidence_type || 'Herkunft unbekannt'} · {p.fact_status || 'Ungeprüft'} · {p.verified_at?'Bestätigung hinterlegt':'Nicht unabhängig bestätigt'}</p>)}
       <ResearchSources queries={data.research} sources={data.sources}/></section>
     </div><div hidden={tab!=='strategy'}><section className="twin-field"><h3>Storyline und Sprecher</h3><ErrorMessage error={error}/>{notice&&<p role="status">{notice}</p>}
-      {data.storylines.length>0&&<div className="twin-toolbar">{data.storylines.map((s,i)=><button className="btn" key={i} onClick={()=>setStoryline(s)} disabled={data.status==='closed'}>{s}</button>)}</div>}
+      {data.storylines.length>0&&<label>Storyline-Vorschlag übernehmen<select aria-label="Storyline-Vorschlag übernehmen" value="" onChange={e=>setStoryline(data.storylines[Number(e.target.value)])} disabled={data.status==='closed'}><option value="" disabled>Vorschlag auswählen …</option>{data.storylines.map((s,i)=><option key={i} value={i}>{s}</option>)}</select></label>}
       <label>Gewählte Storyline<textarea aria-label="Gewählte Storyline" value={storyline} onChange={e=>setStoryline(e.target.value)} disabled={data.status==='closed'}/></label>
       <label>Sprecher aus dem Twin<select aria-label="Sprecher aus dem Twin" value={speaker} onChange={e=>setSpeaker(e.target.value)} disabled={data.status==='closed'}><option value="">Noch nicht gewählt</option>
         {data.speakers.map(s=><option key={s.id} value={s.id}>{s.value} · {s.evidence_type || 'Ungeprüft'}</option>)}</select></label>
       <p><a href={`/client/${clientId}/twin`}>Sprecher und Freigabe im Twin pflegen</a></p>
       <fieldset disabled={data.status==='closed'}><legend>Journalisten auswählen</legend><div className="opportunity-contacts">{data.contacts.map(c=><label key={c.id}>
         <input type="checkbox" checked={contacts.includes(c.id)} onChange={e=>setContacts(e.target.checked?[...contacts,c.id]:contacts.filter(id=>id!==c.id))}/>{c.name} · {c.outlet}</label>)}</div>
-        {!data.contacts.length&&<p>Noch keine Kontakte hinterlegt. Nutzen Sie die Recherche unten.</p>}</fieldset>
+        {!data.contacts.length&&<p>Noch keine Kontakte hinterlegt. Nutzen Sie „Medien & Journalisten“.</p>}</fieldset>
       {data.status!=='closed'&&<div className="twin-toolbar"><button className="btn" disabled={busy} onClick={()=>save()}>Auswahl speichern</button>
-        <button className="btn btn--go" disabled={busy||!storyline.trim()} onClick={()=>save(true)}>{data.status==='active'?'Aktivierung aktualisieren':'ACTIVATE'}</button></div>}
-      {data.status==='active'&&<p><a className="btn btn--go" href={data.legacy_href}>Texte und Freigaben öffnen</a></p>}
+        {data.status!=='active'&&<button className="btn btn--go" disabled={busy||!storyline.trim()} onClick={()=>save(true)}>ACTIVATE</button>}</div>}
+
     </section>
     </div><div hidden={tab!=='assets'}>{!data.id&&<p>Speichern Sie zunächst Ihre Auswahl unter Strategie & Auswahl.</p>}
     {data.id && data.status!=='closed' && <ActivationPanel clientId={clientId} kind={kind} identity={identity} contacts={data.contacts.filter(c=>data.contact_ids.includes(c.id))} onCompleted={()=>request(path).then(value=>setData(old=>({...old,events:value.events,assets:value.assets}))).catch(e=>setError(e.message))}/>}
-    </div><div hidden={tab!=='media'}><ResearchPanel clientId={clientId} contextKind={kind} contextId={identity} onContact={(id,person)=>{window.location.href=id?`/journalists?contact=${id}`:`/journalists?client=${clientId}&kind=${kind}&context=${identity}`;}}/>
+    {data.status==='active'&&<p><a href={data.legacy_href}>Freigaben öffnen</a></p>}</div><div hidden={tab!=='media'}><ResearchPanel clientId={clientId} contextKind={kind} contextId={identity} onContact={(id,person)=>{window.location.href=id?`/journalists?contact=${id}`:`/journalists?client=${clientId}&kind=${kind}&context=${identity}`;}}/>
     </div><div hidden={tab!=='history'}><section className="twin-field"><h3>Aktivität dieser Gelegenheit</h3><p>Entwicklung und Aktivierung sind noch keine ausgelieferte Kundenleistung.</p>
       {data.events.length?<ul>{data.events.map(e=><li key={e.id}>{date(e.created_at)} · {eventLabels[e.kind]||e.kind} · {e.actor}{e.detail.kind&&` · ${actionLabels[e.detail.kind]||e.detail.kind}`}{e.detail.contact_ids&&` · ${e.detail.contact_ids.length} Journalisten ausgewählt`}</li>)}</ul>:<p>Noch keine Aktivität hinterlegt.</p>}
       <h3>Texte</h3>{data.assets.length?<ul>{data.assets.map(a=><li key={a.id}><a href={a.href}>{a.title||a.kind}</a> · {a.released_at?'Freigegeben':'Entwurf'} · {date(a.generated_at)}</li>)}</ul>:<p>Noch keine Texte erstellt.</p>}</section></div>

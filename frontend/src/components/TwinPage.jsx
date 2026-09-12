@@ -55,8 +55,8 @@ export function TwinPage({clientId}) {
   return <div className="twin-page">
     <header><p className="twin-eyebrow">CLIENT TWIN · {data.client.name}</p><h1>Was wir wissen. Und woher.</h1>
       <p>Jede Aussage mit ihrer Quelle, ihrem Stand und ihrer Freigabe.</p>
-      <div className="twin-toolbar"><button className="btn btn--go" aria-expanded={aiImporting} onClick={()=>setAIImporting(!aiImporting)}>Mit KI importieren</button><button className="btn" onClick={() => setImporting(!importing)}>Fragebogen importieren</button>
-        <a href={`/client/${clientId}/profil`}>Profil, Kickoff & Kommunikationsguide →</a></div>
+      <div className="twin-toolbar"><button className="btn btn--go" aria-expanded={aiImporting} onClick={()=>setAIImporting(!aiImporting)}>Mit KI importieren</button><details className="quiet-actions"><summary>Weitere Eingaben</summary><div className="quiet-actions-body"><button className="btn" onClick={() => setImporting(!importing)}>Fragebogen importieren</button>
+        <a href={`/client/${clientId}/profil`}>Profil, Kickoff & Kommunikationsguide →</a></div></details></div>
     </header>
     <section className="twin-progress" aria-label="Vollständigkeit">
       <strong>{data.progress.percent} % vollständig</strong>
@@ -102,6 +102,7 @@ function Statement({row, clientId, busy, onEdit, onAction}) {
   const [historyError, setHistoryError] = useState('');
   useEffect(() => {setHistory(null);}, [row.revision]);
   const inactive = ['Rejected', 'Archived'].includes(row.fact_status);
+  const canConfirm = !row.verified_at && ['Media','External Research','Study','Public Database'].includes(row.source_type) && Boolean(row.source_url || row.source_title);
   return <article className={`twin-statement ${inactive ? 'twin-inactive' : ''}`}>
     <div className="twin-badges"><span>{row.evidence_type || 'Herkunft unbekannt'}</span><span>{row.fact_status || 'Needs Verification'}</span>
       <span>{row.verified_at && !inactive ? 'Unabhängig bestätigt' : 'Nicht unabhängig bestätigt'}</span></div>
@@ -115,14 +116,14 @@ function Statement({row, clientId, busy, onEdit, onAction}) {
     </dl>
     {row.note && <p>{row.note}</p>}{row.verified_at && <p className="twin-muted">Geprüft von {row.verified_by}: {row.verification_note}</p>}
     <div className="twin-toolbar"><button className="btn" disabled={busy} onClick={onEdit}>Bearbeiten</button>
-      {!inactive && <><button className="btn" disabled={busy} onClick={() => setConfirming(!confirming)}>Bestätigen</button>
+      <details className="quiet-actions"><summary>Weitere Aktionen</summary><div className="quiet-actions-body">{!inactive && <>{canConfirm&&<button className="btn" disabled={busy} onClick={() => setConfirming(!confirming)}>Bestätigen</button>}
         <button className="btn" disabled={busy} onClick={() => onAction('reject')}>Verwerfen</button>
         <button className="btn" disabled={busy} onClick={() => onAction('archive')}>Archivieren</button></>}
       <button className="btn" onClick={async () => {
         if (history) {setHistory(null); return;}
         try {setHistory(await twinRequest(clientId, `/statements/${row.id}/history`)); setHistoryError('');}
         catch (err) {setHistoryError(err.message);}
-      }}>Historie</button></div>
+      }}>Historie</button></div></details></div>
     {confirming && <form className="twin-confirm" onSubmit={async e => {e.preventDefault(); if (await onAction('confirm', note)) setConfirming(false);}}>
       <p>Als unabhängig belegten Fakt bestätigen. Eine Quelle vom Typ Media, External Research, Study oder Public Database muss hinterlegt sein. Die externe Freigabe bleibt separat.</p>
       <label>Prüfvermerk<textarea aria-label="Prüfvermerk" required value={note} maxLength={5000} onChange={e => setNote(e.target.value)} /></label>

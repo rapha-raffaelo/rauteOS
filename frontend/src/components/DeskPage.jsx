@@ -100,7 +100,7 @@ export function DeskPage({ translations = {}, language = 'de' }) {
         {!board.twins_with_gaps && <p className="pane__empty">{t('Jeder Twin ist vollständig.')}</p>}
       </Pane>
     </div>
-    </div><aside className="desk-intelligence"><p className="desk__hi">RAUTE Intelligence</p><h2>Nächste Schritte</h2><p>Aus offenen Entscheidungen und Twin-Lücken.</p>{board.decisions.slice(0,3).map((item,i)=><a className="row" key={i} href={item.href}><small>{item.client.name}</small><strong>{item.title}</strong><span>{item.detail}</span></a>)}{!board.decisions.length&&<p>Keine offenen Entscheidungen.</p>}<h3>Wissen ergänzen</h3>{board.rows.filter(row=>row.twin.gaps.length).slice(0,3).map(row=><a className="row" key={row.client.id} href={`/client/${row.client.id}/twin`}><strong>{row.client.name}</strong><span>{row.twin.gaps.map(t).join(' · ')}</span></a>)}{!board.twins_with_gaps&&<p>Keine Pflichtfelder offen.</p>}<a className="btn btn--go" href="/ask?scope=global">Mit Ask RAUTE einordnen</a></aside></div>
+    </div><aside className="desk-intelligence"><p className="desk__hi">RAUTE Intelligence</p><h2>Nächste Schritte</h2><p>Aus offenen Entscheidungen und Twin-Lücken.</p>{board.decisions.slice(0,3).map((item,i)=><a className="row" key={i} href={item.href}><small>{item.client.name}</small><strong>{item.title}</strong><span>{item.detail}</span></a>)}{!board.decisions.length&&<p>Keine offenen Entscheidungen.</p>}<h3>Wissen ergänzen</h3>{board.rows.filter(row=>row.twin.gaps.length).slice(0,3).map(row=><a className="row" key={row.client.id} href={`/client/${row.client.id}/twin`}><strong>{row.client.name}</strong><span>{row.twin.gaps.map(t).join(' · ')}</span></a>)}{!board.twins_with_gaps&&<p>Keine Pflichtfelder offen.</p>}</aside></div>
   </>;
 }
 

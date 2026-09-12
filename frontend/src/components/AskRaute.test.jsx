@@ -42,3 +42,10 @@ it('dictates for review, stops on Escape and rejects late recognition after cont
  fireEvent.change(screen.getByLabelText('Kontext wechseln'),{target:{value:'1'}});mic.onresult({results:[[{transcript:'Late recognition'}]]});
  expect(screen.getByLabelText('Frage').value).not.toBe('Late recognition');
 });
+it('only offers speech stop while reading and ends it when context changes',async()=>{
+ let utterance;vi.stubGlobal('speechSynthesis',{cancel:vi.fn(),speak:vi.fn(v=>{utterance=v;})});vi.stubGlobal('SpeechSynthesisUtterance',class{constructor(text){this.text=text;}});
+ setup('/ask');await screen.findByRole('option',{name:'Alpha'});expect(screen.queryByRole('button',{name:'Vorlesen stoppen'})).toBeNull();
+ fireEvent.click(screen.getByRole('button',{name:'Wo fehlen Leistungen?'}));act(()=>{sources[0].emit('text','A response');sources[0].emit('done','');});
+ fireEvent.click(await screen.findByRole('button',{name:'Vorlesen'}));expect(screen.getByRole('button',{name:'Vorlesen stoppen'})).toBeTruthy();
+ fireEvent.change(screen.getByLabelText('Kontext wechseln'),{target:{value:'1'}});act(()=>utterance.onend());expect(screen.queryByRole('button',{name:'Vorlesen stoppen'})).toBeNull();
+});

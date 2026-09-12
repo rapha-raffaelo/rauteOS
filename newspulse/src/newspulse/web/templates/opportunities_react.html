@@ -9,5 +9,5 @@
 <div id="react-opportunities" data-client-id="{{ client.id }}"><p role="status">Opportunities werden geladen…</p></div>
 <script type="module" src="{{ frontend.script }}"></script>
 {% else %}<p>Die Opportunity-Oberfläche ist noch nicht verfügbar.</p>{% endif %}
-<p><a href="/client/{{ client.id }}/heute">Aktuelle Nachrichten öffnen</a></p>
+{% if not frontend %}<p><a href="/client/{{ client.id }}/heute">Aktuelle Nachrichten öffnen</a></p>{% endif %}
 {% endblock %}

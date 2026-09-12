@@ -26,11 +26,11 @@ function TextEditor({text,clientId,path,onSaved,onCheck,busy}){
   {error&&<p className="twin-error" role="alert">{error}</p>}{notice&&<p role="status">{notice}</p>}
   <div className="asset-review-layout"><form onSubmit={save}><label>Betreff / Titel<input aria-label={`Titel ${text.id}`} value={title} onChange={e=>setTitle(e.target.value)} disabled={Boolean(text.released_at)}/></label>
    <label>Text<textarea aria-label={`Text ${text.id}`} value={body} onChange={e=>setBody(e.target.value)} disabled={Boolean(text.released_at)} rows={12}/></label>
-   <div className="twin-toolbar">{!text.released_at&&<button className="btn" disabled={saving||busy}>Änderungen speichern</button>}
-    <a className="btn" href={`/ask?scope=asset&client_id=${clientId}&asset_type=${text.type}&asset_id=${text.id}`}>Ask RAUTE zum gespeicherten Text</a>
+   <div className="twin-toolbar">{!text.released_at&&<button className="btn btn--go" disabled={saving||busy||title===text.title&&body===text.body}>Änderungen speichern</button>}
+    {!text.released_at&&<button type="button" className="btn" disabled={busy||title!==text.title||body!==text.body} onClick={()=>onCheck(text)}>Aussagen prüfen</button>}
+    {text.type==='outreach'&&<a className="btn" href={text.href}>Kundenfreigabe und Versand öffnen</a>}<details className="quiet-actions"><summary>Weitere Textaktionen</summary><div className="quiet-actions-body">    <a className="btn" href={`/ask?scope=asset&client_id=${clientId}&asset_type=${text.type}&asset_id=${text.id}`}>Ask RAUTE zum gespeicherten Text</a>
     <button type="button" className="btn" onClick={copy}>Text kopieren</button>
-    <button type="button" className="btn" disabled={Boolean(text.released_at)||busy||title!==text.title||body!==text.body} onClick={()=>onCheck(text)}>Aussagen prüfen</button>
-    {text.type==='outreach'&&<a className="btn" href={text.href}>Kundenfreigabe und Versand öffnen</a>}</div>
+</div></details></div>
   </form><aside aria-label="Belegprüfung"><h3>Qualität & Belege</h3><EvidenceReview text={{...text,quality_stale:text.quality_stale||title!==text.title||body!==text.body}}/></aside></div>
  </article>;
 }

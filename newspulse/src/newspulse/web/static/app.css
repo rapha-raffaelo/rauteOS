@@ -2982,6 +2982,9 @@ button:disabled { opacity: .55; cursor: default; }
 @media(max-width:600px){.subtabs{gap:2px}.subtabs > a{padding:10px 8px}.subtabs-tools{grid-template-columns:repeat(2,minmax(0,1fr))}.subtabs-tools a{padding:10px 6px;overflow-wrap:anywhere;}}
 
 [hidden]{display:none!important}
-body:has([id^="react-"]) .tbar__l{display:none} body:has([id^="react-"]) .tbar{padding-top:4px;padding-bottom:4px;min-height:0;justify-content:flex-end} body:has([id^="react-"]) .content{padding-top:16px}
+body:has([id^="react-"]) .content{padding-top:16px}
 
 .side-tools>summary{cursor:pointer}.side-tools>summary::before{content:"▸ ";color:var(--tint)}.side-tools[open]>summary::before{content:"▾ "}
+
+/* Secondary actions stay beside the object they affect, without permanent button rows. */
+.quiet-actions{position:relative;font-size:13px;min-width:0}.quiet-actions>summary{cursor:pointer;padding:8px 4px;color:var(--muted);width:fit-content}.quiet-actions>summary:hover{color:var(--ink)}.quiet-actions-body{display:flex;flex-wrap:wrap;align-items:center;gap:10px;background:var(--fill-2);padding:12px;border:1px solid var(--line);border-radius:8px;margin:6px 0}.quiet-actions:not([open])>.quiet-actions-body{display:none}.side-language{padding:0 12px}.side-language .seg{margin:8px 0}

@@ -127,8 +127,8 @@ def _topbar(html: str) -> str:
     """
     assert '<div class="topbar">' in html, "no top bar on the page"
     after = html.split('<div class="topbar">', 1)[1]
-    assert '<header class="tbar"' in after, "the toolbar no longer follows the bar"
-    return after.split('<header class="tbar"', 1)[0]
+    end = '<header class="tbar"' if '<header class="tbar"' in after else '<main class="content">'
+    return after.split(end, 1)[0]
 
 
 def _rules_only(css: str) -> str:

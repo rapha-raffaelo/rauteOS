@@ -93,6 +93,15 @@
       </nav>
 
       <div class="side__foot">
+        {% if frontend %}<details class="quiet-actions side-language"><summary>{{ t("Sprache") }}</summary>          <div class="seg" role="group" aria-label="{{ t('Sprache') }}">
+            {% for code, label in [('de', 'DE'), ('en', 'EN')] %}
+              <form method="post" action="/language/{{ code }}?next={{ request.url.path }}{% if request.url.query %}%3F{{ request.url.query | urlencode }}{% endif %}">
+                <button type="submit" class="seg__b{% if lang == code %} is-on{% endif %}"
+                        aria-pressed="{{ 'true' if lang == code else 'false' }}">{{ label }}</button>
+              </form>
+            {% endfor %}
+          </div>
+</details>{% endif %}
         <a href="/settings" class="side__row{% if request.url.path.startswith('/settings') %} is-on{% endif %}">{{ t("Einstellungen") }}</a>
         {# Only under Google sign-in: there is nothing to sign out of when the
            browser is holding a basic-auth credential, and a button that cannot
@@ -155,7 +164,7 @@
 
       {# The toolbar: what this page is, what the data is worth, and the two
          actions that belong to no page in particular. #}
-      <header class="tbar">
+      {% if not frontend %}<header class="tbar">
         <div class="tbar__l"{% if frontend %} hidden{% endif %}>
           <h1 class="tbar__title">{%- block pagetitle -%}{%- endblock -%}</h1>
           {% include "partials/runmeta.html" %}
@@ -186,7 +195,7 @@
             {% endif %}
           </form>
         </div>
-      </header>
+      </header>{% endif %}
 
       <main class="content">
         {% block content %}{% endblock %}

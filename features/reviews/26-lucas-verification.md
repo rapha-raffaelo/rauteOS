@@ -167,3 +167,29 @@ selection/commit and mobile overflow on isolated demo data. A live Gemini probe
 using only a fictional company and an in-memory database produced proposals;
 one selected answer was imported and remained unverified. No production Twin
 was changed during verification.
+
+### Control simplification — 2026-09-12
+
+Reviewed Desk, client list/overview, Assets, Twin, opportunity/activation workspaces,
+journalists, Ask and shared navigation. Removed repeated Ask links on Desk,
+opportunity overview and asset lists, duplicate opportunity entry points on the
+client overview/list, and redundant legacy-page footer links in built React views.
+Primary React pages now use one header bar; language selection is in the sidebar
+footer, and manual news collection remains reachable in Settings.
+
+Twin keeps AI import and statement editing prominent; spreadsheet/profile input
+and statement history/rejection/archiving are grouped as secondary actions.
+Independent confirmation is offered only with a suitable source and no existing
+confirmation. Text editors keep save/check/approval prominent; copying and saved
+text advice are grouped. Saved/released texts no longer invite redundant writes
+or checks. Opportunity storyline suggestions use one picker, and active
+workspaces save choices without a repeated activation button. Approval access
+remains in the texts view. Ask suggestions appear before conversation starts;
+conversation deletion and speech-stop appear only when applicable, with read-aloud
+on the latest answer. Source/evidence details and approval controls remain.
+
+Validation: 33 React tests, production build and 112 shell/style/i18n/workbench
+checks passed. Chromium verified six primary pages at desktop/mobile sizes,
+secondary controls, history access, storyline selection, text-specific Ask context,
+conditional chat controls and manual-run access in Settings. No data was deleted
+or production actions invoked during this audit.

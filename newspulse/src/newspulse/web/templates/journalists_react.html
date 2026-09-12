@@ -7,5 +7,5 @@
 <div id="react-journalists"><p role="status">Journalisten werden geladen…</p></div>
 <script type="module" src="{{ frontend.script }}"></script>
 {% else %}<p>Die Journalisten-Oberfläche ist noch nicht verfügbar.</p>{% endif %}
-<p><a href="/contacts">Kontaktbuch öffnen</a></p>
+{% if not frontend %}<p><a href="/contacts">Kontaktbuch öffnen</a></p>{% endif %}
 {% endblock %}
