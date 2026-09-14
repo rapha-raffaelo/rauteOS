@@ -133,3 +133,14 @@ probe on an isolated in-memory copy completed with 14 proposals before release.
 Source `73faf5d` deployed as `2490687e-9020-4b46-bbce-bc28cf3e2d85`
 (SUCCESS). Production Opportunities rendering confirms no Heute option; deployed
 navigation template hash matches the reviewed source. Database integrity is ok.
+
+### Unified profile without submenus — 2026-09-14
+
+Source `3d61fa0` deployed as `97ab7c8d-c48d-48c0-9361-1f8ad9754fac`
+(SUCCESS). All seven active mandates render the four profile sections without a
+profile view selector. The six primary tabs remain; Opportunities still omits
+Heute. Five workbench pages and import-status reads remain healthy. All 12 public
+frontend files, the shared stylesheet and 26 checked server source/template hashes
+match the reviewed release. Database integrity is ok; schema remains
+`0061_opportunity_assets`. Verification used read-only database access and did not
+alter production content.
