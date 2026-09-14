@@ -127,3 +127,9 @@ checked backend hashes match the reviewed release. Read-only checks passed for
 seven active clients; database integrity is ok and schema is unchanged. Production
 facts and import previews were not modified for verification. A live-provider
 probe on an isolated in-memory copy completed with 14 proposals before release.
+
+### Remove Heute selector entry — 2026-09-14
+
+Source `73faf5d` deployed as `2490687e-9020-4b46-bbce-bc28cf3e2d85`
+(SUCCESS). Production Opportunities rendering confirms no Heute option; deployed
+navigation template hash matches the reviewed source. Database integrity is ok.
