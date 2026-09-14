@@ -174,3 +174,12 @@ include the fingerprinted studio stylesheet and accessible mobile navigation.
 Seven client profiles/settings, Contacts and five workbench pages remain healthy;
 database integrity is ok. Frontend architecture remains hybrid React/Jinja.
 No production content was changed for verification.
+
+### Refined assistant, profile and opportunity workspaces — 2026-09-14
+
+Source `ea685e9` deployed as `f4524de1-59e1-4ab5-940d-7dfeb55497c9`
+(SUCCESS). All 13 public frontend files, both shared stylesheets and 32 checked
+server source/template hashes match. Read-only production checks passed for seven
+client profiles/settings, Contacts and five workbench pages. Database integrity
+is ok. This is a React presentation refinement within the existing hybrid app;
+no production content was changed for verification.
