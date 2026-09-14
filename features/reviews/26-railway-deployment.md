@@ -144,3 +144,13 @@ frontend files, the shared stylesheet and 26 checked server source/template hash
 match the reviewed release. Database integrity is ok; schema remains
 `0061_opportunity_assets`. Verification used read-only database access and did not
 alter production content.
+
+### Single Kontakte entry — 2026-09-14
+
+Source `7a9970c` deployed as `ce03a83d-fe52-494e-8cc9-fd7e75a82e62`
+(SUCCESS). Production renders confirm the Contacts React workspace under
+/contacts, title Kontakte, exactly one active Kontakte sidebar entry and no
+Journalisten sidebar link. All 12 public frontend files, shared stylesheet and
+31 checked server source/template hashes match. Seven unified profiles and five
+workbench pages remain healthy; database integrity is ok. No schema changes or
+production content mutations were performed for verification.
