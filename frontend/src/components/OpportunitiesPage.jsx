@@ -1,4 +1,5 @@
 import React,{useEffect,useState} from 'react';
+import {PageHeading,EmptyState} from './PageHeading.jsx';
 import {journalistRequest as request} from '../journalists-api.js';
 import {ResearchPanel} from './JournalistsPage.jsx';
 import {ActivationPanel} from './ActivationPanel.jsx';
@@ -64,7 +65,7 @@ export function OpportunitiesPage({clientId,params=new URLSearchParams(window.lo
   useEffect(()=>{if(!running)return;let active=true;const timer=setInterval(()=>request(path).then(v=>{if(active){setBoard(v);setError('');}}).catch(e=>{if(active)setError(e.message);}),2500);return()=>{active=false;clearInterval(timer);};},[path,running]);
   async function develop(event){event.preventDefault();setBusy(true);setError('');try{const job=await request(path+'/develop',{method:'POST',body:JSON.stringify({focus})});setBoard(v=>({...v,development:job}));}catch(e){setError(e.message);}finally{setBusy(false);}}
   function open(row){setSelected({kind:row.context_kind,id:row.context_id});history.replaceState(null,'',`?kind=${row.context_kind}&context=${row.context_id}`);}
-  return <main className="twin-page opportunities-page"><p className="twin-eyebrow">{board?.client.name}</p><h1>Opportunities</h1><ErrorMessage error={error}/>
+  return <main className="twin-page opportunities-page"><PageHeading eyebrow={board?.client.name} title="Opportunities" description="Relevante Anlässe erkennen. Gute Geschichten entwickeln."/><ErrorMessage error={error}/>
     <details className="twin-field development-panel" open={params.has('develop')||!board?.opportunities.length||running}><summary>Neue Kommunikationschance entwickeln</summary><p>Aus Profil, Positionierung und aktueller Recherche. Ein einzelner Nachrichtenanlass ist nicht nötig. Die Ideen bleiben Vorschläge zur Prüfung.</p>
       <form onSubmit={develop}><label>Recherchefokus<input aria-label="Recherchefokus" required minLength={3} maxLength={300} value={focus} onChange={e=>setFocus(e.target.value)} placeholder="Zum Beispiel: BioLNG im Schwerlastverkehr"/></label>
         <button className="btn btn--go" disabled={!board||busy||running}>{running?'Recherche und Entwicklung laufen…':'Chance entwickeln'}</button></form>
@@ -74,6 +75,6 @@ export function OpportunitiesPage({clientId,params=new URLSearchParams(window.lo
     <div className="opportunity-layout"><aside className="twin-field"><h2>Gelegenheiten</h2>{(filter!=='all'||new Set(board?.opportunities.map(row=>row.context_kind)).size>1)&&<label>Ansicht<select aria-label="Gelegenheiten filtern" value={filter} onChange={e=>setFilter(e.target.value)}><option value="all">Alle</option><option value="detected">Erkannt</option><option value="developed">Entwickelt</option></select></label>}<ul className="journalist-roster">{board?.opportunities.filter(row=>filter==='all'||row.context_kind===filter).map(row=><li key={`${row.context_kind}-${row.context_id}`}>
       <button aria-pressed={selected?.kind===row.context_kind&&selected?.id===row.context_id} onClick={()=>open(row)}>{row.title}<small>{row.context_kind==='detected'?'Erkannt':'Entwickelt'} · {statusLabels[row.status]}</small></button></li>)}</ul>
       {board?.opportunities.length===0&&<p>Noch keine Gelegenheiten. Entwickeln Sie eine neue Chance oder prüfen Sie die aktuellen Nachrichten.</p>}</aside>
-      <div>{selected?<OpportunityWorkspace key={`${selected.kind}-${selected.id}`} clientId={clientId} kind={selected.kind} identity={selected.id} onChanged={()=>refresh().catch(e=>setError(e.message))}/>:<section className="twin-field"><h2>Gelegenheit öffnen</h2><p>Wählen Sie einen Vorschlag, um Quellen, Storyline und nächste Schritte zu prüfen.</p></section>}</div></div>
+      <div>{selected?<OpportunityWorkspace key={`${selected.kind}-${selected.id}`} clientId={clientId} kind={selected.kind} identity={selected.id} onChanged={()=>refresh().catch(e=>setError(e.message))}/>:<EmptyState title="Gelegenheit öffnen">Wählen Sie einen Vorschlag, um Quellen, Storyline und nächste Schritte zu prüfen.</EmptyState>}</div></div>
   </main>;
 }

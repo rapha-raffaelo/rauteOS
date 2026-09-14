@@ -51,19 +51,19 @@
      first and the hairline plus a whisper of shadow second. They carry a trace
      of the accent's hue, so the ground sits *under* a violet interface rather
      than beside it. */
-  --side-bg: #eceaf4;
-  --ground: #f7f6fb;
+  --side-bg: #f0f2f5;
+  --ground: #f8f9fb;
   --card: #ffffff;
   --fill: rgba(78, 74, 110, 0.10);
   --fill-2: rgba(78, 74, 110, 0.06);
   --fill-strong: rgba(78, 74, 110, 0.18);
 
-  --ink: #1b1a26;
+  --ink: #20232d;
   --ink-2: rgba(27, 26, 38, 0.82);
-  --muted: rgba(58, 56, 78, 0.60);
-  --faint: rgba(58, 56, 78, 0.36);
-  --line: rgba(30, 28, 48, 0.11);
-  --line-strong: rgba(30, 28, 48, 0.20);
+  --muted: #656b78;
+  --faint: #787e8a;
+  --line: #e2e5eb;
+  --line-strong: #cbd0d9;
 
   --alert: #d70015;
   --good: #248a3d;
@@ -99,14 +99,14 @@
   --radius-pill: 980px;
   --shadow: 0 1px 2px rgba(30, 28, 48, .05), 0 1px 3px rgba(30, 28, 48, .04);
   --side-w: 232px;
-  --col: 1120px;
+  --col: 1360px;
   /* The ground, translucent: what the two sticky bars are drawn on so the page
      blurs through them. Same colour as --ground, and a token because two rules
      need it and two literals drift. */
-  --veil: rgba(247, 246, 251, .82);
+  --veil: rgba(255, 255, 255, .96);
   /* Fixed, not derived: the toolbar sticks *below* the top bar, and "below"
      needs a number. Two sticky bars both pinned to 0 land on each other. */
-  --topbar-h: 48px;
+  --topbar-h: 64px;
 
   /* How much darker a filled accent control goes when pressed or hovered. A
      brightness filter rather than a second stored colour: a stored one is a

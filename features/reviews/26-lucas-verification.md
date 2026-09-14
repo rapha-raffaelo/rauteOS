@@ -345,3 +345,29 @@ monitoring preservation, sidebar updates, cancellation/Escape, confirmation,
 selected-client removal and responsive modal layout. Centered desktop and mobile
 screenshots reviewed. All editing/deletion probes used local demo/test databases;
 production verification will remain read-only.
+
+### Consistent visual system across React and server views — 2026-09-14
+
+The frontend remains hybrid: React/JavaScript owns Desk, Clients, Contacts,
+Opportunities, Assets, Ask and the primary workbench/statement views. Python/Jinja
+still renders the shell, archive, visibility, settings and parts of the unified
+profile. This release changes presentation, not that architecture.
+
+Refined the shared palette and contrast, typography, navigation states, controls,
+cards, tables and spacing. A fingerprinted studio stylesheet shares the visual
+language across both rendering systems. Reusable React page headings and empty
+states replace inconsistent local headers. Clients now have structured cards with
+identity, truthful profile completion, opportunity count and quarterly delivery;
+edit/delete remain on every card. Client search has an explicit empty state.
+Opportunity/contact master-detail columns now have useful widths and aligned tops.
+
+Mobile navigation collapses behind a labelled toggle with expanded state, Escape
+support and a visible-link fallback when JavaScript is disabled. No new model
+calls, generation actions, database writes or decorative invented metrics.
+
+Validation: 133 backend shell/workbench/style/contact checks and 37 React tests
+passed; production build passed. Browser verified ten main React/server pages at
+1600 and 390 pixels, plus Ask and Actions, without horizontal overflow or JavaScript
+errors. Exercised card actions, search and empty states, modal cancellation,
+workspace tabs, AI import access, mobile menu/keyboard behavior and no-JS fallback.
+Desktop/mobile screenshots reviewed. Production verification remains read-only.

@@ -1,0 +1,122 @@
+/* Shared product language for React workspaces and server-rendered views.
+   Brand, surfaces, contrast and spacing tokens live in app.css. */
+.raute-ui{line-height:1.55;letter-spacing:-.012em}
+.raute-ui .side{padding:28px 14px 20px;gap:30px}
+.raute-ui .side__brand{padding:0 10px;font-size:21px;gap:10px;letter-spacing:-.04em}
+.raute-ui .side__mark{width:31px;height:31px;border-radius:10px;font-size:20px;box-shadow:0 2px 4px rgb(var(--accent-rgb)/.14)}
+.raute-ui .side__nav{gap:4px}
+.raute-ui .side__sect{font-size:10px;letter-spacing:.09em;font-weight:600;color:var(--muted);padding:20px 12px 8px}
+.raute-ui .side__row{min-height:39px;padding:9px 12px;border-radius:8px;font-size:13px;gap:10px;color:var(--ink-2)}
+.raute-ui .side__row.is-on{background:var(--card);color:var(--ink);box-shadow:0 1px 3px #20232d0a;font-weight:600}
+.raute-ui .side__row.is-on:hover{background:var(--card)}
+.raute-ui .side__row:hover{background:#ffffff90}
+.raute-ui .side__icon{width:17px;height:17px;opacity:.7}
+.raute-ui .side__row.is-on .side__icon{color:var(--tint);opacity:1}
+.raute-ui .side__dot{width:6px;height:6px;opacity:.85}
+.raute-ui .side__new{color:var(--muted);margin-top:6px}
+.raute-ui .side__foot{padding-top:14px}
+.raute-ui .side-tools>summary{margin-top:8px}
+.raute-ui .topbar{background:var(--card);padding:0 36px;border-bottom:1px solid var(--line);box-shadow:none}
+.raute-ui .crumbs{font-size:12px}.raute-ui .crumbs__here{font-weight:600}
+.raute-ui .topsearch{background:var(--ground);border-radius:8px;border-color:var(--line);height:34px}
+.raute-ui .topsearch__in{font-size:12px;width:190px}
+.raute-ui .askraute{border-radius:8px;font-size:12px;min-height:34px;padding:8px 14px}
+.raute-ui .content{padding:32px 36px 64px}
+.raute-ui .subtabs{gap:20px;margin-bottom:28px}
+.raute-ui .subtabs>a{padding:12px 2px;font-size:13px;color:var(--muted);font-weight:500}
+.raute-ui .subtabs>a.active{color:var(--ink);font-weight:650}
+.raute-ui .workspace-view{margin-bottom:24px;gap:10px}
+.raute-ui .workspace-view select{background:var(--card);font-size:12px;min-width:180px;padding:8px 30px 8px 12px}
+.raute-ui :is(.btn,button){border-radius:8px;font-size:12px;line-height:1.4;min-height:34px;padding:8px 12px;font-weight:550;box-shadow:none;transition:background .15s,border-color .15s,color .15s}
+.raute-ui :is(.btn,button):hover{filter:none}
+.raute-ui .btn--go{background:var(--tint);border-color:var(--tint);color:white}
+.raute-ui .btn--go:hover{background:rgb(var(--accent-rgb)/.9)}
+.raute-ui .client-delete{color:var(--alert)}
+.raute-ui :is(input:not([type=checkbox]):not([type=radio]),select,textarea){border-color:var(--line-strong);border-radius:8px;color:var(--ink);font-size:13px;background:var(--card)}
+.raute-ui :is(input,textarea)::placeholder{color:var(--faint)}
+.raute-ui label{color:var(--ink-2)}
+.raute-ui .page-heading{display:flex;justify-content:space-between;gap:24px;align-items:center;margin:0 0 30px}
+.raute-ui :is(.page-heading,.profile-page-head) h1{font-size:32px;font-weight:650;line-height:1.2;letter-spacing:-.045em;margin:6px 0 10px}
+.raute-ui :is(.page-eyebrow,.profile-page-head>p:first-child){font-size:10px;letter-spacing:.09em;font-weight:600;color:var(--muted);margin:0 0 8px}
+.raute-ui :is(.page-description,.profile-page-head>p:last-child){font-size:14px;line-height:1.65;color:var(--muted);margin:0;max-width:68ch}
+.raute-ui .page-heading-actions{flex-shrink:0}.raute-ui .page-heading-actions .btn{display:inline-flex;gap:8px;align-items:center;min-height:38px}
+.raute-ui #react-workbench{max-width:1280px;margin:8px 0 0}
+.raute-ui .twin-page{max-width:1280px;margin:0}
+.raute-ui .profile-page{max-width:1280px;margin:0}
+.raute-ui .profile-page-head{margin-bottom:32px}
+.raute-ui .twin-page h2{font-size:17px;letter-spacing:-.025em;font-weight:650}
+.raute-ui .twin-page h3{font-size:14px;font-weight:600}
+.raute-ui :is(.twin-field,.twin-progress,.twin-import,.twin-editor,.profile-section){border-radius:12px;border-color:var(--line);box-shadow:0 2px 3px #20232d02}
+.raute-ui :is(.twin-field,.twin-progress,.twin-import){padding:24px;margin:18px 0}
+.raute-ui :is(.twin-eyebrow,.twin-muted,.twin-page small){font-size:12px;line-height:1.6}
+.raute-ui .twin-field-head{gap:24px}.raute-ui .twin-field-head h3{max-width:72ch;line-height:1.6}
+.raute-ui .twin-value{font-size:14px;line-height:1.75}
+.raute-ui .twin-badges{gap:6px;margin-bottom:12px}.raute-ui .twin-badges span{font-size:10px;padding:3px 7px;border-radius:5px;line-height:1.5}
+.raute-ui .twin-metadata{font-size:12px;gap:20px;margin-top:22px}
+.raute-ui .twin-progress{gap:22px;padding:24px 28px}.raute-ui .twin-progress strong{font-size:26px;letter-spacing:-.04em}
+.raute-ui .twin-progress small{font-size:11px}
+.raute-ui .twin-filters{padding:0;margin:22px 0;gap:16px}.raute-ui .twin-filters label{font-size:12px}
+.raute-ui .twin-ai-import{border-top:1px solid var(--line);padding:28px;border-radius:12px}.raute-ui .twin-ai-import header{max-width:76ch}
+.raute-ui .twin-toolbar{gap:12px;margin:18px 0 26px}.raute-ui .twin-toolbar summary{font-size:12px}
+.raute-ui .profile-section{padding:28px;margin-top:28px}.raute-ui .profile-section h2{font-size:20px;letter-spacing:-.035em}
+.raute-ui .profile-knowledge .twin-page>header h2{font-size:20px;margin:0 0 8px}
+.raute-ui .profile-section :is(.prof__hint,.prof__src,.guide__d){color:var(--muted)}
+/* Client overview: the values have their own hierarchy, not a prose sentence. */
+.raute-ui .clients-toolbar{display:flex;align-items:end;justify-content:space-between;gap:20px;border-top:1px solid var(--line);padding:22px 0 0}
+.raute-ui .clients-toolbar>p{font-size:12px;color:var(--muted);padding-bottom:10px;white-space:nowrap}
+.raute-ui #react-workbench .client-search{width:min(400px,100%);margin:0;font-size:11px;font-weight:500;gap:8px}
+.raute-ui #react-workbench .client-search input{padding:10px 13px;background:var(--card);border-color:var(--line);font-size:13px}
+.raute-ui .client-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;margin-top:24px}
+.raute-ui .workbench-list .client-card{border-radius:12px;border-color:var(--line);padding:24px 24px 0;display:flex;flex-direction:column;box-shadow:0 2px 4px #20232d03;transition:border-color .15s,box-shadow .15s}
+.raute-ui .client-card:hover{border-color:var(--line-strong);box-shadow:0 4px 14px #20232d07}
+.raute-ui .client-card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;gap:12px}
+.raute-ui .client-monogram{display:grid;place-items:center;width:42px;height:42px;border:1px solid var(--line);border-radius:11px;background:var(--ground);font-size:13px;font-weight:650;letter-spacing:-.03em;color:var(--ink-2)}
+.raute-ui .client-status{display:inline-flex;align-items:center;gap:6px;border-radius:5px;background:var(--ground);color:var(--muted);padding:4px 7px;font-size:10px;font-weight:550}
+.raute-ui .client-status:before{content:'';width:5px;height:5px;border-radius:50%;background:currentColor}.raute-ui .client-status--aktiv{color:var(--good)}.raute-ui .client-status--krise{color:var(--alert);background:var(--alert-wash)}
+.raute-ui .client-card h2{font-size:18px;font-weight:650;letter-spacing:-.035em;line-height:1.4;margin:0}
+.raute-ui .client-card h2 a{color:var(--ink);display:flex;justify-content:space-between;gap:12px}.raute-ui .client-card h2 a:hover{color:var(--tint);text-decoration:none}.raute-ui .client-card h2 a span{color:var(--faint);font-weight:400;flex:none}
+.raute-ui .client-industry{color:var(--muted);font-size:12px;margin:5px 0 24px;min-height:20px}
+.raute-ui .client-completeness{margin-top:auto}.raute-ui .client-completeness>div{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:9px}.raute-ui .client-completeness strong{font-weight:600;color:var(--ink)}
+.raute-ui .client-completeness progress{display:block;width:100%;height:4px;border:0;border-radius:3px;appearance:none;background:var(--fill-2);color:var(--tint)}
+.raute-ui .client-completeness progress::-webkit-progress-bar{background:var(--fill-2);border-radius:3px}.raute-ui .client-completeness progress::-webkit-progress-value{background:var(--tint);border-radius:3px}.raute-ui .client-completeness progress::-moz-progress-bar{background:var(--tint);border-radius:3px}
+.raute-ui .client-card-metrics{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:22px 0}.raute-ui .client-card-metrics dt{font-size:10px;color:var(--muted);margin-bottom:5px}.raute-ui .client-card-metrics dd{font-size:24px;font-weight:550;letter-spacing:-.04em;line-height:1.3}.raute-ui .client-card-metrics small{font-size:12px;font-weight:400;color:var(--muted)}
+.raute-ui .client-card-footer{margin:0 -24px;border-top:1px solid var(--line);padding:12px 18px;display:flex;align-items:center;justify-content:space-between;gap:10px}.raute-ui .client-card-footer>span{font-size:10px;color:var(--muted);text-align:right}
+.raute-ui .client-card-actions{margin:0;gap:2px}.raute-ui .client-card-actions .btn{background:transparent;border-color:transparent;padding:6px;font-size:11px;min-height:30px}.raute-ui .client-card-actions .btn:hover{background:var(--ground)}
+/* Work surfaces align the list and its selected detail at the same baseline. */
+.raute-ui .opportunity-layout{grid-template-columns:330px minmax(0,1fr);gap:24px;margin-top:26px}
+.raute-ui .opportunity-layout>aside{padding:20px;margin:0;top:88px}.raute-ui .opportunity-layout>div{padding:0}.raute-ui .opportunity-layout>div>.twin-field:first-child{margin-top:0}
+.raute-ui .journalist-layout{grid-template-columns:280px minmax(0,1fr);gap:24px}.raute-ui .journalist-layout>aside{top:88px;margin-top:0}.raute-ui .journalist-layout>div>.twin-field:first-child{margin-top:0}
+.raute-ui .journalist-roster{padding:8px 0 0;max-height:66vh}.raute-ui .journalist-roster li{margin:0}.raute-ui .journalist-roster button{padding:16px 12px;font-size:13px;line-height:1.65;border-radius:8px;border:1px solid transparent;text-align:left;background:transparent;color:var(--ink);font-weight:500}
+.raute-ui .journalist-roster button:hover{background:var(--ground)}.raute-ui .journalist-roster button[aria-pressed=true]{background:var(--tint-wash-soft);border-color:var(--tint-line);color:var(--ink)}
+.raute-ui .journalist-roster small{font-size:11px;margin:8px 0 0;color:var(--muted)}
+.raute-ui .journalist-summary{border-top:1px solid var(--line)}.raute-ui .profile-edit{border:1px solid var(--line);border-radius:10px;background:var(--card);margin:18px 0}.raute-ui .profile-edit>summary{padding:14px 20px;font-size:12px}
+.raute-ui .development-panel{padding:18px 22px;margin:0}.raute-ui .development-panel>summary{font-size:13px;font-weight:550}.raute-ui .development-panel[open]{padding:24px}
+.raute-ui .workspace-tabs{gap:4px;row-gap:10px;padding:0 0 14px}.raute-ui .workspace-tabs .btn{border:0;background:transparent;color:var(--muted);font-size:11px;padding:7px 10px}.raute-ui .workspace-tabs .btn[aria-pressed=true]{background:var(--fill-2);color:var(--ink)}
+.raute-ui .empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:56px 28px;min-height:260px;border:1px solid var(--line);border-radius:12px;background:var(--card)}
+.raute-ui .empty-state-mark{display:grid;place-items:center;width:48px;height:48px;background:var(--ground);border:1px solid var(--line);border-radius:12px;margin-bottom:20px;color:var(--muted)}.raute-ui .empty-state-mark svg{width:22px;height:22px}.raute-ui .empty-state h2{font-size:16px;margin:0 0 10px}.raute-ui .empty-state p{font-size:13px;color:var(--muted);line-height:1.7;max-width:42ch;margin:0}
+/* Desk and existing server pages use the same rhythm and table treatment. */
+.raute-ui .desk__h{margin-bottom:28px}.raute-ui .desk__t{font-size:32px;letter-spacing:-.045em;font-weight:650;margin:8px 0}.raute-ui .desk__hi{font-size:11px;letter-spacing:.04em}.raute-ui .desk__sub{font-size:13px}
+.raute-ui .kpis{gap:16px;margin-bottom:24px}.raute-ui .kpi{padding:22px;border-color:var(--line)}.raute-ui .kpi__l{font-size:10px;letter-spacing:.05em;font-weight:550}.raute-ui .kpi__v{font-size:32px;font-weight:550;margin:10px 0 4px;letter-spacing:-.05em}.raute-ui .kpi__n{font-size:11px}
+.raute-ui :is(.board,.pane,.panel){box-shadow:none;border-color:var(--line)}.raute-ui .board__h{padding:22px 24px}.raute-ui .board th{font-size:10px;font-weight:550;background:var(--ground);padding:12px 22px}.raute-ui .board td{padding:16px 22px;font-size:12px}.raute-ui .board__nm{color:var(--ink);font-weight:600}.raute-ui .pane__h{padding:18px 22px}.raute-ui .pane__b .row{padding:16px 22px}
+.raute-ui .client-dialog{box-shadow:0 24px 80px #15192330}.raute-ui .client-dialog::backdrop{background:#20232d55;backdrop-filter:blur(3px)}
+@media(min-width:1600px){.raute-ui .content{padding:40px 48px 72px}.raute-ui .topbar{padding:0 48px}}
+@media(max-width:1200px){.raute-ui .client-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.raute-ui .opportunity-layout{grid-template-columns:290px minmax(0,1fr)}}
+@media(max-width:900px){.raute-ui .side{padding:16px;gap:14px}.raute-ui .side__nav{gap:3px}.raute-ui .side__sect{padding:8px}.raute-ui .topbar{padding:14px 20px;gap:12px}.raute-ui .content{padding:24px 20px 48px}.raute-ui .subtabs{gap:14px}.raute-ui .opportunity-layout{grid-template-columns:1fr}.raute-ui .opportunity-layout>aside{position:static}.raute-ui .journalist-layout{grid-template-columns:1fr}.raute-ui .journalist-layout>aside{position:static}.raute-ui .journalist-roster{max-height:300px}.raute-ui .page-heading{align-items:flex-start}.raute-ui .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.raute-ui .page-heading{flex-direction:column;gap:18px;margin-bottom:24px}.raute-ui .page-heading h1{font-size:28px}.raute-ui .client-grid{grid-template-columns:1fr}.raute-ui .clients-toolbar{align-items:stretch;flex-direction:column;gap:8px}.raute-ui .clients-toolbar>p{padding:0}.raute-ui .topsearch__in{width:120px}.raute-ui .subtabs{gap:10px}.raute-ui .subtabs>a{font-size:12px;padding:10px 0}.raute-ui :is(.twin-field,.twin-progress,.twin-import,.profile-section){padding:20px}.raute-ui .twin-field-head{gap:12px}.raute-ui .twin-progress{gap:16px}.raute-ui .empty-state{padding:36px 22px;min-height:220px}.raute-ui .kpi{padding:18px}}
+@media(prefers-reduced-motion:reduce){.raute-ui :is(.btn,button,.client-card){transition:none}}
+
+/* The compact navigation is progressively enhanced; without JavaScript all links remain visible. */
+.raute-ui .side__toggle{display:none}
+@media(max-width:900px){
+ .raute-ui .side{justify-content:space-between;border-bottom:1px solid var(--line);border-right:0}
+ .raute-ui .side__brand{padding:0;font-size:19px}
+ .raute-ui .has-menu-toggle .side__toggle{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;padding:8px;background:var(--card);border:1px solid var(--line)}
+ .raute-ui .side__toggle .ico{width:17px;height:17px}
+ .raute-ui .has-menu-toggle:not(.is-expanded) :is(.side__nav,.side__foot){display:none}
+ .raute-ui .side.is-expanded .side__nav{flex-basis:100%;flex-direction:column;max-height:65dvh;overflow:auto}
+ .raute-ui .side.is-expanded .side__foot{flex-basis:100%;border-top:1px solid var(--line);padding-top:10px}
+}
+.raute-ui .topbar .topsearch .topsearch__in{background:transparent;border:0;border-radius:0}
+.raute-ui .opportunities-page .opportunity-title{font-size:23px;line-height:1.4;letter-spacing:-.035em;margin:8px 0 16px}
+.raute-ui .workspace-overview .twin-field p{margin:7px 0;line-height:1.75}
+.raute-ui .workspace-overview .twin-field p+h3{margin-top:20px}

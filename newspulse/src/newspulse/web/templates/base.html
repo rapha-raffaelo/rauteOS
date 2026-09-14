@@ -9,6 +9,7 @@
      Cache-Control, so freshness is the browser's guess — and a repaint that is
      committed, merged and served still shows the old page. #}
   <link rel="stylesheet" href="/static/app.css?v={{ asset_version('app.css') }}">
+  <link rel="stylesheet" href="/static/studio.css?v={{ asset_version('studio.css') }}">
   <!-- HTMX for server-driven swaps (date picker); vendored locally so the app
        stays fully offline (DEC-3: everything runs on the local machine). Loaded
        synchronously (no defer) so window.htmx is defined before the date input
@@ -17,7 +18,7 @@
        parse-blocking cost is negligible. -->
   <script src="/static/htmx.min.js?v={{ asset_version('htmx.min.js') }}"></script>
 </head>
-<body>
+<body class="raute-ui">
   {% set t = translator(request) %}
   {% set lang = request_language(request) %}
   {# The icon set (GEL-03, DEC-4). Drawn once here as <symbol>s and referenced
@@ -29,6 +30,8 @@
      Inline rather than a sprite file: it is well under a kilobyte and a second
      request for eleven outlines is a request too many. #}
   <svg class="ico-sprite" aria-hidden="true" focusable="false">
+    <symbol id="ico-desk" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol>
+    <symbol id="ico-clients" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M9 5V3h6v2M8 10h2m4 0h2M8 14h2m4 0h2M10 21v-3h4v3"/></symbol>
     <symbol id="ico-heute" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol>
     <symbol id="ico-texte" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></symbol>
     <symbol id="ico-krise" viewBox="0 0 24 24"><path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17.4v.2"/></symbol>
@@ -54,13 +57,14 @@
     <aside class="side">
       <a class="side__brand" href="/"><span class="side__mark">#</span>RauteOS</a>
 
-      <nav class="side__nav" aria-label="{{ t('Navigation') }}">
+      <button class="side__toggle" hidden type="button" aria-label="Menü öffnen" aria-expanded="false" aria-controls="workspace-navigation workspace-account"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+      <nav id="workspace-navigation" class="side__nav" aria-label="{{ t('Navigation') }}">
         <div class="side__sect">{{ t("Übersicht") }}</div>
         {# First, because it is the page the morning starts on: the agency's own
            standing, before any single mandate is opened. #}
-        <a href="/desk" class="side__row{% if request.url.path.startswith('/desk') %} is-on{% endif %}"{% if request.url.path.startswith('/desk') %} aria-current="page"{% endif %}>{{ t("Desk") }}</a>
-        <a href="/clients" class="side__row{% if request.url.path == '/clients' %} is-on{% endif %}">Clients</a>
-        <a href="/assets" class="side__row{% if request.url.path == '/assets' %} is-on{% endif %}">Assets</a>
+        <a href="/desk" class="side__row{% if request.url.path.startswith('/desk') %} is-on{% endif %}"{% if request.url.path.startswith('/desk') %} aria-current="page"{% endif %}><svg class="ico side__icon" aria-hidden="true"><use href="#ico-desk"></use></svg>{{ t("Desk") }}</a>
+        <a href="/clients" class="side__row{% if request.url.path == '/clients' %} is-on{% endif %}"><svg class="ico side__icon" aria-hidden="true"><use href="#ico-clients"></use></svg>Clients</a>
+        <a href="/assets" class="side__row{% if request.url.path == '/assets' %} is-on{% endif %}"><svg class="ico side__icon" aria-hidden="true"><use href="#ico-texte"></use></svg>Assets</a>
         <details class="side-tools"{% if request.url.path in ['/today', '/', '/archive', '/journalists', '/contacts'] %} open{% endif %}><summary class="side__sect">Weitere Werkzeuge</summary>
         <a href="/today" class="side__row{% if request.url.path.startswith('/today') %} is-on{% endif %}"{% if request.url.path.startswith('/today') %} aria-current="page"{% endif %}>{{ t("Heute") }}</a>
         <a href="/" class="side__row{% if request.url.path == '/' %} is-on{% endif %}"{% if request.url.path == '/' %} aria-current="page"{% endif %}>{{ t("Portfolio") }}</a>
@@ -91,7 +95,7 @@
         </a>
       </nav>
 
-      <div class="side__foot">
+      <div id="workspace-account" class="side__foot">
         <details class="quiet-actions side-language"><summary>{{ t("Sprache") }}</summary>          <div class="seg" role="group" aria-label="{{ t('Sprache') }}">
             {% for code, label in [('de', 'DE'), ('en', 'EN')] %}
               <form method="post" action="/language/{{ code }}?next={{ request.url.path }}{% if request.url.query %}%3F{{ request.url.query | urlencode }}{% endif %}">
@@ -177,6 +181,23 @@
 
   <script>
   (() => {
+    const menu = document.querySelector('.side__toggle');
+    const sidebar = document.querySelector('.side');
+    if (menu && sidebar) {
+      menu.hidden = false;
+      sidebar.classList.add('has-menu-toggle');
+      const setOpen = open => {
+        sidebar.classList.toggle('is-expanded', open);
+        menu.setAttribute('aria-expanded', String(open));
+        menu.setAttribute('aria-label', open ? 'Menü schließen' : 'Menü öffnen');
+      };
+      menu.addEventListener('click', () => setOpen(menu.getAttribute('aria-expanded') !== 'true'));
+      sidebar.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && menu.getAttribute('aria-expanded') === 'true') {
+          setOpen(false); menu.focus();
+        }
+      });
+    }
     const CTX = {{ assistant_ctx(request) | tojson }};
     document.querySelectorAll("[data-raute-open]").forEach(el => el.onclick = e => {
       e.preventDefault();
