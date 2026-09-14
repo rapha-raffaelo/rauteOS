@@ -164,3 +164,13 @@ integrity is ok. All 13 public frontend files, the shared stylesheet and 31 chec
 server source/template hashes match the reviewed build. Editing and confirmed soft
 deletion were verified in isolated local/browser tests; no production client was
 edited or removed during verification. Schema unchanged.
+
+### Unified visual system — 2026-09-14
+
+Source `e5b2c6b` deployed as `5e208c53-175b-4612-a2db-61c96bb9ac78`
+(SUCCESS). All 13 public frontend files, both shared stylesheets and 32 checked
+server source/template hashes match the reviewed release. Production renders
+include the fingerprinted studio stylesheet and accessible mobile navigation.
+Seven client profiles/settings, Contacts and five workbench pages remain healthy;
+database integrity is ok. Frontend architecture remains hybrid React/Jinja.
+No production content was changed for verification.
