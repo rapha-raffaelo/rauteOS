@@ -1,11 +1,11 @@
 {% extends "base.html" %}
-{% block title %}Journalisten · RauteOS{% endblock %}
-{% block pagetitle %}Journalisten{% endblock %}
+{% block title %}Kontakte · RauteOS{% endblock %}
+{% block pagetitle %}Kontakte{% endblock %}
 {% block content %}
 {% if frontend %}
 {% for href in frontend.css %}<link rel="stylesheet" href="{{ href }}">{% endfor %}
-<div id="react-journalists"><p role="status">Journalisten werden geladen…</p></div>
+<div id="react-journalists"><p role="status">Kontakte werden geladen…</p></div>
 <script type="module" src="{{ frontend.script }}"></script>
-{% else %}<p>Die Journalisten-Oberfläche ist noch nicht verfügbar.</p>{% endif %}
-{% if not frontend %}<p><a href="/contacts">Kontaktbuch öffnen</a></p>{% endif %}
+{% else %}<p>Die Kontaktansicht ist noch nicht verfügbar.</p>{% endif %}
+{% if not frontend %}<p><a href="/contacts?q=">Kontaktbuch öffnen</a></p>{% endif %}
 {% endblock %}

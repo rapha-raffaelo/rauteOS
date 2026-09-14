@@ -431,13 +431,13 @@ def test_the_sidebar_keeps_its_rows_and_only_changes_how_they_look(web, mandate)
     pages.
 
     The Desk joined them at the top — the agency's own standing, before any
-    single mandate is opened. Journalist intelligence now precedes the legacy
-    contact book; the remaining destinations retain their order.
+    single mandate is opened. Contact intelligence and the contact book share
+    one entry; the remaining destinations retain their order.
     """
     page = web.get("/today").text
     side = page.split('<aside class="side">', 1)[1].split("</aside>", 1)[0]
     rows = re.findall(r'<a href="([^"]+)" class="side__row', side)
-    assert rows[:8] == ["/desk", "/clients", "/assets", "/today", "/", "/archive", "/journalists", "/contacts"]
+    assert rows[:7] == ["/desk", "/clients", "/assets", "/today", "/", "/archive", "/contacts"]
     assert f"/client/{mandate.id}/overview" in side
     assert "/settings" in side
 

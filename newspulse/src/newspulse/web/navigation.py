@@ -122,7 +122,7 @@ _AREAS: tuple[tuple[str, str], ...] = (
     ("/ask", "Ask RAUTE"),
     ("/today", "Heute"),
     ("/archive", "Archiv"),
-    ("/journalists", "Journalisten"),
+    ("/journalists", "Kontakte"),
     ("/contacts", "Kontakte"),
     ("/settings", "Einstellungen"),
 )

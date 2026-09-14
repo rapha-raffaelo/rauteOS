@@ -415,7 +415,7 @@ def test_the_roster_shows_the_count_and_keeps_filtering(web, factory):
             released_at=_NOW - dt.timedelta(days=3), state=OutreachState.RAUS,
         )
 
-    whole = web.get("/contacts").text
+    whole = web.get("/contacts", params={"q": ""}).text
     assert "Marlene Kühn" in whole
     assert "Sven Kaltenbach" in whole
     assert '<span class="book__n">1</span>' in whole

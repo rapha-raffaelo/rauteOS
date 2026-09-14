@@ -65,8 +65,7 @@
         <a href="/today" class="side__row{% if request.url.path.startswith('/today') %} is-on{% endif %}"{% if request.url.path.startswith('/today') %} aria-current="page"{% endif %}>{{ t("Heute") }}</a>
         <a href="/" class="side__row{% if request.url.path == '/' %} is-on{% endif %}"{% if request.url.path == '/' %} aria-current="page"{% endif %}>{{ t("Portfolio") }}</a>
         <a href="/archive" class="side__row{% if request.url.path.startswith('/archive') %} is-on{% endif %}">{{ t("Archiv") }}</a>
-        <a href="/journalists" class="side__row{% if request.url.path == '/journalists' %} is-on{% endif %}">Journalisten</a>
-        <a href="/contacts" class="side__row{% if request.url.path.startswith('/contacts') %} is-on{% endif %}">{{ t("Kontakte") }}</a>
+        <a href="/contacts" class="side__row{% if (request.url.path.startswith('/contacts') or request.url.path == '/journalists') %} is-on{% endif %}">{{ t("Kontakte") }}</a>
 
         </details>
         {% set roster = nav_clients(request) %}

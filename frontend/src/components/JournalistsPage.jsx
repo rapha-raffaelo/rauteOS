@@ -37,7 +37,7 @@ function ProfileEditor({data, onSaved}) {
       onSaved(saved);
     } catch (e) {setError(e.message);} finally {setBusy(false);}
   }
-  return <><section className="twin-field journalist-summary"><p className="twin-eyebrow">Journalistenprofil</p><h2>{data.contact.name}</h2><p>{data.contact.outlet} · {data.contact.beat || 'Ressort offen'}</p><p>{data.profile.topics.join(' · ') || 'Noch keine Themen hinterlegt.'}</p><p>{data.profile.preferences || 'Ansprache noch nicht hinterlegt.'}</p><strong>{data.profile.relationship_status}</strong></section><details className="profile-edit"><summary>Profil bearbeiten</summary><form onSubmit={save} className="twin-field"><h2>{data.contact.name}</h2>
+  return <><section className="twin-field journalist-summary"><p className="twin-eyebrow">Kontaktprofil</p><h2>{data.contact.name}</h2><p>{data.contact.outlet} · {data.contact.beat || 'Ressort offen'}</p><p>{data.profile.topics.join(' · ') || 'Noch keine Themen hinterlegt.'}</p><p>{data.profile.preferences || 'Ansprache noch nicht hinterlegt.'}</p><strong>{data.profile.relationship_status}</strong></section><details className="profile-edit"><summary>Profil bearbeiten</summary><form onSubmit={save} className="twin-field"><h2>{data.contact.name}</h2>
     <p>Kontaktangaben und Profilwissen werden von Ihnen gepflegt. E-Mail-Adressen werden nicht geraten.</p>
     <ErrorMessage error={error}/><div className="twin-form-grid">{Object.entries(contactLabels).map(([key,label]) => <label key={key}>{label}
       <input aria-label={label} required={key==='name'} value={contact[key]} onChange={e=>setContact({...contact,[key]:e.target.value})}/>
@@ -105,7 +105,7 @@ export function JournalistsPage({params = new URLSearchParams(window.location.se
     catch(e){setError(e.message);}finally{setBusy(false);}
   }
   function saved(value) {setData(value);setContacts(v=>v.map(c=>c.id===value.contact.id ? value.contact:c));setNotice('Profil gespeichert.');}
-  return <div className="twin-page journalists-page"><p className="twin-eyebrow">Medienarbeit</p><h1>Journalisten</h1>
+  return <div className="twin-page journalists-page"><p className="twin-eyebrow">Medienarbeit</p><h1>Kontakte</h1>
     <p>Profilwissen, Artikelbelege und Beziehungshistorie an einem Ort.</p>
     {clientId>0 && contextId>0 && ['detected','developed'].includes(contextKind) && <ResearchPanel clientId={clientId} contextId={contextId} contextKind={contextKind} onContact={openContact}/>}
     <ErrorMessage error={error}/>{notice && <p role="status">{notice}</p>}

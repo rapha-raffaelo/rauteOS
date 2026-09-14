@@ -308,3 +308,19 @@ Chromium checked all four sections, legacy links, questionnaire open/close,
 incremental question loading, primary navigation, unique input IDs and mobile
 overflow. Desktop/mobile screenshots reviewed. Production content was not changed
 for verification.
+
+### Single Kontakte navigation entry — 2026-09-14
+
+Removed the duplicate Journalisten sidebar item and named the shared workspace,
+page title, breadcrumb and profile summary Kontakte/Kontaktprofil. The Contacts
+entry opens the React workspace at /contacts; /journalists redirects there while
+preserving contact selection and opportunity research context. Updated opportunity
+links to the canonical destination. Existing contact form/history deep links and
+Python-only fallback remain functional; both views use the same contact records.
+No database or research behavior changed.
+
+Validation: 153 backend contact/history/navigation/journalist checks and 34 React
+tests passed; production build passed. Browser verification exercised creation,
+profile saving, search, legacy redirects with selection, old edit links reading
+the same data, a single active Kontakte sidebar entry and mobile overflow. Desktop
+screenshot reviewed. Browser writes were restricted to the local demo database.

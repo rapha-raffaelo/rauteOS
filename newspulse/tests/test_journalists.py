@@ -34,6 +34,30 @@ def web(db,monkeypatch):
     with TestClient(app) as client: yield client
 
 
+@pytest.mark.parametrize('query', ['', '?contact=1', '?client=1&kind=developed&context=9'])
+def test_old_workspace_links_keep_their_context_under_contacts(web, monkeypatch, query):
+    from newspulse.web import frontend
+    monkeypatch.setattr(frontend, 'page_assets', lambda page: {'script': '/static/test.js', 'css': []})
+    response = web.get('/journalists' + query, follow_redirects=False)
+    assert response.status_code == 303
+    assert response.headers['location'] == '/contacts' + query
+    body = web.get(response.headers['location']).text
+    assert 'id="react-journalists"' in body
+    assert '<title>Kontakte · RauteOS</title>' in body
+    side = body.split('<aside class="side">', 1)[1].split('</aside>', 1)[0]
+    assert side.count('href="/contacts"') == 1
+    assert 'href="/journalists"' not in side
+    assert 'href="/contacts" class="side__row is-on"' in side
+
+
+def test_contacts_keeps_a_working_form_without_frontend_assets(web, monkeypatch):
+    from newspulse.web import frontend
+    monkeypatch.setattr(frontend, 'page_assets', lambda page: None)
+    body = web.get('/contacts').text
+    assert 'class="contact-form"' in body
+    assert 'id="react-journalists"' not in body
+
+
 def create(web,**extra):
     res=web.post('/api/v1/journalists',json={'name':'Anna Beispiel','outlet':'Handelsblatt',**extra})
     assert res.status_code==201,res.text

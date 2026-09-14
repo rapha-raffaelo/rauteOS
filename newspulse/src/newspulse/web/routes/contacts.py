@@ -22,7 +22,7 @@ from fastapi import APIRouter, Depends, Form, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from sqlalchemy.orm import Session
 
-from .. import redirects
+from .. import frontend, redirects
 from ... import config, contacts, outreach
 from ..app import get_db, templates
 from .today import _fetch_last_run
@@ -149,6 +149,15 @@ def contact_book(
     to carry. ``?q=`` wins when both are present, because that one came from the
     form the reader actually typed into.
     """
+    # The single contact entry opens the modern workspace. Existing deep links
+    # to contact forms/history and Python-only installs keep their working view.
+    assets = frontend.page_assets('journalists')
+    legacy_keys = {'q', 'search', 'name', 'outlet', 'edit', 'id'}
+    if assets and not legacy_keys.intersection(request.query_params):
+        return templates.TemplateResponse(request, 'journalists_react.html', dict(
+            frontend=assets, last_run=_fetch_last_run(session),
+            header_date=dt.datetime.now(config.local_zone()).date()))
+
     term = q or search
     existing = contacts.find(session, name, outlet) if name else None
     selected = _one_contact(session, contact)
