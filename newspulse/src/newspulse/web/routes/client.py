@@ -1405,39 +1405,42 @@ def market_view(
     client = session.get(Client, client_id)
     if client is None:
         raise HTTPException(status_code=404, detail="Client not found")
+    if not client.is_competitor:
+        return RedirectResponse(f"/client/{client_id}/twin#marktumfeld", status_code=303)
+    return templates.TemplateResponse(request, "client_market.html", market_context(session, client))
+
+
+def market_context(session: Session, client: Client) -> dict:
+    client_id = client.id
     tz = _local_tz()
     now = dt.datetime.now(dt.UTC)
     sections = _signals_by_kind(session, client, now=now, tz=tz)
     signals = sections.rows
-    return templates.TemplateResponse(
-        request,
-        "client_market.html",
-        {
-            "client": client,
-            "items": _market_items(session, client_id, days=_MARKET_DAYS),
-            "days": _MARKET_DAYS,
-            "themes": list(client.keywords or []) + list(client.alert_topics or []),
-            **_nominations(session, client_id, days=_MARKET_DAYS),
-            "signals": signals,
-            "hidden_studies": sections.hidden_studies,
-            "muted_kinds": [
-                kind.value for kind in SignalKind if client.mutes_signal(kind)
-            ],
-            # Not asked when there is no section to say it above: a mandate that
-            # has muted all three classes renders none of them, and the route and
-            # the template must agree on when the question is worth putting.
-            "field_gap": (
-                _field_gap(
-                    client,
-                    searched=_has_searched_signal(
-                        session, client, kinds=[SignalKind(k) for k in signals]
-                    ),
-                )
-                if signals
-                else None
-            ),
-            "deadline_weeks": _DEADLINE_SOON_DAYS // _DAYS_PER_WEEK,
-            "last_run": _fetch_last_run(session),
-            "header_date": now.astimezone(tz).date(),
-        },
-    )
+    return {
+        "client": client,
+        "items": _market_items(session, client_id, days=_MARKET_DAYS),
+        "days": _MARKET_DAYS,
+        "themes": list(client.keywords or []) + list(client.alert_topics or []),
+        **_nominations(session, client_id, days=_MARKET_DAYS),
+        "signals": signals,
+        "hidden_studies": sections.hidden_studies,
+        "muted_kinds": [
+            kind.value for kind in SignalKind if client.mutes_signal(kind)
+        ],
+        # Not asked when there is no section to say it above: a mandate that
+        # has muted all three classes renders none of them, and the route and
+        # the template must agree on when the question is worth putting.
+        "field_gap": (
+            _field_gap(
+                client,
+                searched=_has_searched_signal(
+                    session, client, kinds=[SignalKind(k) for k in signals]
+                ),
+            )
+            if signals
+            else None
+        ),
+        "deadline_weeks": _DEADLINE_SOON_DAYS // _DAYS_PER_WEEK,
+        "last_run": _fetch_last_run(session),
+        "header_date": now.astimezone(tz).date(),
+    }

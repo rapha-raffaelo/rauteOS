@@ -242,13 +242,14 @@ def test_themes_are_shown_so_the_reader_knows_what_was_searched(factory, client)
     assert "Börsenschließung" in body
 
 
-def test_the_tab_is_reachable_from_the_other_client_views(factory, client):
+def test_market_is_reachable_through_the_unified_profile(factory, client):
     with factory() as session:
         subject = _client(session)
         subject_id = subject.id
 
     for path in (f"/client/{subject_id}", f"/client/{subject_id}/map"):
-        assert f"/client/{subject_id}/market" in client.get(path).text, path
+        assert f"/client/{subject_id}/twin" in client.get(path).text, path
+    assert 'id="marktumfeld"' in client.get(f"/client/{subject_id}/twin").text
 
 
 def test_an_unknown_client_is_a_404(client):

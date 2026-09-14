@@ -2969,3 +2969,12 @@ body:has([id^="react-"]) .content{padding-top:16px}
 
 /* Secondary actions stay beside the object they affect, without permanent button rows. */
 .quiet-actions{position:relative;font-size:13px;min-width:0}.quiet-actions>summary{cursor:pointer;padding:8px 4px;color:var(--muted);width:fit-content}.quiet-actions>summary:hover{color:var(--ink)}.quiet-actions-body{display:flex;flex-wrap:wrap;align-items:center;gap:10px;background:var(--fill-2);padding:12px;border:1px solid var(--line);border-radius:8px;margin:6px 0}.quiet-actions:not([open])>.quiet-actions-body{display:none}.side-language{padding:0 12px}.side-language .seg{margin:8px 0}
+
+/* Unified profile: visible sections instead of a second navigation. */
+.profile-page{max-width:1300px;margin:24px 0 48px;overflow-wrap:anywhere}
+.profile-page-head{margin-bottom:28px}.profile-page-head h1{font-size:32px;letter-spacing:-.03em;margin:6px 0 12px}.profile-page-head p{color:var(--muted);font-size:14px}
+.profile-section{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:28px;margin-top:28px;min-width:0;scroll-margin-top:24px}
+.profile-section h2{font-size:22px;margin:0 0 12px}.profile-knowledge .twin-page{max-width:none}.profile-knowledge .twin-page>header h2{font-size:22px}
+.profile-page .prof__row,.profile-page .props__val{min-width:0}.profile-page .guide__cols{grid-template-columns:minmax(0,380px) minmax(0,1fr)}
+@media(max-width:980px){.profile-page .guide__cols{grid-template-columns:1fr}}
+@media(max-width:600px){.profile-section{padding:18px}.profile-page .prof{grid-template-columns:1fr}.profile-page .props__row,.profile-page .rival__head{flex-wrap:wrap}.profile-page .voice{font-size:12px}.profile-page .voice th,.profile-page .voice td{padding-right:8px}.profile-page .guide__actions{flex-wrap:wrap}}

@@ -287,3 +287,24 @@ links. Existing daily-view deep links still work and retain the Opportunities
 parent tab; they omit the selector rather than falsely selecting Chancen.
 Validation: 68 shell checks passed. Browser verified the four remaining options,
 Issues navigation and returning from an existing daily-view link to Opportunities.
+
+### Single profile page without submenus — 2026-09-14
+
+Removed the profile view selector. Wissen & Aussagen, company/kickoff/guide
+material, Wettbewerb and Marktumfeld now render as visible sections of one
+profile page. Shared escaped template fragments retain the existing form handlers
+and source metadata. Legacy company links render the same page; competitor and
+market links redirect to their corresponding sections. Opportunities retains its
+existing selector without Heute.
+
+The embedded statements view initially shows five questions, with search, filters
+and incremental loading, so the other profile sections remain reachable. Added
+responsive section styling and retained the AI import and questionnaire controls.
+No database schema or generation behavior changed.
+
+Validation: 253 targeted backend checks and 34 React tests passed; production
+build passed. Included an escaping regression check for stored profile text.
+Chromium checked all four sections, legacy links, questionnaire open/close,
+incremental question loading, primary navigation, unique input IDs and mobile
+overflow. Desktop/mobile screenshots reviewed. Production content was not changed
+for verification.

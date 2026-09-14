@@ -215,6 +215,18 @@ def test_the_page_shows_the_source_of_a_machine_filled_line(factory, web):
     assert "https://qonto.com/ueber-uns" in body
 
 
+def test_unified_profile_escapes_fact_text(factory, web):
+    with factory() as session:
+        client = _client(session)
+        profiles.save(session, client, "ceo", '<script>alert("fact")</script>')
+        client_id = client.id
+
+    body = web.get(f"/client/{client_id}/twin").text
+
+    assert '<script>alert("fact")</script>' not in body
+    assert '&lt;script&gt;alert(' in body
+
+
 def test_a_hand_typed_line_carries_no_citation(factory, web):
     """His own knowledge is the strongest provenance in the building and needs no
     link; printing "Von mensch" beside it would be noise."""

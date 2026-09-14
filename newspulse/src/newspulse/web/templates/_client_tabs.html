@@ -5,7 +5,6 @@
 {% set kstate = crisis_tab(request, client) %}
 {% set opportunity_views = [('opportunities', '/opportunities', 'Chancen'), ('texte', '/advice', 'Impulse'), ('issues', '/issues', 'Issues'), ('plan', '/plan', 'Plan')] %}
 {% if kstate.has_history %}{% set opportunity_views = opportunity_views + [('krise', '/krise', 'Krise')] %}{% endif %}
-{% set profile_views = [('twin', '/twin', 'Wissen & Aussagen'), ('profile', '/profil', 'Unternehmen & Kommunikation'), ('rivals', '/wettbewerb', 'Wettbewerb'), ('market', '/market', 'Marktumfeld')] %}
 {% set profile_active = 'profile' if active in ('kickoff', 'guide') else 'rivals' if active == 'map' else active %}
 {% set group = 'opportunities' if active in ('opportunities', 'heute', 'texte', 'issues', 'plan', 'krise') else 'profile' if profile_active in ('twin', 'profile', 'rivals', 'market') else 'archive' if active == 'overview' else active %}
 <nav class="subtabs" aria-label="{{ t('Mandant') }}">
@@ -13,12 +12,12 @@
     <a href="/client/{{ client.id }}{{ suffix }}"{% if group == key %} class="active" aria-current="page"{% endif %}>{{ t(label) }}{% if key == 'opportunities' and kstate.open_id %}<span class="workspace-crisis">{{ t('Krise offen') }}</span>{% endif %}</a>
   {% endfor %}
 </nav>
-{% if group in ('opportunities', 'profile') and active != 'heute' %}
-  {% set views = opportunity_views if group == 'opportunities' else profile_views %}
+{% if group == 'opportunities' and active != 'heute' %}
+  {% set views = opportunity_views %}
   <div class="workspace-view">
-    <label for="workspace-view">{{ t('Opportunities' if group == 'opportunities' else 'Profil') }} · {{ t('Ansicht') }}</label>
-    <select id="workspace-view" aria-label="{{ t('Ansicht in Opportunities' if group == 'opportunities' else 'Ansicht im Profil') }}" onchange="window.location.assign(this.value)">
-      {% for key, suffix, label in views %}<option value="/client/{{ client.id }}{{ suffix }}"{% if (active if group == 'opportunities' else profile_active) == key %} selected{% endif %}>{{ t(label) }}</option>{% endfor %}
+    <label for="workspace-view">{{ t('Opportunities') }} · {{ t('Ansicht') }}</label>
+    <select id="workspace-view" aria-label="{{ t('Ansicht in Opportunities') }}" onchange="window.location.assign(this.value)">
+      {% for key, suffix, label in views %}<option value="/client/{{ client.id }}{{ suffix }}"{% if active == key %} selected{% endif %}>{{ t(label) }}</option>{% endfor %}
     </select>
     <noscript><div>{% for key, suffix, label in views %}<a href="/client/{{ client.id }}{{ suffix }}">{{ t(label) }}</a> {% endfor %}</div></noscript>
   </div>

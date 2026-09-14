@@ -31,6 +31,7 @@ COOKIE_MAX_AGE = 60 * 60 * 24 * 365
 
 # German source string -> English. Ordered roughly by where it appears.
 _EN: dict[str, str] = {
+    "Wissen, Unternehmensangaben, Wettbewerb und Marktumfeld an einem Ort.": "Knowledge, company details, competitors and market context in one place.",
     "Ansicht": "View",
     "Krise offen": "Open crisis",
     "Chancen": "Opportunities",

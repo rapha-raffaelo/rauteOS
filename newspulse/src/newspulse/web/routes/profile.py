@@ -213,26 +213,12 @@ def profile_view(
     return render(request, session, mandate_or_404(session, client_id))
 
 
-def render(
-    request: Request,
-    session: Session,
-    client: Client,
-    **extra,
-) -> HTMLResponse:
-    """The mandate's file: profile, guide and kick-off on one page.
+def render(request: Request, session: Session, client: Client, **extra) -> HTMLResponse:
+    from .twin_view import render_profile
+    return render_profile(request, session, client, **extra)
 
-    "kannst du kickoff, profil und guide unter 'profil' vereinen."
 
-    Three tabs for one subject — what this company is, how it speaks, and the
-    twenty questions only the client can answer — on a strip that had eleven.
-    They are one page now, and this is the only place that renders it, so the
-    guide's own routes and the questionnaire's come back through here with their
-    answers in ``extra`` rather than each keeping a page of its own.
-
-    Every key the two brought with them has a default below. A missing one does
-    not raise in Jinja, it renders as empty: a guide page reached after a failed
-    distillation would have quietly dropped the error it was there to show.
-    """
+def profile_context(request: Request, session: Session, client: Client, **extra) -> dict:
     client_id = client.id
     # Both tables read once and handed on. The proposals need the facts to know
     # what they would displace and the answers to know what to offer; the
@@ -263,80 +249,75 @@ def render(
     stored = onboarding.answers(session, client_id)
     kickoff = onboarding.completeness(session, client_id, stored=stored)
     pending = _pending(session, client_id, facts=facts, stored=stored)
-    return templates.TemplateResponse(
-        request,
-        "client_profile.html",
-        {
-            "client": client,
-            "fields": profiles.FIELDS,
-            "facts": facts,
-            "filled": sum(f.key in facts for f in profiles.FIELDS),
-            "fillable": profiles.FILLABLE,
-            "proposals": pending,
-            # How much of this mandate's own foundation exists. On the profile
-            # because this is the page that reads as the mandate's file: a thin
-            # profile beside a full questionnaire is a different problem from a
-            # thin profile beside twenty unasked questions.
-            "kickoff": kickoff,
-            # Held back from the list above, and still on file. Handed over as
-            # rows rather than a count so the page can name them in its own
-            # discard form: a row nobody can see and nobody can clear sits there
-            # until the next refresh overwrites it, which is the sort of
-            # invisible state this feature exists to end.
-            "contradictions": [
-                p for p in proposed if not profile_refresh.may_replace(facts, p.key)
-            ],
-            "researching": _researching.locked(),
-            # The click's own answer if there was one in this process, otherwise
-            # what the last check recorded — which is the usual case, since the
-            # sweep researches at 06:10 and the page is opened at nine. Without
-            # the fallback a failure from the sweep is invisible: the page shows
-            # a profile that was "checked" with no reason and no way to find one.
-            # Exactly what ``advisory.py`` does with ``impulse_note``.
-            "research_error": _errors.get(client_id) or client.profile_note,
-            # The same value object the portfolio prints, so "never checked" and
-            # "checked 84 days ago" read identically on both pages.
-            "checked": profiles.checked(
-                client.profile_checked_at, now=dt.datetime.now(dt.UTC)
-            ),
-            # The last click found none of the rows it named. The sweep had
-            # replaced them, which is the rule working — nothing the reader never
-            # saw was touched — but a button that appears to do nothing teaches
-            # the reader that the page is broken.
-            "stale_click": bool(request.query_params.get(_STALE_FLAG)),
-            # Compared against, never printed: the page says "Ihre Angabe" where
-            # the column says "mensch". Passed rather than written into the
-            # template so the authority level has one definition.
-            "by_hand": profiles.BY_HAND,
-            "last_run": _fetch_last_run(session),
-            "header_date": dt.datetime.now(_local_tz()).date(),
-            # --- The guide, since it moved onto this page ---------------------
-            "guide_text": client.comms_guide or "",
-            "sources": guide.sources(session, client_id),
-            "max_chars": guide.GUIDE_MAX_CHARS,
-            "max_mb": guide.MAX_UPLOAD_BYTES // (1024 * 1024),
-            "coach_days": coach.DEFAULT_DAYS,
-            # Set only by the guide's own routes, and each of them is an answer
-            # to a click: a proposal to compare, an error to state, a saved
-            # confirmation, a coach's findings and the stories they cite.
-            "proposal": None,
-            "guide_error": None,
-            "saved": False,
-            "findings": None,
-            "coverage": {},
-            "coach_error": None,
-            "draft": None,
-            # --- The questionnaire, as the window over it ---------------------
-            "groups": onboarding.by_section(),
-            "answers": stored,
-            "progress": kickoff,
-            # Opened by a control on this page or by a link that used to point
-            # at the kick-off tab; closed by the button on its bar, which is a
-            # link back here without the flag.
-            "kickoff_open": bool(request.query_params.get(_SHEET_FLAG)),
-        }
-        | extra,
-    )
+    return {
+        "client": client,
+        "fields": profiles.FIELDS,
+        "facts": facts,
+        "filled": sum(f.key in facts for f in profiles.FIELDS),
+        "fillable": profiles.FILLABLE,
+        "proposals": pending,
+        # How much of this mandate's own foundation exists. On the profile
+        # because this is the page that reads as the mandate's file: a thin
+        # profile beside a full questionnaire is a different problem from a
+        # thin profile beside twenty unasked questions.
+        "kickoff": kickoff,
+        # Held back from the list above, and still on file. Handed over as
+        # rows rather than a count so the page can name them in its own
+        # discard form: a row nobody can see and nobody can clear sits there
+        # until the next refresh overwrites it, which is the sort of
+        # invisible state this feature exists to end.
+        "contradictions": [
+            p for p in proposed if not profile_refresh.may_replace(facts, p.key)
+        ],
+        "researching": _researching.locked(),
+        # The click's own answer if there was one in this process, otherwise
+        # what the last check recorded — which is the usual case, since the
+        # sweep researches at 06:10 and the page is opened at nine. Without
+        # the fallback a failure from the sweep is invisible: the page shows
+        # a profile that was "checked" with no reason and no way to find one.
+        # Exactly what ``advisory.py`` does with ``impulse_note``.
+        "research_error": _errors.get(client_id) or client.profile_note,
+        # The same value object the portfolio prints, so "never checked" and
+        # "checked 84 days ago" read identically on both pages.
+        "checked": profiles.checked(
+            client.profile_checked_at, now=dt.datetime.now(dt.UTC)
+        ),
+        # The last click found none of the rows it named. The sweep had
+        # replaced them, which is the rule working — nothing the reader never
+        # saw was touched — but a button that appears to do nothing teaches
+        # the reader that the page is broken.
+        "stale_click": bool(request.query_params.get(_STALE_FLAG)),
+        # Compared against, never printed: the page says "Ihre Angabe" where
+        # the column says "mensch". Passed rather than written into the
+        # template so the authority level has one definition.
+        "by_hand": profiles.BY_HAND,
+        "last_run": _fetch_last_run(session),
+        "header_date": dt.datetime.now(_local_tz()).date(),
+        # --- The guide, since it moved onto this page ---------------------
+        "guide_text": client.comms_guide or "",
+        "sources": guide.sources(session, client_id),
+        "max_chars": guide.GUIDE_MAX_CHARS,
+        "max_mb": guide.MAX_UPLOAD_BYTES // (1024 * 1024),
+        "coach_days": coach.DEFAULT_DAYS,
+        # Set only by the guide's own routes, and each of them is an answer
+        # to a click: a proposal to compare, an error to state, a saved
+        # confirmation, a coach's findings and the stories they cite.
+        "proposal": None,
+        "guide_error": None,
+        "saved": False,
+        "findings": None,
+        "coverage": {},
+        "coach_error": None,
+        "draft": None,
+        # --- The questionnaire, as the window over it ---------------------
+        "groups": onboarding.by_section(),
+        "answers": stored,
+        "progress": kickoff,
+        # Opened by a control on this page or by a link that used to point
+        # at the kick-off tab; closed by the button on its bar, which is a
+        # link back here without the flag.
+        "kickoff_open": bool(request.query_params.get(_SHEET_FLAG)),
+    } | extra
 
 
 @router.post("/client/{client_id}/profil")

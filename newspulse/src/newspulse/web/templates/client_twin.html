@@ -5,13 +5,19 @@
 {% set t = translator(request) %}
 {% set active = "twin" %}
 {% include "_client_tabs.html" %}
-{% if frontend %}
-{% for href in frontend.css %}<link rel="stylesheet" href="{{ href }}">{% endfor %}
-<div id="react-twin" data-client-id="{{ client.id }}"><p role="status">Profil wird geladen…</p>
-<p><a href="/client/{{ client.id }}/profil">Profil, Kickoff und Kommunikationsguide öffnen</a></p></div>
-<script type="module" src="{{ frontend.script }}"></script>
-{% else %}
-<h1>Profil</h1><p>Die Profil-Oberfläche ist noch nicht verfügbar.</p>
-<p><a href="/client/{{ client.id }}/profil">Profil, Kickoff und Kommunikationsguide öffnen</a></p>
-{% endif %}
+<div class="profile-page">
+  <header class="profile-page-head"><p>{{ client.name }}</p><h1>{{ t("Profil") }}</h1><p>{{ t("Wissen, Unternehmensangaben, Wettbewerb und Marktumfeld an einem Ort.") }}</p></header>
+  <section id="wissen" class="profile-knowledge" aria-label="{{ t('Wissen & Aussagen') }}">
+  {% if frontend %}
+    {% for href in frontend.css %}<link rel="stylesheet" href="{{ href }}">{% endfor %}
+    <div id="react-twin" data-client-id="{{ client.id }}"><p role="status">Profil wird geladen…</p></div>
+    <script type="module" src="{{ frontend.script }}"></script>
+  {% else %}
+    <h2>{{ t("Wissen & Aussagen") }}</h2><p>Die Aussagenansicht ist noch nicht verfügbar.</p>
+  {% endif %}
+  </section>
+  <section id="unternehmen" class="profile-section" aria-label="{{ t('Unternehmen & Kommunikation') }}">{{ company_section }}</section>
+  <section id="wettbewerb" class="profile-section" aria-label="{{ t('Wettbewerb') }}">{{ rivals_section }}</section>
+  <section id="marktumfeld" class="profile-section" aria-label="{{ t('Marktumfeld') }}">{{ market_section }}</section>
+</div>
 {% endblock %}

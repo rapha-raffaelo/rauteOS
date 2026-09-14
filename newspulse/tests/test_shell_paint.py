@@ -390,7 +390,6 @@ def test_specialist_views_select_their_primary_workspace(web, mandate, suffix, p
 
 @pytest.mark.parametrize("suffix,options", [
     ("/opportunities", ["/opportunities", "/advice", "/issues", "/plan"]),
-    ("/twin", ["/twin", "/profil", "/wettbewerb", "/market"]),
 ])
 def test_each_workspace_keeps_its_tools_reachable(web, mandate, suffix, options):
     body = web.get(f"/client/{mandate.id}{suffix}").text
@@ -399,6 +398,20 @@ def test_each_workspace_keeps_its_tools_reachable(web, mandate, suffix, options)
     assert targets == [f"/client/{mandate.id}{path}" for path in options]
     for target in targets:
         assert web.get(target).status_code == 200
+
+
+@pytest.mark.parametrize("suffix", ["/twin", "/profil"])
+def test_profile_keeps_forms_and_market_context_on_one_page(web, mandate, suffix):
+    body = web.get(f"/client/{mandate.id}{suffix}").text
+    assert 'id="workspace-view"' not in body
+    for section in ("wissen", "unternehmen", "wettbewerb", "marktumfeld"):
+        assert f'id="{section}"' in body
+    assert body.count('id="react-twin"') <= 1
+    assert body.count('<html') == 1
+    assert f'action="/client/{mandate.id}/profil"' in body
+    assert f'action="/client/{mandate.id}/competitors/accept"' in body
+    assert 'id="guide"' in body
+    assert 'Fragebogen öffnen' in body
 
 
 def test_a_tab_with_no_page_behind_it_is_not_in_the_strip(web, mandate):

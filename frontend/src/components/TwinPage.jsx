@@ -7,7 +7,7 @@ const labels = {evidence_type: 'Herkunft', source_type: 'Quellentyp', confidence
 const defaults = {evidence_type: 'Client Statement', source_type: 'Other', confidence: 'Unknown',
   confidentiality: 'Client Confidential', external_use: 'Approval Required', fact_status: 'Needs Verification', input_owner: 'RAUTE'};
 
-export function TwinPage({clientId}) {
+export function TwinPage({clientId, embedded = false, initialLimit = 20}) {
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -15,7 +15,7 @@ export function TwinPage({clientId}) {
   const [query, setQuery] = useState('');
   const [section, setSection] = useState('');
   const [filter, setFilter] = useState('all');
-  const [limit, setLimit] = useState(20);
+  const [limit, setLimit] = useState(initialLimit);
   const [editing, setEditing] = useState(null);
   const [aiImporting, setAIImporting] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -53,7 +53,7 @@ export function TwinPage({clientId}) {
        filter === 'answered' && rows.some(active) || filter === 'review' && rows.some(r => active(r) && !r.verified_at));
   });
   return <div className="twin-page">
-    <header><p className="twin-eyebrow">PROFIL · {data.client.name}</p><h1>Was wir wissen. Und woher.</h1>
+    <header>{embedded ? <h2>Wissen & Aussagen</h2> : <><p className="twin-eyebrow">PROFIL · {data.client.name}</p><h1>Was wir wissen. Und woher.</h1></>}
       <p>Jede Aussage mit ihrer Quelle, ihrem Stand und ihrer Freigabe.</p>
       <div className="twin-toolbar"><button className="btn btn--go" aria-expanded={aiImporting} onClick={()=>setAIImporting(!aiImporting)}>Mit KI importieren</button><details className="quiet-actions"><summary>Weitere Eingaben</summary><div className="quiet-actions-body"><button className="btn" onClick={() => setImporting(!importing)}>Fragebogen importieren</button>
 </div></details></div>
@@ -75,10 +75,10 @@ export function TwinPage({clientId}) {
         editing.row ? `/statements/${editing.row.id}` : '/statements',
         {...payload, ...(editing.row ? {revision: editing.row.revision} : {})}, editing.row ? 'PUT' : 'POST')} />}
     <div className="twin-toolbar twin-filters">
-      <label>Suche<input type="search" value={query} onChange={e => {setQuery(e.target.value); setLimit(20);}} placeholder="Feld oder Aussage suchen" /></label>
-      <label>Bereich<select aria-label="Bereich" value={section} onChange={e => {setSection(e.target.value); setLimit(20);}}>
+      <label>Suche<input type="search" value={query} onChange={e => {setQuery(e.target.value); setLimit(initialLimit);}} placeholder="Feld oder Aussage suchen" /></label>
+      <label>Bereich<select aria-label="Bereich" value={section} onChange={e => {setSection(e.target.value); setLimit(initialLimit);}}>
         <option value="">Alle Bereiche</option>{[...new Set(data.fields.map(f => f.section))].map(s => <option key={s}>{s}</option>)}</select></label>
-      <label>Anzeige<select aria-label="Anzeige" value={filter} onChange={e => {setFilter(e.target.value); setLimit(20);}}>
+      <label>Anzeige<select aria-label="Anzeige" value={filter} onChange={e => {setFilter(e.target.value); setLimit(initialLimit);}}>
         <option value="all">Alle Felder</option><option value="required">Pflichtfelder</option><option value="missing">Fehlende Pflichtfelder</option>
         <option value="answered">Mit Aussagen</option><option value="review">Bestätigung offen</option></select></label>
     </div>

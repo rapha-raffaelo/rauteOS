@@ -14,7 +14,7 @@ from __future__ import annotations
 import datetime as dt
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -58,6 +58,13 @@ def rivals_view(
     if client is None:
         raise HTTPException(status_code=404, detail="Client not found")
 
+    if not client.is_competitor:
+        return RedirectResponse(f"/client/{client_id}/twin#wettbewerb", status_code=303)
+    return templates.TemplateResponse(request, "client_rivals.html", rivals_context(session, client))
+
+
+def rivals_context(session: Session, client: Client) -> dict:
+    client_id = client.id
     since = dt.datetime.now(dt.UTC) - dt.timedelta(days=WINDOW_DAYS)
     voice = reporting.share_of_voice(session, client, days=WINDOW_DAYS)
     grid = coverage_map.build(session, client, days=90)
@@ -89,25 +96,21 @@ def rivals_view(
         and (other.industry or "").casefold() == (client.industry or "").casefold()
     ]
 
-    return templates.TemplateResponse(
-        request,
-        "client_rivals.html",
-        {
-            "client": client,
-            "voice": voice,
-            "rivals": rivals,
-            "candidates": candidates,
-            # Who the client itself named in the kick-off, offered rather than
-            # linked: a wrong competitor lands in the share-of-voice arithmetic
-            # and quietly changes a number the agency reports.
-            "named": onboarding.to_rivals(session, client),
-            "gaps": grid.gaps[:8],
-            "gap_total": len(grid.gaps),
-            "window_days": WINDOW_DAYS,
-            "rival_work": themework.rivals_job.state.get(client_id)
-            if hasattr(themework, "rivals_job") else None,
-            "own_mentions": next((v.mentions for v in voice if v.client_id == client.id), 0),
-            "last_run": _fetch_last_run(session),
-            "header_date": dt.datetime.now(_local_tz()).date(),
-        },
-    )
+    return {
+        "client": client,
+        "voice": voice,
+        "rivals": rivals,
+        "candidates": candidates,
+        # Who the client itself named in the kick-off, offered rather than
+        # linked: a wrong competitor lands in the share-of-voice arithmetic
+        # and quietly changes a number the agency reports.
+        "named": onboarding.to_rivals(session, client),
+        "gaps": grid.gaps[:8],
+        "gap_total": len(grid.gaps),
+        "window_days": WINDOW_DAYS,
+        "rival_work": themework.rivals_job.state.get(client_id)
+        if hasattr(themework, "rivals_job") else None,
+        "own_mentions": next((v.mentions for v in voice if v.client_id == client.id), 0),
+        "last_run": _fetch_last_run(session),
+        "header_date": dt.datetime.now(_local_tz()).date(),
+    }
