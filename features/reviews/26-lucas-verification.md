@@ -256,3 +256,26 @@ mandate routes on desktop/mobile and exercised every Opportunities/Profile view
 selector destination. Verified primary selection, direct Archive/Visibility
 access, AI import access and the renamed overview. Screenshots reviewed. No
 production content was modified for verification.
+
+### AI import response parsing fix — 2026-09-14
+
+Reproduced the reported background failure against the real configured providers
+using an in-memory SQLite copy of the affected mandate. The model returned a
+complete JSON code block followed by commentary; the previous fence stripper
+left the closing fence/commentary in the string and json.loads raised Extra data.
+The worker swallowed that exception and persisted only the generic retry message.
+
+The importer now accepts plain JSON or one complete fenced JSON block with
+surrounding commentary. Truncated, ambiguous and invalid response lists still
+fail; field/source validation, the 100-answer limit, human-answer precedence and
+review-before-commit remain. Malformed field-key types are skipped safely. Worker
+failures record a specific safe code/message and diagnostic call locations without
+logging source text, model output or exception messages. The UI marks failures as
+alerts and offers an explicit retry while retaining entered context.
+
+Validation: 40 backend Twin/import tests and all 34 React tests passed; production
+build passed. Browser checks covered failed-job resume, explicit retry, retained
+input, preview/source review and required selection at desktop/mobile sizes. A
+second real-provider run on the isolated data copy returned the same extra-text
+format and completed with 14 reviewable proposals under the patched parser.
+No production facts, job statuses or previews were changed during these probes.

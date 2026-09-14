@@ -138,3 +138,71 @@ def test_derived_answer_preserves_restricted_source_permissions(db):
     preview=db.get(TwinImportPreview,db.get(TwinImportPreview,identity).payload['preview_id'])
     assert preview.payload['rows'][0]['data']['confidentiality']=='Highly Restricted'
     assert preview.payload['rows'][0]['data']['external_use']=='Internal Only'
+
+
+@pytest.mark.parametrize('prefix,suffix', [
+    ('', '\nHinweis: Bitte die Quellen prüfen.'),
+    ('Hier sind die Vorschläge:\n', '\nNoch nicht unabhängig bestätigt.'),
+    ('', ''),
+])
+def test_complete_json_fence_with_commentary_produces_reviewable_preview(db, prefix, suffix):
+    identity, generation = prepare(db)
+    raw = prefix + '```json\n' + json.dumps({'answers': [answer()]}) + '\n```' + suffix
+    twin_ai.generate(db, identity, generation, invoke=lambda _: raw)
+    db.expire_all()
+    job = db.get(TwinImportPreview, identity)
+    assert job.payload['status'] == 'complete'
+    preview = db.get(TwinImportPreview, job.payload['preview_id'])
+    assert len(preview.payload['rows']) == 1
+    assert preview.payload['rows'][0]['data']['fact_status'] == 'Needs Verification'
+    assert not db.scalars(select(ClientFact)).all()
+
+
+@pytest.mark.parametrize('raw', [
+    '```json\n{"answers": [\n```\nIncomplete',
+    '```json\n{"answers": []}',
+    '```json\n{"answers": []}\n```\n```json\n{"answers": []}\n```',
+    '{"answers": []}{"answers": []}',
+    '[]', '{"answers": "not a list"}',
+    json.dumps({'answers': [answer()] * 101}),
+])
+def test_incomplete_ambiguous_or_invalid_response_is_not_imported(db, raw):
+    from newspulse.analyzer import ParseError
+    identity, generation = prepare(db)
+    with pytest.raises(ParseError):
+        twin_ai.generate(db, identity, generation, invoke=lambda _: raw)
+    assert not db.scalars(select(ClientFact)).all()
+    assert db.get(TwinImportPreview, identity).payload['preview_id'] is None
+
+
+def test_plain_json_can_contain_literal_markdown_and_malformed_fields_are_skipped(db):
+    identity, generation = prepare(db)
+    candidates = [dict(answer(), key=['A01.01']), dict(answer(), value='Literal ``` fence'),
+                  dict(answer(), key='A01.02', source_ids=['invented'])]
+    twin_ai.generate(db, identity, generation, invoke=lambda _: json.dumps({'answers': candidates}))
+    db.expire_all()
+    preview = db.get(TwinImportPreview, db.get(TwinImportPreview, identity).payload['preview_id'])
+    assert len(preview.payload['rows']) == 1
+    assert preview.payload['rows'][0]['data']['value'] == 'Literal ``` fence'
+
+
+@pytest.mark.parametrize('kind,code', [('parse', 'invalid_response'), ('timeout', 'timeout'),
+                                      ('provider', 'provider_unavailable'), ('internal', 'internal_error')])
+def test_worker_reports_actionable_failure_without_logging_source_content(db, monkeypatch, caplog, kind, code):
+    from sqlalchemy.orm import sessionmaker
+    from newspulse.analyzer import BackendError, ParseError
+    errors = {'parse': ParseError('private source'), 'timeout': BackendError('private source timed out'),
+              'provider': BackendError('private source unavailable'), 'internal': TypeError('private source')}
+    identity, generation = prepare(db)
+    def fail(*args):
+        raise errors[kind]
+    monkeypatch.setattr(twin_ai, 'generate', fail)
+    twin_api.ai_worker(sessionmaker(bind=db.get_bind(), expire_on_commit=False), identity, generation)
+    db.expire_all()
+    job = db.get(TwinImportPreview, identity)
+    assert job.payload['status'] == 'failed' and job.payload['error_code'] == code
+    assert 'input' not in job.payload and 'private source' not in json.dumps(job.payload)
+    assert code in caplog.text and 'private source' not in caplog.text
+    assert not db.scalars(select(ClientFact)).all()
+    # A failed worker releases the slot for an explicit retry.
+    assert prepare(db)[1] != generation

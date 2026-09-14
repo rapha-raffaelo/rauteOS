@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import logging
+import traceback
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, Response, UploadFile
 from pydantic import BaseModel, ConfigDict, Field
@@ -12,12 +14,14 @@ from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.orm.exc import StaleDataError
 
 from ... import evidence, twin, twin_import, twin_ai
+from ...analyzer import AnalyzerError, ParseError
 from ...models import ClientFact, ClientFactHistory, TwinImportPreview
 from ..app import get_db
 from ..mandates import mandate_or_404
 from ..spawn import start_or_release
 
 router = APIRouter(prefix="/api/v1/clients/{client_id}/twin", tags=["twin"])
+_log = logging.getLogger(__name__)
 
 
 class StatementRead(BaseModel):
@@ -228,18 +232,33 @@ class AIImportInput(BaseModel):
     web: bool = True
 
 
-def ai_failed(factory, identity, generation):
+def ai_failed(factory, identity, generation, error=None):
+    if error is None:
+        code, note = 'start_failed', 'Der KI-Import konnte nicht gestartet werden. Bitte erneut versuchen.'
+    elif isinstance(error, (ParseError, json.JSONDecodeError)):
+        code, note = 'invalid_response', 'Der KI-Dienst hat keine gültigen Antwortvorschläge geliefert. Bitte erneut versuchen; es wurden keine Antworten übernommen.'
+    elif isinstance(error, TimeoutError) or isinstance(error, AnalyzerError) and 'timed out' in str(error).lower():
+        code, note = 'timeout', 'Der KI-Dienst hat zu lange gebraucht. Bitte erneut versuchen oder einen einzelnen Bereich auswählen.'
+    elif isinstance(error, AnalyzerError):
+        code, note = 'provider_unavailable', 'Der KI-Dienst ist momentan nicht verfügbar. Bitte später erneut versuchen.'
+    else:
+        code, note = 'internal_error', 'Der KI-Import wurde durch einen technischen Fehler unterbrochen. Bitte erneut versuchen; es wurden keine Antworten übernommen.'
+    # Log diagnostic locations without exception text, source excerpts or model output.
+    frames = traceback.extract_tb(error.__traceback__) if error is not None else []
+    _log.error('AI import failed: job=%s generation=%s code=%s exception=%s frames=%s',
+               identity, generation, code, type(error).__name__,
+               ','.join(f'{frame.name}:{frame.lineno}' for frame in frames))
     with factory() as session:
         twin_ai.finish(session, identity, generation, dict(status='failed', preview_id=None,
-            note='Der KI-Import konnte nicht abgeschlossen werden. Bitte erneut versuchen.'))
+            error_code=code, note=note))
 
 
 def ai_worker(factory, identity, generation):
     try:
         with factory() as session:
             twin_ai.generate(session, identity, generation)
-    except Exception:
-        ai_failed(factory, identity, generation)
+    except Exception as exc:
+        ai_failed(factory, identity, generation, exc)
 
 
 @router.post('/ai-import', status_code=202)

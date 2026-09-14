@@ -2,12 +2,13 @@
 import datetime as dt
 import hashlib
 import json
+import re
 import uuid
 
 from sqlalchemy import select, update
 
 from . import profile, twin
-from .analyzer import invoke_with_fallback, strip_code_fence
+from .analyzer import ParseError, invoke_with_fallback
 from .models import Client, GuideSource, TwinImportPreview
 
 
@@ -48,6 +49,30 @@ def finish(session, identity, generation, payload):
         TwinImportPreview.payload['generation'].as_string() == generation
     ).values(payload=dict(kind='ai-job', generation=generation, **payload)))
     session.commit()
+
+
+def parse_answers(raw):
+    """Accept one complete JSON block, including a fenced block with commentary.
+
+    Do not repair truncated JSON or guess between multiple model proposals.
+    Source IDs and field keys are still checked against the supplied context.
+    """
+    text = raw.strip()
+    try:
+        parsed = json.loads(text)
+    except json.JSONDecodeError:
+        blocks = re.findall(r'^```(?:json)?[ \t]*\r?\n(.*?)^```[ \t]*$',
+                            text, flags=re.MULTILINE | re.DOTALL | re.IGNORECASE)
+        if len(blocks) != 1:
+            raise ParseError('Die KI-Antwort enthält keinen eindeutigen JSON-Block.')
+        try:
+            parsed = json.loads(blocks[0])
+        except json.JSONDecodeError as exc:
+            raise ParseError('Die KI-Antwort enthält kein vollständiges JSON.') from exc
+    answers = parsed.get('answers') if isinstance(parsed, dict) else None
+    if not isinstance(answers, list) or len(answers) > 100:
+        raise ParseError('Die KI-Antwort enthält keine gültige Antwortliste.')
+    return answers
 
 
 def generate(session, identity, generation, *, invoke=None, research=None):
@@ -111,10 +136,7 @@ JSON: {"answers":[{"key":"A01.01","value":"Antwort","source_ids":["mandate"],"re
 Nur aufgeführte Feldschlüssel und Quellen-IDs verwenden.
 DATEN:\n''' + json.dumps(dict(fields=fields, sources=sources), ensure_ascii=False)
     raw = (invoke or invoke_with_fallback)(prompt)
-    parsed = json.loads(strip_code_fence(raw))
-    answers = parsed.get('answers')
-    if not isinstance(answers, list) or len(answers) > 100:
-        raise ValueError('Ungültige KI-Antwort.')
+    answers = parse_answers(raw)
     allowed = {f['key'] for f in fields}
     source_map = {s['id']: s for s in sources}
     rows = []
@@ -127,7 +149,7 @@ DATEN:\n''' + json.dumps(dict(fields=fields, sources=sources), ensure_ascii=Fals
         key = answer.get('key')
         ids = answer.get('source_ids')
         value = answer.get('value')
-        if key not in allowed or key in occupied or key in seen or not isinstance(value, str) or not value.strip():
+        if not isinstance(key, str) or key not in allowed or key in occupied or key in seen or not isinstance(value, str) or not value.strip():
             continue
         if not isinstance(ids, list) or not ids or any(not isinstance(i, str) or i not in source_map for i in ids):
             continue
