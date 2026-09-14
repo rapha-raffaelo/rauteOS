@@ -116,3 +116,14 @@ both workspaces. All 12 public built JS/CSS files, shared stylesheet and checked
 backend/template hashes match. Seven active clients remain readable; database
 integrity is ok and schema is unchanged. No production content mutations were
 performed during verification.
+
+### AI import parsing correction — 2026-09-14
+
+Source `2ab03db` deployed as `add74c52-d715-4366-bf35-812ee4ccf74b`
+(SUCCESS). Handles a complete JSON code block followed by model commentary,
+with safe diagnostic errors and explicit retry. The deployed parser passes the
+exact response-format regression probe. All 12 public frontend JS/CSS files and
+checked backend hashes match the reviewed release. Read-only checks passed for
+seven active clients; database integrity is ok and schema is unchanged. Production
+facts and import previews were not modified for verification. A live-provider
+probe on an isolated in-memory copy completed with 14 proposals before release.
