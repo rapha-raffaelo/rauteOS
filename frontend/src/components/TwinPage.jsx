@@ -59,10 +59,10 @@ export function TwinPage({clientId, embedded = false, initialLimit = 20}) {
 </div></details></div>
     </header>
     <section className="twin-progress" aria-label="Vollständigkeit">
-      <strong>{data.progress.percent} % vollständig</strong>
-      <progress max="100" value={data.progress.percent} aria-label="Beantwortete Pflichtfelder" />
-      <span>{data.progress.required_filled} / {data.progress.required_total} Pflichtfelder beantwortet</span>
-      <span>{data.progress.verified} Aussagen unabhängig bestätigt</span>
+      <div className="twin-progress-main"><span className="twin-progress-label">Profilvollständigkeit</span><strong>{data.progress.percent} % vollständig</strong>
+        <progress max="100" value={data.progress.percent} aria-label="Beantwortete Pflichtfelder" /></div>
+      <dl className="twin-progress-facts"><div><dt>Pflichtfelder beantwortet</dt><dd>{data.progress.required_filled}<span> / {data.progress.required_total}</span></dd></div>
+        <div><dt>Unabhängig bestätigt</dt><dd>{data.progress.verified}<span> {data.progress.verified===1?'Aussage':'Aussagen'}</span></dd></div></dl>
       <small>Vollständigkeit misst beantwortete Pflichtfelder. Sie ist keine Bestätigung ihrer Richtigkeit.</small>
     </section>
     {errors}{notice && <p role="status">{notice}</p>}
@@ -83,8 +83,8 @@ export function TwinPage({clientId, embedded = false, initialLimit = 20}) {
         <option value="answered">Mit Aussagen</option><option value="review">Bestätigung offen</option></select></label>
     </div>
     <p className="twin-muted">{visible.length} Felder · mehrere Aussagen je Feld möglich</p>
-    {visible.slice(0, limit).map(field => <section className="twin-field" key={field.key}>
-      <div className="twin-field-head"><div><small>{field.key} · {field.group} · {field.requirement}</small><h2>{field.label}</h2></div>
+    {visible.slice(0, limit).map(field => <section className={`twin-field twin-question ${statements(field.key).length?'twin-question--answered':'twin-question--empty'}`} key={field.key}>
+      <div className="twin-field-head"><div><small className="twin-question-meta"><span>{field.key}</span> {field.group} · {field.requirement}</small><h2>{field.label}</h2></div>
         <button className="btn" onClick={() => setEditing({field})}>Aussage ergänzen</button></div>
       {!statements(field.key).length && <p className="twin-muted">Noch keine Aussage hinterlegt.</p>}
       {statements(field.key).map(row => <Statement key={row.id} row={row} clientId={clientId} busy={busy}

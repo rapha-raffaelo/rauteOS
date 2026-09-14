@@ -27,12 +27,18 @@ export function OpportunityWorkspace({clientId,kind,identity,onChanged}){
   if(!data)return <><ErrorMessage error={error}/>{!error&&<p role="status">Workspace wird geladen…</p>}</>;
   return <div><p className="twin-eyebrow">{kind==='detected'?'Erkannte Gelegenheit':'Entwickelte Gelegenheit'} · {statusLabels[data.status]} · {data.evidence_type}</p><h2 className="opportunity-title">{data.title}</h2>
     <nav className="workspace-tabs" aria-label="Workspace-Ansichten">{[['overview','Überblick'],['strategy','Strategie & Auswahl'],['media','Medien & Journalisten'],['assets','Texte & Belege'],['history','Aktivität']].map(([id,label])=><button className="btn" key={id} aria-pressed={tab===id} onClick={()=>setTab(id)}>{label}</button>)}</nav>
-    <div hidden={tab!=='overview'} className="workspace-overview"><div className="opportunity-grid"><section className="twin-field"><h3>Was ist die Chance?</h3><p>{data.situation}</p><h3>Warum relevant?</h3><p>{data.relevance}</p></section>
-      <section className="twin-field"><h3>Warum jetzt?</h3><p>{data.why_now}</p>{data.window_ends_at?<p>Nachrichtenfenster bis {date(data.window_ends_at)}</p>:<p>{data.proposed_window_days?`Vorgeschlagenes Planungsfenster: ${data.proposed_window_days} Tage. Keine bestätigte externe Frist.`:'Kein bestätigtes Zeitfenster.'}</p>}
-        <h3>Empfohlene Maßnahmen</h3><ul>{data.recommended_actions.map(a=><li key={a}>{actionLabels[a]||a}</li>)}</ul></section></div>
-    <section className="twin-field workspace-intelligence"><p className="twin-eyebrow">RAUTE Intelligence</p><h3>Belege und offene Fragen</h3><ul>{data.risks.map((r,i)=><li key={i}>{r}</li>)}</ul>
-      {data.proof_points.map(p=><p key={p.id}>{p.value} · {p.evidence_type || 'Herkunft unbekannt'} · {p.fact_status || 'Ungeprüft'} · {p.verified_at?'Bestätigung hinterlegt':'Nicht unabhängig bestätigt'}</p>)}
-      <ResearchSources queries={data.research} sources={data.sources}/></section>
+    <div hidden={tab!=='overview'} className="workspace-overview">
+      <section className="twin-field opportunity-brief"><div className="brief-heading"><span className="twin-eyebrow">DAS BRIEFING</span><h3>Die Chance auf einen Blick</h3></div>
+        <div className="brief-section"><h3>Was ist die Chance?</h3><p>{data.situation}</p></div>
+        <div className="brief-section"><h3>Warum relevant?</h3><p>{data.relevance}</p></div>
+        <div className="brief-section"><h3>Warum jetzt?</h3><p>{data.why_now}</p><p className="brief-timing">{data.window_ends_at?`Nachrichtenfenster bis ${date(data.window_ends_at)}`:data.proposed_window_days?`Vorgeschlagenes Planungsfenster: ${data.proposed_window_days} Tage. Keine bestätigte externe Frist.`:'Kein bestätigtes Zeitfenster.'}</p></div>
+        <div className="brief-section"><h3>Empfohlene Maßnahmen</h3><ul className="brief-actions">{data.recommended_actions.map(a=><li key={a}>{actionLabels[a]||a}</li>)}</ul></div>
+      </section>
+      <section className="twin-field workspace-intelligence"><div className="brief-heading"><span className="twin-eyebrow">RAUTE INTELLIGENCE</span><h3>Belege und offene Fragen</h3></div>
+        {data.risks.length>0&&<div className="brief-risks"><h4>Vor der Umsetzung prüfen</h4><ul>{data.risks.map((r,i)=><li key={i}>{r}</li>)}</ul></div>}
+        {data.proof_points.map(p=><div className="brief-proof" key={p.id}><p>{p.value}</p><small>{p.evidence_type || 'Herkunft unbekannt'} · {p.fact_status || 'Ungeprüft'} · {p.verified_at?'Bestätigung hinterlegt':'Nicht unabhängig bestätigt'}</small></div>)}
+        <ResearchSources queries={data.research} sources={data.sources}/>
+      </section>
     </div><div hidden={tab!=='strategy'}><section className="twin-field"><h3>Storyline und Sprecher</h3><ErrorMessage error={error}/>{notice&&<p role="status">{notice}</p>}
       {data.storylines.length>0&&<label>Storyline-Vorschlag übernehmen<select aria-label="Storyline-Vorschlag übernehmen" value="" onChange={e=>setStoryline(data.storylines[Number(e.target.value)])} disabled={data.status==='closed'}><option value="" disabled>Vorschlag auswählen …</option>{data.storylines.map((s,i)=><option key={i} value={i}>{s}</option>)}</select></label>}
       <label>Gewählte Storyline<textarea aria-label="Gewählte Storyline" value={storyline} onChange={e=>setStoryline(e.target.value)} disabled={data.status==='closed'}/></label>

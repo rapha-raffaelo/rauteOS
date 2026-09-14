@@ -371,3 +371,22 @@ passed; production build passed. Browser verified ten main React/server pages at
 errors. Exercised card actions, search and empty states, modal cancellation,
 workspace tabs, AI import access, mobile menu/keyboard behavior and no-JS fallback.
 Desktop/mobile screenshots reviewed. Production verification remains read-only.
+
+### Refined assistant, profile and opportunity workspaces — 2026-09-14
+
+After verifying the previous visual release was actually served, refined the
+remaining form-like workspaces within the same reduced design direction.
+Ask RAUTE now has a context bar, welcome/suggestion area, distinct conversation
+messages and a dedicated composer. Streaming, explicit submission, speech and
+context-isolated history behavior are preserved. Profile progress is structured
+into completeness, answered fields and independently confirmed statements; empty
+question cards are more compact. All provenance and approval information remains
+visible. Opportunity overview now reads as one briefing with a separate evidence
+and review column, retaining source limitations and timing qualifiers.
+
+The frontend remains hybrid React/Jinja; this change does not claim a full
+JavaScript migration. No backend, database or model behavior was changed.
+Validation: all 37 React tests and the production build passed. Desktop/mobile
+browser checks exercised Ask submission with the synthetic local stream and
+context isolation, profile editor/import access and opportunity tabs, with no
+horizontal overflow or JavaScript errors. Screenshots reviewed.
