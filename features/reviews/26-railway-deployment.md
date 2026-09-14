@@ -154,3 +154,13 @@ Journalisten sidebar link. All 12 public frontend files, shared stylesheet and
 31 checked server source/template hashes match. Seven unified profiles and five
 workbench pages remain healthy; database integrity is ok. No schema changes or
 production content mutations were performed for verification.
+
+### Client card edit/delete actions — 2026-09-14
+
+Source `b885189` deployed as `a7f88e36-8047-4b79-a50a-67be0c168ed6`
+(SUCCESS). Read-only production checks confirm settings are readable for all
+seven active clients, existing profile/workbench pages remain healthy and database
+integrity is ok. All 13 public frontend files, the shared stylesheet and 31 checked
+server source/template hashes match the reviewed build. Editing and confirmed soft
+deletion were verified in isolated local/browser tests; no production client was
+edited or removed during verification. Schema unchanged.
