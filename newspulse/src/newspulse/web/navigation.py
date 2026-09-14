@@ -49,7 +49,7 @@ def _today_bounds() -> tuple[dt.datetime, dt.datetime]:
 
 
 def clients_for_nav(session: Session) -> list[NavClient]:
-    """The mandate roster with today's alert count against each."""
+    """Active mandates with today's alert count; archived clients stay in Settings."""
     start, end = _today_bounds()
     alerts = dict(
         session.execute(
@@ -68,7 +68,7 @@ def clients_for_nav(session: Session) -> list[NavClient]:
     # portfolio: a competitor is something a mandate is measured against, not a
     # mandate of its own, and a flat list invites reading its coverage as work.
     rows = session.scalars(
-        select(Client).where(Client.is_competitor.is_(False)).order_by(Client.name)
+        select(Client).where(Client.is_competitor.is_(False), Client.active.is_(True)).order_by(Client.name)
     ).all()
     return [
         NavClient(

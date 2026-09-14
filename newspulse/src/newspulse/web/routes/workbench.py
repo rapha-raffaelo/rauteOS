@@ -1,6 +1,9 @@
-"""React primary destinations backed by existing ledgers, without new writes."""
+"""React primary destinations backed by existing ledgers and client management."""
 import datetime as dt
-from fastapi import APIRouter, Depends, Request, Response
+import hashlib
+import json
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from ... import desk, workspaces
@@ -95,3 +98,68 @@ def overview(client_id: int, response: Response, session: Session = Depends(get_
         summary=MandateSummary.model_validate(summary) if summary else None,
         opportunities=workspaces.listings(session, client_id)[:30], texts=items,
         activity=activity, logged_actions=actions, released_reports=reports, released_texts=texts(session, client_id, released_only=True), limit=100)
+
+
+# Client management uses the same validation and soft deletion as Settings.
+def client_settings(client):
+    keys = ('name', 'industry', 'country', 'aliases', 'keywords', 'alert_topics',
+            'excluded_terms', 'required_terms', 'actions_per_quarter')
+    values = {}
+    for key in keys:
+        value = getattr(client, key)
+        values[key] = ', '.join(value or []) if isinstance(value, list) else str(value) if value is not None else ''
+    revision = hashlib.sha256(json.dumps([values, client.active], sort_keys=True).encode()).hexdigest()
+    return dict(values=values, revision=revision)
+
+
+class ClientSettingsInput(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    name: str
+    industry: str
+    country: str
+    aliases: str
+    keywords: str
+    alert_topics: str
+    excluded_terms: str
+    required_terms: str
+    actions_per_quarter: str
+    revision: str
+
+
+@router.get('/api/v1/workbench/clients/{client_id}/settings')
+def read_client_settings(client_id: int, response: Response, session: Session = Depends(get_db)):
+    response.headers['Cache-Control'] = 'no-store'
+    return client_settings(mandate_or_404(session, client_id))
+
+
+@router.put('/api/v1/workbench/clients/{client_id}/settings')
+def save_client_settings(client_id: int, body: ClientSettingsInput, session: Session = Depends(get_db)):
+    from ...clients import update_client
+    from .settings import _parse_client_form
+    client = mandate_or_404(session, client_id)
+    if not client.active or body.revision != client_settings(client)['revision']:
+        raise HTTPException(409, 'Der Mandant wurde inzwischen geändert. Bitte schließen und erneut öffnen.')
+    try:
+        fields = _parse_client_form(**body.model_dump(exclude={'revision'}))
+        count = fields['actions_per_quarter']
+        if body.actions_per_quarter.strip() and (count is None or count > 2147483647):
+            raise ValueError('Bitte eine gültige ganze Zahl ab 0 für die Quartalszusage eingeben.')
+        update_client(session, client_id, **fields)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    return dict(id=client.id, name=client.name)
+
+
+class ClientDeleteInput(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    name: str
+
+
+@router.delete('/api/v1/workbench/clients/{client_id}')
+def delete_client(client_id: int, body: ClientDeleteInput, session: Session = Depends(get_db)):
+    from ...clients import deactivate_client
+    client = mandate_or_404(session, client_id)
+    if body.name != client.name:
+        raise HTTPException(409, 'Der Mandantenname wurde inzwischen geändert. Bitte die Liste neu laden.')
+    deactivate_client(session, client_id)
+    return dict(id=client.id, deleted=True)

@@ -112,3 +112,55 @@ def test_detected_angle_is_not_counted_twice_and_dismissed_ideas_are_excluded(db
     db.add(Angle(client_id=1,newsjack_id=detected.id,subject='Detected angle',message='Proposal',context='News'))
     db.get(Angle,1).dismissed_at=now;db.commit()
     assert desk._opportunity_counts(db,now)[1]==1
+
+
+def test_card_edit_uses_existing_validation_and_keeps_unedited_preferences(web, db):
+    db.get(Client, 1).muted_categories = ['boerse']
+    db.commit()
+    response = web.get('/api/v1/workbench/clients/1/settings')
+    assert response.headers['cache-control'] == 'no-store'
+    data = response.json()
+    body = dict(data['values'], revision=data['revision'], name='Alpha New',
+                aliases='Alpha; A', actions_per_quarter='4')
+    saved = web.put('/api/v1/workbench/clients/1/settings', json=body)
+    assert saved.status_code == 200, saved.text
+    assert db.get(Client, 1).name == 'Alpha New'
+    assert db.get(Client, 1).aliases == ['Alpha', 'A']
+    assert db.get(Client, 1).actions_per_quarter == 4
+    assert db.get(Client, 1).muted_categories == ['boerse']
+    assert web.put('/api/v1/workbench/clients/1/settings', json=body).status_code == 409
+    assert web.get('/api/v1/workbench/clients').json()['clients'][0]['client']['name'] == 'Alpha New'
+
+
+@pytest.mark.parametrize('field,value', [('name', ''), ('name', 'Beta'), ('country', 'invalid'), ('actions_per_quarter', '-1')])
+def test_card_edit_rejects_invalid_values_without_changes(web, db, field, value):
+    data = web.get('/api/v1/workbench/clients/1/settings').json()
+    body = dict(data['values'], revision=data['revision'])
+    body[field] = value
+    assert web.put('/api/v1/workbench/clients/1/settings', json=body).status_code == 422
+    assert db.get(Client, 1).name == 'Alpha'
+    assert db.get(Client, 1).actions_per_quarter is None
+
+
+def test_card_delete_only_removes_selected_mandate_from_active_roster(web, db):
+    response = web.request('DELETE', '/api/v1/workbench/clients/1', json={'name': 'Wrong name'})
+    assert response.status_code == 409
+    assert db.get(Client, 1).active is True
+    for _ in range(2):
+        response = web.request('DELETE', '/api/v1/workbench/clients/1', json={'name': 'Alpha'})
+        assert response.status_code == 200
+    assert db.get(Client, 1).active is False
+    assert db.get(Client, 2).active is True
+    assert db.get(Asset, 1).body == 'Client statement, not verified'
+    assert db.get(Angle, 1) is not None
+    from newspulse.web.navigation import clients_for_nav
+    assert [c.id for c in clients_for_nav(db)] == [2]
+    assert [r['client']['id'] for r in web.get('/api/v1/workbench/clients').json()['clients']] == [2]
+    web.post('/settings/clients/1/reactivate', follow_redirects=False)
+    assert db.get(Client, 1).active is True
+
+
+@pytest.mark.parametrize('identity', [3, 999])
+def test_card_management_rejects_competitors_and_unknown_ids(web, identity):
+    assert web.get(f'/api/v1/workbench/clients/{identity}/settings').status_code == 404
+    assert web.request('DELETE', f'/api/v1/workbench/clients/{identity}', json={'name': 'Rival'}).status_code == 404

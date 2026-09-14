@@ -324,3 +324,24 @@ tests passed; production build passed. Browser verification exercised creation,
 profile saving, search, legacy redirects with selection, old edit links reading
 the same data, a single active Kontakte sidebar entry and mobile overflow. Desktop
 screenshot reviewed. Browser writes were restricted to the local demo database.
+
+### Edit and delete from every client card — 2026-09-14
+
+Added Bearbeiten and Löschen to each active mandate card. Editing opens a focused
+modal for name, industry, country, quarterly commitment and monitoring terms.
+The API reuses client CRUD validation, rejects stale form snapshots and preserves
+unexposed preferences. Invalid values remain in the modal for correction.
+Successful actions reload the roster and sidebar so names and counts stay aligned.
+
+Deletion requires a separate named confirmation with Cancel focused by default.
+It uses the existing soft-deactivation service: removes the client from the active
+roster and monitoring while retaining archive/profile/work history, with recovery
+through Settings. The dialog states these semantics. The sidebar now lists active
+mandates only. Unknown IDs and competitors cannot use these card actions.
+
+Validation: 110 backend client/workbench/shell checks and 37 React tests passed;
+production build passed. Browser exercised actions on every card, persisted edits,
+monitoring preservation, sidebar updates, cancellation/Escape, confirmation,
+selected-client removal and responsive modal layout. Centered desktop and mobile
+screenshots reviewed. All editing/deletion probes used local demo/test databases;
+production verification will remain read-only.

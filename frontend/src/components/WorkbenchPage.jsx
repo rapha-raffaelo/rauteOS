@@ -1,6 +1,7 @@
 import React,{useEffect,useState} from 'react';
 import {ClientOverview} from './ClientOverview.jsx';
 import {AskRaute} from './AskRaute.jsx';
+import {ClientActions} from './ClientActions.jsx';
 const activityLabels={idea_developed:'Idee entwickelt',activated:'Opportunity aktiviert',choices_saved:'Auswahl gespeichert',text_created:'Text erstellt',text_checked:'Aussagen geprüft',text_edited:'Text bearbeitet'};
 const date=v=>v?new Date(v).toLocaleDateString('de-DE'):'–';
 function Summary({row}){return <p>Profil: {row.twin.percent} % · Quartal: {row.actions_quarter.total} geliefert{row.promised_quarter!==null?` / ${row.promised_quarter} zugesagt`:' · Zusage offen'} · {row.opportunities} Opportunities</p>;}
@@ -11,7 +12,7 @@ export function WorkbenchPage({page,clientId}){
  if(page==='ask')return <AskRaute/>;
  if(error)return <p role="alert">{error} <a href={window.location.href}>Erneut laden</a></p>;
  if(!data)return <p role="status">Ansicht wird geladen…</p>;
- if(page==='clients')return <section><h1>Clients</h1><label>Mandanten suchen<input value={search} onChange={e=>setSearch(e.target.value)}/></label><div className="workbench-list">{data.clients.filter(r=>r.client.name.toLowerCase().includes(search.toLowerCase())).map(r=><article key={r.client.id}><h2><a href={`/client/${r.client.id}/overview`}>{r.client.name}</a></h2><Summary row={r}/></article>)}</div>{!data.clients.length&&<p>Noch keine aktiven Mandanten.</p>}</section>;
+ if(page==='clients')return <section><h1>Clients</h1><label>Mandanten suchen<input value={search} onChange={e=>setSearch(e.target.value)}/></label><div className="workbench-list">{data.clients.filter(r=>r.client.name.toLowerCase().includes(search.toLowerCase())).map(r=><article key={r.client.id}><h2><a href={`/client/${r.client.id}/overview`}>{r.client.name}</a></h2><Summary row={r}/><ClientActions client={r.client}/></article>)}</div>{!data.clients.length&&<p>Noch keine aktiven Mandanten.</p>}</section>;
  if(page==='assets')return <section><h1>Assets</h1><p>Die neuesten {data.limit} Texte aus allen Mandaten.</p><div className="workbench-controls"><label>Texte suchen<input value={search} onChange={e=>setSearch(e.target.value)}/></label><label>Status<select value={filter} onChange={e=>setFilter(e.target.value)}><option value="all">Alle</option><option value="draft">Entwürfe</option><option value="released">Freigegeben</option></select></label></div><Texts items={data.texts.filter(t=>(filter==='all'||Boolean(t.released_at)===(filter==='released'))&&`${t.client} ${t.title}`.toLowerCase().includes(search.toLowerCase()))}/></section>;
  if(page==='overview')return <ClientOverview data={data} clientId={clientId}/>;
  return <section><h1>{data.client.name} · {page==='actions'?'Actions':'Overview'}</h1>{data.summary&&<Summary row={data.summary}/>}
