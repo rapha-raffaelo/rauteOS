@@ -389,7 +389,7 @@ def test_specialist_views_select_their_primary_workspace(web, mandate, suffix, p
 
 
 @pytest.mark.parametrize("suffix,options", [
-    ("/opportunities", ["/opportunities", "/heute", "/advice", "/issues", "/plan"]),
+    ("/opportunities", ["/opportunities", "/advice", "/issues", "/plan"]),
     ("/twin", ["/twin", "/profil", "/wettbewerb", "/market"]),
 ])
 def test_each_workspace_keeps_its_tools_reachable(web, mandate, suffix, options):

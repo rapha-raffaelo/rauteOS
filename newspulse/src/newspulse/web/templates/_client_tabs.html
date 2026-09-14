@@ -3,7 +3,7 @@
   <p class="panel-hint">{{ t("Vergleichsunternehmen. Hier steht seine Berichterstattung — Impulse, Berichte und Profil führt RauteOS nur für Mandanten.") }}</p>
 {% else %}
 {% set kstate = crisis_tab(request, client) %}
-{% set opportunity_views = [('opportunities', '/opportunities', 'Chancen'), ('heute', '/heute', 'Heute'), ('texte', '/advice', 'Impulse'), ('issues', '/issues', 'Issues'), ('plan', '/plan', 'Plan')] %}
+{% set opportunity_views = [('opportunities', '/opportunities', 'Chancen'), ('texte', '/advice', 'Impulse'), ('issues', '/issues', 'Issues'), ('plan', '/plan', 'Plan')] %}
 {% if kstate.has_history %}{% set opportunity_views = opportunity_views + [('krise', '/krise', 'Krise')] %}{% endif %}
 {% set profile_views = [('twin', '/twin', 'Wissen & Aussagen'), ('profile', '/profil', 'Unternehmen & Kommunikation'), ('rivals', '/wettbewerb', 'Wettbewerb'), ('market', '/market', 'Marktumfeld')] %}
 {% set profile_active = 'profile' if active in ('kickoff', 'guide') else 'rivals' if active == 'map' else active %}
@@ -13,7 +13,7 @@
     <a href="/client/{{ client.id }}{{ suffix }}"{% if group == key %} class="active" aria-current="page"{% endif %}>{{ t(label) }}{% if key == 'opportunities' and kstate.open_id %}<span class="workspace-crisis">{{ t('Krise offen') }}</span>{% endif %}</a>
   {% endfor %}
 </nav>
-{% if group in ('opportunities', 'profile') %}
+{% if group in ('opportunities', 'profile') and active != 'heute' %}
   {% set views = opportunity_views if group == 'opportunities' else profile_views %}
   <div class="workspace-view">
     <label for="workspace-view">{{ t('Opportunities' if group == 'opportunities' else 'Profil') }} · {{ t('Ansicht') }}</label>

@@ -279,3 +279,11 @@ input, preview/source review and required selection at desktop/mobile sizes. A
 second real-provider run on the isolated data copy returned the same extra-text
 format and completed with 14 reviewable proposals under the patched parser.
 No production facts, job statuses or previews were changed during these probes.
+
+### Remove Heute from opportunity views — 2026-09-14
+
+Removed Heute from the Opportunities view selector, including the no-JavaScript
+links. Existing daily-view deep links still work and retain the Opportunities
+parent tab; they omit the selector rather than falsely selecting Chancen.
+Validation: 68 shell checks passed. Browser verified the four remaining options,
+Issues navigation and returning from an existing daily-view link to Opportunities.
