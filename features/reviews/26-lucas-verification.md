@@ -505,3 +505,34 @@ Synthetic browser checks verified automatic preparation without a creation click
 only one start request, progress, preserving custom instructions during completion,
 saved-draft editing, different visual surfaces and no JS errors or horizontal
 overflow at 1440px and 390px. Final document styling was also checked in both widths.
+
+### Resilient AI profile import and shared UI refinement — 2026-09-18
+
+Reproduced the Arrakis.finance import failure in production without committing
+facts: the all-fields request timed out after 138 seconds overall (120-second
+model limit). Its command argument contained about 95 KB of catalog and sources.
+The importer now maps compact field metadata in batches of up to 60 questions,
+retains successful batches after individual provider/parse failures, reports
+partial completion, and publishes research/mapping/validation progress. A stale
+or expired worker stops before another provider call. Source validation,
+confidentiality inheritance, protection of human answers and explicit review
+before committing remain enforced. The CLI receives prompts through stdin,
+avoiding operating-system argument-size limits for larger source documents.
+
+The import panel opens immediately under its action and scrolls into view. Its
+controls wait for persisted status restoration; polling is sequential and
+cancelled on unmount. Progress reflects completed question batches, not invented
+time-based percentages.
+
+Shared buttons now distinguish primary, secondary and destructive actions with
+consistent sizing, softer corners, restrained shadows and visible keyboard focus.
+Knowledge, company, competition and market sections have distinct surfaces and
+heading accents. Filters, settings cards and opportunity lists use quieter neutral
+surfaces. Mobile layouts and reduced-motion preferences remain supported.
+
+Validation: 106 backend tests and 52 frontend tests passed; production Vite build
+passed. Browser checks at 1440px and 390px covered clients, archive, client archive,
+settings/editing and profile/kickoff, with no JS errors or horizontal overflow.
+An isolated synthetic import completed through submit, progress, review, explicit
+selection and persisted fact refresh. Verified primary-button computed styles and
+reviewed desktop/mobile screenshots. Live import verification follows deployment.

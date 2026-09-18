@@ -348,15 +348,16 @@ def invoke_claude_cli(prompt: str, *, timeout: float = _SUBPROCESS_TIMEOUT_SECON
     string), a wall-clock ceiling, and no token or API endpoint touched here —
     the CLI subprocess owns authentication.
     """
-    argv = ["claude", "-p", prompt, "--output-format", "json"]
+    argv = ["claude", "-p", "--output-format", "json"]
     try:
-        completed = subprocess.run(  # noqa: S603 - fixed argv, no shell, prompt is an arg
+        completed = subprocess.run(  # noqa: S603 - fixed argv, no shell, prompt uses stdin
             argv,
+            input=prompt,  # stdin avoids Linux argument-size limits for source documents
             capture_output=True,
             text=True,
             timeout=timeout,
             check=False,
-            shell=False,  # explicit: the prompt is an argv element, never a shell command
+            shell=False,  # explicit: the prompt is input data, never a shell command
             env=claude_env(),
         )
     except subprocess.TimeoutExpired as exc:

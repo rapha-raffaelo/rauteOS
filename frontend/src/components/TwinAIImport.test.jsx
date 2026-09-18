@@ -32,3 +32,15 @@ it('shows an import failure as an alert and retries only on explicit request',as
  expect(screen.queryByRole('alert')).toBeNull();expect(JSON.parse(fetch.mock.calls[1][1].body).text).toBe('Preserve my context');
  expect(screen.getByRole('button',{name:'KI wertet die Quellen aus…'}).disabled).toBe(true);
 });
+it('blocks submission until the persisted job is restored and shows real batch progress',async()=>{
+ let restore;
+ const fetch=vi.fn().mockImplementationOnce(()=>new Promise(resolve=>{restore=resolve;}));
+ vi.stubGlobal('fetch',fetch);render(<TwinAIImport clientId={1} fields={fields} onImported={()=>{}}/>);
+ const button=screen.getByRole('button',{name:'Importstatus wird geladen…'});
+ expect(button.disabled).toBe(true);fireEvent.click(button);expect(fetch).toHaveBeenCalledTimes(1);
+ restore(response({job:{status:'running',total_batches:6,completed_batches:2,note:'Fragenpaket 3 von 6 wird bearbeitet.'},preview:null}));
+ const progress=await screen.findByRole('progressbar',{name:'Fortschritt des KI-Imports'});
+ expect(progress.value).toBe(2);expect(progress.max).toBe(7);
+ expect(screen.getByRole('button',{name:'KI wertet die Quellen aus…'}).disabled).toBe(true);
+ expect(screen.getByRole('status').textContent).toContain('Fragenpaket 3 von 6');
+});

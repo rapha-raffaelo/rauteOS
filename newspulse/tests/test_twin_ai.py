@@ -206,3 +206,59 @@ def test_worker_reports_actionable_failure_without_logging_source_content(db, mo
     assert not db.scalars(select(ClientFact)).all()
     # A failed worker releases the slot for an explicit retry.
     assert prepare(db)[1] != generation
+
+
+def test_batched_import_keeps_successful_answers_after_timeout(db):
+    from newspulse.analyzer import BackendError
+    identity, generation = prepare(db)
+    calls = []
+    def invoke(prompt):
+        data = json.loads(prompt.split('DATEN:\n')[1])
+        fields = data['fields']
+        assert 0 < len(fields) <= 60
+        assert all(set(f) == {'key', 'label', 'group'} for f in fields)
+        job = db.get(TwinImportPreview, identity)
+        assert job.payload['completed_batches'] == len(calls)
+        assert job.payload['input']['text'] == 'Company presentation'
+        calls.append(fields)
+        if len(calls) == 2:
+            raise BackendError('Claude timed out')
+        return json.dumps({'answers': [dict(answer(), key=fields[0]['key'])]})
+    twin_ai.generate(db, identity, generation, invoke=invoke)
+    db.expire_all()
+    job = db.get(TwinImportPreview, identity)
+    assert len(calls) > 2
+    assert {f['key'] for batch in calls for f in batch} == {f['key'] for f in twin.CATALOG}
+    assert job.payload['status'] == 'complete' and job.payload['partial']
+    preview = db.get(TwinImportPreview, job.payload['preview_id'])
+    assert len(preview.payload['rows']) == len(calls) - 1
+    assert preview.payload['partial']
+    assert not db.scalars(select(ClientFact)).all()
+
+
+def test_old_batch_worker_stops_when_new_generation_owns_slot(db):
+    identity, generation = prepare(db)
+    calls = []
+    def invoke(prompt):
+        calls.append(prompt)
+        twin_ai.finish(db, identity, generation, dict(status='failed', note='Replaced'))
+        prepare(db)
+        return json.dumps({'answers': [answer()]})
+    twin_ai.generate(db, identity, generation, invoke=invoke)
+    db.expire_all()
+    assert len(calls) == 1
+    job = db.get(TwinImportPreview, identity)
+    assert job.payload['generation'] != generation
+    assert job.payload['status'] == 'running'
+    assert not db.scalars(select(TwinImportPreview).where(TwinImportPreview.id != identity)).all()
+
+
+def test_expired_job_cannot_publish_progress_or_call_provider(db):
+    identity, generation = prepare(db)
+    row = db.get(TwinImportPreview, identity)
+    row.expires_at = dt.datetime.now(dt.UTC) - dt.timedelta(seconds=1)
+    db.commit()
+    def invoke(prompt):
+        pytest.fail('Expired generation must stop before a provider request')
+    twin_ai.generate(db, identity, generation, invoke=invoke)
+    assert not twin_ai.progress(db, identity, generation, note='Too late')

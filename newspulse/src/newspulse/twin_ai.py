@@ -8,7 +8,7 @@ import uuid
 from sqlalchemy import select, update
 
 from . import profile, twin
-from .analyzer import ParseError, invoke_with_fallback
+from .analyzer import AnalyzerError, ParseError, invoke_with_fallback
 from .models import Client, GuideSource, TwinImportPreview
 
 
@@ -49,6 +49,22 @@ def finish(session, identity, generation, payload):
         TwinImportPreview.payload['generation'].as_string() == generation
     ).values(payload=dict(kind='ai-job', generation=generation, **payload)))
     session.commit()
+
+
+def progress(session, identity, generation, **values):
+    """Publish stages only while this generation still owns the running slot."""
+    session.expire_all()
+    row = session.get(TwinImportPreview, identity)
+    if not row or row.payload.get('generation') != generation or row.payload.get('status') != 'running':
+        return False
+    changed = session.execute(update(TwinImportPreview).where(
+        TwinImportPreview.id == identity,
+        TwinImportPreview.payload['generation'].as_string() == generation,
+        TwinImportPreview.payload['status'].as_string() == 'running',
+        TwinImportPreview.expires_at > dt.datetime.now(dt.UTC),
+    ).values(payload={**row.payload, **values})).rowcount
+    session.commit()
+    return bool(changed)
 
 
 def parse_answers(raw):
@@ -105,6 +121,8 @@ def generate(session, identity, generation, *, invoke=None, research=None):
         finish(session, identity, generation, dict(status='complete', preview_id=None, note='In diesem Bereich sind bereits alle Felder beantwortet.'))
         return
     if body['web']:
+        if not progress(session, identity, generation, stage='research', note='Öffentliche Quellen werden recherchiert.'):
+            return
         try:
             proposals = (research or profile.research)(subject)
             for i, p in enumerate(proposals):
@@ -131,12 +149,41 @@ Lasse Fragen ohne ausreichende Grundlage aus. Erfinde keine Budgets, KPIs, Freig
 Kontakte, Sprecherrechte, Verträge, Kundenmeinungen oder interne Strategien.
 Übertrage fremde Behauptungen als solche, nicht als unabhängig bestätigte Tatsachen.
 Bei Widersprüchen keine Antwort erzeugen. Bereits beantwortete Fragen stehen nicht zur Auswahl.
-Gib höchstens 100 belegbare Antworten zurück. Pro Antwort genau eine passende Frage.
+Gib höchstens 25 belegbare Antworten zurück. Pro Antwort genau eine passende Frage.
+Antworte knapp, höchstens drei Sätze je Antwort.
 JSON: {"answers":[{"key":"A01.01","value":"Antwort","source_ids":["mandate"],"reason":"Was die Quelle hierzu belegt"}]}
 Nur aufgeführte Feldschlüssel und Quellen-IDs verwenden.
-DATEN:\n''' + json.dumps(dict(fields=fields, sources=sources), ensure_ascii=False)
-    raw = (invoke or invoke_with_fallback)(prompt)
-    answers = parse_answers(raw)
+DATEN:\n'''
+    # Small independent requests prevent a large all-fields response from timing
+    # out and discarding every answer. A successful batch survives later failures.
+    batches = [fields[offset:offset + 60] for offset in range(0, len(fields), 60)]
+    answers, failures = [], []
+    completed = 0
+    call = invoke or (lambda text: invoke_with_fallback(text, timeout=90))
+    for index, batch in enumerate(batches):
+        if not progress(session, identity, generation, stage='mapping',
+                total_batches=len(batches), completed_batches=index, suggestions=len(answers),
+                note=f'Fragenpaket {index + 1} von {len(batches)} wird bearbeitet. {len(answers)} Vorschläge erstellt.'):
+            return
+        compact = [{key: field[key] for key in ('key', 'label', 'group')} for field in batch]
+        try:
+            found = parse_answers(call(prompt + json.dumps(dict(fields=compact, sources=sources), ensure_ascii=False)))
+        except (AnalyzerError, ParseError) as exc:
+            failures.append(exc)
+            continue
+        permitted = {field['key'] for field in batch}
+        answers.extend(answer for answer in found if isinstance(answer, dict) and
+                       isinstance(answer.get('key'), str) and answer['key'] in permitted)
+        completed += 1
+        if len(answers) >= 100:
+            answers = answers[:100]
+            break
+    if not completed and failures:
+        raise failures[0]
+    if not progress(session, identity, generation, stage='validating',
+            completed_batches=min(index + 1, len(batches)), suggestions=len(answers),
+            note='Vorschläge und Quellen werden für die Prüfung vorbereitet.'):
+        return
     allowed = {f['key'] for f in fields}
     source_map = {s['id']: s for s in sources}
     rows = []
@@ -172,8 +219,9 @@ DATEN:\n''' + json.dumps(dict(fields=fields, sources=sources), ensure_ascii=Fals
     now = dt.datetime.now(dt.UTC)
     preview = TwinImportPreview(id=str(uuid.uuid4()), client_id=client_id, created_at=now,
         expires_at=now + dt.timedelta(hours=1), payload=dict(kind='ai', columns=[], mapping={}, rows=rows,
-        note=research_note, unanswered=len(fields)-len(rows)))
+        note=research_note, partial=bool(failures), unanswered=len(fields)-len(rows)))
     session.add(preview)
     session.flush()
     finish(session, identity, generation, dict(status='complete', preview_id=preview.id,
-           note=f'{len(rows)} Antwortvorschläge. {research_note}'))
+           partial=bool(failures),
+           note=f'{len(rows)} Antwortvorschläge. ' + ('Einzelne Fragenpakete konnten nicht verarbeitet werden. Die übrigen Vorschläge stehen zur Prüfung bereit. ' if failures else '') + research_note))

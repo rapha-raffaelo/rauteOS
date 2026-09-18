@@ -125,7 +125,7 @@ function ClientSettings({ client: c, data: d }) {
                 )}
               </p>
             </fieldset>
-            <button type="submit">{t("Speichern")}</button>
+            <button type="submit" className="btn btn--go">{t("Speichern")}</button>
           </form>
           <h4>{t("Branche als Suchfilter")}</h4>
           <Job job={d.industry_work[c.id]}>
@@ -352,7 +352,7 @@ function Feeds({ data: d }) {
             </div>
           </fieldset>
         ))}
-        <button type="submit">{t("Feeds speichern")}</button>
+        <button type="submit" className="btn btn--go">{t("Feeds speichern")}</button>
       </form>
     </Panel>
   );
@@ -519,7 +519,7 @@ export function SettingsPage({ data: d, onData }) {
               trennen. Keine eigene Presseschau: Alarm-Themen wirken nur auf
               bereits zugeordnete Meldungen.
             </p>
-            <button type="submit">{t("+ Mandant hinzufügen")}</button>
+            <button type="submit" className="btn btn--go">{t("+ Mandant hinzufügen")}</button>
           </form>
         </details>
         {[false, true]

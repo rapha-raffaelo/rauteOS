@@ -102,8 +102,8 @@ def test_claude_code_invocation_shape_is_subprocess_only():
     argv = run.call_args.args[0]
     assert argv[0] == "claude"
     assert argv[1] == "-p"
-    assert argv[3:] == ["--output-format", "json"]
-    assert isinstance(argv[2], str) and "Beispiel AG" in argv[2]
+    assert argv[2:] == ["--output-format", "json"]
+    assert "Beispiel AG" in run.call_args.kwargs["input"]
     # A timeout is always set so one hung call can never stall the sweep.
     assert run.call_args.kwargs.get("timeout")
     # No shell, so the prompt can never be interpreted as a command.
@@ -423,3 +423,15 @@ def test_weekly_limit_in_nonzero_stdout_activates_configured_fallback(monkeypatc
             'result':"You've hit your weekly limit · resets 12pm (UTC)"}), returncode=1)
         assert analyzer.invoke_with_fallback('A real question')=='Fallback answer'
     assert calls==['A real question']
+
+
+def test_large_prompt_is_sent_intact_over_stdin_without_argument_size_limit():
+    from newspulse.analyzer import invoke_claude_cli
+    prompt = 'Quellen mit Umlauten: äöü\n' * 12000
+    with patch.object(subprocess, 'run') as run:
+        run.return_value = subprocess.CompletedProcess([], 0, stdout='{"result":"done"}', stderr='')
+        assert invoke_claude_cli(prompt) == 'done'
+        assert run.call_args.kwargs['input'] == prompt
+        assert len(prompt.encode()) > 131072
+        assert max(len(arg.encode()) for arg in run.call_args.args[0]) < 100
+        assert run.call_args.kwargs['shell'] is False

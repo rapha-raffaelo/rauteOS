@@ -256,7 +256,7 @@ function Guide({ data: d, base }) {
               accept=".pdf,.txt,.md,.markdown"
               required
             />
-            <button type="submit">{t("Hochladen")}</button>
+            <button type="submit" className="btn btn--go">{t("Hochladen")}</button>
             <p className="panel-hint">
               Gespeichert wird der extrahierte Text, nicht die Datei.
             </p>
@@ -301,7 +301,7 @@ function Guide({ data: d, base }) {
               rows={16}
             />
           </label>
-          <button type="submit">{t("Speichern")}</button>
+          <button type="submit" className="btn btn--go">{t("Speichern")}</button>
           <p>Wirkt auf Impulse, personalisierte Nachrichten und Ask RAUTE.</p>
         </form>
       </div>
@@ -525,7 +525,7 @@ function Company({ data: d, base }) {
               );
             })}
           </div>
-          <button type="submit">{t("Profil speichern")}</button>
+          <button type="submit" className="btn btn--go">{t("Profil speichern")}</button>
           <p className="panel-hint">
             Was du hier änderst, gilt als deine Angabe und wird von der KI nicht
             mehr überschrieben.

@@ -170,3 +170,44 @@
 .raute-ui .workspace-intelligence>details{margin:0;padding:18px 24px;font-size:12px}.raute-ui .workspace-intelligence>details>summary{font-size:11px;color:var(--muted)}
 @media(max-width:1100px){.raute-ui .workspace-overview{grid-template-columns:1fr}}
 @media(max-width:700px){.raute-ui .ask-context{flex-direction:column;align-items:stretch;gap:14px}.raute-ui #react-workbench .ask-context label{width:100%}.raute-ui .ask-welcome{margin:30px auto 22px}.raute-ui .ask-suggestions{grid-template-columns:1fr;gap:8px}.raute-ui .ask-suggestions>.btn{min-height:50px}.raute-ui .ask-composer{padding:16px}.raute-ui .ask-composer-actions{align-items:flex-end}.raute-ui .ask-turns .ask-message{padding:20px 0;gap:10px}.raute-ui .twin-progress-main{flex-basis:100%}.raute-ui .twin-progress-facts{flex-basis:100%;gap:20px}.raute-ui .twin-progress-facts>div{padding-left:0;border-left:0}.raute-ui .twin-progress-facts dd{font-size:21px}.raute-ui .twin-question--empty{padding:16px 18px}.raute-ui :is(.brief-heading,.brief-section,.brief-risks,.brief-proof){padding:18px 20px}}
+
+/* Shared actions: a clear primary action, quiet secondary controls, visible focus. */
+.raute-ui :is(.btn,.platform-action>button,.platform-panel form>button) {display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;padding:10px 16px;border:1px solid var(--line-strong);border-radius:11px;background:var(--card);color:var(--ink);font-size:13px;font-weight:600;line-height:1.35;text-decoration:none;box-shadow:0 1px 2px rgb(25 32 52 / .04);transition:background .16s,border-color .16s,box-shadow .16s,transform .16s}
+.raute-ui :is(.btn,.platform-action>button,.platform-panel form>button):hover:not(:disabled) {background:#f7f8fc;border-color:#bfc6d5;box-shadow:0 3px 8px rgb(25 32 52 / .06)}
+.raute-ui .btn.btn--go {background:linear-gradient(180deg,#7b59ff,#6844e7);border-color:#6944e8;color:#fff;box-shadow:0 3px 7px rgb(var(--accent-rgb) / .16),inset 0 1px 0 #ffffff24}
+.raute-ui .btn.btn--go:hover:not(:disabled) {background:linear-gradient(180deg,#714cf5,#5e39da);border-color:#613bdd;box-shadow:0 5px 12px rgb(var(--accent-rgb) / .22);transform:translateY(-1px)}
+.raute-ui .btn.btn--ghost {background:var(--tint-wash-soft);border-color:var(--tint-line);color:#5b3ec7;box-shadow:none}
+.raute-ui :is(.btn--danger,.btn.danger,.client-delete) {background:#fff5f5;border-color:#efcbd0;color:#ad3044;box-shadow:none}
+.raute-ui :is(.btn--danger,.btn.danger,.client-delete):hover:not(:disabled) {background:#ffebed;border-color:#d999a5;color:#932238}
+.raute-ui :is(.btn,button,input,select,textarea,summary,a):focus-visible {outline:3px solid rgb(var(--accent-rgb) / .38);outline-offset:3px}
+.raute-ui :is(.btn,button):disabled {opacity:.5;cursor:not-allowed;box-shadow:none;transform:none}
+.raute-ui :is(.btn--sm,.client-card-actions .btn) {min-height:32px;padding:6px 10px;font-size:12px;border-radius:8px}
+.raute-ui .client-card-actions .btn {background:transparent;border-color:transparent;box-shadow:none}
+.raute-ui .twin-field-head>.btn {min-height:34px;padding:7px 12px;font-size:12px;background:#f7f8fc;border-color:var(--line);color:#535d72;box-shadow:none}
+.raute-ui :is(input:not([type=checkbox]):not([type=radio]),select,textarea) {transition:border-color .16s,box-shadow .16s}
+.raute-ui :is(input:not([type=checkbox]):not([type=radio]),select,textarea):focus {border-color:var(--tint-line-strong);box-shadow:0 0 0 3px var(--tint-wash-soft)}
+
+/* Sections stay recognisable through headings, spacing and restrained colour. */
+.raute-ui .profile-knowledge {border:1px solid #e4def7;border-radius:18px;padding:28px;background:linear-gradient(180deg,#f8f6ff 0,#fff 220px);margin-bottom:36px}
+.raute-ui .profile-knowledge .twin-page>header {padding-bottom:6px;border-bottom:1px solid #e9e3f5;margin-bottom:24px}
+.raute-ui .profile-knowledge .twin-page>header h2 {font-size:21px;letter-spacing:-.03em}
+.raute-ui .profile-section {--section-accent:#64748b;background:#f2f4f8;padding:24px;border:1px solid #e1e6ee;border-radius:18px;margin:32px 0;box-shadow:none}
+.raute-ui #wettbewerb {--section-accent:#4b6eaf;background:#f1f5fb;border-color:#dce5f2}
+.raute-ui #marktumfeld {--section-accent:#397c7b;background:#f0f7f6;border-color:#dbeae6}
+.raute-ui .profile-section>.platform-panel:first-child {margin-top:0}
+.raute-ui .profile-section>.platform-panel:last-child {margin-bottom:0}
+.raute-ui .profile-section .platform-panel>h2 {display:flex;align-items:center;gap:12px}
+.raute-ui .profile-section .platform-panel>h2:before {content:'';width:4px;align-self:stretch;min-height:22px;border-radius:4px;background:var(--section-accent);flex:none}
+.raute-ui .platform-panel {border-radius:15px;box-shadow:0 2px 6px rgb(30 40 60 / .025)}
+.raute-ui .platform-panel>h2 {padding-bottom:16px;border-bottom:1px solid var(--line);margin:0 0 22px;font-size:19px;letter-spacing:-.025em}
+.raute-ui :is(.co-panel-head,.board__h) {background:linear-gradient(180deg,#f9faff,#fff)}
+.raute-ui .opportunity-layout>aside {background:#f4f6fa;border-color:#e0e5ef;border-radius:15px}
+.raute-ui .twin-filters {background:#f4f5f9;border:1px solid #e7e9f0;border-radius:12px;padding:12px 16px}
+.raute-ui .twin-progress {box-shadow:none;border-color:#e5e7ee}
+.raute-ui .twin-ai-import {background:linear-gradient(180deg,#f7f4ff,#fff 220px);border:1px solid #dcd2fc;border-top:3px solid var(--tint);box-shadow:0 6px 20px rgb(55 35 110 / .04);scroll-margin-top:90px}
+.raute-ui .twin-ai-import>header h2 {font-size:23px;line-height:1.3}
+.raute-ui .twin-ai-progress {background:#fff;border:1px solid var(--tint-line);border-radius:12px;padding:18px;margin-top:20px}
+.raute-ui .twin-ai-progress progress {width:100%;height:6px;accent-color:var(--tint)}
+.raute-ui .twin-ai-progress p {margin:10px 0 0;font-size:13px;color:var(--muted)}
+@media(max-width:600px){.raute-ui :is(.profile-knowledge,.profile-section){padding:16px;border-radius:14px}.raute-ui .profile-section .platform-panel{padding:18px}.raute-ui .twin-filters{padding:12px}.raute-ui :is(.btn,.platform-action>button,.platform-panel form>button){min-height:40px}.raute-ui .twin-ai-import>header h2{font-size:20px}}
+@media(prefers-reduced-motion:reduce){.raute-ui :is(.btn,button,input,select,textarea){transition:none}.raute-ui .btn.btn--go:hover:not(:disabled){transform:none}}
