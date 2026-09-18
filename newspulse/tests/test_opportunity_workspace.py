@@ -103,14 +103,21 @@ def test_detected_activation_reuses_the_existing_angle_and_refuses_closed_window
     assert web.get(base()+f'/detected/{opp.id}').json()['status']=='closed'
 
 
-def test_develops_without_any_news_and_preserves_twin_provenance(web,db):
+def test_develops_without_any_news_and_preserves_twin_provenance(web,db,monkeypatch):
     identity=launch(web);prompts=[]
+    from newspulse import default_content
+    drafted=[]
+    def default(session, client, angle):
+        assert session.get(OpportunityDevelopment,identity).status == 'running'
+        drafted.append(angle.id)
+    monkeypatch.setattr(default_content,'press_release',default)
     def invoke(prompt,**kwargs):
         prompts.append(prompt)
         return json.dumps({'ideas':[idea()],'note':'No fresh sources; research required.'})
     development.develop(db,identity,providers=[],invoke=invoke)
     row=db.get(OpportunityDevelopment,identity)
     assert row.status=='complete' and len(row.workspace_ids)==1
+    assert len(drafted)==1
     workspace=db.get(OpportunityWorkspace,row.workspace_ids[0])
     assert workspace.data['evidence_type']=='RAUTE Hypothesis'
     assert workspace.data['statement_snapshots'][0]['evidence_type']=='Client Statement'
@@ -159,3 +166,16 @@ def test_each_research_area_keeps_provider_failures_visible():
     assert len(called)==5 and 'Competitor' in called[1]
     assert all(q['providers']['Failure']['status']=='failed' for q in queries)
     assert 'SECRET' not in str(queries) and sources==[]
+
+
+def test_default_content_does_not_revive_an_expired_development(web,db,monkeypatch):
+    from newspulse import default_content
+    identity=launch(web)
+    def expire(session,client,angle):
+        row=session.get(OpportunityDevelopment,identity)
+        row.status='failed'
+        session.commit()
+    monkeypatch.setattr(default_content,'press_release',expire)
+    development.develop(db,identity,providers=[],invoke=lambda *a,**k:json.dumps({'ideas':[idea()],'note':'Test'}))
+    db.expire_all()
+    assert db.get(OpportunityDevelopment,identity).status=='failed'

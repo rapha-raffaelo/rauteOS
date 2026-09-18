@@ -35,6 +35,7 @@ from ...models import Angle, Article, Client, Contact, Outreach, TopicHit
 from ...schemas import GuideVerdict
 from ..mandates import mandate_or_404
 from ..app import get_db, templates
+from ..frontend import page_assets
 from . import assets_view
 from .today import _fetch_last_run, _local_tz
 
@@ -295,6 +296,7 @@ def _advice_context(
         ),
         "last_run": _fetch_last_run(session),
         "header_date": dt.datetime.now(_local_tz()).date(),
+        "composer_frontend": page_assets("composer"),
         # DEC-1: one occasion, one package. Every format for each impulse with
         # the state it is in, built from the registry crossed with what is
         # stored, so a seventh format appears in the strip without this route
@@ -314,16 +316,10 @@ def advice_view(
     format_key: str = Query("", alias="format"),
     session: Session = Depends(get_db),
 ) -> HTMLResponse:
-    """This client's impulses, the messages written off them, and why not.
+    """Read the impulse and its default press release without generating content.
 
-    ``?format=`` opens the page with one format's tick box already ticked. It is
-    how a surface that arrives carrying a suggestion hands it over — the
-    editorial plan's "Text schreiben" sends the format its hook proposes — and it
-    only ticks: writing is still the reader's own second press.
-
-    Aliased rather than named ``format`` in Python: the URL key is the contract
-    and stays as it is, while the local name no longer shadows the builtin in a
-    module that formats strings.
+    The legacy format query is accepted for old links; it no longer selects a
+    format or triggers generation.
     """
     client = mandate_or_404(session, client_id)
     return templates.TemplateResponse(

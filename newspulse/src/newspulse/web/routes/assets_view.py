@@ -1,24 +1,8 @@
-"""The package on an impulse: writing its texts, editing them, releasing them.
+"""Impulse content: a default press release, custom messages and stored texts.
 
-DEC-1 locks the surface as "Ein Anlass, ein Paket". A communication occasion is
-handled as a package rather than as a folder of separate documents, so the
-formats are a strip on the impulse itself: which are written, which are checked,
-which are released, which do not exist yet, in one line. The impulse keeps
-everything it produced, and "Fehlende schreiben" is one button.
-
-What lives here rather than in :mod:`newspulse.web.routes.advisory` is everything
-that acts on a stored text. The impulse page is already the longest route module
-in the app, and the four acts below share a lock, a progress record and a set of
-refusals that nothing else on that page touches. The page itself still renders
-from ``advisory``: it asks :func:`package` for the strip and gets back a view of
-the registry crossed with what is stored.
-
-Editing is the reason this is not the letter's surface with six more buttons. A
-pitch is read once and copied; a press release is worked on. So an edit is
-stored, marked as a human's, and drops both verdicts on the way, and the release
-control stays out of reach until a second model has read the text as it now
-stands. A text a human changed after the check was cleared is a text nothing has
-read, and grade F does not bend for the convenience of one click.
+This module owns package views and the existing write/edit/check/release actions.
+Custom messages stream through custom_drafts and use the same writer, asset
+storage and review rules. Existing format-specific integrations remain supported.
 """
 
 from __future__ import annotations
@@ -380,7 +364,7 @@ def package(
                     facts,
                     found[0] if found else None,
                 )
-                for fmt in assets.FORMATS
+                for fmt in (*assets.FORMATS, assets.definition("custom"))
             ),
             letters=len(letters.get(angle.id, [])),
         )
@@ -503,7 +487,7 @@ def _speaks_for(kinds: tuple[str, ...]) -> str:
     return kinds[0] if len(kinds) == 1 else _PACKAGE
 
 
-def _run_write(client_id: int, angle_id: int, kinds: tuple[str, ...]) -> None:
+def _run_write(client_id: int, angle_id: int, kinds: tuple[str, ...], *, only_if_missing=False) -> None:
     """Write these formats in sequence on a worker thread; always let go."""
     try:
         with _sweep_free() as free:
@@ -527,7 +511,7 @@ def _run_write(client_id: int, angle_id: int, kinds: tuple[str, ...]) -> None:
                             total=len(kinds),
                         ),
                     )
-                    _write_one(session, client, angle, fmt)
+                    _write_one(session, client, angle, fmt, only_if_missing=only_if_missing)
     except Exception as exc:  # noqa: BLE001 — a worker thread must never die silently
         # Nothing may read as "there was nothing to write": the reader would go on
         # believing the package was complete.
@@ -543,7 +527,7 @@ def _run_write(client_id: int, angle_id: int, kinds: tuple[str, ...]) -> None:
 
 
 def _write_one(
-    session: Session, client: Client, angle: Angle, fmt: assets.FormatDef
+    session: Session, client: Client, angle: Angle, fmt: assets.FormatDef, *, only_if_missing=False
 ) -> None:
     """One format, with whatever it had to say kept beside it.
 
@@ -562,7 +546,7 @@ def _write_one(
         _remember(angle.id, fmt.key, reason)
 
     try:
-        assets.produce(session, fmt, client, angle, note=_tell)
+        assets.produce(session, fmt, client, angle, note=_tell, **({"only_if_missing": True} if only_if_missing else {}))
     except (assets.RequirementsMissing, assets.Malformed):
         # Both already handed their sentence to ``_tell`` — in the consultant's
         # language, naming the field to fill or what the structure was missing.
@@ -640,7 +624,7 @@ def _run_recheck(client_id: int, angle_id: int, asset_id: int) -> None:
 def _back(client_id: int, angle_id: int) -> RedirectResponse:
     """Back to the impulse the package hangs on, not to the top of the page."""
     return RedirectResponse(
-        f"/client/{client_id}/advice#impulse-{angle_id}", status_code=_SEE_OTHER
+        f"/client/{client_id}/advice?eintrag=anlass-{angle_id}#impulse-{angle_id}", status_code=_SEE_OTHER
     )
 
 
@@ -742,6 +726,20 @@ def _start(client_id: int, angle_id: int, kinds: tuple[str, ...]) -> None:
     )
 
 
+def _run_default(client_id: int, angle_id: int) -> None:
+    _run_write(client_id, angle_id, ('pressemitteilung',), only_if_missing=True)
+
+
+def start_default(session: Session, client: Client, angle: Angle) -> None:
+    """An explicit idea/plan activation starts its missing default draft once."""
+    stored = assets.current(session, [angle.id]).get(angle.id, {})
+    if not _missing(session, client, angle, stored):
+        return
+    _spawn(_run_default, (client.id, angle.id), client_id=client.id,
+           angle_id=angle.id, kinds=('pressemitteilung',),
+           name=f'newspulse-default-release-{angle.id}', refuse_under='pressemitteilung')
+
+
 @router.post("/client/{client_id}/impulse/{angle_id}/assets")
 def write_assets(
     client_id: int,
@@ -749,21 +747,10 @@ def write_assets(
     kind: list[str] = Form(default_factory=list),
     session: Session = Depends(get_db),
 ) -> Response:
-    """Write the formats named off this impulse, or every one still missing.
+    """Create the missing press release by default.
 
-    A list rather than one name, because the page now asks with tick boxes: the
-    reader says which of the six he actually wants written and presses once. One
-    box ticked posts one ``kind`` and behaves exactly as the old single-format
-    button did, so nothing about the per-format action changed.
-
-    An empty list is still "Fehlende schreiben": the formats with no text yet
-    whose required facts are on file. A format that is blocked stays blocked
-    rather than being attempted and refused six seconds later, and its row names
-    the field it wants.
-
-    A released format is dropped from the selection rather than refusing the
-    whole click — with six boxes on screen, one stale tick must not cost the five
-    beside it, and the note it leaves says which one was skipped.
+    Explicit format keys remain supported for existing integrations and stored
+    documents. Released texts stay final; unknown formats are refused.
     """
     client = session.get(Client, client_id)
     if client is None:
@@ -797,15 +784,11 @@ def write_assets(
 def _missing(
     session: Session, client: Client, angle: Angle, stored: dict[str, Asset]
 ) -> tuple[str, ...]:
-    """The formats "Fehlende schreiben" writes: unwritten, and writable today.
-
-    The profile is read once for all six rather than once per format, which is
-    what ``requirements_met`` takes ``facts`` for.
-    """
+    """Only the default press release is generated without an explicit format."""
     facts = profile.stored(session, client.id)
     return tuple(
         fmt.key
-        for fmt in assets.FORMATS
+        for fmt in (assets.definition("pressemitteilung"),)
         if fmt.key not in stored
         and assets.requirements_met(session, fmt, client, angle, facts=facts).ok
     )
@@ -1002,23 +985,9 @@ def write_from_opportunity(
     opportunity_id: int,
     session: Session = Depends(get_db),
 ) -> Response:
-    """Open the format picker with this opportunity as the occasion.
+    """Open the occasion and start its missing press-release draft.
 
-    Nothing is written by the click — the picker is where a person says which
-    formats they want, and a model call spent on "show me" is the thing the
-    tick boxes exist to stop. Unlike the plan's hook there is no format to
-    pre-tick: the fast lane weighs standing, not form.
-
-    Only a ``belegt`` row can be opened: a rejection is an audit record, never
-    a card, and a URL pointing at one is a mis-aimed or forged POST. A
-    dismissed or just-expired opportunity is deliberately *not* refused — the
-    person saw the card when it stood, and whether a text still makes the
-    closing window is their call, not a 404's.
-
-    Deliberately not guarded by the run lock, like ``plan_view``'s occasion
-    creation: the click fetches nothing and writes one ``Angle`` row, and the
-    only race it can lose — a double click, a concurrent scan — is settled by
-    ``ux_angles_newsjack`` inside :func:`occasion_for_opportunity`.
+    Existing drafts and released texts remain intact, including on repeat clicks.
     """
     client = session.get(Client, client_id)
     if client is None:
@@ -1031,6 +1000,7 @@ def write_from_opportunity(
     ):
         raise HTTPException(status_code=404, detail="Opportunity not found")
     angle = occasion_for_opportunity(session, client, opportunity)
+    start_default(session, client, angle)
     return RedirectResponse(
         f"/client/{client_id}/advice?eintrag=anlass-{angle.id}#impulse-{angle.id}",
         status_code=_SEE_OTHER,

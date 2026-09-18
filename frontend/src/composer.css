@@ -1,0 +1,27 @@
+.custom-composer { margin-top: 32px; padding: 28px; border: 1px solid var(--line, #e2e4eb); border-radius: 16px; background: var(--card, white); color: var(--ink, #20212b); }
+.custom-composer__eyebrow { font-size: 11px; font-weight: 650; letter-spacing: .12em; color: var(--muted, #737889); }
+.custom-composer h3 { margin: 8px 0; font-size: 22px; letter-spacing: -.025em; }
+.custom-composer__heading p, .custom-composer__hint { color: var(--muted, #737889); font-size: 14px; margin: 0 0 20px; }
+.custom-composer__presets { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+.custom-composer__presets button { border: 1px solid var(--line, #e2e4eb); border-radius: 999px; padding: 8px 14px; font: inherit; font-size: 13px; background: transparent; color: inherit; cursor: pointer; }
+.custom-composer__presets button[aria-pressed=true] { background: #f0ebff; border-color: var(--accent, #714cff); color: #5737bd; }
+.custom-composer button:disabled { opacity: .55; cursor: default; }
+.custom-composer label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+.custom-composer textarea { box-sizing: border-box; display: block; width: 100%; min-height: 120px; padding: 14px 16px; border: 1px solid var(--line, #e2e4eb); border-radius: 10px; font: inherit; font-size: 15px; line-height: 1.6; resize: vertical; color: inherit; background: var(--card, white); }
+.custom-composer :is(textarea,button,a):focus-visible { outline: 2px solid var(--accent, #714cff); outline-offset: 3px; }
+.custom-composer__footer { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-top: 16px; }
+.custom-composer__footer > span { font-size: 12px; color: var(--muted, #737889); }
+.custom-composer__hint { margin: 10px 0; }
+.custom-composer__result { border-top: 1px solid var(--line, #e2e4eb); padding-top: 24px; margin-top: 24px; }
+.custom-composer progress { display: block; width: 100%; height: 6px; border: none; border-radius: 4px; overflow: hidden; accent-color: var(--accent, #714cff); background: #ebe8f3; }
+.custom-composer progress::-webkit-progress-bar { background: #ebe8f3; }
+.custom-composer progress::-webkit-progress-value { background: var(--accent, #714cff); }
+.custom-composer progress:indeterminate { background: linear-gradient(90deg,#ebe8f3 25%,#7956ff 50%,#ebe8f3 75%); background-size: 200% 100%; animation: draft-loading 1.6s linear infinite; }
+.custom-composer progress:indeterminate::-webkit-progress-bar { background: transparent; }
+.custom-composer__status { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; font-size: 13px; color: var(--muted, #737889); margin: 12px 0 20px; }
+.custom-composer__preview { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 440px; overflow: auto; font-size: 15px; line-height: 1.8; padding: 20px; border-radius: 10px; background: var(--bg, #f8f9fc); margin-bottom: 16px; }
+.custom-composer__preview h4 { margin: 0 0 12px; }
+.custom-composer [role=alert] { color: #a13342; }
+@keyframes draft-loading { to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .custom-composer progress:indeterminate { animation: none; } }
+@media (max-width: 600px) { .custom-composer { padding: 18px; } .custom-composer__footer .btn { width: 100%; } }

@@ -5,12 +5,9 @@ drawer it would be a hang, because the reader cannot even navigate away from
 something that has not painted. Streaming turns the same 60 seconds into
 something that visibly works.
 
-``--output-format stream-json --verbose`` emits NDJSON. What arrives is *not*
-token deltas: the CLI re-emits the assistant message as each content block
-completes, so text lands in chunks rather than characters. This module turns that
-into the small set of events a UI actually needs — status, text, done, error —
-and computes the delta itself, since the transport repeats the whole message
-every time.
+``--include-partial-messages`` emits text deltas as well as complete messages.
+Forward the deltas and suppress the repeated final text, while retaining support
+for backends that only emit complete messages.
 
 Nothing here parses the *content* as structure. A streamed answer is prose for a
 human to read; the schema-validated path (``advisor.advise``) stays the one that
@@ -23,10 +20,10 @@ import json
 import logging
 import os
 import subprocess
+import threading
 from collections.abc import Iterator
 from dataclasses import dataclass
 
-from . import config
 from . import config
 from .analyzer import claude_env
 from .quota import is_quota_error
@@ -164,6 +161,7 @@ def stream_claude(
         "--output-format", "stream-json",
         # stream-json requires it; without it the CLI refuses to start.
         "--verbose",
+        "--include-partial-messages",
     ]
     process = None
     try:
@@ -183,9 +181,17 @@ def stream_claude(
         yield StreamEvent("error", f'{t("Start fehlgeschlagen")}: {exc}')
         return
 
-    yield StreamEvent("status", t("verbunden"))
+    expired = threading.Event()
+    def expire():
+        expired.set()
+        if process.poll() is None:
+            process.kill()
+    timer = threading.Timer(timeout, expire)
+    timer.daemon = True
+    timer.start()
     emitted = ""
     try:
+        yield StreamEvent("status", t("verbunden"))
         for line in process.stdout or ():
             line = line.strip()
             if not line:
@@ -200,6 +206,14 @@ def stream_claude(
             kind = payload.get("type")
             if kind == "system" and payload.get("subtype") == "init":
                 yield StreamEvent("status", t("denkt nach"))
+            elif kind == "stream_event":
+                delta = payload.get("event", {}).get("delta", {})
+                if delta.get("type") == "text_delta" and delta.get("text"):
+                    emitted += delta["text"]
+                    if len(emitted) > _MAX_CHARS:
+                        yield StreamEvent("error", t("Antwort zu lang, abgebrochen."))
+                        return
+                    yield StreamEvent("text", delta["text"])
             elif kind == "assistant":
                 full = _assistant_text(payload)
                 # The transport repeats the whole message; send only what is new.
@@ -220,8 +234,11 @@ def stream_claude(
                     yield StreamEvent("error", str(payload.get("result") or t("Fehler")))
                     return
 
+        if expired.is_set():
+            yield StreamEvent("error", f'{t("Zeitüberschreitung nach")} {timeout}s.')
+            return
         code = process.wait(timeout=timeout)
-        if code != 0 and not emitted:
+        if code != 0:
             stderr = (process.stderr.read() if process.stderr else "")[:300]
             yield StreamEvent("error", f'{t("claude beendet mit")} {code}: {stderr}'.strip())
             return
@@ -235,6 +252,7 @@ def stream_claude(
         _log.exception("streaming failed")
         yield StreamEvent("error", f'{t("Unerwarteter Fehler")}: {exc}')
     finally:
+        timer.cancel()
         # The reader may disconnect mid-answer (closed drawer, navigation). Kill
         # the subprocess rather than leaving a `claude` process running for the
         # rest of the server's life.

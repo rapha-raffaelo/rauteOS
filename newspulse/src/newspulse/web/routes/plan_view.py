@@ -810,29 +810,15 @@ def write_from_hook(
     hook_id: int,
     session: Session = Depends(get_db),
 ) -> Response:
-    """Open the format picker with this hook as the occasion.
-
-    Three things happen, in this order, and each of them is load-bearing:
-
-    * the hook is **accepted**, because clicking this is a person taking it up —
-      and because an untouched hook is exactly what the next recompute is
-      allowed to delete, which would cut the occasion loose from its date;
-    * the occasion is created or found, so a second click lands on the package
-      that already exists;
-    * the reader is sent to the format list with the suggested format ticked.
-
-    Nothing is written here. The picker is where a person says which formats they
-    want, and spending a model call on a click that only meant "show me" is the
-    thing the tick boxes were introduced to stop.
-    """
+    """Accept the hook, open its occasion and start the default press release."""
     client = mandate_or_404(session, client_id)
     hook = _hook_or_404(session, client, hook_id)
     plan.accept(session, hook)
     angle = occasion_for(session, client, hook)
     _forget(client.id)
     query = {"eintrag": f"anlass-{angle.id}"}
-    if hook.format in assets_mod.REGISTRY:
-        query["format"] = hook.format
+    from .assets_view import start_default
+    start_default(session, client, angle)
     return RedirectResponse(
         f"/client/{client_id}/advice?{urlencode(query)}#impulse-{angle.id}",
         status_code=_SEE_OTHER,

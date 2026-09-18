@@ -164,6 +164,19 @@ Twin-IDs. Gib ausschließlich JSON entsprechend diesem Schema zurück:
         session.add(OpportunityEvent(workspace_id=workspace.id,kind='idea_developed',actor='RAUTE',
             detail={'title':idea.title,'development_id':job.id}))
     job.queries=queries;job.sources=sources;job.workspace_ids=ids;job.brain_version=version
-    job.status='complete' if ids else 'no_opportunity';job.note=result.note
-    job.finished_at=dt.datetime.now(dt.UTC)
+    job.note=result.note
+    session.commit()
+
+    # A completed idea includes its default content draft. Failure to write the
+    # release does not undo the saved opportunity and remains retryable in Content.
+    from . import default_content
+    for workspace_id in ids:
+        session.refresh(job)
+        if job.status != 'running':
+            return
+        workspace = session.get(OpportunityWorkspace, workspace_id)
+        default_content.press_release(session, client, session.get(Angle, workspace.angle_id))
+    session.execute(update(OpportunityDevelopment).where(OpportunityDevelopment.id==identity,
+        OpportunityDevelopment.status=='running').values(
+        status='complete' if ids else 'no_opportunity',finished_at=dt.datetime.now(dt.UTC)))
     session.commit()

@@ -362,7 +362,7 @@ def create_app() -> FastAPI:
     # Imported here (not at module top) to avoid a circular import: the route
     # modules import ``get_db``/``templates`` from this module.
     from .routes import (
-        advisory, archive, assets_view, assistant, client, contacts, workbench,
+        advisory, archive, assets_view, custom_drafts, assistant, client, contacts, workbench,
         crisis_view, desk_api, desk_view, twin_api, twin_view, journalists_api, journalists_view, opportunities_api, opportunities_view, activation_api, guide_routes, issues_view,
         language, login, onboarding as onboarding_routes,
         opportunity_view,
@@ -400,6 +400,7 @@ def create_app() -> FastAPI:
     # impulse page itself only renders one; the page reads the strip from
     # ``assets_view.package``.
     app.include_router(assets_view.router)
+    app.include_router(custom_drafts.router)
     app.include_router(assistant.router)
     app.include_router(language.router)
     app.include_router(triage.router)

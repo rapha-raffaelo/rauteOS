@@ -392,3 +392,23 @@ def no_visibility_seeding(monkeypatch):
 
     monkeypatch.setattr(visibility, "seed", _stub)
     return original
+
+
+@pytest.fixture(autouse=True)
+def no_default_press_release(monkeypatch):
+    """Generation jobs must not call real models as a side effect in tests.
+
+    Tests for automatic content explicitly exercise the returned real function.
+    """
+    from newspulse import default_content
+    real = default_content.press_release
+    monkeypatch.setattr(default_content, 'press_release', lambda *args, **kwargs: None)
+    return real
+
+
+@pytest.fixture(autouse=True)
+def no_default_starter(monkeypatch):
+    from newspulse.web.routes import assets_view
+    real = assets_view.start_default
+    monkeypatch.setattr(assets_view, 'start_default', lambda *args, **kwargs: None)
+    return real

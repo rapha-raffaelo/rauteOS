@@ -430,3 +430,57 @@ React mount points instead, all 24 passed on rerun; broader checks passed 234
 legacy/navigation cases and nine run-status cases. Migration/new-client checks
 passed 20 cases. No outstanding failing test remains. Two existing dependency
 deprecation warnings remain (Starlette test client and feedparser).
+
+
+### Press release as the default impulse content — 2026-09-18
+
+The Impulse Content area presents one press-release draft directly. Removed the
+six-format picker, checkboxes, bulk-write controls and tab JavaScript. Existing
+other texts remain accessible in collapsed sections with their editing, review
+and release controls. Missing historical drafts have one creation action; missing
+required profile fields remain visible and never trigger invented facts.
+
+New impulses from the sweep, refresh and manual development jobs include the
+default press release. Explicit plan/newsjack activation starts it in the existing
+background worker. A page GET never starts model calls. Blank format selections
+now request only the missing press release; explicit legacy integrations remain
+compatible. Automatic generation keeps any stored draft or release, including a
+text saved while the models were working. Failed writing retains the impulse.
+Approval, delivery and sending remain explicit actions.
+
+Writing/review redirects and package polling now retain the selected impulse,
+fixing an older issue where editing or writing a historical entry opened the
+latest one. Isolated browser checks cover desktop/mobile layout, existing-text
+access, the single fallback action and automatic content after opportunity
+development, with no JavaScript errors or horizontal overflow.
+
+
+### Custom message composer and live writing progress — 2026-09-18
+
+A React composer now sits immediately below the default press release. Customers
+can start with Kundenmail, LinkedIn-Post, Statement, Talking Points or Q&A,
+then edit the full instruction before explicitly choosing “Eigene Nachricht
+schreiben”. No custom text is generated on page load or preset selection.
+
+The authenticated POST streams decoded draft-body previews and actual word counts.
+An indeterminate progress bar covers writing and checking; completion is shown
+only after persistence. There is no invented percent-of-text estimate. Claude's
+partial-message events are supported without duplicating its final message, and
+a watchdog stops silent subprocesses at the configured timeout. Slow/disconnected
+readers cannot grow the progress queue without limit.
+
+Custom messages use the existing grounded asset writer, schema validation,
+source checking and guide checking. A saved draft survives checker failure.
+An existing custom draft has an explicit replacement notice and version check;
+a changed or released text cannot be silently overwritten. The press release
+stays intact. Stored custom drafts remain editable in the existing content pane,
+and the completion link reloads and opens that pane. Checks that finish after a
+human edit no longer attach their verdict to different words.
+
+Validation: the preceding default-content changes passed the complete Python
+suite (3,280 tests). After adding streaming and the composer, 526 focused backend
+tests passed; the final changed-path run passed 77 tests. All 47 frontend tests
+and the production Vite build passed. Synthetic browser verification passed at
+1440px and 390px: streamed partial text, actual word count, progress completion,
+persistence, editing link, preserved press release, and no JavaScript errors or
+horizontal overflow. No production client data was used for generation tests.

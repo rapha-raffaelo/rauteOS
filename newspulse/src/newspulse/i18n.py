@@ -562,6 +562,10 @@ _EN: dict[str, str] = {
     "Das Paket zu diesem Anlass": "Everything for this occasion",
     "Formate": "Formats",
     "Formaten geschrieben": "formats written",
+    "Vorhandener Text": "Existing text",
+    "Pressemitteilung erstellen": "Create press release",
+    "Neue Impulse erhalten automatisch eine Pressemitteilung als Entwurf. Hier kann ein fehlender Entwurf erstellt werden.":
+        "New ideas automatically receive a draft press release. You can create a missing draft here.",
     "noch nichts geschrieben": "nothing written yet",
     # The three stages of one impulse card: the occasion, the texts written from
     # it, and what left the house. Rubrics, so they stay short in both languages.

@@ -101,8 +101,12 @@ def test_a_mandate_with_no_draft_gets_one_from_stored_material(session, monkeypa
     _market(session, client, "Clean Beauty wird Pflicht im Handel")
     monkeypatch.setattr(angles, "suggest", _draft())
 
+    from newspulse import default_content
+    defaults = []
+    monkeypatch.setattr(default_content, 'press_release', lambda session, client, angle: defaults.append(angle.id))
     written = job._refresh_impulses(session, [client], [], now=_NOW)
 
+    assert len(defaults) == 1
     assert written == 1
     assert session.scalar(select(func.count()).select_from(Angle)) == 1
 

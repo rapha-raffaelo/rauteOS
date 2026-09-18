@@ -98,7 +98,11 @@ def test_a_quiet_morning_still_yields_an_impulse(session, monkeypatch):
     _stored_market(session, client, "Kosmetikbranche diskutiert KI-Rezepturen")
     monkeypatch.setattr(angles, "suggest", _draft())
 
+    from newspulse import default_content
+    created = []
+    monkeypatch.setattr(default_content, 'press_release', lambda session, client, angle, **kw: created.append(angle.id))
     assert job.draft_impulse(session, client, fetch=_no_fetch, now=lambda: _NOW) is True
+    assert len(created) == 1
     assert session.scalar(select(func.count()).select_from(Angle)) == 1
 
 

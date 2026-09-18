@@ -355,9 +355,12 @@ def test_the_dismiss_redirect_cannot_leave_the_site(web, session, mandate):
 # --- Text schreiben ---------------------------------------------------------------
 
 
-def test_write_opens_the_picker_with_the_opportunity_as_occasion(web, session, mandate):
+def test_write_starts_default_content_with_the_opportunity_as_occasion(web, session, mandate, monkeypatch):
     row = _opportunity(session, mandate)
 
+    from newspulse.web.routes import assets_view
+    defaults = []
+    monkeypatch.setattr(assets_view, 'start_default', lambda session, client, angle: defaults.append(angle.id))
     answer = web.post(
         f"/client/{mandate.id}/gelegenheit/{row.id}/text", follow_redirects=False
     )
@@ -367,6 +370,7 @@ def test_write_opens_the_picker_with_the_opportunity_as_occasion(web, session, m
         select(Angle).where(Angle.newsjack_id == row.id)
     ).one()
     assert f"anlass-{angle.id}" in answer.headers["location"]
+    assert defaults == [angle.id]
     assert angle.client_id == mandate.id
     assert angle.subject == _HEADLINE
     assert angle.message == _REASON

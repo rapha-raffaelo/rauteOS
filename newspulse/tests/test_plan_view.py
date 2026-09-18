@@ -847,8 +847,8 @@ def test_the_recompute_button_hands_the_work_to_a_worker(
 # --- "Text schreiben" --------------------------------------------------------------
 
 
-def test_writing_from_a_hook_opens_the_picker_with_the_suggested_format_ticked(
-    web, session, mandate
+def test_writing_from_a_hook_starts_the_default_press_release(
+    web, session, mandate, monkeypatch
 ):
     signal = _signal(session, mandate, effective_at=_NOW + dt.timedelta(days=30))
     hook = _hook(
@@ -856,6 +856,9 @@ def test_writing_from_a_hook_opens_the_picker_with_the_suggested_format_ticked(
         month=_window()[1], format="statement",
     )
 
+    from newspulse.web.routes import assets_view
+    defaults = []
+    monkeypatch.setattr(assets_view, 'start_default', lambda session, client, angle: defaults.append(angle.id))
     opened = web.post(
         f"/client/{mandate.id}/plan/{hook.id}/text", follow_redirects=False
     )
@@ -865,14 +868,11 @@ def test_writing_from_a_hook_opens_the_picker_with_the_suggested_format_ticked(
         select(Angle).where(Angle.plan_hook_id == hook.id)
     ).one()
     assert f"eintrag=anlass-{angle.id}" in opened.headers["location"]
-    assert "format=statement" in opened.headers["location"]
-
-    picker = web.get(f"/client/{mandate.id}/advice?eintrag=anlass-{angle.id}&format=statement")
-    ticked = re.search(
-        r'<input class="fmtrow__tick"[^>]*value="statement"[^>]*>', rendered(picker), re.S
-    )
-    assert ticked is not None
-    assert "checked" in ticked.group(0)
+    assert 'format=' not in opened.headers['location']
+    assert defaults == [angle.id]
+    body = rendered(web.get(opened.headers['location']))
+    assert 'role="tablist"' not in body
+    assert f'id="pane-{angle.id}-pressemitteilung"' in body
 
 
 def test_the_hook_becomes_the_occasion_and_carries_its_own_words(web, session, mandate):

@@ -2836,6 +2836,7 @@ def produce(
     generate: Callable[..., str] | None = None,
     guide_generate: Callable[..., str] | None = None,
     note: Callable[[str], None] | None = None,
+    only_if_missing: bool = False,
 ) -> Asset:
     """Write one format, have it read, and store it: the whole act, once.
 
@@ -2857,6 +2858,10 @@ def produce(
     refused for a missing field or gave up on its structure, so a failed run
     leaves the previous text for this format standing untouched.
     """
+    if only_if_missing:
+        existing = current(session, [angle.id]).get(angle.id, {}).get(fmt.key)
+        if existing is not None:
+            return existing
     draft = write(session, fmt, client, angle, invoke=invoke, note=note)
     checked: Checked | None = None
     try:
@@ -2884,6 +2889,13 @@ def produce(
             f"{fmt.name}: Der Text steht, aber das Zweitmodell hat ihn nicht "
             f"gegengelesen: {why}",
         )
+    if only_if_missing:
+        # A person may have saved or released a text while the models worked.
+        # Automatic defaults never replace any existing version.
+        session.expire_all()
+        existing = current(session, [angle.id]).get(angle.id, {}).get(fmt.key)
+        if existing is not None:
+            return existing
     return store(session, fmt, client, angle, draft, checked)
 
 
@@ -3227,6 +3239,7 @@ def recheck(
     UNGEPRUEFT and the page still draws the text as unread.
     """
     item = _recheck_item(session, client, asset)
+    checked_version = version(asset)
     verdicts: Checked | None = None
     unavailable = ""
     try:
@@ -3252,6 +3265,8 @@ def recheck(
     session.expire(asset)
     if asset.released:
         raise Refused(RELEASED_IS_FINAL)
+    if version(asset) != checked_version:
+        raise Refused("Der Text wurde während der Prüfung geändert. Bitte erneut gegenlesen lassen.")
 
     _apply_checks(asset, verdicts)
     if unavailable:

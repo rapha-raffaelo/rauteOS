@@ -602,16 +602,13 @@ def test_the_strip_shows_every_format_and_the_state_it_is_in(factory, web):
 
     body = web.get(f"/client/{client_id}/advice").text
 
-    for fmt in assets.FORMATS:
-        assert f'data-pane="pane-{angle.id}-{fmt.key}"' in body, fmt.key
-    # The letter is no longer one of them. It is the only thing on this page that
-    # can reach a journalist, and putting it behind the same control as a Q&A
-    # made it one click deep and easy to miss; it is a stage of its own now.
-    assert f'data-pane="pane-{angle.id}-anschreiben"' not in body
-    assert f'id="outreach-{angle.id}"' in body, "and it is open, not tabbed away"
-    assert "fmt-dot--geprueft" in body, "the written statement is checked"
-    assert "fmt-dot--ungeschrieben" in body, "the six others do not exist yet"
-    assert "1 von 7 Formaten geschrieben" in " ".join(body.split())
+    assert f'id="pane-{angle.id}-pressemitteilung"' in body
+    assert f'id="pane-{angle.id}-statement"' in body
+    assert f'id="pane-{angle.id}-qa"' not in body
+    assert 'class="pack__existing"' in body
+    assert 'role="tablist"' not in body
+    assert 'name="kind" type="checkbox"' not in body
+    assert f'id="outreach-{angle.id}"' in body
 
 
 def test_an_impulse_with_nothing_written_gets_the_mocks_invitation(factory, web):
@@ -629,12 +626,10 @@ def test_an_impulse_with_nothing_written_gets_the_mocks_invitation(factory, web)
 
     body = " ".join(web.get(f"/client/{client_id}/advice").text.split())
 
-    assert "Zu diesem Anlass gibt es eine These und noch keinen Text." in body
-    assert "noch nichts geschrieben" in body
-    assert f'data-pane="pane-{angle_id}-qa"' in body, "the list is still there"
-    # Exactly one control writes, and it is the one beside the tick boxes.
-    assert body.count("Ausgewählte schreiben") == 1
-    assert "Paket schreiben" not in body
+    assert "automatisch eine Pressemitteilung als Entwurf" in body
+    assert f'id="pane-{angle_id}-qa"' not in body
+    assert body.count(">Pressemitteilung erstellen</button>") == 1
+    assert "Ausgewählte schreiben" not in body
     assert "Fehlende schreiben" not in body
 
 
@@ -647,7 +642,8 @@ def test_the_invitation_counts_the_formats_the_list_actually_shows(factory, web)
 
     body = " ".join(web.get(f"/client/{client_id}/advice").text.split())
 
-    assert f"{len(assets.FORMATS)} Formate stehen bereit" in body
+    assert "Formate stehen bereit" not in body
+    assert "automatisch eine Pressemitteilung" in body
 
 
 def test_a_package_with_a_text_gets_the_head_and_not_the_invitation(factory, web):
@@ -659,7 +655,8 @@ def test_a_package_with_a_text_gets_the_head_and_not_the_invitation(factory, web
     body = " ".join(web.get(f"/client/{client_id}/advice").text.split())
 
     assert "Paket schreiben" not in body
-    assert "1 von 7 Formaten geschrieben" in body
+    assert "Vorhandener Text" in body
+    assert "Statement" in body
 
 
 def test_a_reader_on_another_impulse_is_told_why_the_buttons_are_out(factory, web):
@@ -696,7 +693,7 @@ def test_a_format_that_cannot_be_written_yet_says_which_field_is_missing(
     body = " ".join(web.get(f"/client/{client_id}/advice").text.split())
 
     assert "Noch nicht schreibbar." in body
-    assert "Wer spricht" in body or "Es fehlt" in body
+    assert "Wer spricht" in body or "Es fehlen" in body
     assert f'href="/client/{client_id}/profil"' in body
 
 
@@ -743,7 +740,7 @@ def test_one_format_is_written_on_its_own(factory, web, worker):
     )
 
     assert resp.status_code == 303
-    assert resp.headers["location"] == f"/client/{client_id}/advice#impulse-{angle_id}"
+    assert resp.headers["location"] == f"/client/{client_id}/advice?eintrag=anlass-{angle_id}#impulse-{angle_id}"
     assert worker.wait() == [(client_id, angle_id, ("qa",))]
     # Recorded by the route, not by the worker the fixture replaced: the page the
     # redirect lands on has to carry the notice, or nothing ever asks again.
@@ -760,7 +757,7 @@ def test_writing_the_missing_ones_skips_what_is_already_there(factory, web, work
 
     (_, _, kinds), = worker.wait()
     assert AssetKind.STATEMENT.value not in kinds, "the statement already exists"
-    assert AssetKind.TALKING_POINTS.value in kinds
+    assert kinds == (AssetKind.PRESSEMITTEILUNG.value,)
 
 
 def test_a_format_nobody_defined_is_not_a_route_to_write_one(factory, web):
@@ -1031,6 +1028,7 @@ def test_the_page_reports_which_format_is_being_written(factory, web):
     # other impulse's tab strip and open edit form is left alone.
     assert f'hx-trigger="every 3s [!npEditing({angle_id})]"' in body
     assert f'hx-target="#pack-{angle_id}"' in body
+    assert f'hx-get="/client/{client_id}/advice?eintrag=anlass-{angle_id}"' in body
 
 
 def test_the_poller_holds_off_while_somebody_is_editing_that_package(factory, web):
@@ -1439,63 +1437,28 @@ def test_ticking_nothing_still_means_the_missing_ones(factory, web, worker):
 
     (_, _, kinds), = worker.wait()
     assert AssetKind.STATEMENT.value not in kinds
-    assert AssetKind.TALKING_POINTS.value in kinds
+    assert kinds == (AssetKind.PRESSEMITTEILUNG.value,)
 
 
-def test_the_tab_script_resolves_its_strip_by_role_not_by_parent():
-    """A tripwire, because the suite runs no JavaScript.
-
-    Every format tab sits inside a .fmtrow wrapper now — the tick box lives
-    beside it — so ``tab.parentElement`` is the row, and the row holds one tab.
-    The script resolved the strip that way once: a click could not switch the
-    previous tab off, two panes showed at once, arrow keys found a one-element
-    list under markup announcing role="tablist", and the poller — finding no
-    strip id on the row — snapped the reader to the first tab on every swap.
-    """
-    source = _ADVICE.read_text(encoding="utf-8")
-    script = source[source.index("var select = function") :]
-
-    assert 'closest(\'[role="tablist"]\')' in script
-    assert "tab.parentElement" not in script, (
-        "the strip must be resolved via closest(), not the row wrapper"
-    )
-
-
-def test_the_format_list_is_a_column_with_a_state_beside_each_name(factory, web):
-    """"Der Slider ist noch nicht so übersichtlich."
-
-    Six formats and a letter lived in one horizontally scrolling row. Adding a
-    tick box to each made it worse: the box crowded the name, the state had
-    nowhere to go but a coloured dot, and whatever ran off the right edge was
-    simply not on screen. Down a column every format is visible at once and its
-    state has a column of its own — so a format that cannot be written yet says
-    what it is waiting for instead of only looking pale.
-    """
+def test_no_format_tabs_or_checkboxes_remain(factory, web):
     with factory() as session:
         client, angle = _mandate(session)
-        _produce(session, client, angle)
         client_id = client.id
-
     body = web.get(f"/client/{client_id}/advice").text
-    strip = body.split('class="fmtlist"', 1)[1].split("</div>\n          <form", 1)[0]
-
-    assert strip.count('<div class="fmtrow') == len(assets.FORMATS)
-    assert strip.count('class="fmtrow__state"') == len(assets.FORMATS)
-    # The column, not the strip: a horizontal scroller is what this replaced.
-    styles = body.split("<style>", 1)[1].split("</style>", 1)[0]
-    assert ".fmtlist { display: flex; flex-direction: column;" in styles
-    assert "overflow-x: auto" not in styles
+    assert 'role="tablist"' not in body
+    assert 'class="fmtrow__tick"' not in body
+    assert 'var select = function (tab' not in body
+    assert body.count('>Pressemitteilung erstellen</button>') == 1
 
 
 def test_a_blocked_format_names_what_it_waits_for_in_its_row(factory, web):
     """The pane said it already, one click away. The row is where the reader is
     deciding what to tick, so it is where the answer belongs."""
     with factory() as session:
-        client, angle = _mandate(session)
+        client, angle = _mandate(session, facts={})
         # A mandate with no profile at all: every requirement is missing.
         client_id = client.id
 
     body = web.get(f"/client/{client_id}/advice").text
-    strip = body.split('class="fmtlist"', 1)[1].split("</div>\n          <form", 1)[0]
-
-    assert "wartet auf" in strip
+    assert "Noch nicht schreibbar" in body
+    assert "Es fehlen" in body or "Wer spricht" in body

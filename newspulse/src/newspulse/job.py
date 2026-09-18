@@ -51,6 +51,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from . import (
+    default_content,
     angles,
     config,
     crisis,
@@ -916,7 +917,8 @@ def _generate_angles(
         if result is None:
             continue
         draft, numbered = result
-        angles.store(session, client, draft, numbered)
+        angle = angles.store(session, client, draft, numbered)
+        default_content.press_release(session, client, angle)
         written += 1
         _log.info("positioning draft stored for %r: %s", client.name, draft.subject)
     return written
@@ -1178,7 +1180,8 @@ def _refresh_impulses(
                 _note(f"Aus {len(material)} Marktmeldung(en) ergab sich kein Anlass.")
             continue
         draft, numbered = result
-        angles.store(session, client, draft, numbered)
+        angle = angles.store(session, client, draft, numbered)
+        default_content.press_release(session, client, angle)
         client.impulse_note = ""
         client.impulse_checked_at = now
         session.commit()
@@ -2509,7 +2512,8 @@ def draft_impulse(
         )
         return False
     draft, numbered = result
-    angles.store(session, client, draft, numbered)
+    angle = angles.store(session, client, draft, numbered)
+    default_content.press_release(session, client, angle, note=_say)
     _log.info("impulse drafted for %r on request: %s", client.name, draft.subject)
     return True
 

@@ -8,6 +8,10 @@
 {% set active = 'texte' %}
 {% include '_client_tabs.html' %}
 {% include 'partials/texte_rail.html' %}
+{% if composer_frontend %}
+  {% for href in composer_frontend.css %}<link rel="stylesheet" href="{{ href }}">{% endfor %}
+  <script type="module" src="{{ composer_frontend.script }}"></script>
+{% endif %}
 
 <style>
   /* Page-local only. Everything with a shared name — .sect, .impulse, .notice —
@@ -119,56 +123,10 @@
   .pack__st { font-size: var(--t-caption); color: var(--muted); }
   .pack__acts { margin-left: auto; display: flex; align-items: center; gap: var(--s2); }
   .pack__off { font-size: var(--t-caption); color: var(--muted); margin-bottom: var(--s2); }
-  /* The mock's empty state: an occasion with a thesis and no text is an
-     invitation, not an empty tab strip. */
-  .pack__empty { text-align: center; padding: var(--s5) 0; }
-  .pack__empty p { font-size: var(--t-subhead); color: var(--muted); margin-bottom: var(--s3); max-width: 54ch;
-                   margin-left: auto; margin-right: auto; }
-  /* The format list. It was a tab strip, then a tab strip with tick boxes wedged
-     into it — six formats plus a letter in one scrolling row, so the box crowded
-     the name, the state had nowhere to go but a coloured dot, and whatever ran
-     off the right edge was simply not there. Six rows down a column instead:
-     every format visible at once, its state in its own column, and a blocked one
-     able to say what it is waiting for. */
-  .fmtlist { display: flex; flex-direction: column; border: 1px solid var(--line);
-             border-radius: var(--radius); margin-bottom: var(--s3); overflow: hidden; }
-  .fmtrow { display: grid; grid-template-columns: auto 1fr auto; align-items: center;
-            gap: var(--s2); padding: 2px var(--s3); border-top: 1px solid var(--line); }
-  .fmtrow:first-child { border-top: 0; }
-  .fmtrow:hover { background: var(--fill-2); }
-  /* The row being read, marked on the row rather than under the name: a bottom
-     border was the tab idiom and reads as an underline once the tabs are rows. */
-  .fmtrow.is-on { background: var(--fill); }
-  .fmtrow__tick { margin: 0; accent-color: var(--accent); }
-  .fmtrow__tick:disabled { opacity: 0.35; }
-  .fmtrow__state { font-size: var(--t-caption); color: var(--muted); text-align: right;
-                   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 30ch; }
-  .fmtrow--blocked .fmtrow__state { color: var(--faint); }
-  .fmtrow__flag { color: var(--alert); font-weight: 600; }
-  .fmtwrite { display: flex; align-items: center; gap: var(--s3); flex-wrap: wrap; margin-bottom: var(--s3); }
-  .fmtwrite .panel-hint { margin: 0; }
   .makemsg__why { font-size: var(--t-caption); color: var(--muted); margin: var(--s1) 0 var(--s2); max-width: 72ch; }
   .makemsg__why b { color: var(--ink-2); font-weight: 600; }
-  /* justify-content spelled out rather than left to the initial value: the names
-     came out centred in the column and text-align does not move flex items, so
-     whatever was doing it, this is the declaration that decides. */
-  .fmttab { font: inherit; font-size: var(--t-subhead); font-weight: 500; background: none; border: 0;
-            text-align: left; width: 100%; min-width: 0;
-            cursor: pointer; padding: 8px 12px; color: var(--muted); border-bottom: 2px solid transparent;
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-            display: flex; align-items: center; justify-content: flex-start; gap: 7px; }
-  .fmttab:hover { color: var(--ink); }
-  .fmttab.is-on { color: var(--ink); font-weight: 600; border-bottom-color: transparent; }
-  .fmttab__n { color: var(--muted); font-weight: 400; }
-  /* Four states, drawn apart: nothing written, a draft, a checked text, a
-     released one — plus the one modifier that overrides the rest, an objection
-     nobody has answered. A checked text and an unread one must never look alike. */
-  .fmt-dot { width: 6px; height: 6px; border-radius: 50%; flex: none; background: var(--faint); }
-  .fmt-dot--ungeschrieben { background: transparent; border: 1px dashed var(--faint); }
-  .fmt-dot--entwurf { background: var(--faint); }
-  .fmt-dot--geprueft, .fmt-dot--freigegeben { background: var(--good); }
-  .fmt-dot--freigegeben { box-shadow: 0 0 0 2px rgba(36, 138, 61, 0.22); }
-  .fmt-dot--einwand { background: var(--warn); border: 0; box-shadow: none; }
+  .pack__existing { margin-top: var(--s4); border-top: 1px solid var(--line); padding-top: var(--s3); }
+  .pack__existing > summary { margin-bottom: var(--s3); }
   .fmtpane { display: none; }
   .fmtpane.is-on { display: block; }
   .fmtpane__bar { display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap; margin-bottom: var(--s2); }
@@ -400,12 +358,9 @@
         </details>
         </div>{# /stage: die Idee #}
 
-        {# DEC-1, "ein Anlass, ein Paket": the formats are a strip on the impulse
-           rather than a folder somewhere else, because that is how a communication
-           occasion is actually handled. Every format is a tab whatever its state,
-           so the six that do not exist yet are as visible as the one that does —
-           a strip that listed only what was written would hide the work. #}
+        {# Press release is the default; existing other texts remain accessible. #}
         {% set pack = packages.get(angle.id) %}
+        {% set primary = pack.slots | selectattr('key', 'equalto', 'pressemitteilung') | first %}
         {% set written = messages.get(angle.id, []) %}
         {% set targets = pitch_targets.get(angle.id) or [] %}
         {# Disabled while any text is being written, because the lock behind the
@@ -416,21 +371,8 @@
         {% set running = asset_progress and asset_progress.angle_id == angle.id %}
         <div class="pack" id="pack-{{ angle.id }}">
           <div class="pack__head">
-            <span class="pack__t">{{ t("Content") }}</span>
-            <span class="pack__st">
-              {% if pack.written %}
-                {{ pack.written }} {{ t("von") }} {{ pack.total }} {{ t("Formaten geschrieben") }}{% if pack.released %} <span class="dot">·</span> {{ pack.released }} {{ t("freigegeben") }}{% endif %}
-              {% else %}
-                {{ t("noch nichts geschrieben") }}
-              {% endif %}
-            </span>
-            <span class="pack__acts">
-              {% if pack.written %}
-                {# Takes the texts and nothing around them: every sheet is marked
-                   as a part, the checks and the buttons beside them are not. #}
-                <button type="button" class="linkbtn" data-copy-group="pack-{{ angle.id }}">{{ t("Alles kopieren") }}</button>
-              {% endif %}
-            </span>
+            <span class="pack__t">{{ t("Pressemitteilung") }}</span>
+            <span class="pack__st">{{ t(primary.state_label) }}</span>
           </div>
 
           {# The page reports what the worker is doing and swaps itself when it is
@@ -448,7 +390,7 @@
              happening, and closing the panel resumes the poll. #}
           {% if running %}
             <div class="notice notice--ok"
-                 hx-get="/client/{{ client.id }}/advice"
+                 hx-get="/client/{{ client.id }}/advice?eintrag=anlass-{{ angle.id }}"
                  hx-trigger="every 3s [!npEditing({{ angle.id }})]"
                  hx-select="#pack-{{ angle.id }}"
                  hx-target="#pack-{{ angle.id }}"
@@ -472,80 +414,15 @@
             <p class="sect__empty sect__refusal">{{ t(asset_notes[angle.id]) }}</p>
           {% endif %}
 
-          {% if not pack.written %}
-            {# The mock's empty package: an occasion that has a thesis and no text
-               is an invitation, and a full strip of seven empty tabs is not one.
-               The strip is still below it, so a single format can be picked. #}
-            {#- One sentence, no button. There were three that wrote — this one,
-                "Fehlende schreiben" in the head, and "Ausgewählte schreiben" under
-                the list — and all three did the same thing by different names.
-                The list below is where the choosing happens, so the button lives
-                there and this says only what there is to choose from. The count
-                comes off the registry: it read "Sieben" while six rows stood
-                underneath, because the letter moved out to Versand. -#}
-            <div class="pack__empty">
-              <p>{{ t("Zu diesem Anlass gibt es eine These und noch keinen Text. %(n)s Formate stehen bereit.") | format(n=pack.slots | length) }}</p>
-            </div>
-          {% endif %}
-
-          {# The strip. "+ Format" from the mock has no counterpart on purpose:
-             every format the registry knows is already a tab, and adding one is a
-             FormatDef and a prompt file rather than something a button can open. #}
-          {# A tick box per format, beside the tab that opens it. Two jobs, one
-             row, because they are the same question asked twice: which of these
-             do I want. The strip alone could only offer "write everything that
-             is missing", so a reader who wanted the press release and the Q&A
-             and not the four others had to press six times or take all six. #}
-          <div class="fmtlist" id="fmttabs-{{ angle.id }}" role="tablist" aria-label="{{ t('Formate') }}">
-            {% for slot in pack.slots %}
-              <div class="fmtrow{% if loop.first %} is-on{% endif %}{% if not slot.readiness.ok %} fmtrow--blocked{% endif %}">
-                {# Released texts are final; the box is drawn and disabled rather
-                   than left out, so the row still lines up with the five others. #}
-                {# ``asset_preselect`` is the format a page that sent the reader
-                   here proposed — the plan hook's suggestion. A tick, never a
-                   write: the button below is still the reader's own press. #}
-                <input class="fmtrow__tick" type="checkbox" name="kind"
-                       value="{{ slot.key }}" form="write-{{ angle.id }}"
-                       id="tick-{{ angle.id }}-{{ slot.key }}"
-                       aria-label="{{ t(slot.fmt.name) }}"
-                       {% if slot.key == asset_preselect and not (slot.state == 'freigegeben' or busy) %}checked{% endif %}
-                       {% if slot.state == 'freigegeben' or busy %}disabled{% endif %}>
-                <button type="button" class="fmttab{% if loop.first %} is-on{% endif %}"
-                        role="tab" id="tab-{{ angle.id }}-{{ slot.key }}"
-                        aria-selected="{{ 'true' if loop.first else 'false' }}"
-                        aria-controls="pane-{{ angle.id }}-{{ slot.key }}"
-                        tabindex="{{ '0' if loop.first else '-1' }}"
-                        data-pane="pane-{{ angle.id }}-{{ slot.key }}">
-                  <span class="fmt-dot fmt-dot--{{ slot.state }}{% if slot.objected %} fmt-dot--einwand{% endif %}"
-                        aria-hidden="true"></span>{{ t(slot.fmt.name) }}
-                </button>
-                {# The state in its own column, not squeezed behind the name. In
-                   a scrolling strip there was no room for it and a dot carried
-                   the whole answer; down a column there is, and a blocked format
-                   can say what it is waiting for instead of only looking pale. #}
-                <span class="fmtrow__state">
-                  {%- if not slot.readiness.ok -%}
-                    {{ t("wartet auf") }}: {{ slot.readiness.missing | map(attribute="label") | join(", ") }}
-                  {%- else -%}
-                    {{ t(slot.state_label) }}
-                    {%- if slot.objected %} <span class="fmtrow__flag">{{ t("Einwand") }}</span>{% endif -%}
-                  {%- endif -%}
-                </span>
-              </div>
-            {% endfor %}
-          </div>
-          {# The write form itself carries no boxes — they reach it by ``form=``
-             from the rows above, so the list stays one list. #}
-          <form id="write-{{ angle.id }}" class="fmtwrite" method="post"
-                action="/client/{{ client.id }}/impulse/{{ angle.id }}/assets">
-            <button type="submit" class="btn"{% if busy %} disabled{% endif %}>{{ t("Ausgewählte schreiben") }}</button>
-            <span class="panel-hint">{{ t("Ohne Häkchen werden alle noch fehlenden geschrieben.") }}</span>
-          </form>
-
-          {% for slot in pack.slots %}
-            <div class="fmtpane{% if loop.first %} is-on{% endif %}"
-                 id="pane-{{ angle.id }}-{{ slot.key }}" role="tabpanel"
-                 aria-labelledby="tab-{{ angle.id }}-{{ slot.key }}" tabindex="0">
+          {% for slot in pack.slots if slot.note and slot.key != 'pressemitteilung' and not slot.asset %}
+            <p class="sect__empty sect__refusal">{{ t(slot.fmt.name) }}: {{ t(slot.note) }}</p>
+          {% endfor %}
+          {% for slot in pack.slots if slot.key == 'pressemitteilung' or slot.asset %}
+            {% if slot.key != 'pressemitteilung' %}
+              <details class="pack__existing"{% if slot.key == 'custom' and request.query_params.get('entwurf') %} open{% endif %}><summary>{{ t("Vorhandener Text") }}: {{ t(slot.fmt.name) }}</summary>
+            {% endif %}
+            <div class="fmtpane is-on" id="pane-{{ angle.id }}-{{ slot.key }}"
+                 aria-label="{{ t(slot.fmt.name) }}">
               {% if slot.asset %}
                 {% set asset = slot.asset %}
                 <div class="fmtpane__bar">
@@ -559,9 +436,9 @@
                   <span class="fmtpane__acts">
                     <button type="button" class="impulse__copy" data-copy-from="asset-text-{{ asset.id }}">{{ t("Kopieren") }}</button>
                     {% if not asset.released %}
-                      <form method="post" action="/client/{{ client.id }}/impulse/{{ angle.id }}/asset/{{ asset.id }}/rewrite">
+                      {% if slot.key != 'custom' %}<form method="post" action="/client/{{ client.id }}/impulse/{{ angle.id }}/asset/{{ asset.id }}/rewrite">
                         <button type="submit" class="linkbtn"{% if busy %} disabled{% endif %}>{{ t("Neu schreiben") }}</button>
-                      </form>
+                      </form>{% endif %}
                       {# Offered for any unread text, not only an edited one: a
                          draft whose crosscheck was down when it was written is
                          unread through no fault of the reader's, and the only way
@@ -678,11 +555,11 @@
                 {% endif %}
               {% else %}
                 <div class="fmtpane__empty">
-                  <p class="fmtpane__what">{{ t(slot.fmt.description) }}</p>
+                  <p class="fmtpane__what">{{ t("Neue Impulse erhalten automatisch eine Pressemitteilung als Entwurf. Hier kann ein fehlender Entwurf erstellt werden.") }}</p>
                   {% if slot.writable %}
                     <form method="post" action="/client/{{ client.id }}/impulse/{{ angle.id }}/assets">
                       <input type="hidden" name="kind" value="{{ slot.key }}">
-                      <button type="submit" class="btn btn--big"{% if busy %} disabled{% endif %}>{{ t("Schreiben") }}</button>
+                      <button type="submit" class="btn btn--big"{% if busy %} disabled{% endif %}>{{ t("Pressemitteilung erstellen") }}</button>
                     </form>
                   {% else %}
                     {# DEC-2 on screen: nothing is written and the refusal names the
@@ -700,6 +577,11 @@
                 </div>
               {% endif %}
             </div>
+            {% if slot.key != 'pressemitteilung' %}</details>{% endif %}
+            {% if slot.key == 'pressemitteilung' and composer_frontend %}
+              {% set custom = pack.slots | selectattr('key', 'equalto', 'custom') | first %}
+              <div data-custom-composer data-client-id="{{ client.id }}" data-angle-id="{{ angle.id }}" data-version="{{ custom.version if custom else '' }}" data-released="{{ 'true' if custom and custom.asset and custom.asset.released else 'false' }}"></div>
+            {% endif %}
           {% endfor %}
         </div>{# /content #}
 
@@ -1470,82 +1352,10 @@
 // exists rather than a card with a copy button.
 window.npEditing = function (angleId) {
   var pack = document.getElementById("pack-" + angleId);
-  return !!(pack && pack.querySelector("details.fmtedit[open]"));
+  return !!(pack && pack.querySelector('details.fmtedit[open], .custom-composer[data-editing="true"]'));
 };
 
-// The package strip: one occasion, one panel at a time. Delegated from the
-// document rather than bound per button, because the poller swaps the package
-// out from under these elements every three seconds while a text is being
-// written, and listeners bound to the old markup go with it.
-//
-// The full tab pattern, not half of it. The markup announces role="tablist" to a
-// screen reader, and an announced tablist that does not move under the arrow keys
-// is worse than plain buttons: the reader has been told how it works and it does
-// not work that way. So: one tab in the tab order at a time, arrows and Home/End
-// between them, and aria-selected following the selection.
-(function () {
-  // Which pane each strip is showing, remembered across the poller's swaps —
-  // the fresh markup always marks the first tab, so without this a run of six
-  // formats would snap the reader back to the first tab every three seconds.
-  var showing = {};
-
-  var select = function (tab, focus) {
-    // closest, not parentElement: every tab sits inside a .fmtrow now (the tick
-    // box lives beside it), so the parent is the row and the row holds one tab.
-    // parentElement here meant a click could not switch the previous tab off,
-    // two panes showed at once, and the poller — finding no strip id — snapped
-    // the reader back to the first tab on every swap.
-    var strip = tab.closest('[role="tablist"]');
-    if (!strip) return;
-    if (strip.id) showing[strip.id] = tab.dataset.pane;
-    strip.querySelectorAll(".fmttab").forEach(function (other) {
-      var pane = document.getElementById(other.dataset.pane);
-      var on = other === tab;
-      other.classList.toggle("is-on", on);
-      other.setAttribute("aria-selected", on ? "true" : "false");
-      other.tabIndex = on ? 0 : -1;
-      // The row carries the highlight now that the tabs are rows: an underline
-      // under one name in a column reads as a link, not as a selection.
-      var row = other.closest(".fmtrow");
-      if (row) row.classList.toggle("is-on", on);
-      if (pane) pane.classList.toggle("is-on", on);
-    });
-    if (focus) tab.focus();
-  };
-
-  document.addEventListener("click", function (event) {
-    var tab = event.target.closest && event.target.closest(".fmttab");
-    if (tab) select(tab, false);
-  });
-
-  var STEPS = { ArrowRight: 1, ArrowLeft: -1, Home: 0, End: 0 };
-  document.addEventListener("keydown", function (event) {
-    var tab = event.target.closest && event.target.closest(".fmttab");
-    if (!tab || !(event.key in STEPS)) return;
-    var list = tab.closest('[role="tablist"]');
-    if (!list) return;
-    var tabs = Array.prototype.slice.call(list.querySelectorAll(".fmttab"));
-    var at = tabs.indexOf(tab);
-    var next =
-      event.key === "Home" ? 0
-      : event.key === "End" ? tabs.length - 1
-      : (at + STEPS[event.key] + tabs.length) % tabs.length;
-    event.preventDefault();
-    select(tabs[next], true);
-  });
-
-  // The poller replaces one package with fresh markup. Put the reader back on
-  // the tab they were reading rather than on the first one.
-  document.body.addEventListener("htmx:afterSwap", function () {
-    Object.keys(showing).forEach(function (stripId) {
-      var strip = document.getElementById(stripId);
-      if (!strip) return;
-      var tab = strip.querySelector('[data-pane="' + showing[stripId] + '"]');
-      if (tab) select(tab, false);
-    });
-  });
-})();
-
+// Copy the current text, without the surrounding controls or checks.
 (function () {
   var flash = function (button) {
     var previous = button.textContent;
