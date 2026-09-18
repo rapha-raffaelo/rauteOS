@@ -200,3 +200,25 @@ both shared stylesheets and ten checked server source/template hashes match the
 reviewed source/build. The navigation roster matches active mandates. SQLite
 integrity is ok and schema remains `0061_opportunity_assets`. Verification used
 query-only database access and did not mutate production client data.
+
+### Default press release and custom message composer — 2026-09-18
+
+Source `400f256` deployed from a clean git archive as
+`07aa2add-25f5-4be4-ab55-9f6e0ba8bdbe` (SUCCESS). Content now starts with the
+press release, with a React custom-message composer below it. Preset instructions
+are editable; explicit submission streams the draft and actual word count before
+saving and checking. New impulse/development jobs attempt their default press
+release without replacing an existing text or automatically releasing/sending it.
+
+All 21 public JavaScript/CSS files and both shared stylesheets match the reviewed
+build. Read-only production checks passed for all seven active client content
+pages, default-format selection and 12 source/template hashes. The new composer
+POST endpoint is registered in the production OpenAPI contract. SQLite integrity
+is ok, schema remains `0061_opportunity_assets`, and asset counts were unchanged
+by verification.
+
+A synthetic production provider probe with no client data returned 11 text events
+and one successful completion. The partial-JSON preview decoded the expected
+58-character test body. No message was stored, released or sent by this probe.
+Local browser checks covered incremental previews, completion, persistent draft
+editing, unchanged press releases and responsive layout at 1440px and 390px.
