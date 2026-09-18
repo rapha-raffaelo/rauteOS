@@ -30,6 +30,7 @@ from ...models import (
     NewsjackOpportunity,
     Standing,
 )
+from ..mandates import mandate_or_404
 from ..app import get_db
 from ..runlock import SWEEP_RUNNING as _sweep_running
 from ..runlock import guard as _run_guard
@@ -738,6 +739,56 @@ def start_default(session: Session, client: Client, angle: Angle) -> None:
     _spawn(_run_default, (client.id, angle.id), client_id=client.id,
            angle_id=angle.id, kinds=('pressemitteilung',),
            name=f'newspulse-default-release-{angle.id}', refuse_under='pressemitteilung')
+
+
+def _default_status(session: Session, client: Client, angle: Angle) -> dict:
+    row = assets.current(session, [angle.id]).get(angle.id, {}).get('pressemitteilung')
+    if row is not None:
+        from urllib.parse import urlencode
+        return {'status': 'ready', 'title': row.title, 'body': row.body,
+                'label': _STATE_LABELS[assets.state_of(row)],
+                'url': f'/client/{client.id}/advice?' + urlencode({
+                    'eintrag': f'anlass-{angle.id}', 'entwurf': row.id,
+                    'stand': assets.version(row)}) + f'#pane-{angle.id}-pressemitteilung'}
+    with _state:
+        progress = _progress.get(client.id)
+    if progress and progress.angle_id == angle.id:
+        return {'status': 'running'}
+    ready = assets.requirements_met(session, assets.definition('pressemitteilung'), client, angle)
+    if not ready.ok:
+        return {'status': 'blocked', 'reason': ready.reason,
+                'url': f'/client/{client.id}/profil'}
+    if _generating.locked() or _run_guard.locked():
+        return {'status': 'waiting'}
+    note = _said(angle.id, 'pressemitteilung') or _said(angle.id, _PACKAGE)
+    if note and note not in {_BUSY, _SWEEP_RUNNING}:
+        return {'status': 'failed', 'reason': 'Die Pressemitteilung konnte nicht fertiggestellt werden. Bitte erneut versuchen.'}
+    return {'status': 'needed'}
+
+
+@router.get('/api/v1/clients/{client_id}/impulses/{angle_id}/press-release')
+def default_status(client_id: int, angle_id: int, response: Response,
+                   session: Session = Depends(get_db)):
+    response.headers['Cache-Control'] = 'no-store'
+    client = mandate_or_404(session, client_id)
+    angle = _impulse_or_404(session, client_id, angle_id)
+    return _default_status(session, client, angle)
+
+
+@router.post('/api/v1/clients/{client_id}/impulses/{angle_id}/press-release')
+def ensure_default(client_id: int, angle_id: int, response: Response, retry: bool = False,
+                   session: Session = Depends(get_db)):
+    """The visible impulse requests its missing draft; repeat visits never rewrite."""
+    response.headers['Cache-Control'] = 'no-store'
+    client = mandate_or_404(session, client_id)
+    angle = _impulse_or_404(session, client_id, angle_id)
+    state = _default_status(session, client, angle)
+    if state['status'] == 'needed' or (retry and state['status'] == 'failed'):
+        _forget(angle.id, 'pressemitteilung')
+        _forget(angle.id, _PACKAGE)
+        start_default(session, client, angle)
+        state = _default_status(session, client, angle)
+    return state
 
 
 @router.post("/client/{client_id}/impulse/{angle_id}/assets")

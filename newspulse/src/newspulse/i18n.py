@@ -2725,6 +2725,11 @@ _EN: dict[str, str] = {
     # The six kinds of stored line a sentence can resolve to, beside its
     # Kennung. "Beitrag" and "Marktsignal" already stand in this table.
     "Analyse": "Analysis",
+    "Nachrichten & Texte": "Messages & drafts",
+    "Aus der Analyse werden konkrete Entwürfe.": "Turn the analysis into concrete drafts.",
+    "Die Pressemitteilung wird automatisch vorbereitet.": "The press release is prepared automatically.",
+    "Wird vorbereitet": "Preparing",
+    "Angaben fehlen": "Information missing",
     "Profilfeld": "Profile field",
     "Mail": "Mail",
     "Freigegebener Text": "Released text",

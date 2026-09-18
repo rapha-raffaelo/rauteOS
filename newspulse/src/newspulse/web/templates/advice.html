@@ -309,9 +309,9 @@
         {# Stage one: the occasion itself, and nothing written from it. Everything
            in here answers "why is there something to say"; everything in the two
            stages below is a text that already says it. #}
-        <div class="stage stage--first">
+        <div class="stage stage--first analysis-stage" aria-label="{{ t('Analyse') }}">
           <div class="stage__h">
-            <span class="stage__n">{{ t("Die Idee") }}</span>
+            <span class="stage__n">{{ t("Analyse") }}</span>
             <span class="stage__st">{{ t("aus dem Themen-Radar") }}</span>
           </div>
           <div class="impulse__text" id="impulse-text-{{ angle.id }}">{{ angle.message }}</div>
@@ -369,10 +369,11 @@
            package is actually running. #}
         {% set busy = asset_busy %}
         {% set running = asset_progress and asset_progress.angle_id == angle.id %}
+        <div class="messages-heading"><span class="messages-heading__mark" aria-hidden="true"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><use href="#ico-texte" /></svg></span><div><h3>{{ t("Nachrichten & Texte") }}</h3><p>{{ t("Aus der Analyse werden konkrete Entwürfe.") }}</p></div></div>
         <div class="pack" id="pack-{{ angle.id }}">
           <div class="pack__head">
             <span class="pack__t">{{ t("Pressemitteilung") }}</span>
-            <span class="pack__st">{{ t(primary.state_label) }}</span>
+            <span class="pack__st">{{ t(primary.state_label) if primary.asset else (t("Wird vorbereitet") if primary.writable else t("Angaben fehlen")) }}</span>
           </div>
 
           {# The page reports what the worker is doing and swaps itself when it is
@@ -555,24 +556,18 @@
                 {% endif %}
               {% else %}
                 <div class="fmtpane__empty">
-                  <p class="fmtpane__what">{{ t("Neue Impulse erhalten automatisch eine Pressemitteilung als Entwurf. Hier kann ein fehlender Entwurf erstellt werden.") }}</p>
-                  {% if slot.writable %}
-                    <form method="post" action="/client/{{ client.id }}/impulse/{{ angle.id }}/assets">
-                      <input type="hidden" name="kind" value="{{ slot.key }}">
-                      <button type="submit" class="btn btn--big"{% if busy %} disabled{% endif %}>{{ t("Pressemitteilung erstellen") }}</button>
-                    </form>
-                  {% else %}
-                    {# DEC-2 on screen: nothing is written and the refusal names the
-                       field to go and fill, with the page that holds it. #}
-                    <p class="sect__empty sect__refusal">
-                      <strong>{{ t("Noch nicht schreibbar.") }}</strong> {{ slot.readiness.reason }}
-                      {% if slot.remedy %}
-                        <a href="/client/{{ client.id }}/{{ slot.remedy.path }}">{{ t(slot.remedy.label) }} →</a>
-                      {% endif %}
+                  {% if not slot.writable %}
+                    <p class="sect__empty sect__refusal"><strong>{{ t("Noch nicht schreibbar.") }}</strong> {{ slot.readiness.reason }}
+                      {% if slot.remedy %}<a href="/client/{{ client.id }}/{{ slot.remedy.path }}">{{ t(slot.remedy.label) }} →</a>{% endif %}
                     </p>
-                  {% endif %}
-                  {% if slot.note %}
-                    <p class="sect__empty sect__refusal">{{ t(slot.note) }}</p>
+                  {% elif composer_frontend %}
+                    <div data-auto-press-release data-client-id="{{ client.id }}" data-angle-id="{{ angle.id }}">
+                      <p>{{ t("Die Pressemitteilung wird automatisch vorbereitet.") }}</p>
+                    </div>
+                  {% else %}
+                    <form method="post" action="/client/{{ client.id }}/impulse/{{ angle.id }}/assets">
+                      <button class="btn" type="submit">{{ t("Pressemitteilung erstellen") }}</button>
+                    </form>
                   {% endif %}
                 </div>
               {% endif %}

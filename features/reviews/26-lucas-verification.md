@@ -484,3 +484,24 @@ and the production Vite build passed. Synthetic browser verification passed at
 1440px and 390px: streamed partial text, actual word count, progress completion,
 persistence, editing link, preserved press release, and no JavaScript errors or
 horizontal overflow. No production client data was used for generation tests.
+
+### Prepare existing impulses automatically; separate analysis and messages — 2026-09-18
+
+Opening an existing impulse now automatically requests its missing press release
+through a dedicated POST. A React status component polls a read-only endpoint
+and inserts the completed draft without reloading the page or discarding custom
+message instructions. Existing, edited and released texts are returned intact.
+Busy jobs defer preparation; failed jobs require an explicit retry so repeated
+page visits do not repeatedly spend model calls. Required missing profile facts
+remain visible with a link to complete them. Server-side page GETs remain read-only.
+
+The analysis has its own slate background and heading. A separate “Nachrichten &
+Texte” heading, accent divider and document icon introduce white document panels
+with larger body text. The custom composer and existing editing/review controls
+remain available underneath.
+
+Validation: 83 backend tests, 51 frontend tests and production Vite build passed.
+Synthetic browser checks verified automatic preparation without a creation click,
+only one start request, progress, preserving custom instructions during completion,
+saved-draft editing, different visual surfaces and no JS errors or horizontal
+overflow at 1440px and 390px. Final document styling was also checked in both widths.

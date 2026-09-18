@@ -626,9 +626,10 @@ def test_an_impulse_with_nothing_written_gets_the_mocks_invitation(factory, web)
 
     body = " ".join(web.get(f"/client/{client_id}/advice").text.split())
 
-    assert "automatisch eine Pressemitteilung als Entwurf" in body
+    assert "Die Pressemitteilung wird automatisch vorbereitet." in body
     assert f'id="pane-{angle_id}-qa"' not in body
-    assert body.count(">Pressemitteilung erstellen</button>") == 1
+    assert "data-auto-press-release" in body
+    assert ">Pressemitteilung erstellen</button>" not in body
     assert "Ausgewählte schreiben" not in body
     assert "Fehlende schreiben" not in body
 
@@ -643,7 +644,7 @@ def test_the_invitation_counts_the_formats_the_list_actually_shows(factory, web)
     body = " ".join(web.get(f"/client/{client_id}/advice").text.split())
 
     assert "Formate stehen bereit" not in body
-    assert "automatisch eine Pressemitteilung" in body
+    assert "Die Pressemitteilung wird automatisch vorbereitet." in body
 
 
 def test_a_package_with_a_text_gets_the_head_and_not_the_invitation(factory, web):
@@ -1448,7 +1449,8 @@ def test_no_format_tabs_or_checkboxes_remain(factory, web):
     assert 'role="tablist"' not in body
     assert 'class="fmtrow__tick"' not in body
     assert 'var select = function (tab' not in body
-    assert body.count('>Pressemitteilung erstellen</button>') == 1
+    assert 'data-auto-press-release' in body
+    assert '>Pressemitteilung erstellen</button>' not in body
 
 
 def test_a_blocked_format_names_what_it_waits_for_in_its_row(factory, web):
