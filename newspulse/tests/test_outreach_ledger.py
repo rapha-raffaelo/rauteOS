@@ -9,6 +9,8 @@ it is read as evidence.
 
 from __future__ import annotations
 
+from react_render import rendered
+
 import datetime as dt
 import json
 import re
@@ -563,7 +565,7 @@ def test_a_draft_card_shows_exactly_one_state_and_offers_the_release(factory, we
         row = _write(session, client, angle)
         client_id, row_id = client.id, row.id
 
-    body = web.get(f"/client/{client_id}/advice").text
+    body = rendered(web.get(f"/client/{client_id}/advice"))
 
     assert _badges(body) == ["Entwurf"]
     assert f"/outreach/{row_id}/release" in body
@@ -579,7 +581,7 @@ def test_a_released_card_shows_verschickt_and_its_trail(factory, web):
         outreach.release(session, row, released_by="Lucas")
         client_id, row_id = client.id, row.id
 
-    body = web.get(f"/client/{client_id}/advice").text
+    body = rendered(web.get(f"/client/{client_id}/advice"))
 
     assert _badges(body) == ["Verschickt"]
     assert "Freigegeben am" in body
@@ -599,7 +601,7 @@ def test_a_letter_with_an_outcome_shows_that_state_and_its_note(factory, web):
         )
         client_id = client.id
 
-    body = web.get(f"/client/{client_id}/advice").text
+    body = rendered(web.get(f"/client/{client_id}/advice"))
 
     assert _badges(body) == ["Veröffentlicht"]
     # Under the badge as prose, not only prefilled into the form: the note is
@@ -621,7 +623,7 @@ def test_a_silent_letter_is_marked_beside_its_state_not_instead_of_it(factory, w
         session.commit()
         client_id = client.id
 
-    body = web.get(f"/client/{client_id}/advice").text
+    body = rendered(web.get(f"/client/{client_id}/advice"))
 
     assert _badges(body) == ["Verschickt", "Ohne Reaktion"]
     assert f"seit {SILENT_AFTER_DAYS + 1} Tagen still" in body
@@ -635,12 +637,12 @@ def test_the_outcome_form_is_only_offered_once_there_is_something_to_answer(
         row = _write(session, client, angle)
         client_id, row_id = client.id, row.id
 
-    assert f"/outreach/{row_id}/outcome" not in web.get(f"/client/{client_id}/advice").text
+    assert f"/outreach/{row_id}/outcome" not in rendered(web.get(f"/client/{client_id}/advice"))
 
     with factory() as session:
         outreach.release(session, session.get(Outreach, row_id))
 
-    assert f"/outreach/{row_id}/outcome" in web.get(f"/client/{client_id}/advice").text
+    assert f"/outreach/{row_id}/outcome" in rendered(web.get(f"/client/{client_id}/advice"))
 
 
 def test_the_outcome_form_preselects_no_outcome_on_a_fresh_release(factory, web):
@@ -654,7 +656,7 @@ def test_the_outcome_form_preselects_no_outcome_on_a_fresh_release(factory, web)
         outreach.release(session, row)
         client_id, row_id = client.id, row.id
 
-    body = web.get(f"/client/{client_id}/advice").text
+    body = rendered(web.get(f"/client/{client_id}/advice"))
 
     assert '<option value="" disabled selected>' in body
     assert 'selected>Antwort' not in body
@@ -664,7 +666,7 @@ def test_the_outcome_form_preselects_no_outcome_on_a_fresh_release(factory, web)
             session, session.get(Outreach, row_id), OutreachState.ANTWORT, "kam zurück"
         )
 
-    body = web.get(f"/client/{client_id}/advice").text
+    body = rendered(web.get(f"/client/{client_id}/advice"))
 
     assert '<option value="" disabled>' in body
     assert 'selected>Antwort' in body
@@ -681,7 +683,7 @@ def test_the_card_chrome_translates(factory, web):
         client_id = client.id
 
     web.cookies.set(i18n.COOKIE_NAME, "en")
-    body = web.get(f"/client/{client_id}/advice").text
+    body = rendered(web.get(f"/client/{client_id}/advice"))
 
     assert _badges(body) == ["Draft"]
     assert "Released and sent" in body
@@ -701,7 +703,7 @@ def test_the_released_trail_translates_and_never_shows_the_mensch_token(factory,
         client_id = client.id
 
     web.cookies.set(i18n.COOKIE_NAME, "en")
-    body = web.get(f"/client/{client_id}/advice").text
+    body = rendered(web.get(f"/client/{client_id}/advice"))
 
     assert "Released and sent" in body
     assert "mensch" not in body
@@ -711,7 +713,7 @@ def test_the_released_trail_translates_and_never_shows_the_mensch_token(factory,
         outreach.release(session, _write(session, client, angle), released_by="Lucas")
         client_id = client.id
 
-    body = web.get(f"/client/{client_id}/advice").text
+    body = rendered(web.get(f"/client/{client_id}/advice"))
 
     assert "released and sent by Lucas" in body
     assert "by Lucas released" not in body
@@ -866,7 +868,7 @@ def test_recording_a_release_over_an_objection_costs_a_second_click(session, web
 
     app = create_app()
     app.dependency_overrides[get_db] = lambda: session
-    body = TestClient(app).get(f"/client/{client.id}/advice").text
+    body = rendered(TestClient(app).get(f"/client/{client.id}/advice"))
 
     card = body.split(f"outreach/{row.id}/release", 1)[0][-1400:]
     assert "Ja, eintragen" in body, "the confirmation exists"

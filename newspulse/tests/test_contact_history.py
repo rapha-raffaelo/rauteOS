@@ -20,6 +20,8 @@ Two other things are pinned harder than they look:
 
 from __future__ import annotations
 
+from react_render import rendered
+
 import datetime as dt
 
 import pytest
@@ -243,7 +245,7 @@ def test_the_rendered_timeline_runs_newest_first(web, factory):
     with factory() as session:
         contact_id, _, _ = _interleaved(session)
 
-    body = web.get("/contacts", params={"id": contact_id}).text
+    body = rendered(web.get("/contacts", params={"id": contact_id}))
 
     # The reply typed yesterday, then last week's letter, then July's.
     assert body.index("18.08.2026") < body.index("14.08.2026")
@@ -415,13 +417,13 @@ def test_the_roster_shows_the_count_and_keeps_filtering(web, factory):
             released_at=_NOW - dt.timedelta(days=3), state=OutreachState.RAUS,
         )
 
-    whole = web.get("/contacts", params={"q": ""}).text
+    whole = rendered(web.get("/contacts", params={"q": ""}))
     assert "Marlene Kühn" in whole
     assert "Sven Kaltenbach" in whole
     assert '<span class="book__n">1</span>' in whole
 
     for params in ({"q": "Handelsblatt"}, {"search": "Handelsblatt"}):
-        narrowed = web.get("/contacts", params=params).text
+        narrowed = rendered(web.get("/contacts", params=params))
         assert "Marlene Kühn" in narrowed, params
         assert "Sven Kaltenbach" not in narrowed, params
 
@@ -435,10 +437,10 @@ def test_opening_a_file_keeps_the_filter_and_filtering_keeps_the_file(web, facto
         contacts.save(session, name="Sven Kaltenbach", outlet="Baugewerbe Magazin")
         contact_id = kuehn.id
 
-    narrowed = web.get("/contacts", params={"q": "Handelsblatt"}).text
+    narrowed = rendered(web.get("/contacts", params={"q": "Handelsblatt"}))
     assert f"/contacts?id={contact_id}&amp;q=Handelsblatt" in narrowed
 
-    opened = web.get("/contacts", params={"id": contact_id, "q": "Handelsblatt"}).text
+    opened = rendered(web.get("/contacts", params={"id": contact_id, "q": "Handelsblatt"}))
     assert f'<input type="hidden" name="id" value="{contact_id}">' in opened
     assert "Sven Kaltenbach" not in opened
 
@@ -468,7 +470,7 @@ def _seed_page(factory) -> tuple[int, int]:
 def test_the_page_names_the_date_the_mandate_and_the_subject(web, factory):
     contact_id, _ = _seed_page(factory)
 
-    body = web.get("/contacts", params={"id": contact_id}).text
+    body = rendered(web.get("/contacts", params={"id": contact_id}))
 
     assert "13.08.2026" in body
     assert "Nordlicht Energie" in body
@@ -482,7 +484,7 @@ def test_a_hand_typed_entry_is_marked_apart_from_one_the_system_recorded(web, fa
     pressed, and an auditor reading this page has to be able to tell."""
     contact_id, _ = _seed_page(factory)
 
-    body = web.get("/contacts", params={"id": contact_id}).text
+    body = rendered(web.get("/contacts", params={"id": contact_id}))
 
     assert "von Hand eingetragen" in body
     assert "bei der Freigabe festgehalten" in body
@@ -504,8 +506,8 @@ def test_a_contact_with_no_released_letters_shows_the_file_and_says_so(web, fact
     resp = web.get("/contacts", params={"id": contact_id})
 
     assert resp.status_code == 200
-    assert "Sven Kaltenbach" in resp.text
-    assert "Noch kein Anschreiben freigegeben" in resp.text
+    assert "Sven Kaltenbach" in rendered(resp)
+    assert "Noch kein Anschreiben freigegeben" in rendered(resp)
 
 
 def test_an_id_that_matches_nothing_renders_the_book_rather_than_an_error(web, factory):
@@ -515,7 +517,7 @@ def test_an_id_that_matches_nothing_renders_the_book_rather_than_an_error(web, f
     resp = web.get("/contacts", params={"id": 9999})
 
     assert resp.status_code == 200
-    assert "Marlene Kühn" in resp.text
+    assert "Marlene Kühn" in rendered(resp)
 
 
 def test_an_unparseable_id_renders_the_book_too(web, factory):
@@ -530,7 +532,7 @@ def test_an_unparseable_id_renders_the_book_too(web, factory):
     for stale in ("", "abc", "3.5", " "):
         resp = web.get(f"/contacts?id={stale}")
         assert resp.status_code == 200, (stale, resp.status_code)
-        assert "Kontaktbuch" in resp.text, stale
+        assert "Kontaktbuch" in rendered(resp), stale
 
 
 def test_saving_an_edit_returns_to_the_open_file(web, factory):
@@ -540,7 +542,7 @@ def test_saving_an_edit_returns_to_the_open_file(web, factory):
     contact_id, _ = _seed_page(factory)
     back = f"/contacts?id={contact_id}&q=Handelsblatt"
 
-    page = web.get(f"/contacts?id={contact_id}&edit={contact_id}&q=Handelsblatt").text
+    page = rendered(web.get(f"/contacts?id={contact_id}&edit={contact_id}&q=Handelsblatt"))
     form = page.split('class="contact-form"')[1].split("</form>")[0]
     assert f'name="redirect_to" value="/contacts?id={contact_id}&amp;q=Handelsblatt"' in form
 
@@ -579,7 +581,7 @@ def test_the_file_pane_translates_its_chrome(web, factory):
     contact_id, _ = _seed_page(factory)
     web.cookies.set(i18n.COOKIE_NAME, "en")
 
-    body = web.get("/contacts", params={"id": contact_id}).text
+    body = rendered(web.get("/contacts", params={"id": contact_id}))
 
     assert "History" in body
     assert "Letters" in body
@@ -611,7 +613,7 @@ def test_deleting_a_contact_leaves_the_released_letters_readable(web, factory):
 
     # And it is still readable where the letter lives: the card names its
     # recipient from its own fields, with no contact row left to ask.
-    body = web.get(f"/client/{client_id}/advice").text
+    body = rendered(web.get(f"/client/{client_id}/advice"))
     assert "Marlene Kühn" in body
     assert "Handelsblatt" in body
 
@@ -755,6 +757,6 @@ def test_the_pitch_list_shows_the_date_it_already_went_out(web, factory):
         )
         client_id = client.id
 
-    body = web.get(f"/client/{client_id}/advice").text
+    body = rendered(web.get(f"/client/{client_id}/advice"))
 
     assert "schon angeschrieben am" in body

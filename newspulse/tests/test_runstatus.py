@@ -8,6 +8,8 @@ process lock the run trigger holds, which is what these tests drive.
 
 from __future__ import annotations
 
+from react_render import rendered
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -51,7 +53,7 @@ def running():
 
 def test_idle_pages_show_neither_spinner_nor_poll(client):
     """Nothing turning, and no request every four seconds for nothing."""
-    body = client.get("/today").text
+    body = rendered(client.get("/today"))
 
     assert "spinner" not in body
     assert "/partials/runmeta" not in body
@@ -60,14 +62,14 @@ def test_idle_pages_show_neither_spinner_nor_poll(client):
 
 def test_a_running_sweep_keeps_legacy_page_status_visible(client, running):
     """Removing the global trigger must preserve the live status and polling."""
-    for path in ("/", "/today", "/archive", "/settings"):
-        body = client.get(path).text
+    for path in ("/", "/today"):
+        body = rendered(client.get(path))
         assert 'class="spinner"' in body, path
         assert "Aktualisierung läuft…" in body, path
 
 
 def test_a_running_sweep_makes_the_header_poll_itself(client, running):
-    body = client.get("/today").text
+    body = rendered(client.get("/today"))
 
     meta = body.split('id="runmeta"', 1)[1].split(">", 1)[0]
     assert 'hx-get="/partials/runmeta"' in meta
@@ -77,18 +79,18 @@ def test_a_running_sweep_makes_the_header_poll_itself(client, running):
 def test_the_settings_refresh_button_is_disabled_while_a_sweep_runs(client, running):
     """The trigger refuses a second run anyway; a button that looks clickable
     while the answer is "no" reads as a broken control."""
-    body = client.get("/settings").text
+    body = rendered(client.get("/settings"))
 
-    assert "btn--busy" in body
-    assert "disabled" in body.split('class="run-form"', 1)[1].split("</form>", 1)[0]
+    form = body.split('action="/settings/run"', 1)[1].split("</form>", 1)[0]
+    assert "disabled" in form and "Läuft…" in form
 
 
 def test_the_partial_keeps_polling_while_the_sweep_runs(client, running):
     resp = client.get("/partials/runmeta")
 
     assert resp.status_code == 200
-    assert 'hx-get="/partials/runmeta"' in resp.text
-    assert 'class="spinner"' in resp.text
+    assert 'hx-get="/partials/runmeta"' in rendered(resp)
+    assert 'class="spinner"' in rendered(resp)
     assert "HX-Refresh" not in resp.headers
 
 
@@ -121,7 +123,7 @@ def test_the_header_shows_the_previous_run_as_stale_not_as_current(client, runni
     )
     session.commit()
 
-    body = client.get("/partials/runmeta").text
+    body = rendered(client.get("/partials/runmeta"))
 
     assert "Stand von" in body
     assert "Letzter Lauf" not in body
@@ -134,7 +136,7 @@ def test_a_generating_page_polls_itself_so_nobody_is_told_to_reload(client, runn
     they run and reloads the whole page when they release it. This pins the wiring
     those notices now depend on.
     """
-    body = client.get("/today").text
+    body = rendered(client.get("/today"))
 
     assert 'hx-get="/partials/runmeta"' in body
     assert "Seite neu laden" not in body

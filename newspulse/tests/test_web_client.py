@@ -10,6 +10,8 @@ and to compose, correctly.
 
 from __future__ import annotations
 
+from react_render import rendered
+
 import datetime as dt
 import re
 
@@ -180,7 +182,7 @@ def test_shows_profile_and_full_archive_newest_first(factory, client):
         c = _seed_multi_month(s)
         client_id = c.id
 
-    body = client.get(f"/client/{client_id}").text
+    body = rendered(client.get(f"/client/{client_id}"))
 
     assert "Alpha AG" in body  # profile header
     assert _headline_count(body) == 4  # the full archive
@@ -202,7 +204,7 @@ def test_row_shows_the_today_field_set(factory, client):
         s.commit()
         client_id = c.id
 
-    body = client.get(f"/client/{client_id}").text
+    body = rendered(client.get(f"/client/{client_id}"))
 
     assert 'href="https://ex.de/delta"' in body  # headline out-link
     assert 'target="_blank"' in body
@@ -220,10 +222,10 @@ def test_date_range_filter_narrows_to_month(factory, client):
         c = _seed_multi_month(s)
         client_id = c.id
 
-    body = client.get(
+    body = rendered(client.get(
         f"/client/{client_id}",
         params={"date_from": "2026-02-01", "date_to": "2026-02-28"},
-    ).text
+    ))
 
     assert "FEB Rueckruf" in body
     assert "JAN Produktstart" not in body
@@ -237,7 +239,7 @@ def test_source_filter_narrows(factory, client):
         c = _seed_multi_month(s)
         client_id = c.id
 
-    body = client.get(f"/client/{client_id}", params={"source": "Spiegel"}).text
+    body = rendered(client.get(f"/client/{client_id}", params={"source": "Spiegel"}))
 
     assert "FEB Rueckruf" in body  # the only Spiegel article
     assert "JAN Produktstart" not in body  # FAZ
@@ -250,7 +252,7 @@ def test_category_filter_narrows(factory, client):
         c = _seed_multi_month(s)
         client_id = c.id
 
-    body = client.get(f"/client/{client_id}", params={"category": "personalie"}).text
+    body = rendered(client.get(f"/client/{client_id}", params={"category": "personalie"}))
 
     assert "MAR Neuer Finanzvorstand" in body  # the only personalie article
     assert "JAN Produktstart" not in body
@@ -275,12 +277,12 @@ def test_search_narrows_over_headline_and_summary(factory, client):
         client_id = c.id
 
     # A term only in a headline surfaces that row and not the other.
-    title_body = client.get(f"/client/{client_id}", params={"q": "Schlagwort"}).text
+    title_body = rendered(client.get(f"/client/{client_id}", params={"q": "Schlagwort"}))
     assert "title-hit" in title_body
     assert "summary-hit" not in title_body
 
     # A term only in a summary surfaces the other row.
-    summary_body = client.get(f"/client/{client_id}", params={"q": "Sonderwort"}).text
+    summary_body = rendered(client.get(f"/client/{client_id}", params={"q": "Sonderwort"}))
     assert "summary-hit" in summary_body
     assert "title-hit" not in summary_body
 
@@ -307,9 +309,9 @@ def test_filters_compose(factory, client):
         s.commit()
         client_id = c.id
 
-    body = client.get(
+    body = rendered(client.get(
         f"/client/{client_id}", params={"source": "FAZ", "category": "krise"}
-    ).text
+    ))
 
     # Only the row matching BOTH filters survives; each filter alone keeps two.
     assert "faz-krise" in body
@@ -342,10 +344,10 @@ def test_date_range_and_search_filters_compose(factory, client):
         s.commit()
         client_id = c.id
 
-    body = client.get(
+    body = rendered(client.get(
         f"/client/{client_id}",
         params={"date_from": "2026-02-01", "date_to": "2026-02-28", "q": "Sonderwort"},
-    ).text
+    ))
 
     # Only the February row matching the term survives the intersection.
     assert "feb-match" in body
@@ -369,11 +371,11 @@ def test_archive_paginates_at_named_page_size(factory, client):
         s.commit()
         client_id = c.id
 
-    first = client.get(f"/client/{client_id}").text
+    first = rendered(client.get(f"/client/{client_id}"))
     assert _headline_count(first) == _PAGE_SIZE  # not the whole archive at once
     assert "page=2" in first  # a next link exists
 
-    second = client.get(f"/client/{client_id}", params={"page": 2}).text
+    second = rendered(client.get(f"/client/{client_id}", params={"page": 2}))
     assert _headline_count(second) == overflow  # the remainder
     assert "page=1" in second  # a prev link back
 
@@ -390,7 +392,7 @@ def test_zero_relevance_row_is_excluded(factory, client):
         s.commit()
         client_id = c.id
 
-    body = client.get(f"/client/{client_id}").text
+    body = rendered(client.get(f"/client/{client_id}"))
     assert "NOISE Nicht relevant" not in body
     assert "Keine Artikel" in body  # empty state
 
@@ -424,7 +426,7 @@ def test_clients_index_lists_portfolio_with_counts(factory, client):
         )
         s.commit()
 
-    body = client.get("/clients?view=classic").text
+    body = rendered(client.get("/clients?view=classic"))
 
     assert "Alpha AG" in body
     assert "Beta AG" in body
@@ -450,7 +452,7 @@ def test_clients_index_lists_portfolio_with_counts(factory, client):
 def test_clients_index_excludes_irrelevant_and_handles_empty(factory, client):
     """A relevance_score=0 pair is not counted, and no clients renders an empty
     state rather than an error."""
-    assert "Noch keine Mandanten" in client.get("/clients?view=classic").text
+    assert "Noch keine Mandanten" in rendered(client.get("/clients?view=classic"))
 
     with factory() as s:
         c = _seed_client(s, name="Alpha AG")
@@ -460,7 +462,7 @@ def test_clients_index_excludes_irrelevant_and_handles_empty(factory, client):
         )
         s.commit()
 
-    body = client.get("/clients?view=classic").text
+    body = rendered(client.get("/clients?view=classic"))
     # A dismissed match must not be counted anywhere on the row.
     assert _counts(_content(body).split("Alpha AG", 1)[1]) == ["0", "0", "0"]
 
@@ -530,10 +532,10 @@ def test_share_of_voice_panel_renders_the_comparison(factory, client):
         s.commit()
         a_id = a.id
 
-    body = client.get(f"/client/{a_id}").text
+    body = rendered(client.get(f"/client/{a_id}"))
     assert "Share of Voice" in body
     assert "Beta AG" in body
-    assert "50.0%" in body
+    assert "50.0 %" in body
 
 
 def test_without_competitors_the_panel_explains_rather_than_showing_100_percent(
@@ -543,8 +545,8 @@ def test_without_competitors_the_panel_explains_rather_than_showing_100_percent(
         a = _seed_client(s, name="Alpha AG")
         s.commit()
         a_id = a.id
-    body = client.get(f"/client/{a_id}").text
-    assert "Noch keine Wettbewerber hinterlegt" in body
+    body = rendered(client.get(f"/client/{a_id}"))
+    assert "Noch keine Vergleichsgruppe." in body
 
 
 def test_a_client_card_carries_no_nested_links(factory, client):
@@ -558,7 +560,7 @@ def test_a_client_card_carries_no_nested_links(factory, client):
         a.competitors.append(b)
         s.commit()
 
-    body = client.get("/clients?view=classic").text
+    body = rendered(client.get("/clients?view=classic"))
     card_start = body.index('class="pcard')
     card_end = body.index("</a>", card_start)
     card = body[card_start:card_end]
@@ -577,9 +579,9 @@ def test_the_deep_dive_is_where_the_competitors_and_the_workspace_live(factory, 
         s.commit()
         a_id = a.id
 
-    body = client.get(f"/client/{a_id}").text
+    body = rendered(client.get(f"/client/{a_id}"))
     assert "Beta AG" in body                      # share of voice
-    assert f"/client/{a_id}/advice" in body
+    assert f"/client/{a_id}/opportunities" in body
     # The workbook is no longer a trailing link in the strip — a download is not
     # a place, and beside ten tabs it read as an eleventh that had slipped. It
     # sits on this page, which is the one holding the coverage it exports.
@@ -588,8 +590,8 @@ def test_the_deep_dive_is_where_the_competitors_and_the_workspace_live(factory, 
     assert f"/client/{a_id}/export.xlsx" in body
     # The Coverage Map moved into the Wettbewerb tab, where the question it
     # answers is actually asked; the workspace strip carries that instead.
-    assert f"/client/{a_id}/wettbewerb" in body
-    assert f"/client/{a_id}/profil" in body
+    assert f"/client/{a_id}/twin#wettbewerb" in body
+    assert f"/client/{a_id}/twin" in body
 
 
 # --- The competitor picker -----------------------------------------------------
@@ -613,7 +615,7 @@ def test_only_companies_marked_as_competitors_can_be_added(factory, client):
         session.commit()
         subject_id = subject.id
 
-    body = client.get(f"/client/{subject_id}").text
+    body = rendered(client.get(f"/client/{subject_id}/twin"))
 
     # Nowhere in the page's own content, not merely absent from one control:
     # the mandate is never a yardstick, whichever picker it would appear in.
@@ -634,7 +636,7 @@ def test_with_no_competitor_anywhere_the_page_offers_the_manual_field(factory, c
         session.commit()
         subject_id = subject.id
 
-    body = client.get(f"/client/{subject_id}").text
+    body = rendered(client.get(f"/client/{subject_id}/twin"))
 
     assert "Wettbewerber hinzufügen" in body
     assert f'action="/client/{subject_id}/competitors/accept"' in body
@@ -670,7 +672,7 @@ def test_the_client_tab_leads_with_its_positioning_drafts(factory, client):
         session.commit()
         subject_id = subject.id
 
-    body = client.get(f"/client/{subject_id}/advice").text
+    body = rendered(client.get(f"/client/{subject_id}/advice"))
 
     assert "Börsenschließungen: Liquidität als Infrastruktur" in body
     assert "Zwei Absätze Text." in body
@@ -703,13 +705,13 @@ def test_a_running_draft_makes_the_page_fetch_its_own_result(factory, client):
         session.commit()
         subject_id = subject.id
 
-    idle = client.get(f"/client/{subject_id}/advice").text
+    idle = rendered(client.get(f"/client/{subject_id}/advice"))
     assert "hx-target=\"#positioning\"" not in idle
 
     # Hold the guard the way a running draft does.
     assert advisory._drafting.acquire(blocking=False)
     try:
-        busy = client.get(f"/client/{subject_id}/advice").text
+        busy = rendered(client.get(f"/client/{subject_id}/advice"))
     finally:
         advisory._drafting.release()
 
@@ -734,13 +736,13 @@ def test_one_publisher_is_one_choice_however_the_feed_spelled_it(factory, client
             )
         s.commit()
 
-    body = client.get("/archive").text
+    body = rendered(client.get("/archive"))
     options = body.count('value="Finanzen.net"') + body.count('value="finanzen.net"') \
         + body.count('value="FINANZEN.NET"')
     assert options == 1, "one publisher, one entry in the dropdown"
 
     # And picking it finds every clip, whichever way the feed wrote the name.
-    filtered = client.get("/archive", params={"source": "finanzen.net"}).text
+    filtered = rendered(client.get("/archive", params={"source": "finanzen.net"}))
     assert _headline_count(filtered) == 4
 
 
@@ -758,7 +760,7 @@ def test_a_portfolio_of_zeroes_says_why_it_is_empty(factory, client):
         )
         s.commit()
 
-    body = _content(client.get("/").text)
+    body = _content(rendered(client.get("/")))
 
     assert "Zuletzt Berichterstattung am" in body
     assert (today - dt.timedelta(days=2)).strftime("%d.%m.%Y") in body
@@ -776,7 +778,7 @@ def test_a_portfolio_with_coverage_today_says_nothing_extra(factory, client):
         )
         s.commit()
 
-    body = _content(client.get("/").text)
+    body = _content(rendered(client.get("/")))
 
     assert "Zuletzt Berichterstattung am" not in body
 
@@ -809,8 +811,8 @@ def test_a_benchmark_gets_no_workspace_and_no_strip_pointing_at_one(factory, cli
     assert page.status_code == 200
     assert client.get(f"/client/{rival_id}/wettbewerb").status_code == 200
     # And it carries no strip: every tab on it would now be a dead link.
-    assert 'class="subtabs"' not in page.text
-    assert "Vergleichsunternehmen" in page.text
+    assert 'class="subtabs"' not in rendered(page)
+    assert "Vergleichsunternehmen" in rendered(page)
 
 
 def test_the_generate_buttons_refuse_a_benchmark_too(factory, client):
@@ -875,10 +877,10 @@ def test_the_archive_names_the_radar_material_it_does_not_list(factory, client):
         session.commit()
         cid = mandate.id
 
-    body = client.get(f"/client/{cid}").text
+    body = rendered(client.get(f"/client/{cid}"))
 
     assert "3 Beiträge aus dem Themen-Radar" in body
-    assert f"/client/{cid}/market" in body
+    assert f"/client/{cid}/twin#marktumfeld" in body
     # And it stays an archive of coverage: the radar pieces are not listed here.
     assert "Etwas über das Themenfeld 0" not in body
 
@@ -895,7 +897,7 @@ def test_a_mandate_with_no_radar_material_says_nothing_about_it(factory, client)
         session.commit()
         cid = mandate.id
 
-    body = client.get(f"/client/{cid}").text
+    body = rendered(client.get(f"/client/{cid}"))
 
     assert "Themen-Radar" not in body
 
@@ -910,6 +912,6 @@ def test_the_count_is_bounded_by_its_own_window(factory, client):
         session.commit()
         cid = mandate.id
 
-    body = client.get(f"/client/{cid}").text
+    body = rendered(client.get(f"/client/{cid}"))
 
     assert "1 Beiträge aus dem Themen-Radar der letzten 30 Tage" in body

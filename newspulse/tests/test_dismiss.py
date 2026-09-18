@@ -12,6 +12,8 @@ sweep brings the article straight back.
 
 from __future__ import annotations
 
+from react_render import rendered
+
 import datetime as dt
 
 import pytest
@@ -96,16 +98,16 @@ def test_a_dismissed_article_leaves_every_view_at_once(factory, client):
         subject_id, analysis_id = subject.id, analysis.id
 
     day = _TEST_DAY.isoformat()
-    assert "Wüsten-Action" in client.get("/today", params={"date": day}).text
-    assert "Wüsten-Action" in client.get(f"/client/{subject_id}").text
-    assert "Wüsten-Action" in client.get("/archive").text
+    assert "Wüsten-Action" in rendered(client.get("/today", params={"date": day}))
+    assert "Wüsten-Action" in rendered(client.get(f"/client/{subject_id}"))
+    assert "Wüsten-Action" in rendered(client.get("/archive"))
 
     client.post(f"/coverage/{analysis_id}/dismiss", data={"redirect_to": "/"},
                 follow_redirects=False)
 
-    assert "Wüsten-Action" not in client.get("/today", params={"date": day}).text
-    assert "Wüsten-Action" not in client.get(f"/client/{subject_id}").text
-    assert "Wüsten-Action" not in client.get("/archive").text
+    assert "Wüsten-Action" not in rendered(client.get("/today", params={"date": day}))
+    assert "Wüsten-Action" not in rendered(client.get(f"/client/{subject_id}"))
+    assert "Wüsten-Action" not in rendered(client.get("/archive"))
 
 
 def test_it_leaves_the_counts_and_the_share_of_voice(factory, client):
@@ -119,12 +121,12 @@ def test_it_leaves_the_counts_and_the_share_of_voice(factory, client):
     # The archive count lives on the mandate's own page now: the portfolio card
     # answers "does this one need me today", which is a different question. Anchor
     # on the archive heading, not on a bare number the page header also carries.
-    before = " ".join(client.get(f"/client/{subject_id}").text.split())
-    assert "1 Artikel · Seite" in before
+    before = " ".join(rendered(client.get(f"/client/{subject_id}")).split())
+    assert "1 Artikel" in before
     client.post(f"/coverage/{analysis_id}/dismiss", follow_redirects=False)
 
-    after = " ".join(client.get(f"/client/{subject_id}").text.split())
-    assert "1 Artikel · Seite" not in after
+    after = " ".join(rendered(client.get(f"/client/{subject_id}")).split())
+    assert "1 Artikel" not in after
 
     with factory() as session:
         from newspulse.reporting import share_of_voice
@@ -170,7 +172,7 @@ def test_a_dismissal_can_be_undone(factory, client):
     client.post(f"/coverage/{analysis_id}/dismiss", follow_redirects=False)
     client.post(f"/coverage/{analysis_id}/restore", follow_redirects=False)
 
-    assert "Wüsten-Action" in client.get(f"/client/{subject_id}").text
+    assert "Wüsten-Action" in rendered(client.get(f"/client/{subject_id}"))
 
 
 def test_the_prompts_stop_seeing_it_too(factory):

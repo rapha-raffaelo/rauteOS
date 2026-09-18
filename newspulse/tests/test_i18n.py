@@ -7,6 +7,8 @@ tests check both the lookup and that real pages actually change.
 
 from __future__ import annotations
 
+from react_render import rendered
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -108,22 +110,22 @@ def test_an_unknown_language_code_stores_the_default(client):
     ],
 )
 def test_pages_render_in_the_selected_language(client, path, german, english):
-    assert german in client.get(path).text
+    assert german in rendered(client.get(path))
 
     client.cookies.set(i18n.COOKIE_NAME, "en")
-    body = client.get(path).text
+    body = rendered(client.get(path))
     assert english in body
 
 
 def test_the_html_lang_attribute_follows_the_choice(client):
-    assert 'lang="de"' in client.get("/today").text
+    assert 'lang="de"' in rendered(client.get("/today"))
     client.cookies.set(i18n.COOKIE_NAME, "en")
-    assert 'lang="en"' in client.get("/today").text
+    assert 'lang="en"' in rendered(client.get("/today"))
 
 
 def test_both_flags_are_offered_on_every_page(client):
     for path in ("/", "/clients", "/archive", "/settings"):
-        body = client.get(path).text
+        body = rendered(client.get(path))
         assert "/language/de" in body, path
         assert "/language/en" in body, path
 
@@ -136,7 +138,7 @@ def test_no_german_chrome_survives_on_an_english_page(client, factory):
         s.commit()
 
     client.cookies.set(i18n.COOKIE_NAME, "en")
-    body = client.get("/today").text
+    body = rendered(client.get("/today"))
     for leftover in ("Einstellungen", "Aktualisieren", "Warnungen", "Gesamter Tag"):
         assert leftover not in body, leftover
 
@@ -171,7 +173,7 @@ def test_the_impulse_column_translates_its_chrome_but_not_the_draft(client, fact
         s.commit()
 
     client.cookies.set(i18n.COOKIE_NAME, "en")
-    body = client.get("/today").text
+    body = rendered(client.get("/today"))
 
     assert "Openings" in body
     assert "Copy" in body
@@ -183,7 +185,7 @@ def test_the_impulse_column_translates_its_chrome_but_not_the_draft(client, fact
 
 def test_ask_raute_is_reachable_from_every_page(client):
     for path in ("/", "/clients", "/archive", "/settings"):
-        body = client.get(path).text
+        body = rendered(client.get(path))
         assert "Ask RAUTE" in body, path
         assert "captain.svg" not in body, path
 
@@ -215,15 +217,15 @@ def test_category_labels_are_translated_but_the_stored_value_is_not(client, fact
         ))
         s.commit()
 
-    de = client.get("/today").text
+    de = rendered(client.get("/today"))
     assert ">Krise</span>" in de
 
     client.cookies.set(i18n.COOKIE_NAME, "en")
-    en = client.get("/today").text
+    en = rendered(client.get("/today"))
     assert ">Crisis</span>" in en
     assert ">Krise</span>" not in en
     # The filter still submits the stored German value.
-    assert 'value="krise"' in client.get("/archive").text
+    assert 'value="krise"' in rendered(client.get("/archive"))
 
 
 def test_every_category_has_an_english_label():

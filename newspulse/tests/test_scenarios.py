@@ -23,6 +23,8 @@ The disciplines under test, in order:
 
 from __future__ import annotations
 
+from react_render import rendered
+
 import datetime as dt
 import json
 
@@ -1043,7 +1045,7 @@ def _seeded_issue(session, mandate) -> Issue:
 
 def test_the_register_renders_the_courses_and_the_options(session, mandate, web):
     _seeded_issue(session, mandate)
-    body = web.get(f"/client/{mandate.id}/issues").text
+    body = rendered(web.get(f"/client/{mandate.id}/issues"))
 
     assert "Szenarien" in body
     assert "Wahrscheinlicher Verlauf" in body
@@ -1059,13 +1061,13 @@ def test_the_register_marks_every_course_as_a_scenario(session, mandate, web):
     """"Jedes Szenario ist im Text als Szenario gekennzeichnet" — the stored
     narrative had to read as one, and the page states it besides."""
     _seeded_issue(session, mandate)
-    body = web.get(f"/client/{mandate.id}/issues").text
+    body = rendered(web.get(f"/client/{mandate.id}/issues"))
     assert ">Szenario</span>" in body
 
 
 def test_the_register_carries_the_mark_a_fired_condition_left(session, mandate, web):
     _seeded_issue(session, mandate)
-    body = web.get(f"/client/{mandate.id}/issues").text
+    body = rendered(web.get(f"/client/{mandate.id}/issues"))
     assert "Ausgelöst" in body
     # The condition as its translated sentence, and beside it what matched —
     # the note carries the outlet alone, so nothing German is stored into it.
@@ -1090,7 +1092,7 @@ def test_the_register_says_when_no_recommendation_was_named(session, mandate, we
         ),
         now=_NOW,
     )
-    body = web.get(f"/client/{mandate.id}/issues").text
+    body = rendered(web.get(f"/client/{mandate.id}/issues"))
     assert "Die Antwort nannte keine Empfehlung." in body
 
 
@@ -1101,7 +1103,7 @@ def test_the_register_renders_in_english_without_german_leftovers(
 
     _seeded_issue(session, mandate)
     web.cookies.set(i18n.COOKIE_NAME, "en")
-    body = web.get(f"/client/{mandate.id}/issues").text
+    body = rendered(web.get(f"/client/{mandate.id}/issues"))
 
     assert "Scenarios" in body
     assert "Likely case" in body

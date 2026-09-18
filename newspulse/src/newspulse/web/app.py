@@ -1,6 +1,7 @@
 """FastAPI application factory for the NewsPulse dashboard.
 
-Shared Jinja + HTMX shell with a progressively migrated React Desk. The app is
+React navigation and primary workspaces with a minimal HTML document host.
+Legacy specialist page bodies continue to use Jinja + HTMX. The app is
 created by ``create_app()`` so tests can build a fresh instance and override the database
 session dependency to point at a seeded fixture database — nothing here reaches
 for the process-wide engine at import time.
@@ -240,6 +241,9 @@ def assistant_context(request) -> dict:
 # One Jinja environment for the whole app, shared with the route modules via the
 # app instance (see ``create_app``). Kept module-level so it is built once.
 templates = Jinja2Templates(directory=str(_TEMPLATES_DIR))
+from .react_pages import shell_data, tabs_data
+from .frontend import page_assets
+templates.env.globals.update(shell_data=shell_data, tabs_data=tabs_data, shell_assets=lambda: page_assets('shell'))
 # Scheme allow-list filter used by every template that renders a feed URL into an
 # href (see safe_url); registered here so all templates share one definition.
 templates.env.filters["safe_url"] = safe_url

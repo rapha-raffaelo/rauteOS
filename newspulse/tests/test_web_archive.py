@@ -7,6 +7,8 @@ seed more than one and assert the filters compose across them.
 
 from __future__ import annotations
 
+from react_render import rendered
+
 import datetime as dt
 
 import pytest
@@ -88,7 +90,7 @@ def portfolio(factory):
 
 
 def test_archive_spans_every_client_by_default(client, portfolio):
-    body = client.get("/archive").text
+    body = rendered(client.get("/archive"))
     assert "ALPHA-JUNI-FAZ" in body
     assert "ALPHA-JULI-SZ" in body
     assert "BETA-JULI-FAZ" in body
@@ -98,20 +100,20 @@ def test_archive_spans_every_client_by_default(client, portfolio):
 def test_filter_by_client(client, portfolio, factory):
     with factory() as s:
         beta_id = s.query(Client).filter_by(name="Beta AG").one().id
-    body = client.get("/archive", params={"client": beta_id}).text
+    body = rendered(client.get("/archive", params={"client": beta_id}))
     assert "BETA-JULI-FAZ" in body
     assert "ALPHA-JUNI-FAZ" not in body
 
 
 def test_filter_by_month(client, portfolio):
-    body = client.get("/archive", params={"month": "2026-06"}).text
+    body = rendered(client.get("/archive", params={"month": "2026-06"}))
     assert "ALPHA-JUNI-FAZ" in body
     assert "ALPHA-JULI-SZ" not in body
     assert "BETA-JULI-FAZ" not in body
 
 
 def test_filter_by_publisher(client, portfolio):
-    body = client.get("/archive", params={"source": "FAZ"}).text
+    body = rendered(client.get("/archive", params={"source": "FAZ"}))
     assert "ALPHA-JUNI-FAZ" in body
     assert "BETA-JULI-FAZ" in body
     assert "ALPHA-JULI-SZ" not in body
@@ -119,14 +121,14 @@ def test_filter_by_publisher(client, portfolio):
 
 def test_filters_compose_as_and_terms(client, portfolio):
     """Publisher AND month together narrow to the single matching row."""
-    body = client.get("/archive", params={"source": "FAZ", "month": "2026-07"}).text
+    body = rendered(client.get("/archive", params={"source": "FAZ", "month": "2026-07"}))
     assert "BETA-JULI-FAZ" in body
     assert "ALPHA-JUNI-FAZ" not in body  # right publisher, wrong month
     assert "ALPHA-JULI-SZ" not in body   # right month, wrong publisher
 
 
 def test_free_text_search_matches_headline(client, portfolio):
-    body = client.get("/archive", params={"q": "Vorstand"}).text
+    body = rendered(client.get("/archive", params={"q": "Vorstand"}))
     assert "BETA-JULI-FAZ" in body
     assert "ALPHA-JUNI-FAZ" not in body
 
@@ -134,7 +136,7 @@ def test_free_text_search_matches_headline(client, portfolio):
 def test_month_dropdown_lists_every_month_with_coverage(client, portfolio):
     """Computed over the whole archive, so picking a month doesn't collapse the
     dropdown to that one option."""
-    body = client.get("/archive", params={"month": "2026-07"}).text
+    body = rendered(client.get("/archive", params={"month": "2026-07"}))
     assert 'value="2026-06"' in body
     assert 'value="2026-07"' in body
     assert "Juni 2026" in body and "Juli 2026" in body
@@ -144,7 +146,7 @@ def test_unparseable_month_degrades_to_no_filter(client, portfolio):
     """A hand-edited URL must not 500 or silently empty the page."""
     resp = client.get("/archive", params={"month": "not-a-month"})
     assert resp.status_code == 200
-    assert "3 Artikel" in resp.text
+    assert "3 Artikel" in rendered(resp)
 
 
 def test_irrelevant_analyses_are_excluded(client, factory):
@@ -157,7 +159,7 @@ def test_irrelevant_analyses_are_excluded(client, factory):
               source="FAZ", day=dt.date(2026, 7, 1), category=Category.SONSTIGES,
               relevance=0)
         s.commit()
-    body = client.get("/archive").text
+    body = rendered(client.get("/archive"))
     assert "NOISE Nicht relevant" not in body
     assert "Keine Artikel" in body
 
@@ -165,7 +167,7 @@ def test_irrelevant_analyses_are_excluded(client, factory):
 def test_empty_archive_renders_an_empty_state(client):
     resp = client.get("/archive")
     assert resp.status_code == 200
-    assert "Keine Artikel" in resp.text
+    assert "Keine Artikel" in rendered(resp)
 
 
 def test_archive_can_be_filtered_to_one_media_tier(client, factory):
@@ -183,16 +185,16 @@ def test_archive_can_be_filtered_to_one_media_tier(client, factory):
               source="Oberberg-Aktuell", day=dt.date(2026, 7, 12), category=Category.SONSTIGES)
         s.commit()
 
-    tier1 = client.get("/archive", params={"tier": "1"}).text
+    tier1 = rendered(client.get("/archive", params={"tier": "1"}))
     assert "LEIT Story" in tier1
     assert "TICKER Story" not in tier1 and "REGIO Story" not in tier1
 
-    tier3 = client.get("/archive", params={"tier": "3"}).text
+    tier3 = rendered(client.get("/archive", params={"tier": "3"}))
     assert "TICKER Story" in tier3
     assert "LEIT Story" not in tier3
 
     # Unlisted outlets fall to the neutral middle tier.
-    tier2 = client.get("/archive", params={"tier": "2"}).text
+    tier2 = rendered(client.get("/archive", params={"tier": "2"}))
     assert "REGIO Story" in tier2
 
 
@@ -204,7 +206,7 @@ def test_an_unknown_tier_value_shows_everything(client, factory):
         _seed(s, client_obj=c, title="EINE Story", url="https://ex.de/1",
               source="FAZ", day=dt.date(2026, 7, 10), category=Category.KRISE)
         s.commit()
-    assert "EINE Story" in client.get("/archive", params={"tier": "unfug"}).text
+    assert "EINE Story" in rendered(client.get("/archive", params={"tier": "unfug"}))
 
 
 def test_a_competitor_is_not_offered_in_the_client_filter(client, factory):
@@ -215,12 +217,12 @@ def test_a_competitor_is_not_offered_in_the_client_filter(client, factory):
         s.add(Client(name="Rivale AG", is_competitor=True))
         s.commit()
 
-    body = client.get("/archive").text
+    body = rendered(client.get("/archive"))
     assert "Alpha AG" in body
     assert "Rivale AG" not in body
 
     # Opting in widens every control, not just the rows.
-    widened = client.get("/archive", params={"with_competitors": "1"}).text
+    widened = rendered(client.get("/archive", params={"with_competitors": "1"}))
     assert "Rivale AG" in widened
 
 
@@ -236,6 +238,6 @@ def test_publisher_options_follow_the_same_scope(client, factory):
               source="Nurwettbewerb", day=dt.date(2026, 7, 11), category=Category.KRISE)
         s.commit()
 
-    body = client.get("/archive").text
+    body = rendered(client.get("/archive"))
     assert "Mandantenblatt" in body
     assert "Nurwettbewerb" not in body

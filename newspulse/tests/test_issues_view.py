@@ -20,6 +20,8 @@ clock the routes read, and a fixed calendar rots.
 
 from __future__ import annotations
 
+from react_render import rendered
+
 import datetime as dt
 import hashlib
 
@@ -150,12 +152,12 @@ def _opened(session, mandate) -> Issue:
 def test_the_empty_register_is_a_statement_not_a_missing_page(web, mandate):
     page = web.get(f"/client/{mandate.id}/issues")
     assert page.status_code == 200
-    assert "Kein offenes Issue" in page.text
+    assert "Kein offenes Issue" in rendered(page)
 
 
 def test_the_tab_stands_in_the_workspace_strip(web, mandate):
-    page = web.get(f"/client/{mandate.id}/heute")
-    assert f'href="/client/{mandate.id}/issues"' in page.text
+    page = web.get(f"/client/{mandate.id}/opportunities")
+    assert f'value="/client/{mandate.id}/issues"' in rendered(page)
 
 
 def test_a_benchmark_gets_no_register(web, session, mandate):
@@ -169,10 +171,10 @@ def test_the_offer_names_the_repetition_and_carries_both_buttons(web, session, m
     """DEC-3's offer: what the repetition consists of, and the two answers."""
     _repetition(session, mandate)
     page = web.get(f"/client/{mandate.id}/issues")
-    assert "Issue?" in page.text
-    assert "Dieselbe Sache an" in page.text
-    assert 'action="/issues/accept"' in page.text
-    assert 'action="/issues/dismiss"' in page.text
+    assert "Issue?" in rendered(page)
+    assert "Dieselbe Sache an" in rendered(page)
+    assert 'action="/issues/accept"' in rendered(page)
+    assert 'action="/issues/dismiss"' in rendered(page)
 
 
 def test_accepting_opens_the_row_with_age_movement_and_count(web, session, mandate):
@@ -189,10 +191,10 @@ def test_accepting_opens_the_row_with_age_movement_and_count(web, session, manda
     assert resp.status_code == 303
     assert session.scalar(select(func.count()).select_from(Issue)) == 1
     page = web.get(f"/client/{mandate.id}/issues")
-    assert "Tage alt" in page.text or "Tag alt" in page.text
-    assert "letzte Bewegung" in page.text
-    assert "2" in page.text and "Signale" in page.text
-    assert "eröffnet von" in page.text and "mensch" in page.text
+    assert "Tage alt" in rendered(page) or "Tag alt" in rendered(page)
+    assert "letzte Bewegung" in rendered(page)
+    assert "2" in rendered(page) and "Signale" in rendered(page)
+    assert "eröffnet von" in rendered(page) and "mensch" in rendered(page)
 
 
 def test_dismissing_silences_the_offer(web, session, mandate):
@@ -208,7 +210,7 @@ def test_dismissing_silences_the_offer(web, session, mandate):
     )
     assert session.scalar(select(func.count()).select_from(IssueDismissal)) == 1
     page = web.get(f"/client/{mandate.id}/issues")
-    assert "Issue?" not in page.text
+    assert "Issue?" not in rendered(page)
     assert session.scalar(select(func.count()).select_from(Issue)) == 0
 
 
@@ -243,7 +245,7 @@ def test_grading_shows_the_value_with_the_person_who_set_it(web, session, mandat
         follow_redirects=False,
     )
     page = web.get(f"/client/{mandate.id}/issues")
-    assert "gesetzt von" in page.text
+    assert "gesetzt von" in rendered(page)
     session.refresh(opened)
     assert opened.probability == 4
     assert opened.impact == 3
@@ -264,7 +266,7 @@ def test_an_out_of_scale_grade_is_refused_without_a_write(web, session, mandate)
 def test_an_ungraded_row_says_not_set_rather_than_a_number(web, session, mandate):
     _opened(session, mandate)
     page = web.get(f"/client/{mandate.id}/issues")
-    assert "noch nicht gesetzt" in page.text
+    assert "noch nicht gesetzt" in rendered(page)
 
 
 # --- The heatmap's named column -----------------------------------------------------
@@ -278,9 +280,9 @@ def test_an_ungraded_issue_stands_in_the_named_column_not_the_field(
     opened = _opened(session, mandate)
     issues.grade(session, opened, by="lucas", probability=3)  # impact still unset
     page = web.get(f"/client/{mandate.id}/issues")
-    ungraded = page.text.split("data-ungraded", 1)[1]
+    ungraded = rendered(page).split("data-ungraded", 1)[1]
     assert opened.title in ungraded
-    field = page.text.split('aria-label="Heatmap"', 1)[1].split("data-ungraded")[0]
+    field = rendered(page).split('aria-label="Heatmap"', 1)[1].split("data-ungraded")[0]
     assert "heat__dot" not in field
 
 
@@ -288,9 +290,9 @@ def test_a_fully_graded_issue_is_plotted_on_its_cell(web, session, mandate):
     opened = _opened(session, mandate)
     issues.grade(session, opened, by="lucas", probability=2, impact=5)
     page = web.get(f"/client/{mandate.id}/issues")
-    cell = page.text.split('data-cell="2-5"', 1)[1].split("</div>")[0]
+    cell = rendered(page).split('data-cell="2-5"', 1)[1].split("</div>")[0]
     assert "heat__dot" in cell
-    ungraded = page.text.split("data-ungraded", 1)[1]
+    ungraded = rendered(page).split("data-ungraded", 1)[1]
     assert opened.title not in ungraded
 
 
@@ -306,7 +308,7 @@ def test_closing_without_a_reason_keeps_the_row_open_and_says_why(
         data={"reason": "  ", "redirect_to": f"/client/{mandate.id}/issues"},
         follow_redirects=True,
     )
-    assert "fehlt die Begründung" in resp.text
+    assert "fehlt die Begründung" in rendered(resp)
     session.refresh(opened)
     assert opened.closed_at is None
 
@@ -319,9 +321,9 @@ def test_a_closed_issue_stays_readable_with_reason_and_signals(web, session, man
         follow_redirects=False,
     )
     page = web.get(f"/client/{mandate.id}/issues")
-    assert "Frühere Issues" in page.text
-    assert "Thema abgeebbt." in page.text
-    assert _MATTER in page.text  # the signals' headlines are still on the page
+    assert "Frühere Issues" in rendered(page)
+    assert "Thema abgeebbt." in rendered(page)
+    assert _MATTER in rendered(page)  # the signals' headlines are still on the page
 
 
 def test_escalating_lands_on_the_crisis_with_the_prehistory(web, session, mandate):
@@ -335,7 +337,7 @@ def test_escalating_lands_on_the_crisis_with_the_prehistory(web, session, mandat
     declared = session.get(Crisis, opened.crisis_id)
     assert declared is not None
     timeline = web.get(f"/client/{mandate.id}/krise?zeitleiste=1")
-    assert "Issue eröffnet" in timeline.text
+    assert "Issue eröffnet" in rendered(timeline)
 
 
 def test_a_stale_issue_id_is_a_redirect_not_a_500(web, mandate):
@@ -376,6 +378,6 @@ def test_the_page_renders_in_english_when_asked(web, session, mandate):
     _opened(session, mandate)
     web.post("/language/en?next=/", follow_redirects=False)
     page = web.get(f"/client/{mandate.id}/issues")
-    assert "Open issues" in page.text
-    assert "Not graded" in page.text
-    assert "last movement" in page.text
+    assert "Open issues" in rendered(page)
+    assert "Not graded" in rendered(page)
+    assert "last movement" in rendered(page)

@@ -7,6 +7,8 @@ silently emptied. These tests are the notice.
 
 from __future__ import annotations
 
+from react_render import rendered
+
 import datetime as dt
 import re
 
@@ -88,7 +90,7 @@ def test_every_page_lists_the_mandates(factory, client):
         s.commit()
 
     for path in ("/", "/today", "/archive", "/contacts", "/settings"):
-        assert _names(client.get(path).text) == ["Alpha AG", "Beta AG"], path
+        assert _names(rendered(client.get(path))) == ["Alpha AG", "Beta AG"], path
 
 
 def test_a_competitor_is_not_a_mandate(factory, client):
@@ -102,7 +104,7 @@ def test_a_competitor_is_not_a_mandate(factory, client):
         ])
         s.commit()
 
-    assert _names(client.get("/").text) == ["Alpha AG"]
+    assert _names(rendered(client.get("/"))) == ["Alpha AG"]
 
 
 def test_the_badge_counts_todays_alerts_only(factory, client):
@@ -120,7 +122,7 @@ def test_the_badge_counts_todays_alerts_only(factory, client):
         _alert(s, beta, day=today - dt.timedelta(days=1), url="https://ex.de/b1")
         s.commit()
 
-    body = client.get("/").text
+    body = rendered(client.get("/"))
     # Alpha carries a 2; Beta carries nothing rather than a grey 0, because a
     # badge that is always present stops being a signal.
     assert _badges(body) == ["2"]
@@ -138,13 +140,13 @@ def test_the_current_mandate_is_marked(factory, client):
 
     for path in (f"/client/{alpha_id}", f"/client/{alpha_id}/advice",
                  f"/client/{alpha_id}/profil"):
-        side = _sidebar(client.get(path).text)
+        side = _sidebar(rendered(client.get(path)))
         row = [ln for ln in side.splitlines() if f'href="/client/{alpha_id}/overview"' in ln]
         assert row and "is-on" in row[0], path
 
 
 def test_an_empty_portfolio_renders_no_mandate_section(factory, client):
     """A heading over nothing reads as a page that failed to load."""
-    side = _sidebar(client.get("/").text)
+    side = _sidebar(rendered(client.get("/")))
     assert "side__cl" not in side
     assert "Mandanten" not in side

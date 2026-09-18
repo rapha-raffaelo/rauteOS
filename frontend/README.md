@@ -1,8 +1,14 @@
 # RauteOS frontend
 
-React renders the Desk, Twin and journalist pages inside the existing FastAPI/Jinja shell. The
-sidebar, authentication, language cookie, Ask RAUTE and navigation remain owned
-by the server. All requests use the same origin.
+React owns the shared sidebar, top bar and client navigation, plus Desk,
+Clients, Assets, Ask RAUTE, Opportunities, Contacts, both archives, Settings, the new-client form and
+the complete client Profile (statements, company facts, guide, kickoff,
+competition and market signals). FastAPI retains authentication, validation,
+data access, integrations and jobs. Jinja hosts the HTML document and safe JSON
+bootstrap only for these migrated pages; it does not render their UI bodies.
+Older specialist screens such as KI visibility, editorial planning and coverage
+maps still render their page bodies on the server, inside the React navigation.
+All requests use the same origin.
 
 Use Node 22.22.3 (the version in CI and Docker):
 
@@ -38,9 +44,10 @@ The Twin is the second React page, at `/client/{id}/twin`. Run
 `uv run alembic upgrade head` from `newspulse/` before starting it. It consumes
 `/api/v1/clients/{id}/twin` and its statement/import endpoints. The catalogue in
 `newspulse/twin_catalog.json` contains questionnaire definitions, not client data.
-Old profile, kickoff and guide tools remain linked from the Twin.
+The complete profile is one React page. Legacy profile, kickoff and guide URLs
+resolve to the same workspace; no profile submenu is needed.
 
-The journalist workspace is at `/journalists`. It uses the existing contact book
+The contact workspace is at `/contacts`; `/journalists` redirects there. It uses the existing contact book
 plus persistent topics, preferences and relationships. From an opportunity, the
 research link includes its client, kind and ID. Only an explicit POST starts
 provider calls; GET reads the latest dated result. Research metadata is separate
@@ -67,3 +74,23 @@ The primary React destinations are `/desk`, `/clients`, `/assets`, `/ask`,
 Ask uses the existing SSE endpoint with explicit global/client/opportunity/asset
 context, separate browser-session threads and read-only suggestions. The header
 and saved text links supply context; no model request runs just by opening a page.
+
+## Shared shell and migrated pages
+
+`src/shell.jsx` renders navigation from `react-shell-data` and client tabs from
+`react-tabs-data`. `src/platform/` owns Archive, Settings and Profile components.
+`web/react_pages.py` builds allowlisted JSON view models; it never serializes
+arbitrary ORM columns, session objects or credentials. Page GETs also accept
+`Accept: application/json`, with `Cache-Control: no-store` and `Vary: Accept`.
+Existing POST endpoints remain the single validation and persistence layer.
+Import preview and kickoff saves consume JSON; kickoff saves update one answer
+without replacing other draft inputs. React polls active settings/research jobs.
+
+Build the frontend before starting the application. The migrated pages require
+the bundle; Python-only development can still exercise their JSON contracts.
+
+Python UI tests use `tests/react_render.py` to render the actual React components
+with React's static renderer. They do not reconstruct the retired Jinja markup.
+The helper creates an ignored `frontend/.test-render/` bundle and requires Node
+and `npm ci`, just like the production build. Vitest covers interactive behavior;
+browser checks cover real form submissions and responsive layout.

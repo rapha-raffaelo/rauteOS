@@ -28,6 +28,8 @@ so the real parsing runs over a canned answer.
 
 from __future__ import annotations
 
+from react_render import rendered
+
 import datetime as dt
 import json
 import logging
@@ -531,7 +533,7 @@ def test_a_run_with_nothing_due_still_says_so_on_the_run_line(session, caplog):
     with caplog.at_level(logging.INFO, logger="newspulse.profile_refresh"):
         profile_refresh.run(session, now=_NOW, generate=_answer())
 
-    assert "0 of 0 due mandate(s) refreshed" in caplog.text
+    assert "0 of 0 due mandate(s) refreshed" in rendered(caplog)
 
 
 def test_one_broken_client_does_not_stop_the_rest_of_the_run(session, caplog):
@@ -552,7 +554,7 @@ def test_one_broken_client_does_not_stop_the_rest_of_the_run(session, caplog):
 
     assert refreshed == 1, "the healthy mandate was still refreshed"
     assert len(calls) == 2, "the broken one did not abort the pass"
-    assert "Kaputt" in caplog.text
+    assert "Kaputt" in rendered(caplog)
     assert any(record.levelno == logging.ERROR for record in caplog.records)
 
 
@@ -643,7 +645,7 @@ def test_a_broken_refresh_never_fails_the_sweep(
     with caplog.at_level(logging.ERROR, logger="newspulse.job"):
         assert no_sweep_profile_refresh(session, _NOW) == 0
 
-    assert "profile refresh failed" in caplog.text
+    assert "profile refresh failed" in rendered(caplog)
     # And the session is usable afterwards, so the notification and everything
     # else the sweep does after this point still works.
     assert session.scalar(select(func.count()).select_from(Client)) == 1
@@ -710,7 +712,7 @@ def test_a_proposal_shows_the_old_value_the_new_one_and_its_source(web_factory, 
             session, client, now=_NOW, generate=_answer(sitz="Paris")
         )
 
-    row = _field_row(web.get(f"/client/{client_id}/profil").text, "sitz")
+    row = _field_row(rendered(web.get(f"/client/{client_id}/profil")), "sitz")
 
     assert "Berlin" in row, "the value it argues against"
     assert "Paris" in row, "the value it proposes"
@@ -731,7 +733,7 @@ def test_a_row_argues_against_the_value_the_profile_holds_now(web_factory, web):
 
     # The consultant clears the field through the form, then reviews the pile.
     web.post(f"/client/{client_id}/profil", data={"sitz": ""}, follow_redirects=False)
-    row = _field_row(web.get(f"/client/{client_id}/profil").text, "sitz")
+    row = _field_row(rendered(web.get(f"/client/{client_id}/profil")), "sitz")
 
     assert "Berlin" not in row, "there is nothing on file to argue against"
     assert "props__was" not in row, "and so nothing to strike through"
@@ -751,7 +753,7 @@ def test_a_proposal_the_profile_caught_up_with_is_not_drawn(web_factory, web):
         )
         profiles.save(session, client, "sitz", "Paris")
 
-    body = web.get(f"/client/{client_id}/profil").text
+    body = rendered(web.get(f"/client/{client_id}/profil"))
 
     assert "Das Netz sagt" not in body, "the web agrees; this is no contradiction"
     assert _pids(body) == [], "and there is nothing left to decide"
@@ -767,7 +769,7 @@ def test_an_empty_field_is_not_struck_through(web_factory, web):
             session, client, now=_NOW, generate=_answer(sitz="Paris")
         )
 
-    row = _field_row(web.get(f"/client/{client_id}/profil").text, "sitz")
+    row = _field_row(rendered(web.get(f"/client/{client_id}/profil")), "sitz")
 
     assert "Paris" in row, "the offer is in the field"
     assert "props__was" not in row, "with nothing struck through above it"
@@ -783,7 +785,7 @@ def test_a_proposal_without_a_source_is_not_shown(web_factory, web):
         unsourced.source_title = ""
         session.commit()
 
-    body = web.get(f"/client/{client_id}/profil").text
+    body = rendered(web.get(f"/client/{client_id}/profil"))
 
     assert "Jemand Unbelegtes" not in body
 
@@ -848,7 +850,7 @@ def test_accepting_writes_the_value_under_the_humans_name(web_factory, web):
             session, client, now=_NOW, generate=_answer(ceo="Alexandre Prot")
         )
 
-    body = web.get(f"/client/{client_id}/profil").text
+    body = rendered(web.get(f"/client/{client_id}/profil"))
     web.post(f"/client/{client_id}/profil/accept", data={"pid": _pids(body)},
              follow_redirects=False)
 
@@ -869,7 +871,7 @@ def test_an_accepted_value_is_not_proposed_over_by_the_next_refresh(web_factory,
             session, client, now=_NOW, generate=_answer(ceo="Alexandre Prot")
         )
 
-    body = web.get(f"/client/{client_id}/profil").text
+    body = rendered(web.get(f"/client/{client_id}/profil"))
     web.post(f"/client/{client_id}/profil/accept", data={"pid": _pids(body)},
              follow_redirects=False)
 
@@ -883,7 +885,7 @@ def test_an_accepted_value_is_not_proposed_over_by_the_next_refresh(web_factory,
     assert facts["ceo"].value == "Alexandre Prot", "his answer stands"
     assert not profile_refresh.may_replace(facts, "ceo")
     # And the disagreement is on the page as a contradiction, under the rule.
-    body = web.get(f"/client/{client_id}/profil").text
+    body = rendered(web.get(f"/client/{client_id}/profil"))
     assert "Jemand ganz anderes" in body
     assert "wird nie überschrieben" in body
 
@@ -899,7 +901,7 @@ def test_the_page_states_the_rule_that_protects_a_hand_filled_field(web_factory,
             session, client, now=_NOW, generate=_answer(ceo="Jemand anderes")
         )
 
-    body = web.get(f"/client/{client_id}/profil").text
+    body = rendered(web.get(f"/client/{client_id}/profil"))
 
     assert "Weiß ich vom Kick-off" in body, "his answer is the one that stands"
     assert "Jemand anderes" in body, "and the contradiction is visible, not silent"
@@ -918,7 +920,7 @@ def test_the_contradiction_block_says_what_discarding_it_costs(web_factory, web)
             session, client, now=_NOW, generate=_answer(ceo="Jemand anderes")
         )
 
-    body = web.get(f"/client/{client_id}/profil").text
+    body = rendered(web.get(f"/client/{client_id}/profil"))
 
     assert "nicht erneut gemeldet" in body
 
@@ -945,7 +947,7 @@ def test_accept_all_takes_only_the_rows_that_were_on_the_page(web_factory, web):
             session, client, now=_NOW, generate=_answer(ceo="Alexandre Prot")
         )
 
-    drawn = _pids(web.get(f"/client/{client_id}/profil").text)
+    drawn = _pids(rendered(web.get(f"/client/{client_id}/profil")))
     with web_factory() as session:
         _file_proposal(session, client_id, "umsatz", "84 Mio. (2031)")
 
@@ -969,7 +971,7 @@ def test_discard_all_leaves_a_proposal_that_arrived_after_the_page(web_factory, 
             session, client, now=_NOW, generate=_answer(ceo="Alexandre Prot")
         )
 
-    drawn = _pids(web.get(f"/client/{client_id}/profil").text)
+    drawn = _pids(rendered(web.get(f"/client/{client_id}/profil")))
     with web_factory() as session:
         _file_proposal(session, client_id, "umsatz", "84 Mio. (2031)")
 
@@ -1178,7 +1180,7 @@ def test_the_profile_page_says_a_profile_was_never_checked(web_factory, web):
     with web_factory() as session:
         client_id = _client(session, checked=None).id
 
-    body = web.get(f"/client/{client_id}/profil").text
+    body = rendered(web.get(f"/client/{client_id}/profil"))
 
     assert "Noch nie geprüft" in body
 
@@ -1190,7 +1192,7 @@ def test_the_profile_page_prints_an_old_check_as_an_age(web_factory, web):
             session, checked=dt.datetime.now(dt.UTC) - dt.timedelta(days=84)
         ).id
 
-    body = web.get(f"/client/{client_id}/profil").text
+    body = rendered(web.get(f"/client/{client_id}/profil"))
 
     assert "Zuletzt geprüft vor 84 Tagen" in body
 
@@ -1202,7 +1204,7 @@ def test_the_client_list_carries_the_check_age_too(web_factory, web):
         _client(session, name="Alt", checked=dt.datetime.now(dt.UTC) - dt.timedelta(days=84))
         _client(session, name="Nie", checked=None)
 
-    body = web.get("/clients?view=classic").text
+    body = rendered(web.get("/clients?view=classic"))
 
     assert "Zuletzt geprüft vor 84 Tagen" in body
     assert "Noch nie geprüft" in body

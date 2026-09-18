@@ -15,6 +15,8 @@ worse problem than the one being solved.
 
 from __future__ import annotations
 
+from react_render import rendered
+
 import datetime as dt
 
 import pytest
@@ -116,7 +118,7 @@ def test_the_muted_category_is_gone_from_the_day(factory, client):
     with factory() as session:
         _seed(session, muted=["finanzen"])
 
-    body = client.get("/today").text
+    body = rendered(client.get("/today"))
 
     assert "BaFin rügt Zalando" in body
     assert "Zalando-Aktie zeigt Stabilität" not in body
@@ -128,7 +130,7 @@ def test_the_day_says_how_much_it_muted_and_offers_it_back(factory, client):
     with factory() as session:
         _seed(session, muted=["finanzen"])
 
-    body = " ".join(client.get("/today").text.split())
+    body = " ".join(rendered(client.get("/today")).split())
 
     assert "3 stummgeschaltet" in body
     assert "show_muted=1" in body
@@ -138,7 +140,7 @@ def test_showing_them_brings_them_back(factory, client):
     with factory() as session:
         _seed(session, muted=["finanzen"])
 
-    body = client.get("/today?show_muted=1").text
+    body = rendered(client.get("/today?show_muted=1"))
 
     assert "Zalando-Aktie zeigt Stabilität" in body
     assert "wieder ausblenden" in body
@@ -148,7 +150,7 @@ def test_without_a_preference_nothing_changes(factory, client):
     with factory() as session:
         _seed(session)
 
-    body = " ".join(client.get("/today").text.split())
+    body = " ".join(rendered(client.get("/today")).split())
 
     assert "Zalando-Aktie zeigt Stabilität" in body
     assert "stummgeschaltet" not in body
@@ -187,7 +189,7 @@ def test_muting_is_per_client_not_portfolio_wide(factory, client):
         )
         session.commit()
 
-    body = client.get("/today").text
+    body = rendered(client.get("/today"))
 
     assert "Sparkasse meldet Quartalszahlen" in body
     assert "Zalando-Aktie zeigt Stabilität" not in body
@@ -199,7 +201,7 @@ def test_the_archive_keeps_everything_that_was_muted(factory, client):
     with factory() as session:
         client_id = _seed(session, muted=["finanzen"])
 
-    body = client.get(f"/client/{client_id}").text
+    body = rendered(client.get(f"/client/{client_id}"))
 
     assert "Zalando-Aktie zeigt Stabilität" in body
 

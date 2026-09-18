@@ -14,6 +14,8 @@ query first and offered with what it actually returned.
 
 from __future__ import annotations
 
+from react_render import rendered
+
 import datetime as dt
 
 import pytest
@@ -246,14 +248,13 @@ def test_the_panel_shows_the_measurement_and_marks_the_empty_ones(factory, clien
         ],
     }
 
-    body = " ".join(client.get("/settings").text.split())
+    body = " ".join(rendered(client.get("/settings")).split())
 
     assert "Nachhaltige Verpackung" in body
-    assert "<strong>4</strong> Marktmeldung(en)" in body
+    assert "4 Marktmeldung(en)" in body
     assert "Transgourmet ersetzt Styropor" in body
     # The one with no hits is offered but must not look like the ones that work.
-    assert "keine Treffer" in body
-    assert "rival--empty" in body
+    assert "Keine Treffer — die Presse schreibt diesen Begriff nicht" in body
 
 
 def test_a_failed_suggestion_says_so_rather_than_showing_an_empty_list(factory, client):
@@ -268,7 +269,7 @@ def test_a_failed_suggestion_says_so_rather_than_showing_an_empty_list(factory, 
         "error": "claude ist weg",
     }
 
-    body = client.get("/settings").text
+    body = rendered(client.get("/settings"))
 
     assert "Themenvorschlag fehlgeschlagen" in body
     assert "claude ist weg" in body
@@ -294,7 +295,7 @@ def test_the_impulse_page_offers_themes_when_the_radar_found_nothing(factory, cl
         "Berichterstattung über den Mandanten selbst ist."
     )
     try:
-        body = client.get(f"/client/{client_id}/advice").text
+        body = rendered(client.get(f"/client/{client_id}/advice"))
     finally:
         advisory._last_refusal.pop(client_id, None)
 
@@ -321,7 +322,7 @@ def test_the_measured_proposals_appear_on_the_impulse_page_itself(factory, clien
         ],
     }
     try:
-        body = " ".join(client.get(f"/client/{client_id}/advice").text.split())
+        body = " ".join(rendered(client.get(f"/client/{client_id}/advice")).split())
     finally:
         advisory._last_refusal.pop(client_id, None)
 
@@ -338,6 +339,6 @@ def test_no_remedy_is_offered_when_there_was_no_refusal(factory, client):
         session.commit()
         client_id = subject.id
 
-    body = client.get(f"/client/{client_id}/advice").text
+    body = rendered(client.get(f"/client/{client_id}/advice"))
 
     assert "Passende Themen vorschlagen" not in body

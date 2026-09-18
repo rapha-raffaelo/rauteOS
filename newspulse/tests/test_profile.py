@@ -7,6 +7,8 @@ the machine must never overwrite the human.
 
 from __future__ import annotations
 
+from react_render import rendered
+
 import datetime as dt
 import json
 import threading
@@ -208,7 +210,7 @@ def test_the_page_shows_the_source_of_a_machine_filled_line(factory, web):
                       filled_by="gemini-2.5-flash")
         client_id = client.id
 
-    body = web.get(f"/client/{client_id}/profil").text
+    body = rendered(web.get(f"/client/{client_id}/profil"))
 
     assert "Alexandre Prot" in body
     assert "gemini-2.5-flash" in body
@@ -221,7 +223,7 @@ def test_unified_profile_escapes_fact_text(factory, web):
         profiles.save(session, client, "ceo", '<script>alert("fact")</script>')
         client_id = client.id
 
-    body = web.get(f"/client/{client_id}/twin").text
+    body = rendered(web.get(f"/client/{client_id}/twin"))
 
     assert '<script>alert("fact")</script>' not in body
     assert '&lt;script&gt;alert(' in body
@@ -235,7 +237,7 @@ def test_a_hand_typed_line_carries_no_citation(factory, web):
         profiles.save(session, client, "ceo", "Weiß ich vom Kick-off")
         client_id = client.id
 
-    body = web.get(f"/client/{client_id}/profil").text
+    body = rendered(web.get(f"/client/{client_id}/profil"))
 
     assert "Weiß ich vom Kick-off" in body
     assert "mensch" not in body
@@ -348,7 +350,7 @@ def test_a_field_the_consultant_filled_is_not_proposed_over(factory, web):
             sitz=("Paris", "https://qonto.com", "Qonto"),
         )
 
-    body = web.get(f"/client/{client_id}/profil").text
+    body = rendered(web.get(f"/client/{client_id}/profil"))
 
     assert "Weiß ich besser" in body, "his own value still stands"
     # The offers are rendered into the fields they are offers for, so the field
@@ -404,7 +406,7 @@ def test_only_contradictions_left_still_offers_a_way_to_clear_them(factory, web)
             session, client_id, ceo=("Jemand anderes", "https://irgendwo.de", "Irgendwo")
         )
 
-    body = web.get(f"/client/{client_id}/profil").text
+    body = rendered(web.get(f"/client/{client_id}/profil"))
     assert "Verwerfen" in body, "the rows are reachable"
     assert f'name="pid" value="{ids["ceo"]}"' in body, "and the button names them"
 
@@ -430,7 +432,7 @@ def test_a_contradiction_is_visible_beside_an_ordinary_proposal(factory, web):
             sitz=("Paris", "https://qonto.com", "Qonto"),
         )
 
-    body = web.get(f"/client/{client_id}/profil").text
+    body = rendered(web.get(f"/client/{client_id}/profil"))
 
     assert "Paris" in body, "the offer is drawn"
     assert "das Netz sagt etwas anderes" in body, "and so is the one held back"
@@ -457,7 +459,7 @@ def test_the_reason_a_check_broke_reaches_the_page(factory, web):
     # Nothing in memory: the sweep runs elsewhere and leaves this dict empty.
     profile_routes._errors.pop(client_id, None)
 
-    body = web.get(f"/client/{client_id}/profil").text
+    body = rendered(web.get(f"/client/{client_id}/profil"))
 
     assert "nicht erreichbar" in body, "the sweep's failure is invisible on the page"
 
@@ -510,7 +512,7 @@ def test_the_competition_tab_puts_the_four_questions_in_one_place(factory, web):
         session.commit()
         client_id = client.id
 
-    body = web.get(f"/client/{client_id}/wettbewerb").text
+    body = rendered(web.get(f"/client/{client_id}/wettbewerb"))
 
     assert "Trade Republic" in body                      # the comparison set
     assert "Trade Republic senkt Gebühren" in body       # what they are written about
@@ -525,8 +527,8 @@ def test_the_day_tab_keeps_the_workspace_around_it(factory, web):
         client = _client(session)
         client_id = client.id
 
-    scoped = web.get(f"/today?client={client_id}").text
-    everyones = web.get("/today").text
+    scoped = rendered(web.get(f"/today?client={client_id}"))
+    everyones = rendered(web.get("/today"))
 
     assert f'/client/{client_id}/twin' in scoped, "the consolidated profile is present"
     assert "/profil" not in everyones

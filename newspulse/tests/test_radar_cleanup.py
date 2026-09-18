@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from react_render import rendered
+
 import datetime as dt
 
 import pytest
@@ -131,7 +133,7 @@ def test_the_settings_page_does_not_survey_unless_asked(session, web):
     client = _client(session)
     _hit(session, client, "Putin Signs Russia First Crypto Law")
 
-    body = web.get("/settings").text
+    body = rendered(web.get("/settings"))
 
     assert "Radar-Treffer prüfen" in body
     assert "Putin Signs" not in body
@@ -141,7 +143,7 @@ def test_the_survey_shows_what_would_go_before_anything_goes(session, web):
     client = _client(session)
     _hit(session, client, "Putin Signs Russia First Crypto Law")
 
-    body = web.get("/settings?radar=1").text
+    body = rendered(web.get("/settings?radar=1"))
 
     assert "Putin Signs" in body
     assert "Cointelegraph" in body
@@ -153,7 +155,7 @@ def test_a_clean_portfolio_says_so(session, web):
     client = _client(session)
     _hit(session, client, "Firmenkunden-Banking wird zum Preiskampf", "Handelsblatt")
 
-    body = web.get("/settings?radar=1").text
+    body = rendered(web.get("/settings?radar=1"))
 
     assert "Alle gespeicherten Radar-Treffer tragen ein Thema" in body
 

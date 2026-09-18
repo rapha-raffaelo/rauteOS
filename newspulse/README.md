@@ -32,8 +32,10 @@ uv run alembic upgrade head      # create the SQLite database from migrations
 
 ## Run the dashboard
 
-The dashboard is served by FastAPI. Most pages use Jinja + HTMX; the Desk uses
-React when its assets are built. See [frontend setup](../frontend/README.md)
+The dashboard is served by FastAPI. React renders the shared navigation and
+primary workspaces, including Archive, Settings and the full client Profile.
+Build its assets before starting the server. Some specialist page bodies still
+use Jinja + HTMX. See [frontend setup](../frontend/README.md)
 for the build commands. Docker builds them automatically; a Python-only checkout
 uses the classic Desk. Start the server with either:
 

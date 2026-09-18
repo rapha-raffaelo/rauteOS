@@ -20,6 +20,8 @@ from urllib.parse import urlencode
 
 import re
 
+from ..react_pages import render as render_react
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from sqlalchemy import ColumnElement, and_, func, or_, select
@@ -698,9 +700,9 @@ def _render_detail(
         category=parsed_category.value if parsed_category else "",
         search=search_value,
     )
-    return templates.TemplateResponse(
+    return render_react(
         request,
-        "client_detail.html",
+        "archive",
         {
             "client": _profile(client),
             "rows": rows,

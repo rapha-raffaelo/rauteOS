@@ -19,6 +19,8 @@ that reach it inject an answer.
 
 from __future__ import annotations
 
+from react_render import rendered
+
 import datetime as dt
 import re
 from pathlib import Path
@@ -133,7 +135,7 @@ def test_the_market_view_lists_what_the_radar_found(factory, client):
         _market(session, subject, _article(session, "BitMEX stellt Betrieb ein"))
         subject_id = subject.id
 
-    body = client.get(f"/client/{subject_id}/market").text
+    body = rendered(client.get(f"/client/{subject_id}/market"))
 
     assert "BitMart schliesst nach neun Jahren" in body
     assert "BitMEX stellt Betrieb ein" in body
@@ -150,8 +152,8 @@ def test_market_material_stays_out_of_the_clients_own_archive(factory, client):
         _market(session, subject, _article(session, "BitMEX stellt Betrieb ein"))
         subject_id = subject.id
 
-    archive = client.get(f"/client/{subject_id}").text
-    market = client.get(f"/client/{subject_id}/market").text
+    archive = rendered(client.get(f"/client/{subject_id}"))
+    market = rendered(client.get(f"/client/{subject_id}/market"))
 
     assert "BitMEX stellt Betrieb ein" not in archive
     assert "BitMEX stellt Betrieb ein" in market
@@ -166,7 +168,7 @@ def test_outlets_on_the_subject_are_ranked_by_how_much_they_cover_it(factory, cl
         _market(session, subject, _article(session, "Einzeln", source="yellow.com"))
         subject_id = subject.id
 
-    body = client.get(f"/client/{subject_id}/market").text
+    body = rendered(client.get(f"/client/{subject_id}/market"))
     ranking = body.split("Medien im Themenfeld", 1)[1]
 
     assert ranking.index("CoinDesk") < ranking.index("yellow.com")
@@ -181,7 +183,7 @@ def test_outlets_on_the_client_are_a_separate_list(factory, client):
         _market(session, subject, _article(session, "Markt bewegt sich", source="CoinDesk"))
         subject_id = subject.id
 
-    body = client.get(f"/client/{subject_id}/market").text
+    body = rendered(client.get(f"/client/{subject_id}/market"))
     subject_block = body.split("Medien im Themenfeld", 1)[1].split("Medien über den Mandanten", 1)[0]
     client_block = body.split("Medien über den Mandanten", 1)[1]
 
@@ -200,7 +202,7 @@ def test_the_journalist_list_says_when_the_feeds_carried_no_author(factory, clie
         _market(session, subject, _article(session, "Ohne Autor", author=None))
         subject_id = subject.id
 
-    body = client.get(f"/client/{subject_id}/market").text
+    body = rendered(client.get(f"/client/{subject_id}/market"))
 
     assert "Kein Feed in diesem Zeitraum hat einen Autor mitgeliefert." in body
 
@@ -212,7 +214,7 @@ def test_a_journalist_is_listed_when_the_feed_did_supply_one(factory, client):
                                            author="Frank Schräer"))
         subject_id = subject.id
 
-    body = client.get(f"/client/{subject_id}/market").text
+    body = rendered(client.get(f"/client/{subject_id}/market"))
 
     assert "Frank Schräer" in body
 
@@ -225,7 +227,7 @@ def test_a_client_without_themes_is_told_so_rather_than_shown_a_quiet_market(fac
         subject = _client(session, keywords=[], alert_topics=[])
         subject_id = subject.id
 
-    body = client.get(f"/client/{subject_id}/market").text
+    body = rendered(client.get(f"/client/{subject_id}/market"))
 
     assert "Für diesen Mandanten ist kein Themen-Radar eingerichtet." in body
     assert f'href="/settings?edit={subject_id}"' in body
@@ -236,7 +238,7 @@ def test_themes_are_shown_so_the_reader_knows_what_was_searched(factory, client)
         subject = _client(session, keywords=["Onchain-Liquidität"], alert_topics=["Börsenschließung"])
         subject_id = subject.id
 
-    body = client.get(f"/client/{subject_id}/market").text
+    body = rendered(client.get(f"/client/{subject_id}/market"))
 
     assert "Onchain-Liquidität" in body
     assert "Börsenschließung" in body
@@ -248,8 +250,8 @@ def test_market_is_reachable_through_the_unified_profile(factory, client):
         subject_id = subject.id
 
     for path in (f"/client/{subject_id}", f"/client/{subject_id}/map"):
-        assert f"/client/{subject_id}/twin" in client.get(path).text, path
-    assert 'id="marktumfeld"' in client.get(f"/client/{subject_id}/twin").text
+        assert f"/client/{subject_id}/twin" in rendered(client.get(path)), path
+    assert 'id="marktumfeld"' in rendered(client.get(f"/client/{subject_id}/twin"))
 
 
 def test_an_unknown_client_is_a_404(client):
@@ -318,7 +320,7 @@ def test_a_class_with_no_signals_shows_its_own_empty_line(factory, client):
     with factory() as session:
         subject_id = _client(session).id
 
-    body = client.get(f"/client/{subject_id}/market").text
+    body = rendered(client.get(f"/client/{subject_id}/market"))
 
     assert "Noch keine Studie aus dem Feld dieses Mandanten gefunden." in body
     assert "Für dieses Feld steht derzeit nichts im Regulierungskalender." in body
@@ -339,7 +341,7 @@ def test_the_four_sections_render_independently(factory, client):
         )
         subject_id = subject.id
 
-    body = client.get(f"/client/{subject_id}/market").text
+    body = rendered(client.get(f"/client/{subject_id}/market"))
 
     assert "BitMEX stellt Betrieb ein" in body
     assert "Zahlungsverhalten im Onlinehandel 2026" in body
@@ -366,7 +368,7 @@ def test_regulation_is_ordered_by_when_it_lands_soonest_first(factory, client):
         )
         subject_id = subject.id
 
-    calendar = client.get(f"/client/{subject_id}/market").text.split(
+    calendar = rendered(client.get(f"/client/{subject_id}/market")).split(
         "Regulierungskalender", 1
     )[1]
 
@@ -386,7 +388,7 @@ def test_a_regulatory_row_states_the_weeks_that_are_left(factory, client):
         )
         subject_id = subject.id
 
-    body = client.get(f"/client/{subject_id}/market").text
+    body = rendered(client.get(f"/client/{subject_id}/market"))
 
     assert "in 5 Wochen" in body
     assert _de(35) in body
@@ -406,7 +408,7 @@ def test_a_regulatory_date_that_has_passed_leaves_the_calendar(factory, client):
         )
         subject_id = subject.id
 
-    body = client.get(f"/client/{subject_id}/market").text
+    body = rendered(client.get(f"/client/{subject_id}/market"))
 
     assert "Verordnung ist längst in Kraft" not in body
     assert "Konsultation läuft noch" in body
@@ -423,7 +425,7 @@ def test_an_item_landing_today_is_still_on_the_calendar(factory, client):
         )
         subject_id = subject.id
 
-    body = client.get(f"/client/{subject_id}/market").text
+    body = rendered(client.get(f"/client/{subject_id}/market"))
 
     assert "Meldepflicht gilt ab heute" in body
     assert "heute" in body
@@ -444,7 +446,7 @@ def test_a_regulatory_item_whose_date_was_never_read_stays_at_the_end(factory, c
         )
         subject_id = subject.id
 
-    calendar = client.get(f"/client/{subject_id}/market").text.split(
+    calendar = rendered(client.get(f"/client/{subject_id}/market")).split(
         "Regulierungskalender", 1
     )[1]
 
@@ -467,7 +469,7 @@ def test_a_consultation_still_open_survives_its_effective_date(factory, client):
         )
         subject_id = subject.id
 
-    body = client.get(f"/client/{subject_id}/market").text
+    body = rendered(client.get(f"/client/{subject_id}/market"))
 
     assert "Verordnung mit offener Frist" in body
     assert "in 3 Wochen" in body
@@ -485,7 +487,7 @@ def test_an_event_shows_its_date_and_its_speaker_deadline(factory, client):
         )
         subject_id = subject.id
 
-    events = client.get(f"/client/{subject_id}/market").text.split(
+    events = rendered(client.get(f"/client/{subject_id}/market")).split(
         "Veranstaltungen", 1
     )[1]
 
@@ -505,7 +507,7 @@ def test_a_speaker_deadline_inside_two_weeks_is_marked(factory, client):
         )
         subject_id = subject.id
 
-    body = _markup(client.get(f"/client/{subject_id}/market").text)
+    body = _markup(rendered(client.get(f"/client/{subject_id}/market")))
 
     assert "sig__deadline--soon" in body
     # The mark says what it is marked by. "Läuft ab" beside a date nine days out
@@ -531,7 +533,7 @@ def test_a_deadline_exactly_two_weeks_out_does_not_contradict_the_countdown(
         )
         subject_id = subject.id
 
-    body = _markup(client.get(f"/client/{subject_id}/market").text)
+    body = _markup(rendered(client.get(f"/client/{subject_id}/market")))
 
     assert "sig__deadline--soon" in body, "fourteen days is within two weeks"
     assert "in 2 Wochen" in body
@@ -554,7 +556,7 @@ def test_a_speaker_deadline_that_has_closed_reads_as_closed(factory, client):
         )
         subject_id = subject.id
 
-    body = _markup(client.get(f"/client/{subject_id}/market").text)
+    body = _markup(rendered(client.get(f"/client/{subject_id}/market")))
 
     assert "Kongress mit geschlossenem Aufruf" in body, "the event itself is still ahead"
     assert "Einreichfrist" in body
@@ -575,7 +577,7 @@ def test_the_countdown_says_which_of_an_events_two_dates_it_counts_to(factory, c
         )
         subject_id = subject.id
 
-    events = _markup(client.get(f"/client/{subject_id}/market").text).split(
+    events = _markup(rendered(client.get(f"/client/{subject_id}/market"))).split(
         "Veranstaltungen", 1
     )[1]
     countdown = events.split('class="sig__when', 1)[1].split("</div>", 1)[0]
@@ -595,7 +597,7 @@ def test_a_deadline_further_out_than_two_weeks_is_not_marked(factory, client):
         )
         subject_id = subject.id
 
-    body = _markup(client.get(f"/client/{subject_id}/market").text)
+    body = _markup(rendered(client.get(f"/client/{subject_id}/market")))
 
     assert "Einreichfrist" in body
     assert "sig__deadline--soon" not in body
@@ -610,7 +612,7 @@ def test_an_event_without_a_call_for_speakers_shows_no_deadline(factory, client)
         )
         subject_id = subject.id
 
-    body = client.get(f"/client/{subject_id}/market").text
+    body = rendered(client.get(f"/client/{subject_id}/market"))
 
     assert "Messe ohne Programmaufruf" in body
     assert "Einreichfrist" not in body
@@ -633,7 +635,7 @@ def test_a_study_shows_its_publisher_and_links_out_to_the_source(factory, client
         )
         subject_id = subject.id
 
-    body = client.get(f"/client/{subject_id}/market").text
+    body = rendered(client.get(f"/client/{subject_id}/market"))
 
     assert "Statistisches Bundesamt" in body
     assert "Erhoben wurden 4.000 Kaufabbrüche." in body
@@ -651,7 +653,7 @@ def test_a_study_does_not_age_off_the_page(factory, client):
         )
         subject_id = subject.id
 
-    body = client.get(f"/client/{subject_id}/market").text
+    body = rendered(client.get(f"/client/{subject_id}/market"))
 
     assert "Alte, aber zitierfähige Studie" in body
 
@@ -669,7 +671,7 @@ def test_studies_are_ordered_newest_publication_first(factory, client):
         )
         subject_id = subject.id
 
-    studies = client.get(f"/client/{subject_id}/market").text.split("Studien", 1)[1]
+    studies = rendered(client.get(f"/client/{subject_id}/market")).split("Studien", 1)[1]
 
     assert studies.index("Frische Erhebung") < studies.index("Ältere Erhebung")
 
@@ -696,7 +698,7 @@ def test_two_studies_published_the_same_day_do_not_swap_places_between_renders(
         subject_id = subject.id
 
     renders = [
-        client.get(f"/client/{subject_id}/market").text.split("Studien", 1)[1]
+        rendered(client.get(f"/client/{subject_id}/market")).split("Studien", 1)[1]
         for _ in range(2)
     ]
 
@@ -722,7 +724,7 @@ def test_a_search_found_row_is_marked_as_one_and_a_curated_row_is_not(factory, c
         )
         subject_id = subject.id
 
-    body = _markup(client.get(f"/client/{subject_id}/market").text)
+    body = _markup(rendered(client.get(f"/client/{subject_id}/market")))
     searched = body.split("Aus der Feldsuche", 1)[1].split("Vom Institut", 1)[0]
     curated = body.split("Vom Institut", 1)[1].split("</article>", 1)[0]
 
@@ -744,7 +746,7 @@ def test_a_muted_class_disappears_from_the_page_for_that_client(factory, client)
         subject_id = subject.id
 
     client.post(f"/client/{subject_id}/market/veranstaltung/mute", follow_redirects=False)
-    body = client.get(f"/client/{subject_id}/market").text
+    body = rendered(client.get(f"/client/{subject_id}/market"))
 
     assert "Fachtagung Zahlungsverkehr" not in body
     # Gone, not collapsed into an empty box that explains itself.
@@ -793,14 +795,14 @@ def test_a_muted_class_can_be_brought_back_from_the_same_page(factory, client):
         session.commit()
         subject_id = subject.id
 
-    body = client.get(f"/client/{subject_id}/market").text
+    body = rendered(client.get(f"/client/{subject_id}/market"))
     assert f"/client/{subject_id}/market/studie/unmute" in body
 
     client.post(f"/client/{subject_id}/market/studie/unmute", follow_redirects=False)
 
-    assert "Noch keine Studie aus dem Feld dieses Mandanten gefunden." in client.get(
+    assert "Noch keine Studie aus dem Feld dieses Mandanten gefunden." in rendered(client.get(
         f"/client/{subject_id}/market"
-    ).text
+    ))
 
 
 def test_muting_an_unknown_class_is_a_404_rather_than_a_stored_typo(factory, client):
@@ -827,7 +829,7 @@ def test_one_mandates_mute_does_not_touch_another(factory, client):
 
     client.post(f"/client/{quiet_id}/market/studie/mute", follow_redirects=False)
 
-    assert "Studie für Harkonnen" in client.get(f"/client/{loud_id}/market").text
+    assert "Studie für Harkonnen" in rendered(client.get(f"/client/{loud_id}/market"))
 
 
 # --- An industry term the press does not write ---------------------------------
@@ -852,7 +854,7 @@ def test_an_unusable_field_is_explained_rather_than_left_as_a_quiet_market(
         )
         subject_id = subject.id
 
-    body = client.get(f"/client/{subject_id}/market").text
+    body = rendered(client.get(f"/client/{subject_id}/market"))
 
     assert "Aus kuratierter Quelle" in body, "the curated half still arrives"
     assert "der Branchenbegriff dieses Mandanten kommt in der deutschen Presse" in body
@@ -872,7 +874,7 @@ def test_a_working_field_is_not_accused_of_being_unusable(factory, client):
         )
         subject_id = subject.id
 
-    body = client.get(f"/client/{subject_id}/market").text
+    body = rendered(client.get(f"/client/{subject_id}/market"))
 
     assert (
         "der Branchenbegriff dieses Mandanten kommt in der deutschen Presse" not in body
@@ -900,7 +902,7 @@ def test_a_field_that_could_not_be_measured_is_not_accused_of_anything(factory, 
         )
         subject_id = subject.id
 
-    body = client.get(f"/client/{subject_id}/market").text
+    body = rendered(client.get(f"/client/{subject_id}/market"))
 
     assert "Aus kuratierter Quelle" in body
     assert "kommt in der deutschen Presse zu selten vor" not in body
@@ -956,7 +958,7 @@ def test_a_search_found_signal_answers_the_question_even_when_it_is_not_rendered
         )
         subject_id = subject.id
 
-    body = client.get(f"/client/{subject_id}/market").text
+    body = rendered(client.get(f"/client/{subject_id}/market"))
 
     assert "Gilt seit vorletzter Woche" not in body, "it has landed; it left the calendar"
     assert "kommt in der deutschen Presse zu selten vor" not in body
@@ -984,7 +986,7 @@ def test_a_muted_class_does_not_hide_why_the_search_half_is_missing(factory, cli
         )
         subject_id = subject.id
 
-    body = client.get(f"/client/{subject_id}/market").text
+    body = rendered(client.get(f"/client/{subject_id}/market"))
 
     assert "Suchtreffer in der stummen Klasse" not in body, "the class is muted"
     assert "kommt in der deutschen Presse zu selten vor" in body
@@ -1009,7 +1011,7 @@ def test_a_mandate_with_no_industry_at_all_is_told_that_and_not_something_else(
             is client_routes.FieldGap.UNSET
         )
 
-    body = client.get(f"/client/{subject_id}/market").text
+    body = rendered(client.get(f"/client/{subject_id}/market"))
 
     assert "für diesen Mandanten ist keine Branche hinterlegt" in body
     assert "kommt in der deutschen Presse zu selten vor" not in body

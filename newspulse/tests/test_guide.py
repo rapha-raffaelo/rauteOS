@@ -8,6 +8,8 @@ applied without a person seeing it first.
 
 from __future__ import annotations
 
+from react_render import rendered
+
 import datetime as dt
 import io
 
@@ -235,7 +237,7 @@ def test_the_guide_page_shows_the_text_and_its_budget(factory, client):
         obj = _client(session, comms_guide="Positionierung: nachweisbar wirksam.")
         client_id = obj.id
 
-    body = client.get(f"/client/{client_id}/guide").text
+    body = rendered(client.get(f"/client/{client_id}/guide"))
 
     assert "Positionierung: nachweisbar wirksam." in body
     assert str(guide.GUIDE_MAX_CHARS) in body
@@ -278,10 +280,10 @@ def test_an_unreadable_upload_reports_against_the_file(factory, client):
     with factory() as session:
         client_id = _client(session).id
 
-    body = client.post(
+    body = rendered(client.post(
         f"/client/{client_id}/guide/upload",
         files={"file": ("leitfaden.docx", b"PK\x03\x04", "application/octet-stream")},
-    ).text
+    ))
 
     assert "DOCX" in body
     with factory() as session:
@@ -545,7 +547,7 @@ def test_the_page_offers_the_coach_and_says_it_has_not_run(factory, client):
     with factory() as session:
         client_id = _client(session, comms_guide="Nachweis vor Neuheit").id
 
-    body = client.get(f"/client/{client_id}/guide").text
+    body = rendered(client.get(f"/client/{client_id}/guide"))
 
     assert "Strategie-Coach" in body
     assert f'action="/client/{client_id}/guide/coach"' in body
@@ -556,7 +558,7 @@ def test_running_the_coach_without_a_guide_says_so_on_the_page(factory, client):
     with factory() as session:
         client_id = _client(session).id
 
-    body = client.post(f"/client/{client_id}/guide/coach").text
+    body = rendered(client.post(f"/client/{client_id}/guide/coach"))
 
     assert "Kein Kommunikations-Guide hinterlegt." in body
 

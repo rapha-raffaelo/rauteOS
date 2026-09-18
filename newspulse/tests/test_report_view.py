@@ -14,6 +14,8 @@ somewhere else entirely.
 
 from __future__ import annotations
 
+from react_render import rendered
+
 import datetime as dt
 import json
 import re
@@ -180,13 +182,13 @@ def seeded(factory):
 
 
 def _review(http, seeded) -> str:
-    return http.get(f"/client/{seeded['client_id']}/berichte").text
+    return rendered(http.get(f"/client/{seeded['client_id']}/berichte"))
 
 
 def _document(http, seeded) -> str:
-    return http.get(
+    return rendered(http.get(
         f"/client/{seeded['client_id']}/berichte/{seeded['report_id']}/dokument"
-    ).text
+    ))
 
 
 def _body(html: str) -> str:
@@ -267,7 +269,7 @@ def test_an_edit_stating_a_figure_the_tool_cannot_source_is_refused(
         f"/befund/{seeded['kept_id']}",
         data={"claim": "Die Reichweite lag bei 1,2 Millionen.", "consequence": ""},
     )
-    assert "reichweite" in response.text.lower()
+    assert "reichweite" in rendered(response).lower()
     with factory() as session:
         finding = session.get(Report, seeded["report_id"]).findings[0]
         assert finding.claim == "Arrakis war im Juli sichtbar.", "the edit went through"
@@ -325,13 +327,13 @@ def test_the_report_is_reachable_from_the_texte_tab_not_a_tab_of_its_own(http, s
 
     # On the href, not on the word: "Berichte" is a substring of
     # "Berichterstattung", which the same page prints for its own reasons.
-    strip = http.get(f"/client/{client_id}/guide").text
+    strip = rendered(http.get(f"/client/{client_id}/guide"))
     tabs = strip.split('class="subtabs"', 1)[1].split("</nav>", 1)[0]
     assert f'/client/{client_id}/berichte' not in tabs, "no tab of its own any more"
-    assert ">Impulse<" in tabs
-    assert f'/client/{client_id}/advice' in tabs
+    assert ">Opportunities<" in tabs
+    assert f'/client/{client_id}/opportunities' in tabs
 
-    rail = http.get(f"/client/{client_id}/advice").text
+    rail = rendered(http.get(f"/client/{client_id}/advice"))
     assert f'/client/{client_id}/berichte' in rail, "the rail carries the period"
 
 
@@ -381,7 +383,7 @@ def test_a_failed_generation_says_so_rather_than_redirecting(
         f"/client/{seeded['client_id']}/berichte/erzeugen", data={"zeitraum": "2026-07"}
     )
     assert response.status_code == 200
-    assert "fehlgeschlagen" in response.text
+    assert "fehlgeschlagen" in rendered(response)
 
 
 # --- The document -----------------------------------------------------------------
@@ -433,10 +435,10 @@ def test_the_share_of_voice_chart_prints_the_frozen_figure_and_its_complement(
     chart = report_routes._voice_chart(document)
     mandate, field = chart.segments
     frozen = next(f for f in document.figures if f.key == "share_of_voice")
-    assert mandate.text == frozen.text
-    assert field.text == reports.share_text(1 - frozen.value)
+    assert rendered(mandate) == rendered(frozen)
+    assert rendered(field) == reports.share_text(1 - frozen.value)
     body = _body(_document(http, seeded))
-    assert frozen.text in body
+    assert rendered(frozen) in body
 
 
 def test_a_mandate_name_is_never_translated_on_its_own_report(http, factory, seeded):
@@ -483,7 +485,7 @@ def test_the_export_carries_the_same_document_as_the_screen(http, seeded):
     )
     assert "attachment" in export.headers["content-disposition"]
     assert "bericht_Arrakis_AG_2026-07.html" in export.headers["content-disposition"]
-    assert _body(export.text) == _body(screen.text)
+    assert _body(rendered(export)) == _body(rendered(screen))
 
 
 def test_a_report_of_another_mandate_is_not_reachable_under_this_one(
@@ -651,7 +653,7 @@ def test_a_released_report_cannot_be_regenerated(http, seeded, factory, monkeypa
         f"/client/{seeded['client_id']}/berichte/erzeugen", data={"zeitraum": "2026-07"}
     )
     assert response.status_code == 200
-    assert "freigegeben" in response.text
+    assert "freigegeben" in rendered(response)
     with factory() as session:
         assert [f.claim for f in session.get(Report, seeded["report_id"]).findings] == [
             "Arrakis war im Juli sichtbar.",

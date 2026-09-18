@@ -12,6 +12,8 @@ remembered it rather than the quarter it happened in.
 
 from __future__ import annotations
 
+from react_render import rendered
+
 import datetime as dt
 
 import pytest
@@ -379,7 +381,7 @@ def test_the_desk_states_the_contract_beside_the_delivery(web, factory):
         _letter(session, client, angle, released_at=dt.datetime.now(dt.UTC),
                 state=OutreachState.RAUS)
 
-    body = web.get("/desk?view=classic").text
+    body = rendered(web.get("/desk?view=classic"))
 
     assert "Mandantenüberblick" in body
     assert "10 / 1" in body
@@ -466,7 +468,7 @@ def test_the_ledger_form_cannot_be_used_to_leave_the_site(web, factory):
 
 
 def test_an_empty_portfolio_says_so_rather_than_rendering_an_empty_grid(web):
-    body = web.get("/desk?view=classic").text
+    body = rendered(web.get("/desk?view=classic"))
 
     assert "Noch kein Mandant angelegt" in body
     assert "/mandant/neu" in body
@@ -497,7 +499,7 @@ def test_api_keeps_delivery_provenance_and_missing_contract_distinct(web, factor
     assert row["promised_quarter"] is None and row["on_track"] is None
     assert zero["promised_quarter"] == 0 and zero["on_track"] is True
     assert set(row["client"]) == {"id", "name", "industry"}
-    assert "PRIVATE STRATEGY" not in response.text
+    assert "PRIVATE STRATEGY" not in rendered(response)
     assert body["generated_at"].endswith("Z")
     assert body["timezone"]
     assert body["decisions_open"] == len(body["decisions"])
@@ -538,16 +540,16 @@ def test_react_shell_uses_built_manifest_and_shared_chrome(web, tmp_path, monkey
         'src/desk.jsx': {'file': 'desk.js', 'css': ['desk.css']}
     }))
     monkeypatch.setattr(frontend, 'BUILD_DIR', tmp_path)
-    body = web.get('/desk').text
+    body = rendered(web.get('/desk'))
     assert 'id="react-desk"' in body
     assert '/static/react/desk.js' in body and '/static/react/desk.css' in body
     assert 'Ask RAUTE' in body and 'class="side__' in body
-    assert 'id="react-desk"' not in web.get('/desk?view=classic').text
+    assert 'id="react-desk"' not in rendered(web.get('/desk?view=classic'))
     (tmp_path / 'desk.js').unlink()
-    assert 'Noch kein Mandant angelegt.' in web.get('/desk').text
+    assert 'Noch kein Mandant angelegt.' in rendered(web.get('/desk'))
 
 
 def test_unbuilt_checkout_keeps_a_working_desk(web, tmp_path, monkeypatch):
     from newspulse.web import frontend
     monkeypatch.setattr(frontend, 'BUILD_DIR', tmp_path)
-    assert 'Noch kein Mandant angelegt.' in web.get('/desk').text
+    assert 'Noch kein Mandant angelegt.' in rendered(web.get('/desk'))

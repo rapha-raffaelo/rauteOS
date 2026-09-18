@@ -13,6 +13,8 @@ table, never in the log.
 
 from __future__ import annotations
 
+from react_render import rendered
+
 import datetime as dt
 import json
 import logging
@@ -472,7 +474,7 @@ def test_no_token_value_is_ever_written_to_the_log(volume, caplog):
     gmail_link.token(fetch=google, now=_now_after(seconds=7200))
     gmail_link.disconnect(fetch=google)
 
-    logged = caplog.text
+    logged = rendered(caplog)
     assert _REFRESH not in logged
     assert _ACCESS not in logged
     # The address is the thing worth logging, and it is there.
@@ -536,7 +538,7 @@ def _connect(web: TestClient, code: str = "auth-code") -> Any:
 def test_the_panel_says_it_is_not_set_up_and_offers_no_connect_button(
     unconfigured, web
 ):
-    body = web.get("/settings").text
+    body = rendered(web.get("/settings"))
     assert "Nicht eingerichtet" in body
     # It never renders a button that would fail at Google with invalid_client.
     assert "/settings/gmail/start" not in body
@@ -597,7 +599,7 @@ def test_a_completed_callback_shows_the_address_and_the_granted_scopes(
 ):
     _connect(web)
 
-    body = web.get("/settings").text
+    body = rendered(web.get("/settings"))
     assert _MAILBOX in body
     # The permissions in words, not as scope URLs.
     assert "Nachrichten lesen" in body
@@ -631,7 +633,7 @@ def test_declining_consent_returns_a_plain_german_line_and_stores_nothing(
 
     assert GmailNotice.DECLINED.value in response.headers["location"]
     assert not gmail_link.token_path().exists()
-    body = web.get("/settings?gmail=abgelehnt").text
+    body = rendered(web.get("/settings?gmail=abgelehnt"))
     assert "Die Freigabe wurde bei Google abgebrochen." in body
 
 
@@ -684,7 +686,7 @@ def test_a_live_connection_stays_visible_without_a_client_id(
     monkeypatch.delenv("NEWSPULSE_GMAIL_CLIENT_ID", raising=False)
     monkeypatch.setattr(config, "GMAIL_CLIENT_ID", "")
 
-    body = web.get("/settings").text
+    body = rendered(web.get("/settings"))
     assert _MAILBOX in body
     assert "/settings/gmail/disconnect" in body
 
@@ -738,7 +740,7 @@ def test_the_panel_explains_a_connection_google_ended(volume, web, google):
     ]
     gmail_link.token(now=_now_after(seconds=7200))
 
-    body = web.get("/settings").text
+    body = rendered(web.get("/settings"))
     assert "Der Zugriff wurde bei Google entzogen" in body
     assert "Postfach verbinden" in body
     assert _MAILBOX not in body

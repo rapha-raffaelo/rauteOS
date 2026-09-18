@@ -390,3 +390,43 @@ Validation: all 37 React tests and the production build passed. Desktop/mobile
 browser checks exercised Ask submission with the synthetic local stream and
 context isolation, profile editor/import access and opportunity tabs, with no
 horizontal overflow or JavaScript errors. Screenshots reviewed.
+
+
+### React navigation, archives, settings and complete profile — 2026-09-18
+
+React now renders the sidebar, header and client tabs on every page. The global
+and client archives, settings and complete unified client profile use React
+components with allowlisted JSON view models. Profile includes company facts,
+provenance and disagreements, guide documents and drafting, kickoff answers,
+competitors, Share of Voice and market signals. Existing authenticated Python
+POST handlers retain validation and persistence. Python continues to run the
+integrations and background jobs; Jinja only hosts these pages' document and
+escaped JSON bootstrap. Specialist bodies such as KI visibility and editorial
+planning remain server-rendered and are explicitly documented as such.
+
+The six client tabs and single top-right Ask RAUTE entry are preserved. Contacts
+appears once, the profile has no submenu, and Opportunities has no Heute option.
+Settings job polling and failed saves retain draft input; import preview retains
+the selected file without committing. Kickoff saves/clears update one answer and
+its progress without losing draft answers elsewhere. Sources and approval states
+remain visible. ORM serialization is explicit and excludes credentials.
+
+The Python UI suite renders the actual React components for semantic checks;
+it no longer assumes the browser UI is emitted as Jinja HTML. New contracts cover
+safe bootstrap escaping, client isolation, proposal serialization and kickoff
+JSON writes. React tests cover navigation, draft retention, failed saves and URL
+safety. Browser checks passed on seven routes each at 1440px and 390px without
+JavaScript errors or horizontal overflow. Local synthetic-data interactions
+verified client/profile/guide saves, import preview, isolated kickoff saves and
+clears, and mobile navigation. Desktop/mobile screenshots were reviewed.
+
+The standalone new-client form also uses React, with the same three inputs and
+server validation. Its mobile duplicate-name flow preserves website and country.
+
+Validation: 44 React tests and the production build passed. The complete Python
+run exercised 3,275 cases: 3,251 passed, while 24 exposed a test-renderer bug that
+truncated legacy headers/nested layouts. After filling the original document's
+React mount points instead, all 24 passed on rerun; broader checks passed 234
+legacy/navigation cases and nine run-status cases. Migration/new-client checks
+passed 20 cases. No outstanding failing test remains. Two existing dependency
+deprecation warnings remain (Starlette test client and feedparser).

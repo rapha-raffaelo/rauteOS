@@ -25,6 +25,8 @@ Nothing here reaches a model.
 
 from __future__ import annotations
 
+from react_render import rendered
+
 import datetime as dt
 import importlib
 import json
@@ -1327,11 +1329,13 @@ def test_a_database_failure_that_is_not_a_missing_table_is_not_swallowed(
 
 def _panel(body: str) -> str:
     """The brain section of the settings page, between its own markers."""
+    if '<section id="brain"' in body:
+        return body.split('<section id="brain"',1)[1].split('</section>',1)[0]
     return body.split("<!-- ── Brain")[1].split("<!-- ── /Brain")[0]
 
 
 def test_the_panel_lists_every_block_with_its_current_text(client):
-    body = _panel(client.get("/settings").text)
+    body = _panel(rendered(client.get("/settings")))
 
     for key, text in brain.shipped().items():
         assert key in body, key
@@ -1341,7 +1345,7 @@ def test_the_panel_lists_every_block_with_its_current_text(client):
 
 
 def test_the_panel_says_a_block_is_the_shipped_default_when_nothing_was_changed(client):
-    body = _panel(client.get("/settings").text)
+    body = _panel(rendered(client.get("/settings")))
     assert "Vorgabe" in body
     assert "Überschrieben" not in body
     assert "Noch nie geändert" in body
@@ -1353,7 +1357,7 @@ def test_the_panel_says_a_block_is_an_override_once_it_has_been_edited(
     with factory() as session:
         brain.edit(session, A_BLOCK, "Ein anderer Maßstab.", edited_by="lucas")
 
-    body = _panel(client.get("/settings").text)
+    body = _panel(rendered(client.get("/settings")))
     assert "Überschrieben" in body
     assert "Ein anderer Maßstab." in body
     assert "lucas" in body
@@ -1377,7 +1381,7 @@ def test_an_empty_edit_is_refused_on_the_page_with_the_reason(factory, client):
     resp = client.post(f"/settings/brain/{A_BLOCK}", data={"text": "   "})
 
     assert resp.status_code == 200
-    assert "leer" in _panel(resp.text)
+    assert "leer" in _panel(rendered(resp))
     with factory() as session:
         assert brain.stored(session) == {}
 
@@ -1399,7 +1403,7 @@ def test_the_block_page_shows_every_version_with_its_wording(factory, client):
         brain.edit(session, A_BLOCK, "Erste Fassung.", edited_by="lucas")
         brain.edit(session, A_BLOCK, "Zweite Fassung.", edited_by="raphael")
 
-    body = _panel(client.get(f"/settings/brain/{A_BLOCK}").text)
+    body = _panel(rendered(client.get(f"/settings/brain/{A_BLOCK}")))
 
     assert "Fassung 1" in body and "Fassung 2" in body
     assert "Erste Fassung." in body and "Zweite Fassung." in body
@@ -1411,7 +1415,7 @@ def test_a_reverted_version_shows_the_wording_it_restored(factory, client):
         brain.edit(session, A_BLOCK, "Etwas anderes.")
         brain.revert(session, A_BLOCK)
 
-    body = _panel(client.get(f"/settings/brain/{A_BLOCK}").text)
+    body = _panel(rendered(client.get(f"/settings/brain/{A_BLOCK}")))
 
     assert "Auf die Vorgabe zurückgesetzt" in body
     # Both wordings are readable: the one that was overridden and the one that
@@ -1431,7 +1435,7 @@ def test_an_override_whose_block_no_longer_ships_is_shown_as_orphaned(factory, c
         )
         session.commit()
 
-    body = _panel(client.get("/settings").text)
+    body = _panel(rendered(client.get("/settings")))
     assert "alter_name" in body
     assert "Verwaist" in body
     assert "Gilt noch." in body
@@ -1511,7 +1515,7 @@ def test_the_panel_names_the_version_the_standards_are_at(factory, client):
     with factory() as session:
         brain.edit(session, A_BLOCK, "Ein anderer Maßstab.")
 
-    assert "Fassung 1" in _panel(client.get("/settings").text)
+    assert "Fassung 1" in _panel(rendered(client.get("/settings")))
 
 
 def test_every_german_string_in_the_brain_panel_has_an_english_entry():
@@ -1543,8 +1547,8 @@ def test_a_refused_edit_reads_in_english_on_an_english_page(client):
     response = client.post(f"/settings/brain/{A_BLOCK}", data={"text": "   "})
 
     assert response.status_code == 200
-    assert i18n.translate(brain.EMPTY_BLOCK_MESSAGE, "en") in _panel(response.text)
-    assert brain.EMPTY_BLOCK_MESSAGE not in _panel(response.text)
+    assert i18n.translate(brain.EMPTY_BLOCK_MESSAGE, "en") in _panel(rendered(response))
+    assert brain.EMPTY_BLOCK_MESSAGE not in _panel(rendered(response))
 
 
 def test_a_configured_user_name_is_shown_as_typed_and_not_run_through_the_lookup(
@@ -1558,7 +1562,7 @@ def test_a_configured_user_name_is_shown_as_typed_and_not_run_through_the_lookup
         brain.edit(session, A_BLOCK, "Ein Satz.", edited_by="Vorgabe")
 
     client.cookies.set(i18n.COOKIE_NAME, "en")
-    body = _panel(client.get("/settings").text)
+    body = _panel(rendered(client.get("/settings")))
 
     assert "Vorgabe" in body
     # "Shipped" is what t("Vorgabe") returns, and it is still the tag on every
@@ -1587,7 +1591,7 @@ def test_a_revert_with_no_shipped_wording_left_says_so_rather_than_showing_nothi
             )
         session.commit()
 
-    body = _panel(client.get("/settings/brain/alter_name").text)
+    body = _panel(rendered(client.get("/settings/brain/alter_name")))
 
     assert "Erst." in body
     assert "Wieder da." in body
@@ -2528,7 +2532,7 @@ def test_a_stamped_version_resolves_to_the_wording_it_names(factory, client):
     assert resp.headers["location"] == (
         f"/settings/brain/{A_BLOCK}?fassung=1#brain-v1"
     )
-    body = _panel(client.get(resp.headers["location"].split("#")[0]).text)
+    body = _panel(rendered(client.get(resp.headers["location"].split("#")[0])))
     assert "Die Fassung, die gesucht wird." in body
     # The fragment the redirect sent and the id the page emits, asserted as one
     # pair: they are written in two files and a link that lands at the top of a
@@ -2548,7 +2552,7 @@ def test_the_page_a_stamp_lands_on_says_what_that_version_covers(factory, client
         brain.edit(open_session, A_BLOCK, "Die Fassung, die gesucht wird.")
         brain.edit(open_session, "house_style", "Eine spätere Änderung.")
 
-    body = _panel(client.get(f"/settings/brain/{A_BLOCK}", params={"fassung": 1}).text)
+    body = _panel(rendered(client.get(f"/settings/brain/{A_BLOCK}", params={"fassung": 1})))
 
     assert "Von einem Text hierher gekommen:" in body
     assert "nicht in dem von damals" in body
@@ -2564,7 +2568,7 @@ def test_a_version_that_belongs_to_another_block_is_not_echoed_as_this_one(
         brain.edit(open_session, A_BLOCK, "Die erste Änderung.")
         brain.edit(open_session, "house_style", "Die zweite, woanders.")
 
-    body = _panel(client.get(f"/settings/brain/{A_BLOCK}", params={"fassung": 2}).text)
+    body = _panel(rendered(client.get(f"/settings/brain/{A_BLOCK}", params={"fassung": 2})))
 
     assert "Von einem Text hierher gekommen:" not in body
 
@@ -2576,7 +2580,7 @@ def test_an_ordinary_block_page_carries_no_arrival_note(factory, client):
     with factory() as open_session:
         brain.edit(open_session, A_BLOCK, "Die einzige Änderung.")
 
-    body = _panel(client.get(f"/settings/brain/{A_BLOCK}").text)
+    body = _panel(rendered(client.get(f"/settings/brain/{A_BLOCK}")))
 
     assert "Von einem Text hierher gekommen:" not in body
 
@@ -2644,7 +2648,7 @@ def test_a_fassung_wider_than_the_column_leaves_the_block_page_standing(
     )
 
     assert resp.status_code == 200
-    assert "Von einem Text hierher gekommen:" not in _panel(resp.text)
+    assert "Von einem Text hierher gekommen:" not in _panel(rendered(resp))
 
 
 def _a_stored_draft(session, *, brain_version: int | None) -> Client:
@@ -2667,14 +2671,14 @@ def _a_stored_draft(session, *, brain_version: int | None) -> Client:
 def _advice(client, session, *, brain_version: int | None) -> str:
     """The impulse page for a mandate with one stored draft at that stamp."""
     mandate = _a_stored_draft(session, brain_version=brain_version)
-    return client.get(f"/client/{mandate.id}/advice").text
+    return rendered(client.get(f"/client/{mandate.id}/advice"))
 
 
 def _today_column(client, session, *, brain_version: int | None) -> str:
     """The Impulse rail on Heute, which is where the drafts are actually read."""
     _a_stored_draft(session, brain_version=brain_version)
     today = dt.datetime.now(dt.UTC).astimezone(config.local_zone()).date()
-    body = client.get("/today", params={"date": today.isoformat()}).text
+    body = rendered(client.get("/today", params={"date": today.isoformat()}))
     return body.split('class="anglecol"', 1)[1]
 
 
@@ -2766,7 +2770,7 @@ def test_a_letter_carries_its_own_stamp_and_not_the_impulse_it_came_from(
     )
     session.commit()
 
-    body = client.get(f"/client/{mandate.id}/advice").text
+    body = rendered(client.get(f"/client/{mandate.id}/advice"))
 
     assert "/settings/brain/version/7" in body
     assert "/settings/brain/version/1" in body

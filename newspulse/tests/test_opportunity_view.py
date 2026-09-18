@@ -26,6 +26,8 @@ Nothing here reaches a model and nothing reaches the network.
 
 from __future__ import annotations
 
+from react_render import rendered
+
 import datetime as dt
 import re
 from zoneinfo import ZoneInfo
@@ -247,9 +249,9 @@ def test_a_belegt_opportunity_renders_its_dossier(web, session, mandate):
     page = web.get(_url(row))
 
     assert page.status_code == 200
-    assert _HEADLINE in page.text
-    assert _REASON in page.text
-    assert "Entscheidungsspur" in page.text
+    assert _HEADLINE in rendered(page)
+    assert _REASON in rendered(page)
+    assert "Entscheidungsspur" in rendered(page)
 
 
 def test_an_unknown_id_is_a_404(web, session, mandate):
@@ -372,7 +374,7 @@ def test_the_badge_and_the_provenance_bar_carry_the_three_addends(web, session, 
         session, mandate, hours_left=24.4, window_hours=48, pickup_count=4
     )
 
-    page = web.get(_url(row)).text
+    page = rendered(web.get(_url(row)))
 
     assert "60" in page
     assert "Verbreitung 20" in page
@@ -394,7 +396,7 @@ def test_the_outlet_count_and_the_readable_pieces_are_never_conflated(
     """
     row = _opportunity(session, mandate, pickup_count=4)
 
-    page = web.get(_url(row)).text
+    page = rendered(web.get(_url(row)))
 
     assert "4 Medien trugen die Story bei der Prüfung" in page
     assert "1 Beitrag/Beiträge davon sind gespeichert" in page
@@ -423,7 +425,7 @@ def test_the_sources_list_names_every_piece_oldest_first_with_the_origin_marked(
     assert [s.outlet for s in listed] == ["Handelsblatt", "DVZ"]
     assert listed[0].is_origin and not listed[1].is_origin
     assert [s.author for s in listed] == ["Michael Bröcker", "Jana Wolf"]
-    page = web.get(_url(row)).text
+    page = rendered(web.get(_url(row)))
     assert "Ursprung" in page and "Jana Wolf" in page
 
 
@@ -437,7 +439,7 @@ def test_a_piece_without_a_stored_byline_gets_a_named_gap_not_a_guess(
     session.commit()
 
     assert opportunity.sources(session, row)[0].author == ""
-    assert "kein Autor im Beitrag" in web.get(_url(row)).text
+    assert "kein Autor im Beitrag" in rendered(web.get(_url(row)))
 
 
 # --- The status in the head --------------------------------------------------------
@@ -473,7 +475,7 @@ def test_activating_posts_at_the_same_endpoint_as_the_card(web, session, mandate
     card already uses, which is what keeps the race settled in one place."""
     row = _opportunity(session, mandate)
 
-    page = web.get(_url(row)).text
+    page = rendered(web.get(_url(row)))
 
     assert "Aktivieren" in page
     assert f'action="/client/{mandate.id}/gelegenheit/{row.id}/text"' in page
@@ -486,7 +488,7 @@ def test_the_status_control_shows_all_four_states_with_the_derived_one_marked(
     the only segment a person can act on is the one that opens the occasion."""
     row = _opportunity(session, mandate)
 
-    page = web.get(_url(row)).text
+    page = rendered(web.get(_url(row)))
 
     for state in ("Offen", "Aktiv", "Ausgelaufen", "Verworfen"):
         assert state in page
@@ -507,10 +509,10 @@ def test_an_expired_opportunity_stays_readable_without_buttons(web, session, man
     page = web.get(_url(row))
 
     assert page.status_code == 200
-    assert _HEADLINE in page.text
-    assert "Abgelaufen am" in page.text
-    assert f"/gelegenheit/{row.id}/text" not in page.text
-    assert f"/gelegenheit/{row.id}/verwerfen" not in page.text
+    assert _HEADLINE in rendered(page)
+    assert "Abgelaufen am" in rendered(page)
+    assert f"/gelegenheit/{row.id}/text" not in rendered(page)
+    assert f"/gelegenheit/{row.id}/verwerfen" not in rendered(page)
 
 
 def test_a_dismissed_opportunity_names_when_and_on_what_it_ended(web, session, mandate):
@@ -520,9 +522,9 @@ def test_a_dismissed_opportunity_names_when_and_on_what_it_ended(web, session, m
     page = web.get(_url(row))
 
     assert page.status_code == 200
-    assert "Verworfen am" in page.text
-    assert "von Hand abgeräumt" in page.text
-    assert f"/gelegenheit/{row.id}/text" not in page.text
+    assert "Verworfen am" in rendered(page)
+    assert "von Hand abgeräumt" in rendered(page)
+    assert f"/gelegenheit/{row.id}/text" not in rendered(page)
 
 
 # --- The next step, read off the state ----------------------------------------------
@@ -600,7 +602,7 @@ def test_the_step_tile_renders_the_next_move_and_its_weight(web, session, mandat
     angle = _occasion(session, row)
     _asset(session, angle, state=CheckState.UNGEPRUEFT)
 
-    page = web.get(_url(row)).text
+    page = rendered(web.get(_url(row)))
 
     assert "Empfohlene nächste Schritte" in page
     assert "Prüfung starten" in page
@@ -640,7 +642,7 @@ def test_an_objection_never_renders_like_a_clean_check(web, session, mandate):
     angle = _occasion(session, row)
     _asset(session, angle, kind="statement", state=CheckState.EINWAND)
 
-    page = web.get(_url(row)).text
+    page = rendered(web.get(_url(row)))
 
     assert "Einwand" in page
     assert "geprüft</span>" not in page.replace("ungeprüft</span>", "")
@@ -802,7 +804,7 @@ def test_the_chips_stand_on_the_mandates_stored_stakeholder_rows(
     session.commit()
     row = _opportunity(session, mandate)
 
-    page = web.get(_url(row)).text
+    page = rendered(web.get(_url(row)))
 
     assert "Netzbetreiber" in page and "Kommunen" in page
     # The order is the map's, not the template's.
@@ -814,7 +816,7 @@ def test_without_a_stakeholder_map_the_chips_are_a_named_gap(web, session, manda
     both of its options."""
     row = _opportunity(session, mandate)
 
-    page = web.get(_url(row)).text
+    page = rendered(web.get(_url(row)))
 
     assert "Für dieses Mandat sind keine Anspruchsgruppen hinterlegt." in page
 
@@ -867,7 +869,7 @@ def test_the_media_list_never_shows_a_derived_address(web, session, mandate):
     session.commit()
     _occasion(session, row)
 
-    page = web.get(_url(row)).text
+    page = rendered(web.get(_url(row)))
 
     assert "Kontakt da" in page
     assert "m.broecker@example.de" not in page
@@ -879,7 +881,7 @@ def test_without_a_stored_byline_the_media_tile_says_so(web, session, mandate):
     row.article.author = None
     session.commit()
 
-    page = web.get(_url(row)).text
+    page = rendered(web.get(_url(row)))
 
     assert "ist kein Autor gespeichert" in page
 
@@ -900,7 +902,7 @@ def test_a_stored_forward_look_is_shown_as_an_estimate_with_its_date(
         outlook_at=made,
     )
 
-    page = web.get(_url(row)).text
+    page = rendered(web.get(_url(row)))
 
     assert "2 bis 7 Tage" in page
     assert "Verbände positionieren sich" in page
@@ -915,7 +917,7 @@ def test_without_a_stored_forward_look_the_tile_says_none_was_made(
     charge a model call for looking."""
     row = _opportunity(session, mandate, outlook=[], outlook_at=None)
 
-    page = web.get(_url(row)).text
+    page = rendered(web.get(_url(row)))
 
     assert "keine Vorschau geschrieben" in page
     assert opportunity.outlook(row).exists is False
@@ -974,13 +976,13 @@ def test_an_opportunity_with_nothing_on_it_renders_in_full(web, session, mandate
     page = web.get(_url(row))
 
     assert page.status_code == 200
-    assert "Zu dieser Gelegenheit ist noch kein Anlass angelegt" in page.text
-    assert "kein Autor im Beitrag" in page.text
-    assert "Für dieses Mandat sind keine Anspruchsgruppen hinterlegt." in page.text
-    assert "keine Vorschau geschrieben" in page.text
+    assert "Zu dieser Gelegenheit ist noch kein Anlass angelegt" in rendered(page)
+    assert "kein Autor im Beitrag" in rendered(page)
+    assert "Für dieses Mandat sind keine Anspruchsgruppen hinterlegt." in rendered(page)
+    assert "keine Vorschau geschrieben" in rendered(page)
     # The next step is still readable, because it is the one thing on the page
     # that never needs anything to have happened yet.
-    assert "Text schreiben" in page.text
+    assert "Text schreiben" in rendered(page)
 
 
 # --- The way in ------------------------------------------------------------------------
@@ -991,7 +993,7 @@ def test_the_card_on_heute_links_to_the_dossier(web, session, mandate):
 
     page = web.get("/today")
 
-    assert _url(row) in page.text
+    assert _url(row) in rendered(page)
 
 
 def test_the_mandates_concluded_list_links_to_the_dossier(web, session, mandate):
@@ -1001,7 +1003,7 @@ def test_the_mandates_concluded_list_links_to_the_dossier(web, session, mandate)
 
     page = web.get(f"/client/{mandate.id}")
 
-    assert _url(row) in page.text
+    assert _url(row) in rendered(page)
     assert web.get(_url(row)).status_code == 200
 
 
@@ -1091,7 +1093,7 @@ def test_the_rail_reads_the_positioning_off_the_stored_profile(web, session, man
     mandate.profile_checked_at = dt.datetime.now(dt.UTC)
     session.commit()
 
-    page = web.get(_url(row)).text
+    page = rendered(web.get(_url(row)))
 
     assert "Was RauteOS zum Mandat weiß" in page
     assert "Führender Anbieter regenerativer Klimaprozesse." in page
@@ -1120,7 +1122,7 @@ def test_the_rail_counts_the_contacts_against_the_names_it_offers(
     )
     _occasion(session, row)
 
-    page = web.get(_url(row)).text
+    page = rendered(web.get(_url(row)))
 
     assert "1 von 2" in page
     assert "vorgeschlagenen Bylines haben einen hinterlegten Kontakt." in page
@@ -1153,7 +1155,7 @@ def test_the_rail_reads_the_newest_visibility_measurement(web, session, mandate)
     row = _opportunity(session, mandate)
     _measurement(session, mandate, named=(True, False, True), position=2)
 
-    page = web.get(_url(row)).text
+    page = rendered(web.get(_url(row)))
 
     assert "2 von 3" in page
     assert "Antworten nennen das Mandat, gemessen am" in page
@@ -1196,7 +1198,7 @@ def test_the_rail_carries_the_reputation_reading_and_its_direction(
         points=6,
     )
 
-    page = web.get(_url(row)).text
+    page = rendered(web.get(_url(row)))
 
     assert "Beobachtung" in page
     assert "steigend" in page
@@ -1229,7 +1231,7 @@ def test_every_item_of_the_rail_names_its_own_gap(web, session, mandate):
     row.article.author = None
     session.commit()
 
-    page = web.get(_url(row)).text
+    page = rendered(web.get(_url(row)))
 
     assert page.count('class="know__i ') == 6
     assert "Im Profil steht keine Positionierung" in page
@@ -1245,7 +1247,7 @@ def test_the_rail_links_land_on_routes_that_exist(web, session, mandate):
     the link to that page is half of what makes the line useful."""
     row = _opportunity(session, mandate)
 
-    page = web.get(_url(row)).text
+    page = rendered(web.get(_url(row)))
 
     rail = page.split("Was RauteOS zum Mandat weiß")[1].split("Entscheidungsspur")[0]
     hrefs = re.findall(r'class="know__l" href="([^"]+)"', rail)

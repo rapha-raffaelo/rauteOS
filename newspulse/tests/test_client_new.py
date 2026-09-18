@@ -14,6 +14,8 @@ he has seen a single article.
 
 from __future__ import annotations
 
+from react_render import rendered
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select
@@ -49,7 +51,7 @@ def web(factory):
 
 
 def test_the_mask_asks_for_what_the_tool_cannot_find_out(web):
-    body = web.get("/mandant/neu").text
+    body = rendered(web.get("/mandant/neu"))
 
     assert 'name="name"' in body
     assert 'name="website"' in body
@@ -62,14 +64,14 @@ def test_the_mask_asks_for_what_the_tool_cannot_find_out(web):
 def test_the_mask_says_what_will_happen_next(web):
     """The answer to "what am I signing up for", which a settings row could
     never give."""
-    body = web.get("/mandant/neu").text
+    body = rendered(web.get("/mandant/neu"))
 
     assert "Was danach von selbst passiert" in body
     assert "Das Profil wird von der Website gelesen" in body
 
 
 def test_the_buttons_point_at_the_mask_and_not_at_settings(web):
-    sidebar = web.get("/").text
+    sidebar = rendered(web.get("/"))
 
     assert '/mandant/neu' in sidebar
     assert "/settings#neuer-mandant" not in sidebar
@@ -122,6 +124,6 @@ def test_a_refused_name_comes_back_with_what_was_typed(web, factory, monkeypatch
     )
 
     assert answer.status_code == 200, "re-rendered, not redirected"
-    assert 'value="Neu AG"' in answer.text
-    assert 'value="neu-ag.de"' in answer.text
-    assert 'value="AT"' in answer.text
+    assert 'value="Neu AG"' in rendered(answer)
+    assert 'value="neu-ag.de"' in rendered(answer)
+    assert 'value="AT"' in rendered(answer)

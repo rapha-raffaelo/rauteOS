@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}{{ translator(request)(page_title) }}{% if client %} · {{ client.name }}{% endif %} · RauteOS{% endblock %}
+{% block content %}
+{% if client %}{% include "_client_tabs.html" %}{% endif %}
+<div id="react-platform" data-page="{{ page }}"><p role="status">Ansicht wird geladen…</p></div>
+<script id="react-page-data" type="application/json">{{ data | tojson }}</script>
+{% for href in frontend.css %}<link rel="stylesheet" href="{{ href }}">{% endfor %}
+<script type="module" src="{{ frontend.script }}"></script>
+{% endblock %}

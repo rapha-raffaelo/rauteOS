@@ -22,3 +22,5 @@ OUT-*/
 
 frontend/node_modules/
 newspulse/src/newspulse/web/static/react/
+
+frontend/.test-render/

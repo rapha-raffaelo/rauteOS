@@ -22,6 +22,8 @@ Nothing here reaches a model and nothing reaches the network.
 
 from __future__ import annotations
 
+from react_render import rendered
+
 import re
 from pathlib import Path
 from types import SimpleNamespace
@@ -171,7 +173,7 @@ def test_no_destination_in_the_top_bar_answers_404(web, mandate):
     Every href and every form action in the bar is called, on a mandate page so
     the crumb carries its second, deeper link too.
     """
-    bar = _topbar(web.get(f"/client/{mandate.id}/profil").text)
+    bar = _topbar(rendered(web.get(f"/client/{mandate.id}/profil")))
     destinations = _links(bar)
     assert len(destinations) >= 3, f"expected path, search and assistant, got {destinations}"
     for url in destinations:
@@ -184,7 +186,7 @@ def test_the_bar_holds_no_control_without_a_destination(web, mandate):
     The Vorlage shows more controls up here than the tool has pages for; the
     test is that none of them arrived without something behind it.
     """
-    bar = _topbar(web.get("/today").text)
+    bar = _topbar(rendered(web.get("/today")))
     buttons = re.findall(r"<button[^>]*>", bar)
     assert len(buttons) == 1, f"one submit, and it belongs to the search: {buttons}"
     assert 'type="submit"' in buttons[0]
@@ -194,14 +196,14 @@ def test_the_bar_holds_no_control_without_a_destination(web, mandate):
 
 
 def test_the_bar_names_the_workspace_and_the_mandate(web, mandate):
-    bar = _topbar(web.get(f"/client/{mandate.id}/profil").text)
+    bar = _topbar(rendered(web.get(f"/client/{mandate.id}/profil")))
     assert "Portfolio" in bar
     assert "Solaris AG" in bar
     assert f'href="/client/{mandate.id}"' in bar
 
 
 def test_the_bar_names_the_workspace_alone_off_a_mandate(web, mandate):
-    bar = _topbar(web.get("/archive").text)
+    bar = _topbar(rendered(web.get("/archive")))
     assert "Archiv" in bar
     assert "Solaris AG" not in bar, "no mandate is being looked at here"
 
@@ -210,7 +212,7 @@ def test_the_path_is_translated_but_a_mandate_name_is_not(web, mandate):
     """The crumb reuses the sidebar's own labels, so it switches with them —
     and the stored name stays the stored name."""
     web.cookies.set("newspulse_lang", "en")
-    bar = _topbar(web.get(f"/client/{mandate.id}/profil").text)
+    bar = _topbar(rendered(web.get(f"/client/{mandate.id}/profil")))
     assert "Clients" in bar
     assert "Solaris AG" in bar
 
@@ -286,7 +288,7 @@ def test_a_client_filter_no_row_could_carry_is_no_mandate(session, stray):
 def test_the_workspace_crumb_is_the_word_the_sidebar_uses_for_that_page(web, mandate):
     """The crumb links somewhere; the sidebar names that somewhere. If the two
     disagree, clicking the crumb lands on a page highlighting another word."""
-    page = web.get(f"/client/{mandate.id}/profil").text
+    page = rendered(web.get(f"/client/{mandate.id}/profil"))
     nav = re.search(r'<nav class="crumbs".*?</nav>', page, re.S)
     assert nav is not None
     crumb = re.search(r'<a[^>]*href="([^"]*)"[^>]*>([^<]*)</a>', nav.group(0))
@@ -315,7 +317,7 @@ def test_no_session_on_the_request_is_a_workspace_not_a_500():
 
 
 def test_the_search_field_submits_to_the_archive_search(web, mandate):
-    bar = _topbar(web.get("/today").text)
+    bar = _topbar(rendered(web.get("/today")))
     assert 'action="/archive"' in bar
     assert 'name="q"' in bar
     assert 'method="get"' in bar
@@ -326,13 +328,13 @@ def test_a_term_typed_in_the_bar_reaches_the_archive_filter(web, mandate):
     archive page already runs."""
     page = web.get("/archive", params={"q": "Netzentgelte"})
     assert page.status_code == 200
-    assert 'value="Netzentgelte"' in page.text
+    assert 'value="Netzentgelte"' in rendered(page)
 
 
 def test_the_field_keeps_the_term_while_the_archive_is_the_page(web, mandate):
-    bar = _topbar(web.get("/archive", params={"q": "Netzentgelte"}).text)
+    bar = _topbar(rendered(web.get("/archive", params={"q": "Netzentgelte"})))
     assert 'value="Netzentgelte"' in bar
-    elsewhere = _topbar(web.get("/today", params={"q": "Netzentgelte"}).text)
+    elsewhere = _topbar(rendered(web.get("/today", params={"q": "Netzentgelte"})))
     assert 'value=""' in elsewhere, "the term belongs to the archive, not to Heute"
 
 
@@ -340,19 +342,19 @@ def test_the_field_keeps_the_term_while_the_archive_is_the_page(web, mandate):
 
 
 def test_ask_raute_opens_the_react_destination(web, mandate):
-    bar = _topbar(web.get("/today").text)
+    bar = _topbar(rendered(web.get("/today")))
     target = next(url for url in _links(bar) if url.startswith("/ask?"))
     assert web.get(target).status_code == 200
 
 
 def test_ask_raute_keeps_the_mandate_context(web, mandate):
-    bar = _topbar(web.get(f"/client/{mandate.id}/heute").text)
+    bar = _topbar(rendered(web.get(f"/client/{mandate.id}/heute")))
     target = next(url for url in _links(bar) if url.startswith("/ask?"))
     assert f"client_id={mandate.id}" in target
 
 
 def test_legacy_assistant_links_lead_to_ask_raute(web, mandate):
-    page = web.get("/archive", params={"assistant": "1"}).text
+    page = rendered(web.get("/archive", params={"assistant": "1"}))
     assert 'id="assistant-drawer"' not in page
     assert 'data-drawer-open' not in page
     assert 'href="/ask?' in page
@@ -367,7 +369,7 @@ def _strip(html: str) -> str:
 
 
 def test_the_primary_tabs_are_consolidated(web, mandate):
-    strip = _strip(web.get(f"/client/{mandate.id}/heute").text)
+    strip = _strip(rendered(web.get(f"/client/{mandate.id}/heute")))
     assert re.findall(r'<a [^>]+>([^<]+)</a>', strip) == [
         "Overview", "Opportunities", "Profil", "Actions", "Archiv", "KI-Sichtbarkeit"]
     assert "subtabs-legacy" not in strip
@@ -383,7 +385,7 @@ def test_the_primary_tabs_are_consolidated(web, mandate):
     ("/map", "/twin"), ("", ""), ("/ki", "/ki"),
 ])
 def test_specialist_views_select_their_primary_workspace(web, mandate, suffix, parent):
-    strip = _strip(web.get(f"/client/{mandate.id}{suffix}").text)
+    strip = _strip(rendered(web.get(f"/client/{mandate.id}{suffix}")))
     active = re.findall(r'<a href="([^"]+)"[^>]*class="active"', strip)
     assert active == [f"/client/{mandate.id}{parent}"]
 
@@ -392,7 +394,7 @@ def test_specialist_views_select_their_primary_workspace(web, mandate, suffix, p
     ("/opportunities", ["/opportunities", "/advice", "/issues", "/plan"]),
 ])
 def test_each_workspace_keeps_its_tools_reachable(web, mandate, suffix, options):
-    body = web.get(f"/client/{mandate.id}{suffix}").text
+    body = rendered(web.get(f"/client/{mandate.id}{suffix}"))
     select = body.split('id="workspace-view"', 1)[1].split('</select>', 1)[0]
     targets = re.findall(r'<option value="([^"]+)"', select)
     assert targets == [f"/client/{mandate.id}{path}" for path in options]
@@ -402,7 +404,7 @@ def test_each_workspace_keeps_its_tools_reachable(web, mandate, suffix, options)
 
 @pytest.mark.parametrize("suffix", ["/twin", "/profil"])
 def test_profile_keeps_forms_and_market_context_on_one_page(web, mandate, suffix):
-    body = web.get(f"/client/{mandate.id}{suffix}").text
+    body = rendered(web.get(f"/client/{mandate.id}{suffix}"))
     assert 'id="workspace-view"' not in body
     for section in ("wissen", "unternehmen", "wettbewerb", "marktumfeld"):
         assert f'id="{section}"' in body
@@ -417,7 +419,7 @@ def test_profile_keeps_forms_and_market_context_on_one_page(web, mandate, suffix
 def test_a_tab_with_no_page_behind_it_is_not_in_the_strip(web, mandate):
     """Same rule as the top bar, and the reason "Krise" is conditional: the
     strip carries no href this app does not serve."""
-    strip = _strip(web.get(f"/client/{mandate.id}/heute").text)
+    strip = _strip(rendered(web.get(f"/client/{mandate.id}/heute")))
     for url in _links(strip):
         assert web.get(url).status_code != 404, url
 
@@ -434,7 +436,7 @@ def test_the_sidebar_keeps_its_rows_and_only_changes_how_they_look(web, mandate)
     single mandate is opened. Contact intelligence and the contact book share
     one entry; the remaining destinations retain their order.
     """
-    page = web.get("/today").text
+    page = rendered(web.get("/today"))
     side = page.split('<aside class="side">', 1)[1].split("</aside>", 1)[0]
     rows = re.findall(r'<a href="([^"]+)" class="side__row', side)
     assert rows[:7] == ["/desk", "/clients", "/assets", "/today", "/", "/archive", "/contacts"]
@@ -443,7 +445,7 @@ def test_the_sidebar_keeps_its_rows_and_only_changes_how_they_look(web, mandate)
 
 
 def test_the_page_being_looked_at_is_the_selected_row(web, mandate):
-    side = web.get("/today").text.split('<aside class="side">', 1)[1]
+    side = rendered(web.get("/today")).split('<aside class="side">', 1)[1]
     row = next(line for line in side.splitlines() if 'href="/today"' in line)
     assert "is-on" in row
     assert 'aria-current="page"' in row

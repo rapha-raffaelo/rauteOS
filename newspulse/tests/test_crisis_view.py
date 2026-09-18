@@ -19,6 +19,8 @@ Five of these tests protect a promise rather than a layout:
 
 from __future__ import annotations
 
+from react_render import rendered
+
 import datetime as dt
 import hashlib
 import threading
@@ -272,12 +274,12 @@ def test_crisis_view_appears_in_opportunities_only_after_a_declaration(web, sess
     _trigger(session, mandate)
     before = web.get(f"/client/{mandate.id}/opportunities")
     assert before.status_code == 200
-    assert ">Krise</option>" not in before.text
+    assert ">Krise</option>" not in rendered(before)
 
     _declared(session, mandate)
     after = web.get(f"/client/{mandate.id}/opportunities")
-    assert ">Krise</option>" in after.text
-    assert "Krise offen" in after.text
+    assert ">Krise</option>" in rendered(after)
+    assert "Krise offen" in rendered(after)
 
 
 def test_a_dismissed_proposal_creates_no_tab_and_no_page(web, session, mandate):
@@ -286,7 +288,7 @@ def test_a_dismissed_proposal_creates_no_tab_and_no_page(web, session, mandate):
     crisis.dismiss(session, mandate, article, by="lucas")
 
     page = web.get(f"/client/{mandate.id}/opportunities")
-    assert ">Krise</option>" not in page.text
+    assert ">Krise</option>" not in rendered(page)
     assert web.get(f"/client/{mandate.id}/krise").status_code == 404
 
 
@@ -300,17 +302,17 @@ def test_the_page_is_a_404_for_a_mandate_that_never_had_one(web, session, mandat
 def test_the_offer_on_heute_carries_declare_and_dismiss(web, session, mandate):
     _trigger(session, mandate)
     page = web.get("/today")
-    assert "Krise erklären" in page.text
-    assert 'action="/crisis/dismiss"' in page.text
-    assert "Verwerfen" in page.text
+    assert "Krise erklären" in rendered(page)
+    assert 'action="/crisis/dismiss"' in rendered(page)
+    assert "Verwerfen" in rendered(page)
 
 
 def test_the_offer_stands_on_the_mandantenkarte_with_both_buttons(web, session, mandate):
     _trigger(session, mandate)
     page = web.get(f"/client/{mandate.id}")
-    assert "koffer" in page.text
-    assert "Krise erklären" in page.text
-    assert 'action="/crisis/dismiss"' in page.text
+    assert "koffer" in rendered(page)
+    assert "Krise erklären" in rendered(page)
+    assert 'action="/crisis/dismiss"' in rendered(page)
 
 
 def test_dismiss_silences_the_same_story_for_this_mandate_only(web, factory, session):
@@ -347,7 +349,7 @@ def test_dismiss_silences_the_same_story_for_this_mandate_only(web, factory, ses
         # And no crisis row was invented on the way.
         assert fresh.scalar(select(func.count()).select_from(Crisis)) == 0
 
-    assert "Krise erklären" not in web.get(f"/client/{ours.id}").text
+    assert "Krise erklären" not in rendered(web.get(f"/client/{ours.id}"))
 
 
 def test_dismiss_is_idempotent(web, session, mandate):
@@ -407,10 +409,10 @@ def test_coverage_is_grouped_by_story_with_its_pickup_count(web, session, mandat
     _cover(session, mandate, source="taz", title=_HEADLINE, hours_ago=1)
     page = web.get(f"/client/{mandate.id}/krise")
     assert page.status_code == 200
-    assert "3 Beiträge" in page.text
-    assert "3 Aufgriffe" in page.text
-    assert "Auslöser" in page.text
-    assert "Handelsblatt" in page.text and "taz" in page.text
+    assert "3 Beiträge" in rendered(page)
+    assert "3 Aufgriffe" in rendered(page)
+    assert "Auslöser" in rendered(page)
+    assert "Handelsblatt" in rendered(page) and "taz" in rendered(page)
 
 
 # --- The right column -------------------------------------------------------------
@@ -420,34 +422,34 @@ def test_an_unchecked_text_renders_as_ungeprueft_never_as_clean(web, session, ma
     standing = _declared(session, mandate)
     _crisis_text(session, mandate, standing, checked=False)
     page = web.get(f"/client/{mandate.id}/krise")
-    assert "Holding Statement" in page.text
-    assert "Ungeprüft" in page.text
-    assert "kpill--ok" not in page.text.split("Holding Statement", 1)[1].split("</article>")[0]
+    assert "Holding Statement" in rendered(page)
+    assert "Ungeprüft" in rendered(page)
+    assert "kpill--ok" not in rendered(page).split("Holding Statement", 1)[1].split("</article>")[0]
 
 
 def test_a_released_checked_text_shows_both_states(web, session, mandate):
     standing = _declared(session, mandate)
     _crisis_text(session, mandate, standing, kind="krisen_qa", checked=True, released=True)
     page = web.get(f"/client/{mandate.id}/krise")
-    assert "Q&amp;A-Haltung" in page.text
-    assert "Geprüft" in page.text
-    assert "Freigegeben" in page.text
+    assert "Q&amp;A-Haltung" in rendered(page)
+    assert "Geprüft" in rendered(page)
+    assert "Freigegeben" in rendered(page)
 
 
 def test_an_open_request_stands_with_its_deadline(web, session, mandate):
     _declared(session, mandate)
     _reply(session, mandate, body="Drei Fragen zur Widerrufsfrist. Frist: heute 14:00.")
     page = web.get(f"/client/{mandate.id}/krise")
-    assert "Anfrage" in page.text
-    assert "Maren Kessler" in page.text
-    assert "heute 14:00" in page.text
+    assert "Anfrage" in rendered(page)
+    assert "Maren Kessler" in rendered(page)
+    assert "heute 14:00" in rendered(page)
 
 
 def test_a_request_naming_no_deadline_says_so(web, session, mandate):
     _declared(session, mandate)
     _reply(session, mandate, body="Können Sie das kommentieren?")
     page = web.get(f"/client/{mandate.id}/krise")
-    assert "keine Frist genannt" in page.text
+    assert "keine Frist genannt" in rendered(page)
 
 
 def test_a_request_received_before_the_declaration_is_visible(web, session, mandate):
@@ -462,15 +464,15 @@ def test_a_request_received_before_the_declaration_is_visible(web, session, mand
         received_at=standing.declared_at - dt.timedelta(minutes=30),
     )
     page = web.get(f"/client/{mandate.id}/krise")
-    assert "Maren Kessler" in page.text
-    assert "14:00 Uhr" in page.text
+    assert "Maren Kessler" in rendered(page)
+    assert "14:00 Uhr" in rendered(page)
 
 
 def test_a_resolved_request_no_longer_counts_as_open(web, session, mandate):
     _declared(session, mandate)
     _reply(session, mandate, body="Danke!", state=OutreachState.VEROEFFENTLICHT)
     page = web.get(f"/client/{mandate.id}/krise")
-    assert "Anfrage:" not in page.text
+    assert "Anfrage:" not in rendered(page)
 
 
 @pytest.mark.parametrize(
@@ -495,25 +497,25 @@ def test_a_missing_crisis_contact_is_a_named_gap_linking_into_the_kickoff(
 ):
     _declared(session, mandate)
     page = web.get(f"/client/{mandate.id}/krise")
-    assert "Im Profil fehlt der Krisenkontakt." in page.text
-    assert "Nicht im Profil hinterlegt." in page.text
-    assert f"/client/{mandate.id}/kickoff" in page.text
+    assert "Im Profil fehlt der Krisenkontakt." in rendered(page)
+    assert "Nicht im Profil hinterlegt." in rendered(page)
+    assert f"/client/{mandate.id}/kickoff" in rendered(page)
 
 
 def test_a_filled_crisis_contact_is_shown_and_not_flagged(web, session, mandate):
     _declared(session, mandate)
     _fact(session, mandate, "krisenkontakt", "Dr. Anne Wiegand, +49 170 4412290")
     page = web.get(f"/client/{mandate.id}/krise")
-    assert "Dr. Anne Wiegand" in page.text
-    assert "Im Profil fehlt der Krisenkontakt." not in page.text
+    assert "Dr. Anne Wiegand" in rendered(page)
+    assert "Im Profil fehlt der Krisenkontakt." not in rendered(page)
 
 
 def test_the_gap_box_names_the_formats_nothing_answers_yet(web, session, mandate):
     _declared(session, mandate)
     page = web.get(f"/client/{mandate.id}/krise")
-    assert "Noch kein Text im Format" in page.text
-    assert "Holding Statement" in page.text
-    assert "Q&amp;A-Haltung" in page.text
+    assert "Noch kein Text im Format" in rendered(page)
+    assert "Holding Statement" in rendered(page)
+    assert "Q&amp;A-Haltung" in rendered(page)
 
 
 # --- Closing, and the record ------------------------------------------------------
@@ -541,15 +543,15 @@ def test_a_reasonless_close_says_why_the_crisis_is_still_open(web, session, mand
     )
     session.expire_all()
     assert session.get(Crisis, standing.id).closed_at is None
-    assert "es fehlt die Begründung" in web.get(f"/client/{mandate.id}/krise").text
+    assert "es fehlt die Begründung" in rendered(web.get(f"/client/{mandate.id}/krise"))
 
 
 def test_a_worker_note_is_shown_once_and_does_not_outlive_its_render(web, session, mandate):
     """A note describes one click; stale forever was the bug."""
     _declared(session, mandate)
     crisis_view._last_note[mandate.id] = "Der Lauf ist mit einem Fehler abgebrochen."
-    assert "abgebrochen" in web.get(f"/client/{mandate.id}/krise").text
-    assert "abgebrochen" not in web.get(f"/client/{mandate.id}/krise").text
+    assert "abgebrochen" in rendered(web.get(f"/client/{mandate.id}/krise"))
+    assert "abgebrochen" not in rendered(web.get(f"/client/{mandate.id}/krise"))
 
 
 def test_a_closed_crisis_stays_readable_with_its_full_chronology(web, session, mandate):
@@ -563,13 +565,13 @@ def test_a_closed_crisis_stays_readable_with_its_full_chronology(web, session, m
 
     page = web.get(f"/client/{mandate.id}/krise")
     assert page.status_code == 200
-    assert "Krise geschlossen" in page.text
-    assert "Geklärt, die Kanzlei übernimmt." in page.text
+    assert "Krise geschlossen" in rendered(page)
+    assert "Geklärt, die Kanzlei übernimmt." in rendered(page)
 
     record = web.get(f"/client/{mandate.id}/krise?zeitleiste=1")
     # The bar above also says "Krise geschlossen", so the order is asserted
     # inside the timeline itself.
-    chronology = record.text.split('class="ktl"', 1)[1]
+    chronology = rendered(record).split('class="ktl"', 1)[1]
     for entry in ("Krise erklärt", "Beitrag", "Text entworfen", "Text freigegeben",
                   "Krise geschlossen"):
         assert entry in chronology, f"the chronology lost {entry!r}"
@@ -627,9 +629,9 @@ def test_another_mandates_run_is_not_presented_as_this_ones(web, session, mandat
     crisis_view._writing_for = mandate.id + 1
     try:
         page = web.get(f"/client/{mandate.id}/krise")
-        assert "Wird geschrieben" not in page.text
+        assert "Wird geschrieben" not in rendered(page)
         web.post(f"/client/{mandate.id}/krise/text", follow_redirects=False)
-        assert "ein anderes Mandat" in web.get(f"/client/{mandate.id}/krise").text
+        assert "ein anderes Mandat" in rendered(web.get(f"/client/{mandate.id}/krise"))
     finally:
         crisis_view._writing.release()
 
@@ -671,5 +673,5 @@ def test_the_page_renders_in_english_when_asked(web, session, mandate):
     _declared(session, mandate)
     web.post("/language/en?next=/", follow_redirects=False)
     page = web.get(f"/client/{mandate.id}/krise")
-    assert "What is being said" in page.text
-    assert "Who is reachable" in page.text
+    assert "What is being said" in rendered(page)
+    assert "Who is reachable" in rendered(page)

@@ -54,117 +54,9 @@
        what this tool is about — putting them behind a "Portfolio" link makes the
        list of them the subject and the mandate a detail of it, which is backwards
        for someone who opens the app already knowing whose morning it is. #}
-    <aside class="side">
-      <a class="side__brand" href="/"><span class="side__mark">#</span>RauteOS</a>
-
-      <button class="side__toggle" hidden type="button" aria-label="Menü öffnen" aria-expanded="false" aria-controls="workspace-navigation workspace-account"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
-      <nav id="workspace-navigation" class="side__nav" aria-label="{{ t('Navigation') }}">
-        <div class="side__sect">{{ t("Übersicht") }}</div>
-        {# First, because it is the page the morning starts on: the agency's own
-           standing, before any single mandate is opened. #}
-        <a href="/desk" class="side__row{% if request.url.path.startswith('/desk') %} is-on{% endif %}"{% if request.url.path.startswith('/desk') %} aria-current="page"{% endif %}><svg class="ico side__icon" aria-hidden="true"><use href="#ico-desk"></use></svg>{{ t("Desk") }}</a>
-        <a href="/clients" class="side__row{% if request.url.path == '/clients' %} is-on{% endif %}"><svg class="ico side__icon" aria-hidden="true"><use href="#ico-clients"></use></svg>Clients</a>
-        <a href="/assets" class="side__row{% if request.url.path == '/assets' %} is-on{% endif %}"><svg class="ico side__icon" aria-hidden="true"><use href="#ico-texte"></use></svg>Assets</a>
-        <details class="side-tools"{% if request.url.path in ['/today', '/', '/archive', '/journalists', '/contacts'] %} open{% endif %}><summary class="side__sect">Weitere Werkzeuge</summary>
-        <a href="/today" class="side__row{% if request.url.path.startswith('/today') %} is-on{% endif %}"{% if request.url.path.startswith('/today') %} aria-current="page"{% endif %}>{{ t("Heute") }}</a>
-        <a href="/" class="side__row{% if request.url.path == '/' %} is-on{% endif %}"{% if request.url.path == '/' %} aria-current="page"{% endif %}>{{ t("Portfolio") }}</a>
-        <a href="/archive" class="side__row{% if request.url.path.startswith('/archive') %} is-on{% endif %}">{{ t("Archiv") }}</a>
-        <a href="/contacts" class="side__row{% if (request.url.path.startswith('/contacts') or request.url.path == '/journalists') %} is-on{% endif %}">{{ t("Kontakte") }}</a>
-
-        </details>
-        {% set roster = nav_clients(request) %}
-        {% if roster %}
-          <div class="side__sect">{{ t("Mandanten") }}<span class="side__n">{{ roster | length }}</span></div>
-          {% for c in roster %}
-            {# Selected on any page of that mandate's workspace, so the sidebar
-               keeps saying whose desk this is while the tabs move underneath. #}
-            {% set on = request.url.path.startswith('/client/' ~ c.id) %}
-            <a href="/client/{{ c.id }}/overview" class="side__row side__cl{% if on %} is-on{% endif %}{% if not c.active %} is-off{% endif %}"{% if on %} aria-current="page"{% endif %}>
-              <span class="side__dot" style="background: {{ c.name | brand_colour }}"></span>
-              <span class="side__nm">{{ c.name }}</span>
-              {% if c.alerts %}<span class="side__badge">{{ c.alerts }}</span>{% endif %}
-            </a>
-          {% endfor %}
-        {% endif %}
-        {# Outside the roster's own condition on purpose: with an empty portfolio
-           there was no way to create the first mandate at all, which is the one
-           moment this button matters most. #}
-        <a href="/mandant/neu" class="side__row side__new">
-          <span class="side__plus" aria-hidden="true">+</span>
-          <span class="side__newl">{{ t("Neuer Mandant") }}</span>
-        </a>
-      </nav>
-
-      <div id="workspace-account" class="side__foot">
-        <details class="quiet-actions side-language"><summary>{{ t("Sprache") }}</summary>          <div class="seg" role="group" aria-label="{{ t('Sprache') }}">
-            {% for code, label in [('de', 'DE'), ('en', 'EN')] %}
-              <form method="post" action="/language/{{ code }}?next={{ request.url.path }}{% if request.url.query %}%3F{{ request.url.query | urlencode }}{% endif %}">
-                <button type="submit" class="seg__b{% if lang == code %} is-on{% endif %}"
-                        aria-pressed="{{ 'true' if lang == code else 'false' }}">{{ label }}</button>
-              </form>
-            {% endfor %}
-          </div>
-</details>
-        <a href="/settings" class="side__row{% if request.url.path.startswith('/settings') %} is-on{% endif %}">{{ t("Einstellungen") }}</a>
-        {# Only under Google sign-in: there is nothing to sign out of when the
-           browser is holding a basic-auth credential, and a button that cannot
-           work is worse than no button. #}
-        {% if google_login_active() %}
-          {% set who = signed_in_as(request) %}
-          <form method="post" action="/logout" class="side__out">
-            <button type="submit" class="side__row side__outbtn" title="{{ t('Abmelden') }}">
-              <span class="side__nm">{{ who or t("Abmelden") }}</span>
-              <span class="side__outmark" aria-hidden="true">⏻</span>
-            </button>
-          </form>
-        {% endif %}
-      </div>
-    </aside>
-
+    <aside id="react-sidebar" class="side"></aside>
     <div class="main">
-      {# The top bar (GEL-03, DEC-4): where you are, one field, one button.
-
-         Every one of the three goes somewhere that already exists — the crumbs
-         are pages the sidebar lists, the field is the archive's own ?q=, and
-         the button is the assistant that has been in this layout all along. The
-         Vorlage shows more controls up here; the ones with nothing behind them
-         are not in this markup, because a dead button in the chrome is worse
-         than a chrome without it. #}
-      {% set here = nav_crumbs(request) %}
-      <div class="topbar">
-        {# Two crumbs at most, and the story asks for exactly these two: the
-           workspace and the mandate. The trail therefore stops *above* the page
-           — "Portfolio / Solaris AG" over the Profil page — so no crumb carries
-           aria-current="page". The sidebar already marks the page it is on, and
-           a breadcrumb that claims to end there while linking somewhere else
-           reads out wrong. #}
-        <nav class="crumbs" aria-label="{{ t('Pfad') }}">
-          {% if here.mandate %}
-            <a href="{{ here.area_href }}">{{ t(here.area) }}</a>
-            <span class="crumbs__sep" aria-hidden="true">/</span>
-            <a class="crumbs__here" href="{{ here.mandate_href }}">{{ here.mandate }}</a>
-          {% else %}
-            <span class="crumbs__here">{{ t(here.area) }}</span>
-          {% endif %}
-        </nav>
-
-        <div class="topbar__r">
-          {# Straight onto the archive's own text filter. A GET form, so the
-             result is a URL the reader can keep. #}
-          <form class="topsearch" method="get" action="/archive" role="search">
-            <svg class="ico topsearch__ico" aria-hidden="true"><use href="#ico-suche"></use></svg>
-            <input class="topsearch__in" type="search" name="q" autocomplete="off"
-                   value="{{ request.query_params.get('q', '') if request.url.path == '/archive' else '' }}"
-                   placeholder="{{ t('Archiv durchsuchen…') }}"
-                   aria-label="{{ t('Archiv durchsuchen') }}">
-            <button class="topsearch__go" type="submit">{{ t("Suchen") }}</button>
-          </form>
-
-          <a class="askraute" href="/ask?{{ assistant_ctx(request) | urlencode }}" data-raute-open>
-            <svg class="ico askraute__ico" aria-hidden="true"><use href="#ico-raute"></use></svg>Ask RAUTE</a>
-        </div>
-      </div>
-
+      <div id="react-topbar"></div>
       {# Legacy page heading and live run status. Manual collection lives in Settings. #}
       {% if not frontend %}<header class="tbar">
         <div class="tbar__l"{% if frontend %} hidden{% endif %}>
@@ -179,44 +71,10 @@
     </div>
   </div>
 
-  <script>
-  (() => {
-    const menu = document.querySelector('.side__toggle');
-    const sidebar = document.querySelector('.side');
-    if (menu && sidebar) {
-      menu.hidden = false;
-      sidebar.classList.add('has-menu-toggle');
-      const setOpen = open => {
-        sidebar.classList.toggle('is-expanded', open);
-        menu.setAttribute('aria-expanded', String(open));
-        menu.setAttribute('aria-label', open ? 'Menü schließen' : 'Menü öffnen');
-      };
-      menu.addEventListener('click', () => setOpen(menu.getAttribute('aria-expanded') !== 'true'));
-      sidebar.addEventListener('keydown', event => {
-        if (event.key === 'Escape' && menu.getAttribute('aria-expanded') === 'true') {
-          setOpen(false); menu.focus();
-        }
-      });
-    }
-    const CTX = {{ assistant_ctx(request) | tojson }};
-    document.querySelectorAll("[data-raute-open]").forEach(el => el.onclick = e => {
-      e.preventDefault();
-      const params = new URLSearchParams(CTX);
-      const current = new URLSearchParams(window.location.search);
-      if (window.location.pathname === '/ask') {
-        window.location.reload(); return;
-      }
-      if (window.location.pathname.endsWith('/opportunities') && current.get('context')) {
-        params.set('scope', 'opportunity');
-        params.set('opportunity_kind', current.get('kind') || 'developed');
-        params.set('opportunity_id', current.get('context'));
-      }
-      window.location.assign('/ask?' + params);
-    });
-    if (new URLSearchParams(location.search).has('assistant') && location.pathname !== '/ask') {
-      document.querySelector('[data-raute-open]')?.click();
-    }
-  })();
-  </script>
+  <div id="react-shell"></div>
+  <script id="react-shell-data" type="application/json">{{ shell_data(request) | tojson }}</script>
+  {% set shell = shell_assets() %}
+  {% if shell %}<script type="module" src="{{ shell.script }}"></script>{% endif %}
+  <noscript><p>Bitte JavaScript aktivieren, um RauteOS zu verwenden.</p></noscript>
 </body>
 </html>

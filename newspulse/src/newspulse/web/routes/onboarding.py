@@ -83,6 +83,12 @@ def _saved(
     a figure that still said 12/20 after the thirteenth answer would make the
     page look like it had not saved.
     """
+    if 'application/json' in request.headers.get('accept', ''):
+        from fastapi.responses import JSONResponse
+        from ..react_pages import view_data
+        stored = onboarding.answers(session, client.id)
+        return JSONResponse(view_data(dict(answer=stored.get(question.key),
+            progress=onboarding.completeness(session, client.id, stored=stored))))
     if not request.headers.get("hx-request"):
         # Back to the open window and to the question that was answered. The
         # flag has to ride along: without it the page renders behind a window

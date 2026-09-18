@@ -1,0 +1,247 @@
+.platform-page {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+.platform-panel {
+  padding: 24px;
+  margin: 24px 0;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  min-width: 0;
+}
+.platform-panel h2 {
+  font-size: 20px;
+  margin-bottom: 16px;
+}
+.platform-panel h3 {
+  font-size: 17px;
+  margin: 20px 0 10px;
+}
+.platform-panel p {
+  margin: 10px 0;
+  line-height: 1.6;
+}
+.platform-panel ul {
+  padding-left: 22px;
+}
+.platform-panel li {
+  margin: 8px 0;
+}
+.platform-fields,
+.platform-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+.platform-span {
+  grid-column: 1/-1;
+}
+.platform-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+  margin: 12px 0;
+  font-size: 14px;
+}
+.platform-field span {
+  font-weight: 500;
+}
+.platform-field small {
+  color: var(--muted);
+}
+.platform-field textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 88px;
+}
+.platform-field input,
+.platform-field select {
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
+}
+.platform-field input[type="file"] {
+  padding: 12px;
+  border: 1px dashed var(--line-strong);
+  background: var(--fill-2);
+}
+.platform-actions,
+.platform-action {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 0;
+}
+.platform-action:has(textarea) {
+  display: block;
+}
+.platform-action .platform-field {
+  flex: 1 1 220px;
+}
+.platform-client {
+  border-top: 1px solid var(--line);
+  padding: 20px 0;
+}
+.platform-client header,
+.platform-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.platform-client header h3 {
+  margin: 0;
+}
+.platform-client header p {
+  font-size: 13px;
+  color: var(--muted);
+}
+.platform-edit {
+  margin-top: 16px;
+  background: var(--fill-2);
+  padding: 20px;
+  border-radius: 8px;
+}
+.platform-panel fieldset {
+  border: 1px solid var(--line);
+  padding: 16px;
+  margin: 16px 0;
+  border-radius: 8px;
+}
+.platform-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 16px 8px 0;
+}
+.platform-check input {
+  width: auto;
+}
+.platform-pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: var(--fill-2);
+  padding: 16px;
+  font: inherit;
+  font-size: 13px;
+  max-height: 400px;
+  overflow: auto;
+}
+.platform-proposal {
+  padding: 16px;
+  border-left: 3px solid var(--accent);
+  background: var(--fill-2);
+}
+.platform-deadline {
+  color: var(--alert);
+  font-weight: 600;
+}
+.platform-dialog {
+  width: min(880px, calc(100% - 32px));
+  max-height: 90dvh;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 28px;
+  margin: auto;
+  overflow: auto;
+  color: var(--ink);
+  background: var(--card);
+}
+.platform-dialog::backdrop {
+  background: rgb(20 25 40 / 0.4);
+}
+.platform-dialog > header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+.platform-question {
+  padding: 22px 0;
+  border-bottom: 1px solid var(--line);
+}
+.platform-question h4 {
+  font-size: 16px;
+}
+.platform-question p {
+  margin: 8px 0;
+  color: var(--muted);
+}
+.platform-question form {
+  margin: 8px 0;
+}
+.platform-dialog .platform-actions {
+  margin: 0;
+}
+.platform-page .archive-filters {
+  align-items: end;
+}
+.platform-page .archive-filters .platform-field {
+  flex: 1 1 160px;
+}
+.platform-page .feed-item__headline {
+  font-size: 17px;
+}
+.platform-page .table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.platform-page .data {
+  width: 100%;
+}
+.platform-page .data th,
+.platform-page .data td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+.platform-panel .platform-columns {
+  align-items: start;
+}
+.profile-page > .profile-section {
+  padding: 0;
+  background: none;
+  border: 0;
+}
+.profile-page .platform-panel {
+  margin-top: 0;
+}
+@media (max-width: 700px) {
+  .platform-fields,
+  .platform-columns {
+    grid-template-columns: 1fr;
+  }
+  .platform-panel {
+    padding: 18px;
+  }
+  .platform-edit {
+    padding: 12px;
+  }
+  .platform-span {
+    grid-column: auto;
+  }
+  .platform-dialog {
+    padding: 18px;
+  }
+  .platform-action {
+    align-items: stretch;
+  }
+  .platform-action button {
+    max-width: 100%;
+    white-space: normal;
+  }
+  .platform-panel .data {
+    font-size: 12px;
+  }
+  .platform-panel .data td,
+  .platform-panel .data th {
+    padding: 8px;
+  }
+  .platform-page .feed-item__headline {
+    font-size: 16px;
+  }
+}

@@ -14,6 +14,8 @@ The three story-mandated behaviors are covered explicitly:
 
 from __future__ import annotations
 
+from react_render import rendered
+
 import datetime as dt
 from types import SimpleNamespace
 
@@ -115,14 +117,14 @@ def test_settings_page_renders_with_empty_database(client):
     """A fresh install renders the settings page (no clients, feeds from config)."""
     resp = client.get("/settings")
     assert resp.status_code == 200
-    assert "Einstellungen" in resp.text
+    assert "Einstellungen" in rendered(resp)
     # The registered feeds are listed even before anything is configured.
-    assert "Spiegel" in resp.text
+    assert "Spiegel" in rendered(resp)
 
 
 def test_threshold_defaults_to_config_when_unset(client):
     """With no stored threshold the page shows the config default as selected."""
-    body = client.get("/settings").text
+    body = rendered(client.get("/settings"))
     assert f'value="{config.ALERT_THRESHOLD}" selected' in body
 
 
@@ -142,7 +144,7 @@ def test_adding_a_client_creates_it_through_the_service(factory, client):
         follow_redirects=True,
     )
     assert resp.status_code == 200
-    assert "Neu AG" in resp.text
+    assert "Neu AG" in rendered(resp)
 
     with factory() as session:
         created = session.query(Client).filter(Client.name == "Neu AG").one()
@@ -155,7 +157,7 @@ def test_adding_a_client_without_name_shows_inline_error(factory, client):
     """A blank name is rejected inline and nothing is written."""
     resp = client.post("/settings/clients", data={"name": "  "})
     assert resp.status_code == 200
-    assert "Name ist erforderlich" in resp.text
+    assert "Name ist erforderlich" in rendered(resp)
     with factory() as session:
         assert session.query(Client).count() == 0
 
@@ -165,7 +167,7 @@ def test_duplicate_active_client_name_shows_inline_error(factory, client):
     client.post("/settings/clients", data={"name": "Doppel AG"}, follow_redirects=True)
     resp = client.post("/settings/clients", data={"name": "doppel ag"})
     assert resp.status_code == 200
-    assert "already exists" in resp.text
+    assert "already exists" in rendered(resp)
     with factory() as session:
         assert session.query(Client).count() == 1
 
@@ -230,7 +232,7 @@ def test_reactivate_into_duplicate_name_shows_inline_error(factory, client):
 
     resp = client.post(f"/settings/clients/{first_id}/reactivate")
     assert resp.status_code == 200
-    assert "already exists" in resp.text
+    assert "already exists" in rendered(resp)
     with factory() as session:
         assert session.query(Client).filter_by(name="Alpha AG", active=True).count() == 1
 
@@ -252,7 +254,7 @@ def test_editing_alert_threshold_persists_and_reloads(factory, client):
         assert stored.value == "9"
 
     # Reloaded and shown as the selected option on the page.
-    body = client.get("/settings").text
+    body = rendered(client.get("/settings"))
     assert 'value="9" selected' in body
 
 
@@ -267,7 +269,7 @@ def test_non_numeric_threshold_shows_inline_error(factory, client):
     """A non-numeric threshold is rejected inline and nothing is persisted."""
     resp = client.post("/settings/threshold", data={"alert_threshold": "hoch"})
     assert resp.status_code == 200
-    assert "muss eine Zahl sein" in resp.text
+    assert "muss eine Zahl sein" in rendered(resp)
     with factory() as session:
         assert session.get(Setting, _ALERT_THRESHOLD_KEY) is None
 
@@ -329,7 +331,7 @@ def test_import_preview_reports_validation_error_without_committing(factory, cli
     )
     assert resp.status_code == 200
     # The NP-02 validation error names the missing source column inline.
-    assert "Firmenname" in resp.text
+    assert "Firmenname" in rendered(resp)
     # Nothing was written.
     with factory() as session:
         assert session.query(Client).count() == 0
@@ -344,7 +346,7 @@ def test_import_preview_shows_parsed_rows_without_committing(factory, client):
         files={"file": ("clients.csv", csv_bytes, "text/csv")},
     )
     assert resp.status_code == 200
-    assert "Beispiel AG" in resp.text
+    assert "Beispiel AG" in rendered(resp)
     with factory() as session:
         assert session.query(Client).count() == 0
 
@@ -359,8 +361,8 @@ def test_import_preview_rejects_two_fields_mapped_to_one_column(factory, client)
         files={"file": ("clients.csv", csv_bytes, "text/csv")},
     )
     assert resp.status_code == 200
-    assert "Firma" in resp.text
-    assert "map each column" in resp.text
+    assert "Firma" in rendered(resp)
+    assert "map each column" in rendered(resp)
     with factory() as session:
         assert session.query(Client).count() == 0
 
@@ -387,7 +389,7 @@ def test_import_without_a_file_shows_inline_error(factory, client):
         data={"map_name": "Firmenname"},
     )
     assert resp.status_code == 200
-    assert "Datei auswählen" in resp.text
+    assert "Datei auswählen" in rendered(resp)
     with factory() as session:
         assert session.query(Client).count() == 0
 
@@ -409,7 +411,7 @@ def test_run_history_shows_status_articles_and_errors(factory, client):
         )
         session.commit()
 
-    body = client.get("/settings").text
+    body = rendered(client.get("/settings"))
     assert "partial" in body
     assert "87" in body
     assert "Feed Spiegel timed out" in body
@@ -423,13 +425,13 @@ def test_run_trigger_rejects_a_window_not_offered(client):
     without starting a sweep."""
     resp = client.post("/settings/run", data={"since_days": "999"})
     assert resp.status_code == 200  # re-rendered with an inline error, no redirect
-    assert "Ungültiger Zeitraum" in resp.text
+    assert "Ungültiger Zeitraum" in rendered(resp)
 
 
 def test_run_trigger_rejects_non_numeric_window(client):
     resp = client.post("/settings/run", data={"since_days": "dreissig"})
     assert resp.status_code == 200
-    assert "Ungültiger Zeitraum" in resp.text
+    assert "Ungültiger Zeitraum" in rendered(resp)
 
 
 def test_backfill_offers_an_onboarding_window(client):
@@ -441,7 +443,7 @@ def test_backfill_offers_an_onboarding_window(client):
     from newspulse.web.routes.settings import BACKFILL_DAYS
 
     assert 90 in BACKFILL_DAYS
-    body = client.get("/settings").text
+    body = rendered(client.get("/settings"))
     assert 'value="90"' in body
 
 
@@ -455,7 +457,7 @@ def test_run_trigger_refuses_a_second_concurrent_run(client, monkeypatch):
     try:
         resp = client.post("/settings/run", data={"since_days": ""})
         assert resp.status_code == 200
-        assert "Es läuft bereits ein Lauf" in resp.text
+        assert "Es läuft bereits ein Lauf" in rendered(resp)
     finally:
         settings_routes._run_guard.release()
 
@@ -567,13 +569,13 @@ def test_the_portfolio_separates_mandates_from_yardsticks(factory, client):
         mandate.competitors.append(rival)
         session.commit()
 
-    body = client.get("/settings").text
+    body = rendered(client.get("/settings"))
 
     assert "Mandanten gesamt" in body
     assert "Maßstab für" in body
     # Two tables, so the mandate's own list of competitors and the yardstick's
     # list of owners are different columns rather than one ambiguous one.
-    assert body.count('class="data data--clients"') == 2
+    assert body.count('class="platform-client-group"') == 2
 
 
 def test_a_yardstick_row_says_whose_yardstick_it_is(factory, client):
@@ -586,7 +588,7 @@ def test_a_yardstick_row_says_whose_yardstick_it_is(factory, client):
         mandate.competitors.append(rival)
         session.commit()
 
-    body = client.get("/settings").text
+    body = rendered(client.get("/settings"))
     yardsticks = body.split("Maßstab für", 1)[1]
 
     assert "Zalando" in yardsticks
@@ -603,7 +605,7 @@ def test_a_yardstick_linked_to_nobody_is_flagged(factory, client):
         )
         session.commit()
 
-    body = client.get("/settings").text
+    body = rendered(client.get("/settings"))
 
     assert "keinem Mandanten" in body
 
@@ -613,7 +615,7 @@ def test_a_portfolio_of_only_mandates_shows_no_yardstick_table(factory, client):
         session.add(Client(name="Zalando", aliases=[], keywords=[], alert_topics=[]))
         session.commit()
 
-    body = client.get("/settings").text
+    body = rendered(client.get("/settings"))
 
     assert "Maßstab für" not in body
-    assert body.count('class="data data--clients"') == 1
+    assert body.count('class="platform-client-group"') == 1

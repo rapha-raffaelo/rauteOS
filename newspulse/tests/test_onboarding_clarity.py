@@ -10,6 +10,8 @@ escalate what the search terms already found — and concluded that anyone enter
 
 from __future__ import annotations
 
+from react_render import rendered
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -78,7 +80,7 @@ def test_a_genuinely_unusable_country_is_still_refused():
 
 def test_the_form_says_what_each_search_field_does(client):
     """The two fields do different things and the difference was invisible."""
-    body = " ".join(client.get("/settings").text.split())
+    body = " ".join(rendered(client.get("/settings")).split())
 
     assert "entscheiden, was gefunden wird" in body
     assert "stufen hoch, was schon gefunden wurde" in body
@@ -104,8 +106,8 @@ def test_one_name_per_concept_across_the_app(factory, client):
         session.commit()
         subject_id = subject.id
 
-    detail = client.get(f"/client/{subject_id}").text
-    settings = client.get("/settings").text
+    detail = rendered(client.get(f"/settings?edit={subject_id}"))
+    settings = rendered(client.get("/settings"))
 
     assert "Suchbegriffe" in detail and "Keywords" not in detail
     assert "Alarm-Themen" in detail and "Alert-Themen" not in detail

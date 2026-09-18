@@ -1,3 +1,4 @@
+from react_render import rendered
 """Profiles stay attributable; fresh research never pretends the archive is complete."""
 import datetime as dt
 
@@ -41,7 +42,7 @@ def test_old_workspace_links_keep_their_context_under_contacts(web, monkeypatch,
     response = web.get('/journalists' + query, follow_redirects=False)
     assert response.status_code == 303
     assert response.headers['location'] == '/contacts' + query
-    body = web.get(response.headers['location']).text
+    body = rendered(web.get(response.headers['location']))
     assert 'id="react-journalists"' in body
     assert '<title>Kontakte · RauteOS</title>' in body
     side = body.split('<aside class="side">', 1)[1].split('</aside>', 1)[0]
@@ -53,7 +54,7 @@ def test_old_workspace_links_keep_their_context_under_contacts(web, monkeypatch,
 def test_contacts_keeps_a_working_form_without_frontend_assets(web, monkeypatch):
     from newspulse.web import frontend
     monkeypatch.setattr(frontend, 'page_assets', lambda page: None)
-    body = web.get('/contacts').text
+    body = rendered(web.get('/contacts'))
     assert 'class="contact-form"' in body
     assert 'id="react-journalists"' not in body
 

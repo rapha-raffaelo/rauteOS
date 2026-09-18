@@ -18,13 +18,15 @@ import datetime as dt
 from dataclasses import dataclass
 from urllib.parse import urlencode
 
+from ..react_pages import render as render_react
+
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 from sqlalchemy import ColumnElement, func, select
 from sqlalchemy.orm import Session
 
 from ...models import Analysis, Article, Category, Client, visible_coverage
-from ..app import get_db, templates
+from ..app import get_db
 from .client import (
     _PAGE_SIZE,
     _archive_conditions,
@@ -349,9 +351,9 @@ def archive_view(
     current_page = min(max(page, 1), total_pages)
     rows = _fetch_page(session, conditions, current_page)
 
-    return templates.TemplateResponse(
+    return render_react(
         request,
-        "archive.html",
+        "archive",
         {
             "rows": rows,
             "filters": filters,

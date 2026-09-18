@@ -19,6 +19,8 @@ never happens silently.
 
 from __future__ import annotations
 
+from react_render import rendered
+
 import datetime as dt
 from zoneinfo import ZoneInfo
 
@@ -164,13 +166,13 @@ def test_an_open_opportunity_stands_on_heute_with_the_time_as_a_number(
     page = web.get("/today")
 
     assert page.status_code == 200
-    assert "Gelegenheit" in page.text
-    assert "12 Std" in page.text
-    assert "verbleibend" in page.text
-    assert _HEADLINE in page.text
-    assert "Zuerst bei" in page.text and "Handelsblatt" in page.text
-    assert "3× aufgegriffen" in page.text
-    assert _REASON in page.text
+    assert "Gelegenheit" in rendered(page)
+    assert "12 Std" in rendered(page)
+    assert "verbleibend" in rendered(page)
+    assert _HEADLINE in rendered(page)
+    assert "Zuerst bei" in rendered(page) and "Handelsblatt" in rendered(page)
+    assert "3× aufgegriffen" in rendered(page)
+    assert _REASON in rendered(page)
 
 
 def test_under_an_hour_the_card_counts_minutes(web, session, mandate):
@@ -180,8 +182,8 @@ def test_under_an_hour_the_card_counts_minutes(web, session, mandate):
 
     page = web.get("/today")
 
-    assert "Min" in page.text and "verbleibend" in page.text
-    assert "0 Std" not in page.text
+    assert "Min" in rendered(page) and "verbleibend" in rendered(page)
+    assert "0 Std" not in rendered(page)
 
 
 def test_an_empty_reason_still_gives_the_card_a_standing_sentence(
@@ -193,8 +195,8 @@ def test_an_empty_reason_still_gives_the_card_a_standing_sentence(
 
     page = web.get("/today")
 
-    assert "3 Medien tragen die Story" in page.text
-    assert "zuerst bei Handelsblatt" in page.text
+    assert "3 Medien tragen die Story" in rendered(page)
+    assert "zuerst bei Handelsblatt" in rendered(page)
 
 
 def test_the_cards_stand_above_the_days_coverage(web, session, mandate):
@@ -204,7 +206,7 @@ def test_the_cards_stand_above_the_days_coverage(web, session, mandate):
 
     page = web.get("/today")
 
-    assert page.text.index('class="njacks"') < page.text.index('class="cols"')
+    assert rendered(page).index('class="njacks"') < rendered(page).index('class="cols"')
 
 
 def test_without_an_open_opportunity_heute_shows_no_placeholder(web, session, mandate):
@@ -212,8 +214,8 @@ def test_without_an_open_opportunity_heute_shows_no_placeholder(web, session, ma
     page = web.get("/today")
 
     assert page.status_code == 200
-    assert "njacks" not in page.text
-    assert "Gelegenheit" not in page.text
+    assert "njacks" not in rendered(page)
+    assert "Gelegenheit" not in rendered(page)
 
 
 def test_an_expired_opportunity_leaves_heute_without_any_run(web, session, mandate):
@@ -221,7 +223,7 @@ def test_an_expired_opportunity_leaves_heute_without_any_run(web, session, manda
     touched again stops being shown on time."""
     _opportunity(session, mandate, hours_left=-1)
 
-    assert _HEADLINE not in web.get("/today").text
+    assert _HEADLINE not in rendered(web.get("/today"))
 
 
 def test_a_rejection_is_never_a_card(web, session, mandate):
@@ -234,7 +236,7 @@ def test_a_rejection_is_never_a_card(web, session, mandate):
         reason="Nichts Gespeichertes trägt eine Aussage dazu.",
     )
 
-    assert _HEADLINE not in web.get("/today").text
+    assert _HEADLINE not in rendered(web.get("/today"))
 
 
 def test_the_client_filter_hides_the_other_mandates_cards(web, session, mandate):
@@ -251,8 +253,8 @@ def test_the_client_filter_hides_the_other_mandates_cards(web, session, mandate)
 
     page = web.get(f"/today?client={other.id}")
 
-    assert "EU-Kommission legt Entwurf" in page.text
-    assert _HEADLINE not in page.text
+    assert "EU-Kommission legt Entwurf" in rendered(page)
+    assert _HEADLINE not in rendered(page)
 
 
 # --- The cap ----------------------------------------------------------------------
@@ -273,16 +275,16 @@ def test_never_more_than_three_cards_per_mandate_cut_by_pickup_and_named(
     page = web.get("/today")
 
     # The three widest waves stand; the two narrowest were cut.
-    assert titles[4] in page.text
-    assert titles[3] in page.text
-    assert titles[2] in page.text
-    assert titles[1] not in page.text
-    assert titles[0] not in page.text
-    assert "2 weitere Gelegenheit(en) bei" in page.text
-    assert "Solaris AG" in page.text
-    assert "nach Aufgriffszahl gekürzt" in page.text
+    assert titles[4] in rendered(page)
+    assert titles[3] in rendered(page)
+    assert titles[2] in rendered(page)
+    assert titles[1] not in rendered(page)
+    assert titles[0] not in rendered(page)
+    assert "2 weitere Gelegenheit(en) bei" in rendered(page)
+    assert "Solaris AG" in rendered(page)
+    assert "nach Aufgriffszahl gekürzt" in rendered(page)
     # The sentence carries the cap the route applied, not a hardcoded word.
-    assert "hier stehen die 3" in page.text
+    assert "hier stehen die 3" in rendered(page)
 
 
 def test_three_open_opportunities_are_no_cut(web, session, mandate):
@@ -297,7 +299,7 @@ def test_three_open_opportunities_are_no_cut(web, session, mandate):
 
     page = web.get("/today")
 
-    assert "gekürzt" not in page.text
+    assert "gekürzt" not in rendered(page)
 
 
 # --- Verwerfen --------------------------------------------------------------------
@@ -322,7 +324,7 @@ def test_dismiss_stamps_the_row_and_removes_the_card_without_a_reason(
     kept = session.get(NewsjackOpportunity, row.id)
     assert kept is not None and kept.dismissed_at is not None
     assert kept.standing is Standing.BELEGT  # the verdict is untouched
-    assert _HEADLINE not in web.get("/today").text
+    assert _HEADLINE not in rendered(web.get("/today"))
     assert newsjack.open_opportunities(session, mandate) == []
 
 
@@ -404,8 +406,8 @@ def test_a_written_text_is_findable_from_the_card(web, session, mandate):
 
     page = web.get("/today")
 
-    assert "Text(e) ansehen" in page.text
-    assert f"anlass-{angle.id}" in page.text
+    assert "Text(e) ansehen" in rendered(page)
+    assert f"anlass-{angle.id}" in rendered(page)
 
 
 def test_a_rejection_or_foreign_mandate_cannot_be_opened(web, session, mandate):
@@ -445,10 +447,10 @@ def test_an_expired_opportunity_stays_readable_in_the_archive(web, session, mand
 
     page = web.get(f"/client/{mandate.id}")
 
-    assert "Gelegenheiten aus der schnellen Spur" in page.text
-    assert _HEADLINE in page.text
-    assert "Abgelaufen am" in page.text
-    assert "Kein Text entstanden." in page.text
+    assert "Gelegenheiten aus der schnellen Spur" in rendered(page)
+    assert _HEADLINE in rendered(page)
+    assert "Abgelaufen am" in rendered(page)
+    assert "Kein Text entstanden." in rendered(page)
 
 
 def test_a_dismissed_opportunity_reads_verworfen_in_the_archive(web, session, mandate):
@@ -457,8 +459,8 @@ def test_a_dismissed_opportunity_reads_verworfen_in_the_archive(web, session, ma
 
     page = web.get(f"/client/{mandate.id}")
 
-    assert "Verworfen am" in page.text
-    assert "Abgelaufen am" not in page.text
+    assert "Verworfen am" in rendered(page)
+    assert "Abgelaufen am" not in rendered(page)
 
 
 def test_an_open_opportunity_is_not_in_the_archive(web, session, mandate):
@@ -466,9 +468,9 @@ def test_an_open_opportunity_is_not_in_the_archive(web, session, mandate):
     And with nothing concluded there is no section at all."""
     _opportunity(session, mandate, hours_left=12)
 
-    assert "Gelegenheiten aus der schnellen Spur" not in web.get(
+    assert "Gelegenheiten aus der schnellen Spur" not in rendered(web.get(
         f"/client/{mandate.id}"
-    ).text
+    ))
 
 
 # --- The languages ----------------------------------------------------------------
@@ -501,10 +503,10 @@ def test_the_card_renders_in_english_when_chosen(web, session, mandate):
 
     page = web.get("/today")
 
-    assert "left" in page.text
-    assert "First at" in page.text
+    assert "left" in rendered(page)
+    assert "First at" in rendered(page)
     # The standing sentence is stored data and stays as written.
-    assert _REASON in page.text
+    assert _REASON in rendered(page)
 
 
 # --- The fast lane's own notification ---------------------------------------------

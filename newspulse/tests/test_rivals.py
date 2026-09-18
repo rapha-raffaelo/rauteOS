@@ -11,6 +11,8 @@ changes a number the agency reports.
 
 from __future__ import annotations
 
+from react_render import rendered
+
 import json
 
 import pytest
@@ -189,8 +191,8 @@ def test_the_proposal_lives_in_the_clients_own_edit_row(factory, client):
     with factory() as session:
         subject_id = _client(session).id
 
-    closed = client.get("/settings").text
-    open_row = client.get(f"/settings?edit={subject_id}").text
+    closed = rendered(client.get("/settings"))
+    open_row = rendered(client.get(f"/settings?edit={subject_id}"))
 
     assert f'action="/settings/clients/{subject_id}/rivals"' not in closed
     assert f'action="/settings/clients/{subject_id}/rivals"' in open_row
@@ -207,7 +209,7 @@ def test_an_accepted_competitor_is_visible_in_the_table(factory, client):
         f"/client/{subject_id}/competitors/accept",
         data={"name": "About You", "redirect_to": "/settings"},
     )
-    body = client.get("/settings").text
+    body = rendered(client.get("/settings"))
 
     assert "About You" in body
     assert "tag--rival" in body
@@ -230,7 +232,7 @@ def test_the_proposals_render_as_buttons_that_create_nothing_by_themselves(
         "rivals": rivals._parse(_reply("About You")).rivals,
     }
     try:
-        body = client.get(f"/settings?edit={subject_id}").text
+        body = rendered(client.get(f"/settings?edit={subject_id}"))
     finally:
         themework.rivals_job.state.clear()
 
@@ -251,12 +253,12 @@ def test_a_running_proposal_says_so_and_fetches_its_own_result(factory, client):
 
     themework.rivals_job.state[subject_id] = {"state": "läuft", "client": "Zalando"}
     try:
-        body = client.get(f"/settings?edit={subject_id}").text
+        body = rendered(client.get(f"/settings?edit={subject_id}"))
     finally:
         themework.rivals_job.state.clear()
 
     assert "Wettbewerber werden vorgeschlagen" in body
-    assert f'hx-target="#client-edit-{subject_id}"' in body
+    assert 'role="status"' in body  # React polls the JSON view without replacing inputs.
 
 
 def test_an_empty_proposal_says_so_rather_than_looking_broken(
@@ -275,7 +277,7 @@ def test_an_empty_proposal_says_so_rather_than_looking_broken(
         "rivals": [],
     }
     try:
-        body = client.get(f"/settings?edit={subject_id}").text
+        body = rendered(client.get(f"/settings?edit={subject_id}"))
     finally:
         themework.rivals_job.state.clear()
 
@@ -340,7 +342,7 @@ def test_a_competitor_from_another_industry_is_not_offered_at_all(factory, clien
         session.commit()
         broker_id = broker.id
 
-    body = client.get(f"/client/{broker_id}").text
+    body = rendered(client.get(f"/client/{broker_id}/twin"))
     offered = body.split('id="competitor_id"', 1)[1].split("</select>", 1)[0]
 
     # The picker itself offers the peer and nothing else. Grouping the fashion
@@ -364,7 +366,7 @@ def test_without_an_industry_nothing_is_offered_but_the_field_stays_open(factory
         session.commit()
         subject_id = subject.id
 
-    body = client.get(f"/client/{subject_id}").text
+    body = rendered(client.get(f"/client/{subject_id}/twin"))
 
     assert 'id="competitor_id"' not in body
     assert 'name="name"' in body  # the manual field
@@ -561,7 +563,7 @@ def test_the_proposal_form_carries_the_two_fields_into_the_accept(factory, clien
         ],
     }
     try:
-        body = client.get(f"/settings?edit={subject_id}").text
+        body = rendered(client.get(f"/settings?edit={subject_id}"))
     finally:
         themework.rivals_job.state.pop(subject_id, None)
 

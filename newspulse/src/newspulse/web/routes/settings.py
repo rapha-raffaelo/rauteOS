@@ -37,6 +37,8 @@ from enum import StrEnum
 from pathlib import Path
 from urllib.parse import quote, urlparse
 
+from ..react_pages import render as render_react
+
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
 from sqlalchemy import func, select
@@ -86,7 +88,7 @@ from ...models import (
 )
 from .. import redirects, runlock, themework
 from .. import spawn
-from ..app import get_db, templates
+from ..app import get_db
 
 router = APIRouter()
 
@@ -1063,7 +1065,7 @@ def _render_settings(
     """Render the settings page with the shared context plus any per-route extras."""
     context = _page_context(session)
     context.update(extra)
-    return templates.TemplateResponse(request, "settings.html", context)
+    return render_react(request, 'settings', context)
 
 
 # --- Routes --------------------------------------------------------------------
@@ -1640,8 +1642,8 @@ def new_client_form(request: Request) -> Response:
     the alert topics here would be asking the consultant to do work the tool has
     already been taught to do, and to do it before he has seen a single article.
     """
-    return templates.TemplateResponse(
-        request, "client_new.html", _mask_context()
+    return render_react(
+        request, "new_client", _mask_context()
     )
 
 
@@ -1666,9 +1668,9 @@ def create_client_from_mask(
         )
         created = create_client(session, **fields)
     except ValueError as exc:
-        return templates.TemplateResponse(
+        return render_react(
             request,
-            "client_new.html",
+            "new_client",
             _mask_context(name=name, website=website, country=country, error=str(exc)),
         )
     site = normalize_website(website)

@@ -1,13 +1,9 @@
 """One profile page for statements, company knowledge and its market context."""
-import datetime as dt
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
-from markupsafe import Markup
 from sqlalchemy.orm import Session
-from .. import frontend
-from ..app import get_db, templates, translator
+from ..app import get_db
 from ..mandates import mandate_or_404
-from .today import _fetch_last_run, _local_tz
 
 router = APIRouter()
 
@@ -18,17 +14,12 @@ def render_profile(request, session, client, **extra):
     from .rivals_view import rivals_context
     from .client import market_context
 
-    def section(name, context):
-        # Only our autoescaped templates become markup, never caller-supplied HTML.
-        template = templates.env.get_template(f'partials/{name}_body.html')
-        return Markup(template.render(**(context | {'request': request, 't': translator(request)})))
-
-    return templates.TemplateResponse(request, 'client_twin.html', dict(
-        client=client, frontend=frontend.page_assets('twin'),
-        company_section=section('client_profile', profile_context(request, session, client, **extra)),
-        rivals_section=section('client_rivals', rivals_context(session, client)),
-        market_section=section('client_market', market_context(session, client)),
-        last_run=_fetch_last_run(session), header_date=dt.datetime.now(_local_tz()).date()))
+    from ..react_pages import render
+    return render(request, 'profile', dict(
+        client=client,
+        company=profile_context(request, session, client, **extra),
+        rivals=rivals_context(session, client),
+        market=market_context(session, client)))
 
 
 @router.get('/client/{client_id}/twin', response_class=HTMLResponse)

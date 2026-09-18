@@ -7,6 +7,8 @@ is a malformed payload taking the answer down with it.
 
 from __future__ import annotations
 
+from react_render import rendered
+
 import json
 
 from newspulse.web.routes.assistant import (
@@ -185,7 +187,7 @@ def _page(path: str = "/", lang: str | None = None) -> str:
     client = TestClient(app)
     if lang:
         client.cookies.set(i18n.COOKIE_NAME, lang)
-    return client.get(path).text
+    return rendered(client.get(path))
 
 
 def test_ask_raute_replaces_the_drawer_on_every_page():

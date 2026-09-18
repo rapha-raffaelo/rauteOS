@@ -19,6 +19,8 @@ a full questionnaire is run against a byte-for-byte snapshot of ``client_facts``
 
 from __future__ import annotations
 
+from react_render import rendered
+
 import datetime as dt
 import re
 from pathlib import Path
@@ -166,7 +168,7 @@ def test_every_question_and_section_string_has_an_english_entry():
         for text in (section.title, section.short, section.intro):
             assert text in known, text
     for question in onboarding.QUESTIONS:
-        assert question.text in known, question.text
+        assert rendered(question) in known, rendered(question)
         assert question.help in known, question.help
         # Every optional string the template puts through ``t()`` too: a note or a
         # placeholder added later would otherwise render German on the English
@@ -465,11 +467,11 @@ def test_one_mandates_answers_do_not_count_towards_another(session):
 
 def test_the_page_renders_every_question_in_its_section(web, session):
     client = _client(session)
-    body = web.get(f"/client/{client.id}/kickoff").text
+    body = rendered(web.get(f"/client/{client.id}/kickoff"))
 
     for question in onboarding.QUESTIONS:
         assert f'id="q-{question.key}"' in body, question.key
-        assert question.text in body, question.key
+        assert rendered(question) in body, question.key
     for section in onboarding.SECTIONS:
         assert f'id="s-{section.key}"' in body, section.key
         assert section.title in body, section.key
@@ -479,7 +481,7 @@ def test_every_rendered_question_says_what_it_feeds(web, session):
     """"Füllt Profil · Geschäftsfeld", not a field name. The declaration is the
     reason this is a questionnaire and not a form."""
     client = _client(session)
-    body = web.get(f"/client/{client.id}/kickoff").text
+    body = rendered(web.get(f"/client/{client.id}/kickoff"))
 
     assert body.count('class="q__feeds"') == onboarding.TOTAL
     assert "<b>Profil · Geschäftsfeld</b>" in body
@@ -493,7 +495,7 @@ def test_every_rendered_question_says_what_it_feeds(web, session):
 def test_each_question_posts_to_its_own_route(web, session):
     """Answerable independently: twenty forms, not one submit at the end."""
     client = _client(session)
-    body = web.get(f"/client/{client.id}/kickoff").text
+    body = rendered(web.get(f"/client/{client.id}/kickoff"))
 
     for question in onboarding.QUESTIONS:
         assert f'action="/client/{client.id}/kickoff/{question.key}"' in body
@@ -515,9 +517,9 @@ def test_an_answer_is_stored_and_survives_a_reload(web, session):
     assert (
         saved.headers["location"] == f"/client/{client.id}/profil?fragebogen=1#q-satz"
     )
-    assert "Roboterarme, die den Chirurgen führen." in web.get(
+    assert "Roboterarme, die den Chirurgen führen." in rendered(web.get(
         f"/client/{client.id}/kickoff"
-    ).text
+    ))
 
 
 def test_an_htmx_save_returns_only_that_question_and_the_rail(web, session):
@@ -532,28 +534,28 @@ def test_an_htmx_save_returns_only_that_question_and_the_rail(web, session):
     )
 
     assert resp.status_code == 200
-    assert 'id="q-satz"' in resp.text
-    assert 'hx-swap-oob="true"' in resp.text
-    assert 'id="q-nie_satz"' not in resp.text
+    assert 'id="q-satz"' in rendered(resp)
+    assert 'hx-swap-oob="true"' in rendered(resp)
+    assert 'id="q-nie_satz"' not in rendered(resp)
 
 
 def test_the_page_states_how_many_remain_in_words(web, session):
     client = _client(session)
     web.post(f"/client/{client.id}/kickoff/satz", data={"value": "Roboterarme."})
 
-    body = web.get(f"/client/{client.id}/kickoff").text
+    body = rendered(web.get(f"/client/{client.id}/kickoff"))
 
     assert "19" in body
     assert "Fragen sind noch offen" in body
     assert "19<span> / 20</span>" not in body
-    assert "1<span> / 20</span>" in body
+    assert "1/20 beantwortet oder übergangen" in body
 
 
 def test_skipping_through_the_page_shows_a_state_of_its_own(web, session):
     client = _client(session)
 
     web.post(f"/client/{client.id}/kickoff/schweigen/skip")
-    body = web.get(f"/client/{client.id}/kickoff").text
+    body = rendered(web.get(f"/client/{client.id}/kickoff"))
 
     assert "q--skipped" in body
     assert "übergangen" in body
@@ -587,7 +589,7 @@ def test_an_answered_question_offers_the_deliberate_way_back_to_unanswered(web, 
     client = _client(session)
     web.post(f"/client/{client.id}/kickoff/satz", data={"value": "Roboterarme."})
 
-    body = web.get(f"/client/{client.id}/kickoff").text
+    body = rendered(web.get(f"/client/{client.id}/kickoff"))
     block = body.split('id="q-satz"')[1].split('id="q-sprecher"')[0]
     assert f'action="/client/{client.id}/kickoff/satz/clear"' in block
     # And the one-click path that would have destroyed the same answer is not
@@ -604,12 +606,12 @@ def test_a_list_field_is_not_committed_on_blur(web, session):
     For a list it is an append box: a half-typed name would become a chip that can
     only be corrected by deleting it and starting over."""
     client = _client(session)
-    body = web.get(f"/client/{client.id}/kickoff").text
+    body = rendered(web.get(f"/client/{client.id}/kickoff"))
 
     block = body.split('id="q-sprecher"')[1].split('id="q-wettbewerber"')[0]
-    assert 'hx-trigger="submit"' in block
+    assert 'data-list="true"' in block
     prose = body.split('id="q-satz"')[1].split('id="q-sprecher"')[0]
-    assert 'hx-trigger="change, submit"' in prose
+    assert 'data-list="false"' in prose and ">Speichern</button>" in prose
 
 
 def test_a_list_question_shows_its_entries_as_chips(web, session):
@@ -619,13 +621,13 @@ def test_a_list_question_shows_its_entries_as_chips(web, session):
     web.post(f"/client/{client.id}/kickoff/sprecher",
              data={"value": "Milan Roth, CTO"})
 
-    body = web.get(f"/client/{client.id}/kickoff").text
+    body = rendered(web.get(f"/client/{client.id}/kickoff"))
 
     assert body.count('class="chipx"') == 2
     assert "Dr. Anna Verhoeven, CEO" in body
 
     web.post(f"/client/{client.id}/kickoff/sprecher/remove", data={"index": "0"})
-    body = web.get(f"/client/{client.id}/kickoff").text
+    body = rendered(web.get(f"/client/{client.id}/kickoff"))
     assert "Dr. Anna Verhoeven, CEO" not in body
     assert "Milan Roth, CTO" in body
 
@@ -638,9 +640,9 @@ def test_the_questionnaire_is_reachable_from_the_page_that_shows_what_it_answers
     questions are felt."""
     client = _client(session)
 
-    body = web.get(f"/client/{client.id}/profil").text
+    body = rendered(web.get(f"/client/{client.id}/profil"))
 
-    assert 'href="?fragebogen=1#fragebogen"' in body
+    assert f'href="/client/{client.id}/twin?fragebogen=1#fragebogen"' in body
     assert "Kickoff" in body
 
 
@@ -648,7 +650,7 @@ def test_the_page_renders_in_english(web, session):
     client = _client(session)
     web.cookies.set(i18n.COOKIE_NAME, "en")
 
-    body = web.get(f"/client/{client.id}/kickoff").text
+    body = rendered(web.get(f"/client/{client.id}/kickoff"))
 
     assert "Which sentence should we never write about you?" in body
     assert "<b>Profile · Line of business</b>" in body
@@ -678,7 +680,7 @@ def test_the_page_carries_the_placeholders_the_locked_mock_specifies(web, sessio
     but guidance removed."""
     client = _client(session)
 
-    body = web.get(f"/client/{client.id}/kickoff").text
+    body = rendered(web.get(f"/client/{client.id}/kickoff"))
 
     for expected in (
         "Weitere Person, Rolle, Themen",
@@ -882,7 +884,7 @@ def test_the_draft_is_returned_and_no_guide_is_written(session):
 
     draft = onboarding.to_guide_draft(session, client, invoke=_distilled())
 
-    assert draft.text
+    assert rendered(draft)
     assert client.comms_guide in (None, "")
     assert session.get(Client, client.id).comms_guide in (None, "")
 
@@ -892,9 +894,9 @@ def test_the_guide_is_written_only_once_the_draft_is_saved(session):
     _kickoff(session, client)
     draft = onboarding.to_guide_draft(session, client, invoke=_distilled())
 
-    guide.save(session, client, draft.text)
+    guide.save(session, client, rendered(draft))
 
-    assert session.get(Client, client.id).comms_guide == draft.text
+    assert session.get(Client, client.id).comms_guide == rendered(draft)
 
 
 def test_the_draft_carries_every_no_go_verbatim(session):
@@ -910,8 +912,8 @@ def test_the_draft_carries_every_no_go_verbatim(session):
         invoke=_distilled("No-Gos: Bitte keine Aussagen über den Ersatz von Ärzten."),
     )
 
-    assert "Vermont ersetzt den Chirurgen." in draft.text
-    assert "Umsatzzahlen werden nie genannt." in draft.text
+    assert "Vermont ersetzt den Chirurgen." in rendered(draft)
+    assert "Umsatzzahlen werden nie genannt." in rendered(draft)
     assert set(draft.verbatim) == {
         "Vermont ersetzt den Chirurgen.",
         "Umsatzzahlen werden nie genannt.",
@@ -930,7 +932,7 @@ def test_the_verbatim_block_lists_every_rule_even_ones_already_quoted(session):
         session, client, invoke=_distilled("No-Gos: Vermont ersetzt den Chirurgen.")
     )
 
-    block = draft.text.split(onboarding._NOGO_HEADING)[1]
+    block = rendered(draft).split(onboarding._NOGO_HEADING)[1]
     assert "Vermont ersetzt den Chirurgen." in block
     assert "Umsatzzahlen werden nie genannt." in block
 
@@ -945,7 +947,7 @@ def test_a_partly_answered_questionnaire_names_the_sections_that_had_no_answer(s
 
     assert [s.key for s in draft.missing] == ["ziele", "medien", "zusammenarbeit"]
     for section in draft.missing:
-        assert section.title in draft.text
+        assert section.title in rendered(draft)
 
 
 def test_a_fully_answered_questionnaire_names_no_gaps(session):
@@ -1005,8 +1007,8 @@ def test_the_draft_stays_inside_the_guide_budget_and_keeps_the_rules_whole(sessi
         session, client, invoke=_distilled("x" * (guide.GUIDE_MAX_CHARS + 500))
     )
 
-    assert len(draft.text) <= guide.GUIDE_MAX_CHARS
-    assert "Vermont ersetzt den Chirurgen." in draft.text
+    assert len(rendered(draft)) <= guide.GUIDE_MAX_CHARS
+    assert "Vermont ersetzt den Chirurgen." in rendered(draft)
 
 
 def test_rules_longer_than_the_whole_guide_are_dropped_whole_and_named(session):
@@ -1026,15 +1028,15 @@ def test_rules_longer_than_the_whole_guide_are_dropped_whole_and_named(session):
 
     draft = onboarding.to_guide_draft(session, client, invoke=_distilled())
 
-    assert len(draft.text) <= guide.GUIDE_MAX_CHARS
+    assert len(rendered(draft)) <= guide.GUIDE_MAX_CHARS
     assert draft.dropped, "a block this long cannot fit whole"
     for rule in draft.dropped:
         assert rule in draft.verbatim, "dropped rules are the client's, unchanged"
-        assert rule not in draft.text
+        assert rule not in rendered(draft)
     kept = [r for r in draft.verbatim if r not in draft.dropped]
     assert kept, "the budget still holds at least the first rule"
     for rule in kept:
-        assert rule in draft.text, "kept rules are whole, never trimmed"
+        assert rule in rendered(draft), "kept rules are whole, never trimmed"
 
 
 def test_an_over_long_rule_block_survives_being_saved_as_a_guide(session):
@@ -1046,9 +1048,9 @@ def test_an_over_long_rule_block_survives_being_saved_as_a_guide(session):
         _answer(session, client, key, f"Regel {key}: " + "kein Wort dazu. " * 60)
 
     draft = onboarding.to_guide_draft(session, client, invoke=_distilled())
-    saved = guide.save(session, client, draft.text)
+    saved = guide.save(session, client, rendered(draft))
 
-    assert saved == draft.text.strip()
+    assert saved == rendered(draft).strip()
     for rule in draft.verbatim:
         if rule not in draft.dropped:
             assert rule in saved
@@ -1070,10 +1072,10 @@ def test_a_draft_posted_from_the_form_keeps_its_last_rule_whole(session):
     draft = onboarding.to_guide_draft(session, client, invoke=_distilled("P " * 1200))
 
     assert not draft.dropped
-    assert len(draft.text) + draft.text.count("\n") > guide.GUIDE_MAX_CHARS, (
+    assert len(rendered(draft)) + rendered(draft).count("\n") > guide.GUIDE_MAX_CHARS, (
         "a draft below the ceiling even as CRLF would not test the trim"
     )
-    saved = guide.save(session, client, draft.text.replace("\n", "\r\n"))
+    saved = guide.save(session, client, rendered(draft).replace("\n", "\r\n"))
     for rule in draft.verbatim:
         assert rule in saved, "a no-go was trimmed off the end by guide.save"
 
@@ -1091,7 +1093,7 @@ def test_the_answers_are_filed_as_a_guide_source(session):
 
     stored = guide.sources(session, client.id)
     assert [s.filename for s in stored] == [onboarding.SOURCE_NAME]
-    assert "Wir bauen Roboterarme für OP-Säle." in stored[0].text
+    assert "Wir bauen Roboterarme für OP-Säle." in rendered(stored[0])
 
 
 def test_regenerating_replaces_the_kickoff_source_rather_than_piling_up(session):
@@ -1106,7 +1108,7 @@ def test_regenerating_replaces_the_kickoff_source_rather_than_piling_up(session)
 
     stored = guide.sources(session, client.id)
     assert len(stored) == 1
-    assert "Immer Kundinnen und Kunden, nie User." in stored[0].text
+    assert "Immer Kundinnen und Kunden, nie User." in rendered(stored[0])
 
 
 def test_regenerating_does_not_push_the_kickoff_ahead_of_a_newer_document(session):
@@ -1321,7 +1323,7 @@ def test_the_profile_offers_the_kickoff_answer_and_names_its_source(factory, web
         _answer(session, client, "satz", "Wir bauen Roboterarme für OP-Säle.")
         client_id = client.id
 
-    body = web.get(f"/client/{client_id}/profil").text
+    body = rendered(web.get(f"/client/{client_id}/profil"))
 
     assert "Wir bauen Roboterarme für OP-Säle." in body
     assert onboarding.SOURCE_NAME in body
@@ -1341,7 +1343,7 @@ def test_a_kickoff_answer_is_offered_even_where_the_consultant_filled_the_field(
         _answer(session, client, "satz", "Wir bauen Roboterarme für OP-Säle.")
         client_id = client.id
 
-    body = web.get(f"/client/{client_id}/profil").text
+    body = rendered(web.get(f"/client/{client_id}/profil"))
 
     assert "Wir bauen Roboterarme für OP-Säle." in body
 
@@ -1353,7 +1355,7 @@ def test_an_answer_that_says_what_the_field_already_says_is_not_offered(factory,
         _answer(session, client, "satz", "Roboterarme.")
         client_id = client.id
 
-    body = web.get(f"/client/{client_id}/profil").text
+    body = rendered(web.get(f"/client/{client_id}/profil"))
 
     assert "Vorschläge für das Profil" not in body
 
@@ -1371,7 +1373,7 @@ def test_accepting_through_the_page_shows_both_values_with_their_provenance(
 
     web.post(f"/client/{client_id}/profil/accept", data={"key": "geschaeftsfeld"},
              follow_redirects=False)
-    body = web.get(f"/client/{client_id}/profil").text
+    body = rendered(web.get(f"/client/{client_id}/profil"))
 
     with factory() as session:
         fact = profiles.stored(session, client_id)["geschaeftsfeld"]
@@ -1403,7 +1405,7 @@ def test_the_profile_states_how_much_of_the_kickoff_is_answered(factory, web):
         _kickoff(session, client)
         client_id = client.id
 
-    body = web.get(f"/client/{client_id}/profil").text
+    body = rendered(web.get(f"/client/{client_id}/profil"))
 
     assert f"5/{onboarding.TOTAL}" in body
     assert "Fragen aus dem Kickoff beantwortet oder übergangen" in body
@@ -1413,7 +1415,7 @@ def test_a_mandate_with_no_questionnaire_says_so_on_its_profile(factory, web):
     with factory() as session:
         client_id = _client(session).id
 
-    body = web.get(f"/client/{client_id}/profil").text
+    body = rendered(web.get(f"/client/{client_id}/profil"))
 
     assert "Kein Fragebogen beantwortet" in body
 
@@ -1423,7 +1425,7 @@ def test_the_client_list_carries_the_completeness_line(factory, web):
         client = _client(session)
         _kickoff(session, client)
 
-    body = web.get("/clients?view=classic").text
+    body = rendered(web.get("/clients?view=classic"))
 
     assert f"5/{onboarding.TOTAL}" in body
     assert "Fundament" in body
@@ -1433,7 +1435,7 @@ def test_the_client_list_says_plainly_when_there_is_no_questionnaire(factory, we
     with factory() as session:
         _client(session)
 
-    body = web.get("/clients?view=classic").text
+    body = rendered(web.get("/clients?view=classic"))
 
     assert "kein Fragebogen" in body
 
@@ -1444,7 +1446,7 @@ def test_the_guide_page_offers_a_draft_from_the_kickoff(factory, web):
         _kickoff(session, client)
         client_id = client.id
 
-    body = web.get(f"/client/{client_id}/guide").text
+    body = rendered(web.get(f"/client/{client_id}/guide"))
 
     assert f"/client/{client_id}/guide/kickoff" in body
     assert "Entwurf aus dem Kickoff" in body
@@ -1454,7 +1456,7 @@ def test_the_guide_page_says_when_there_is_nothing_to_draft_from(factory, web):
     with factory() as session:
         client_id = _client(session).id
 
-    body = web.get(f"/client/{client_id}/guide").text
+    body = rendered(web.get(f"/client/{client_id}/guide"))
 
     assert f"/client/{client_id}/guide/kickoff" not in body
     assert "noch unbeantwortet" in body
@@ -1474,11 +1476,11 @@ def test_the_drafted_guide_is_editable_and_unsaved_until_it_is_submitted(
         _kickoff(session, client)
         client_id = client.id
 
-    body = web.post(f"/client/{client_id}/guide/kickoff").text
+    body = rendered(web.post(f"/client/{client_id}/guide/kickoff"))
 
     assert "Positionierung: Chirurgierobotik." in body
     assert "Vermont ersetzt den Chirurgen." in body, "the no-go, verbatim"
-    assert '<textarea class="guide__area proposal__area"' in body
+    assert 'name="comms_guide"' in body and '<textarea' in body
     with factory() as session:
         assert session.get(Client, client_id).comms_guide in (None, "")
 
@@ -1490,7 +1492,7 @@ def test_the_rivals_page_offers_what_the_client_named(factory, web):
                 "Intuitive Surgical, weil sie den Markt definieren")
         client_id = client.id
 
-    body = web.get(f"/client/{client_id}/wettbewerb").text
+    body = rendered(web.get(f"/client/{client_id}/wettbewerb"))
 
     assert "Im Kickoff genannt" in body
     assert "Intuitive Surgical" in body
@@ -1548,10 +1550,10 @@ def test_every_string_on_the_kickoff_conversion_pages_has_an_english_entry():
     on the day somebody remembers to extend a list here.
     """
     known = set(i18n.known_keys())
-    templates = Path(web_app.__file__).parent / "templates"
+    sources = Path(__file__).resolve().parents[2] / "frontend/src/platform"
 
-    for name in _CONVERSION_PAGES:
-        found = _TRANSLATED.findall((templates / name).read_text("utf-8"))
+    for name in ["ProfilePage.jsx"]:
+        found = _TRANSLATED.findall((sources / name).read_text("utf-8"))
         assert found, f"{name} renders no translated string at all"
         assert [s for s in found if s in known] == found, (
             name, sorted({s for s in found if s not in known})
@@ -1580,7 +1582,7 @@ def test_the_answer_displaces_a_researched_proposal_for_the_same_field(factory, 
         ))
         session.commit()
 
-    body = web.get(f"/client/{client_id}/profil").text
+    body = rendered(web.get(f"/client/{client_id}/profil"))
 
     assert "Wir bauen Roboterarme für OP-Säle." in body
     assert "Laut Website: Zulieferer." not in body
@@ -1614,7 +1616,7 @@ def test_a_sourceless_research_proposal_is_not_called_the_clients_statement(fact
         ))
         session.commit()
 
-    body = web.get(f"/client/{client_id}/profil").text
+    body = rendered(web.get(f"/client/{client_id}/profil"))
 
     # Not merely unlabelled: not offered. A value the reader cannot check is not
     # a decision anybody should be asked to make, so the page drops it — which
@@ -1641,7 +1643,7 @@ def test_the_profile_page_carries_the_guide(web, session):
     client = _client(session)
     guide.save(session, client, "Nie ohne Zahl. Nie im Konjunktiv.")
 
-    body = web.get(f"/client/{client.id}/profil").text
+    body = rendered(web.get(f"/client/{client.id}/profil"))
 
     assert "Nie ohne Zahl. Nie im Konjunktiv." in body
     assert f'action="/client/{client.id}/guide"' in body, "the guide is editable here"
@@ -1651,12 +1653,12 @@ def test_the_questionnaire_opens_as_a_window_over_the_profile(web, session):
     """Closed until it is asked for, and then the whole set is in it."""
     client = _client(session)
 
-    closed = web.get(f"/client/{client.id}/profil").text
-    opened = web.get(f"/client/{client.id}/profil?fragebogen=1").text
+    closed = rendered(web.get(f"/client/{client.id}/profil"))
+    opened = rendered(web.get(f"/client/{client.id}/profil?fragebogen=1"))
 
-    assert 'class="sheet"' not in closed
-    assert 'class="sheet"' in opened
-    assert opened.count('class="q"') == len(onboarding.QUESTIONS)
+    assert 'class="platform-dialog"' not in closed
+    assert 'class="platform-dialog"' in opened
+    assert opened.count('class="platform-question"') == len(onboarding.QUESTIONS)
 
 
 def test_the_window_is_closed_by_pressing_it_shut(web, session):
@@ -1665,9 +1667,9 @@ def test_the_window_is_closed_by_pressing_it_shut(web, session):
     something to lose by brushing the wrong pixel."""
     client = _client(session)
 
-    opened = web.get(f"/client/{client.id}/profil?fragebogen=1").text
+    opened = rendered(web.get(f"/client/{client.id}/profil?fragebogen=1"))
 
-    assert f'href="/client/{client.id}/profil"' in opened
+    assert 'aria-label="Fragebogen schließen"' in opened
     assert "aria-modal=\"true\"" in opened
 
 
@@ -1690,9 +1692,9 @@ def test_the_strip_carries_one_tab_for_the_three(web, session):
     """Eleven tabs are a list somebody has to read, not a navigation."""
     client = _client(session)
 
-    strip = web.get(f"/client/{client.id}/profil").text
+    strip = rendered(web.get(f"/client/{client.id}/profil"))
 
-    assert f'href="/client/{client.id}/profil"' in strip
+    assert f'href="/client/{client.id}/twin"' in strip
     assert f'href="/client/{client.id}/kickoff"' not in strip
     assert f'href="/client/{client.id}/guide"' not in strip
 
@@ -1708,8 +1710,8 @@ def test_an_answer_saved_without_htmx_comes_back_into_the_open_window(web, sessi
         follow_redirects=True,
     )
 
-    assert 'class="sheet"' in saved.text
-    assert "Roboterarme, die den Chirurgen führen." in saved.text
+    assert 'class="platform-dialog"' in rendered(saved)
+    assert "Roboterarme, die den Chirurgen führen." in rendered(saved)
 
 
 def test_a_guide_error_is_still_shown_after_the_move(web, session, monkeypatch):
@@ -1726,8 +1728,8 @@ def test_a_guide_error_is_still_shown_after_the_move(web, session, monkeypatch):
 
     monkeypatch.setattr(guide_routes.guide, "distill", _boom)
 
-    body = web.post(
+    body = rendered(web.post(
         f"/client/{client.id}/guide/distill", data={}, follow_redirects=False
-    ).text
+    ))
 
     assert "das Modell ist nicht erreichbar" in body

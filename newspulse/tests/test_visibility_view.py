@@ -19,6 +19,8 @@ are the reason the rest exist:
 
 from __future__ import annotations
 
+from react_render import rendered
+
 import datetime as dt
 import html as htmllib
 import re
@@ -151,7 +153,7 @@ def _run(
             VisibilityAnswer(
                 question_id=question.id,
                 provider=provider,
-                answer=f"Antwort auf {question.text}",
+                answer=f"Antwort auf {rendered(question)}",
                 named=position is not None,
                 position=position,
                 companies=list(companies),
@@ -182,13 +184,13 @@ def test_the_tab_strip_links_to_the_visibility_page(web, session, mandate):
     page = web.get(f"/client/{mandate.id}/ki")
 
     assert page.status_code == 200
-    assert f'href="/client/{mandate.id}/ki"' in page.text
-    assert "KI-Sichtbarkeit" in _text(page.text)
+    assert f'href="/client/{mandate.id}/ki"' in rendered(page)
+    assert "KI-Sichtbarkeit" in _text(rendered(page))
 
 
 def test_the_visibility_tab_is_marked_active_on_its_own_page(web, session, mandate):
     assert re.search(
-        rf'href="/client/{mandate.id}/ki" class="active"', web.get(f"/client/{mandate.id}/ki").text
+        rf'href="/client/{mandate.id}/ki" class="active"', rendered(web.get(f"/client/{mandate.id}/ki"))
     )
 
 
@@ -215,7 +217,7 @@ def test_a_benchmark_still_appears_inside_the_mandates_ranking(web, session, man
         asked=[_CLAUDE],
     )
 
-    body = _text(web.get(f"/client/{mandate.id}/ki").text)
+    body = _text(rendered(web.get(f"/client/{mandate.id}/ki")))
 
     assert "Zolar" in body
     assert "Wer den Markt besetzt" in body
@@ -247,7 +249,7 @@ def test_the_page_states_the_share_of_questions_that_named_the_mandate(
         asked=[_CLAUDE],
     )
 
-    body = _text(web.get(f"/client/{mandate.id}/ki").text)
+    body = _text(rendered(web.get(f"/client/{mandate.id}/ki")))
 
     assert "75 %" in body
     assert "3 von 4 gemessenen Fragen" in body
@@ -271,7 +273,7 @@ def test_the_ranking_marks_the_mandate_among_the_companies_named(web, session, m
         asked=[_CLAUDE],
     )
 
-    html = web.get(f"/client/{mandate.id}/ki").text
+    html = rendered(web.get(f"/client/{mandate.id}/ki"))
 
     # Zolar was named in both questions, Enpal in one, EON Solar in one.
     assert "Zolar" in html and "EON Solar" in html
@@ -297,7 +299,7 @@ def test_the_stated_sources_appear_with_their_counts(web, session, mandate):
         asked=[_CLAUDE],
     )
 
-    body = _text(web.get(f"/client/{mandate.id}/ki").text)
+    body = _text(rendered(web.get(f"/client/{mandate.id}/ki")))
 
     assert "Verbraucherzentrale 2×" in body
     assert "Finanztip 1×" in body
@@ -333,7 +335,7 @@ def test_movement_lists_the_changed_question_and_counts_the_unchanged_ones(
         asked=[_CLAUDE],
     )
 
-    body = _text(web.get(f"/client/{mandate.id}/ki").text)
+    body = _text(rendered(web.get(f"/client/{mandate.id}/ki")))
 
     assert _AUSWAHL in body
     assert "1 von 2 Fragen verändert" in body
@@ -360,7 +362,7 @@ def test_a_movement_names_what_changed_and_on_which_provider(web, session, manda
         asked=[_CLAUDE],
     )
 
-    body = _text(web.get(f"/client/{mandate.id}/ki").text)
+    body = _text(rendered(web.get(f"/client/{mandate.id}/ki")))
 
     assert f"Position 3 auf 2 bei {_CLAUDE}." in body
 
@@ -390,7 +392,7 @@ def test_a_question_a_provider_failed_on_is_not_compared_as_a_loss(web, session,
         failed=[_GEMINI],
     )
 
-    body = _text(web.get(f"/client/{mandate.id}/ki").text)
+    body = _text(rendered(web.get(f"/client/{mandate.id}/ki")))
 
     assert f"Bei {_GEMINI} nicht mehr genannt." not in body
     assert "Nichts hat sich verändert" in body
@@ -401,7 +403,7 @@ def test_one_measurement_says_there_is_nothing_to_compare_against(web, session, 
     question = _question(session, mandate, _AUSWAHL, VisibilityBand.AUSWAHL)
     _run(session, mandate, at=_NOW, cells=[(question, _CLAUDE, 1, ["Enpal"])], asked=[_CLAUDE])
 
-    html = web.get(f"/client/{mandate.id}/ki").text
+    html = rendered(web.get(f"/client/{mandate.id}/ki"))
 
     assert "100 %" in _text(html)
     assert "Erst eine Messung: es gibt noch nichts, wogegen sich das vergleichen ließe." in _text(html)
@@ -413,7 +415,7 @@ def test_two_measurements_draw_the_trend(web, session, mandate):
     _run(session, mandate, at=_NOW - _WEEK, cells=[(question, _CLAUDE, None, ["Zolar"])], asked=[_CLAUDE])
     _run(session, mandate, at=_NOW, cells=[(question, _CLAUDE, 1, ["Enpal"])], asked=[_CLAUDE])
 
-    html = web.get(f"/client/{mandate.id}/ki").text
+    html = rendered(web.get(f"/client/{mandate.id}/ki"))
 
     assert "<polyline" in html
     assert "Erst eine Messung" not in _text(html)
@@ -433,7 +435,7 @@ def test_a_failed_provider_renders_as_nicht_gemessen_and_names_it(web, session, 
         failed=[_GEMINI],
     )
 
-    html = web.get(f"/client/{mandate.id}/ki").text
+    html = rendered(web.get(f"/client/{mandate.id}/ki"))
     body = _text(html)
 
     assert re.search(
@@ -452,7 +454,7 @@ def test_an_answer_without_the_mandate_renders_as_nicht_genannt(web, session, ma
         asked=[_CLAUDE],
     )
 
-    html = web.get(f"/client/{mandate.id}/ki").text
+    html = rendered(web.get(f"/client/{mandate.id}/ki"))
 
     assert re.search(rf'vis-cell--unnamed"><b>{_CLAUDE}</b>\s*nicht genannt', html)
     assert "nicht gemessen" not in _text(html)
@@ -464,7 +466,7 @@ def test_an_answer_without_the_mandate_renders_as_nicht_genannt(web, session, ma
 def test_an_empty_set_shows_the_proposal_flow_rather_than_an_empty_chart(
     web, session, mandate
 ):
-    body = _text(web.get(f"/client/{mandate.id}/ki").text)
+    body = _text(rendered(web.get(f"/client/{mandate.id}/ki")))
 
     assert "Noch kein Fragensatz" in body
     assert "Fragen vorschlagen" in body
@@ -516,8 +518,8 @@ def test_proposing_renders_the_questions_and_stores_none_of_them(
     page = web.get(f"/client/{mandate.id}/ki")
 
     assert page.status_code == 200
-    assert _AUSWAHL in _text(page.text)
-    assert _PROBLEM in _text(page.text)
+    assert _AUSWAHL in _text(rendered(page))
+    assert _PROBLEM in _text(rendered(page))
     assert session.scalars(select(VisibilityQuestion)).all() == []
 
 
@@ -530,7 +532,7 @@ def test_accepting_a_proposed_question_is_what_stores_it(web, session, mandate):
 
     assert answer.status_code == 303
     stored = session.scalars(select(VisibilityQuestion)).all()
-    assert [(row.text, row.band, row.accepted) for row in stored] == [
+    assert [(rendered(row), row.band, row.accepted) for row in stored] == [
         (_AUSWAHL, VisibilityBand.AUSWAHL, True)
     ]
 
@@ -615,7 +617,7 @@ def test_the_sweep_seeds_a_mandate_nobody_picked_questions_for(
 
     assert job._measure_visibility(session, [mandate], now=_NOW) == 1
     assert measured == ["Enpal"]
-    assert [q.text for q in visibility.accepted(session, mandate)] == [
+    assert [rendered(q) for q in visibility.accepted(session, mandate)] == [
         "Welche Anbieter gibt es?"
     ]
 
@@ -685,7 +687,7 @@ def test_two_measurements_that_share_no_question_are_not_reported_as_unchanged(
     _run(session, mandate, at=_NOW - _WEEK, cells=[(first, _CLAUDE, 1, ["Enpal"])], asked=[_CLAUDE])
     _run(session, mandate, at=_NOW, cells=[(second, _CLAUDE, None, ["Zolar"])], asked=[_CLAUDE])
 
-    body = _text(web.get(f"/client/{mandate.id}/ki").text)
+    body = _text(rendered(web.get(f"/client/{mandate.id}/ki")))
 
     assert "0 von 0 Fragen verändert" not in body
     assert "alle 0 vergleichbaren Fragen" not in body
@@ -748,7 +750,7 @@ def test_the_mandate_keeps_its_row_when_the_ranking_is_cut(web, session, mandate
         asked=[_CLAUDE],
     )
 
-    html = web.get(f"/client/{mandate.id}/ki").text
+    html = rendered(web.get(f"/client/{mandate.id}/ki"))
     body = _text(html)
 
     assert 'vis-bar__n vis-bar__n--us"' in html, "the mandate fell out of the ranking"
@@ -763,7 +765,7 @@ def test_a_mandate_no_answer_named_still_holds_a_row(web, session, mandate):
     question = _question(session, mandate, _AUSWAHL, VisibilityBand.AUSWAHL)
     _run(session, mandate, at=_NOW, cells=[(question, _CLAUDE, None, ["Zolar"])], asked=[_CLAUDE])
 
-    html = web.get(f"/client/{mandate.id}/ki").text
+    html = rendered(web.get(f"/client/{mandate.id}/ki"))
 
     assert re.search(r'vis-bar__n vis-bar__n--us">\s*Enpal', html), (
         "a mandate no answer named has no row in the ranking at all"
@@ -792,7 +794,7 @@ def test_a_publisher_containing_the_mandates_host_is_not_its_own_page(web, sessi
         asked=[_CLAUDE],
     )
 
-    body = _text(web.get(f"/client/{mandate.id}/ki").text)
+    body = _text(rendered(web.get(f"/client/{mandate.id}/ki")))
 
     # Both are listed, by publisher rather than by the path they arrived on, and
     # only the mandate's own host carries the badge.
@@ -822,7 +824,7 @@ def test_one_publisher_stated_two_ways_is_one_row_with_one_count(web, session, m
         asked=[_CLAUDE],
     )
 
-    body = _text(web.get(f"/client/{mandate.id}/ki").text)
+    body = _text(rendered(web.get(f"/client/{mandate.id}/ki")))
 
     assert body.count("pv-magazine.de") == 1
     assert "pv-magazine.de 2×" in body
@@ -842,7 +844,7 @@ def test_a_measurement_still_running_is_reported_and_not_read_as_the_standing(
     _run(session, mandate, at=_NOW - _WEEK, cells=[(question, _CLAUDE, 1, ["Enpal"])], asked=[_CLAUDE])
     _unfinished(session, mandate, at=_FRESH, cells=[(question, False, None)])
 
-    body = _text(web.get(f"/client/{mandate.id}/ki").text)
+    body = _text(rendered(web.get(f"/client/{mandate.id}/ki")))
 
     assert "Eine Messung läuft gerade." in body
     assert "100 %" in body, "the running measurement was read as this week's standing"
@@ -862,7 +864,7 @@ def test_a_claim_left_behind_by_a_crash_is_not_a_running_measurement(
     assert visibility._in_flight(session, mandate) is None, "the claim is stale"
     assert visibility.due(session, mandate) is True
 
-    body = _text(web.get(f"/client/{mandate.id}/ki").text)
+    body = _text(rendered(web.get(f"/client/{mandate.id}/ki")))
 
     assert "Eine Messung läuft gerade." not in body
     assert "Aktualisieren" in body
@@ -873,7 +875,7 @@ def test_a_barren_first_attempt_claims_no_standing_before_it(web, session, manda
     _question(session, mandate, _AUSWAHL, VisibilityBand.AUSWAHL)
     _run(session, mandate, at=_NOW, cells=[], failed=[_CLAUDE, _GEMINI])
 
-    body = _text(web.get(f"/client/{mandate.id}/ki").text)
+    body = _text(rendered(web.get(f"/client/{mandate.id}/ki")))
 
     assert "hat keine Antwort geliefert." in body
     assert "Der Stand darunter ist der der Messung davor." not in body
@@ -883,7 +885,7 @@ def test_a_barren_first_attempt_claims_no_standing_before_it(web, session, manda
 def test_a_set_of_one_question_is_not_called_one_fragen(web, session, mandate):
     _question(session, mandate, _AUSWAHL, VisibilityBand.AUSWAHL)
 
-    body = _text(web.get(f"/client/{mandate.id}/ki").text)
+    body = _text(rendered(web.get(f"/client/{mandate.id}/ki")))
 
     assert "Eine Frage, gemessen alle 7 Tage." in body
     assert "1 Fragen" not in body
@@ -900,7 +902,7 @@ def test_a_named_answer_without_a_position_is_not_reported_as_a_fall(web, sessio
     after.finished_at = _NOW
     session.commit()
 
-    body = _text(web.get(f"/client/{mandate.id}/ki").text)
+    body = _text(rendered(web.get(f"/client/{mandate.id}/ki")))
 
     assert f"Bei {_CLAUDE} erstmals in der Aufzählung, auf Position 2." in body
     assert "Position None" not in body
@@ -912,7 +914,7 @@ def test_the_measure_control_hands_the_work_to_a_worker_thread(
     """A full set is two model calls per question per provider; measuring inside the
     response would hold a worker for as long as that takes."""
     _question(session, mandate, _AUSWAHL, VisibilityBand.AUSWAHL)
-    assert f'action="/client/{mandate.id}/ki/messen"' in web.get(f"/client/{mandate.id}/ki").text
+    assert f'action="/client/{mandate.id}/ki/messen"' in rendered(web.get(f"/client/{mandate.id}/ki"))
 
     started: list[str] = []
     monkeypatch.setattr(
@@ -1000,7 +1002,7 @@ def test_the_proposal_answers_where_it_was_asked_for(web, session, mandate, monk
     monkeypatch.setattr(visibility, "propose", lambda session, client: offered)
 
     _delivered(mandate.id, offered)
-    body = web.get(f"/client/{mandate.id}/ki").text
+    body = rendered(web.get(f"/client/{mandate.id}/ki"))
 
     asked = body.index("Fragen vorschlagen")
     answered = body.index("Vorgeschlagene Fragen")
@@ -1043,7 +1045,7 @@ def test_the_page_says_a_proposal_is_under_way(web, mandate):
     """Thirty seconds of silence is what made a working button look broken."""
     assert visibility_view._proposing.acquire(blocking=False)
 
-    body = web.get(f"/client/{mandate.id}/ki").text
+    body = rendered(web.get(f"/client/{mandate.id}/ki"))
 
     assert "wird vorgeschlagen" in body
     assert 'hx-trigger="every 3s"' in body, "and it collects the answer itself"
@@ -1082,7 +1084,7 @@ def test_ticking_several_questions_files_all_of_them(web, session, mandate):
     )
 
     assert answer.status_code == 303
-    stored = {q.text for q in visibility.accepted(session, mandate)}
+    stored = {rendered(q) for q in visibility.accepted(session, mandate)}
     assert stored == {"Frage A?", "Frage C?"}, "both, and not the one left unticked"
 
 
@@ -1103,7 +1105,7 @@ def test_a_question_already_in_the_set_stops_being_offered(web, session, mandate
         follow_redirects=False,
     )
 
-    offers = web.get(f"/client/{mandate.id}/ki").text
+    offers = rendered(web.get(f"/client/{mandate.id}/ki"))
     panel = offers.split("Vorgeschlagene Fragen", 1)[1]
 
     assert "Frage B?" in panel, "the one nobody took is still on offer"
@@ -1123,7 +1125,7 @@ def test_a_half_formed_pair_is_skipped_rather_than_filed_under_a_default(
     )
 
     assert answer.status_code == 303
-    stored = {q.text for q in visibility.accepted(session, mandate)}
+    stored = {rendered(q) for q in visibility.accepted(session, mandate)}
     assert stored == {"Frage B?"}
 
 
@@ -1150,7 +1152,7 @@ def test_the_refresh_button_stands_outside_the_due_window(web, session, mandate)
     )
 
     assert visibility.due(session, mandate) is False, "the clock says no, and should"
-    body = web.get(f"/client/{mandate.id}/ki").text
+    body = rendered(web.get(f"/client/{mandate.id}/ki"))
 
     assert f'action="/client/{mandate.id}/ki/messen"' in body
     assert "Aktualisieren" in _text(body)
@@ -1191,7 +1193,7 @@ def test_no_button_and_no_measurement_without_a_question_set(
     """The one thing the clock was not the reason for. With nothing accepted there
     is nothing to put to a provider, and the page offers the proposal flow
     instead."""
-    body = web.get(f"/client/{mandate.id}/ki").text
+    body = rendered(web.get(f"/client/{mandate.id}/ki"))
     assert f'action="/client/{mandate.id}/ki/messen"' not in body
     assert "Fragen vorschlagen" in _text(body)
 
@@ -1208,7 +1210,7 @@ def test_a_running_measurement_takes_the_button_away(web, session, mandate):
     _question(session, mandate, _AUSWAHL, VisibilityBand.AUSWAHL)
     _unfinished(session, mandate, at=_FRESH, cells=[])
 
-    body = web.get(f"/client/{mandate.id}/ki").text
+    body = rendered(web.get(f"/client/{mandate.id}/ki"))
 
     assert f'action="/client/{mandate.id}/ki/messen"' not in body
 
@@ -1219,6 +1221,6 @@ def test_the_switch_still_governs_the_button(web, session, mandate, monkeypatch)
     _question(session, mandate, _AUSWAHL, VisibilityBand.AUSWAHL)
     monkeypatch.setattr(config, "VISIBILITY_ENABLED", False)
 
-    assert f'action="/client/{mandate.id}/ki/messen"' not in web.get(
+    assert f'action="/client/{mandate.id}/ki/messen"' not in rendered(web.get(
         f"/client/{mandate.id}/ki"
-    ).text
+    ))

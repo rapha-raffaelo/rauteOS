@@ -21,6 +21,8 @@ reason the rest exist:
 
 from __future__ import annotations
 
+from react_render import rendered
+
 import datetime as dt
 import hashlib
 import html as htmllib
@@ -291,8 +293,8 @@ def test_the_tab_strip_links_to_the_plan_page(web, session, mandate):
     page = _at(web, mandate)
 
     assert page.status_code == 200
-    assert f'href="/client/{mandate.id}/plan"' in page.text
-    assert "Redaktionsplan" in _text(page.text)
+    assert f'href="/client/{mandate.id}/opportunities"' in rendered(page)
+    assert "Redaktionsplan" in _text(rendered(page))
 
 
 def test_a_benchmark_has_no_plan_page(web, session):
@@ -313,7 +315,7 @@ def test_every_month_of_the_window_is_rendered_even_when_it_carries_nothing(
     page = _at(web, mandate)
 
     for month in _window():
-        assert f'id="monat-{month}"' in page.text
+        assert f'id="monat-{month}"' in rendered(page)
     assert len(_window()) == config.PLAN_MONTHS
 
 
@@ -343,7 +345,7 @@ def test_a_hook_shows_its_date_its_reason_its_class_and_its_evidence(
         reason="Der Tag, an dem Fachjournalisten Stimmen aus der Branche suchen.",
     )
 
-    words = _text(_at(web, mandate).text)
+    words = _text(rendered(_at(web, mandate)))
 
     assert "24" in words
     assert "Der Tag, an dem Fachjournalisten Stimmen aus der Branche suchen." in words
@@ -367,7 +369,7 @@ def test_a_hooks_evidence_links_to_the_page_that_holds_the_stored_row(
 
     page = _at(web, mandate)
 
-    assert f'href="/client/{mandate.id}/market#sig-veranstaltung"' in page.text
+    assert f'href="/client/{mandate.id}/market#sig-veranstaltung"' in rendered(page)
 
 
 def test_an_archive_hook_links_into_the_month_of_its_stored_analysis(
@@ -387,9 +389,9 @@ def test_an_archive_hook_links_into_the_month_of_its_stored_analysis(
 
     page = _at(web, mandate)
 
-    assert "date_from=2025-09-01" in page.text
-    assert "date_to=2025-09-30" in page.text
-    assert f"Analyse {analysis.id}" in _text(page.text)
+    assert "date_from=2025-09-01" in rendered(page)
+    assert "date_to=2025-09-30" in rendered(page)
+    assert f"Analyse {analysis.id}" in _text(rendered(page))
 
 
 def test_a_theme_hook_names_its_radar_row_and_links_to_the_market_page(
@@ -403,11 +405,11 @@ def test_a_theme_hook_names_its_radar_row_and_links_to_the_market_page(
 
     page = _at(web, mandate)
 
-    assert f"Themen-Treffer {hit.id}" in _text(page.text)
+    assert f"Themen-Treffer {hit.id}" in _text(rendered(page))
     # Anchored at the radar section rather than at the top of the page: the
     # market page carries four sections and the cited row is in the first.
-    assert f'href="/client/{mandate.id}/market#radar"' in page.text
-    assert "Thema" in _text(page.text)
+    assert f'href="/client/{mandate.id}/market#radar"' in rendered(page)
+    assert "Thema" in _text(rendered(page))
 
 
 def test_a_theme_hooks_evidence_names_the_day_it_was_published(
@@ -424,7 +426,7 @@ def test_a_theme_hooks_evidence_names_the_day_it_was_published(
         month=_window()[0], day=None, title="Netzentgelte",
     )
 
-    words = _text(_at(web, mandate).text)
+    words = _text(rendered(_at(web, mandate)))
 
     published = session.get(Article, hit.article_id).published_at
     assert f"{published.astimezone(_BERLIN):%d.%m.%Y}" in words
@@ -442,7 +444,7 @@ def test_a_hook_whose_stored_row_is_gone_says_so_instead_of_linking(
     session.delete(signal)
     session.commit()
 
-    page = _at(web, mandate).text
+    page = rendered(_at(web, mandate))
     words = _text(page)
 
     assert "Der Beleg zu diesem Haken ist nicht mehr auffindbar." in words
@@ -453,8 +455,8 @@ def test_a_hook_whose_stored_row_is_gone_says_so_instead_of_linking(
     # And it loses it properly. A dangling modifier is a rule that matches
     # nothing while looking like a rule that does.
     assert 'class="tag tag--"' not in page
-    assert 'class="tag tag--"' not in _at(web, mandate, "/plan.html").text
-    assert 'class="ptag ptag--"' not in _at(web, mandate, "/plan.html").text
+    assert 'class="tag tag--"' not in rendered(_at(web, mandate, "/plan.html"))
+    assert 'class="ptag ptag--"' not in rendered(_at(web, mandate, "/plan.html"))
 
 
 def test_an_undated_hook_renders_a_month_and_never_a_day(web, session, mandate):
@@ -470,7 +472,7 @@ def test_an_undated_hook_renders_a_month_and_never_a_day(web, session, mandate):
         month=month, day=None, title="Jahresrückblicke der Fachpresse",
     )
 
-    body = _at(web, mandate).text
+    body = rendered(_at(web, mandate))
     block = re.search(r'<div class="hook__d[^"]*">(.*?)</div>\s*</div>', body, re.S)
 
     assert block is not None
@@ -488,10 +490,10 @@ def test_an_empty_month_is_written_out_with_a_link_to_the_mandates_themes(
 
     page = _at(web, mandate)
 
-    assert "month--empty" in page.text
-    assert "Ein leerer Monat wird nicht gefüllt, er wird gezeigt" in _text(page.text)
-    assert "Themen prüfen" in _text(page.text)
-    assert f'href="/settings?edit={mandate.id}"' in page.text
+    assert "month--empty" in rendered(page)
+    assert "Ein leerer Monat wird nicht gefüllt, er wird gezeigt" in _text(rendered(page))
+    assert "Themen prüfen" in _text(rendered(page))
+    assert f'href="/settings?edit={mandate.id}"' in rendered(page)
 
 
 def test_the_argument_for_an_empty_month_is_made_once_and_the_link_every_time(
@@ -499,7 +501,7 @@ def test_the_argument_for_an_empty_month_is_made_once_and_the_link_every_time(
 ):
     """Five identical paragraphs down one page is how a sentence stops being
     read. Every empty month still says it is empty and still offers the fix."""
-    body = _at(web, mandate).text
+    body = rendered(_at(web, mandate))
     words = _text(body)
     argument = "entweder ist hier wirklich nichts, oder dem Mandat fehlt ein Thema"
 
@@ -510,8 +512,8 @@ def test_the_argument_for_an_empty_month_is_made_once_and_the_link_every_time(
 def test_the_page_offers_the_plan_as_a_download(web, session, mandate):
     page = _at(web, mandate)
 
-    assert f'href="/client/{mandate.id}/plan.html"' in page.text
-    assert "Als Dokument" in _text(page.text)
+    assert f'href="/client/{mandate.id}/plan.html"' in rendered(page)
+    assert "Als Dokument" in _text(rendered(page))
 
 
 def test_a_mandate_without_themes_and_without_signals_is_told_what_it_is_missing(
@@ -523,23 +525,23 @@ def test_a_mandate_without_themes_and_without_signals_is_told_what_it_is_missing
     session.commit()
 
     page = _at(web, bare)
-    words = _text(page.text)
+    words = _text(rendered(page))
 
     assert "Für diesen Mandanten lässt sich noch kein Plan bauen." in words
     assert "Keine geprüften Themen hinterlegt." in words
     assert "Kein Marktsignal gefunden." in words
-    assert f'href="/settings?edit={bare.id}"' in page.text
-    assert f'href="/client/{bare.id}/market"' in page.text
+    assert f'href="/settings?edit={bare.id}"' in rendered(page)
+    assert f'href="/client/{bare.id}/market"' in rendered(page)
     # The month stack is not rendered beside it: one answer, not two.
-    assert "month--empty" not in page.text
+    assert "month--empty" not in rendered(page)
 
 
 def test_a_mandate_with_themes_but_no_signals_still_gets_a_plan(web, session, mandate):
     """One of the two inputs is enough — the gap notice is for having neither."""
     page = _at(web, mandate)
 
-    assert "Für diesen Mandanten lässt sich noch kein Plan bauen." not in _text(page.text)
-    assert "month--empty" in page.text
+    assert "Für diesen Mandanten lässt sich noch kein Plan bauen." not in _text(rendered(page))
+    assert "month--empty" in rendered(page)
 
 
 def test_a_mandate_with_signals_but_no_themes_still_gets_a_plan(web, session):
@@ -550,7 +552,7 @@ def test_a_mandate_with_signals_but_no_themes_still_gets_a_plan(web, session):
 
     page = _at(web, bare)
 
-    assert "Für diesen Mandanten lässt sich noch kein Plan bauen." not in _text(page.text)
+    assert "Für diesen Mandanten lässt sich noch kein Plan bauen." not in _text(rendered(page))
 
 
 # --- Deciding, and surviving a recompute -------------------------------------------
@@ -572,7 +574,7 @@ def test_discarding_a_hook_records_the_refusal_and_keeps_it_on_the_page(
     assert posted.status_code == 303
     session.expire_all()
     assert session.get(PlanHook, hook.id).state is HookState.VERWORFEN
-    assert "hook--out" in _at(web, mandate).text
+    assert "hook--out" in rendered(_at(web, mandate))
 
 
 _NOTHING_FOUND = (
@@ -596,7 +598,7 @@ def test_a_month_whose_hooks_were_all_refused_does_not_claim_nothing_was_found(
     )
 
     web.post(f"/client/{mandate.id}/plan/{hook.id}/verwerfen", follow_redirects=False)
-    section = _month_section(_at(web, mandate).text, _window()[1])
+    section = _month_section(rendered(_at(web, mandate)), _window()[1])
 
     assert "Alle Haken in diesem Monat wurden verworfen." in _text(section)
     assert "hook--out" in section
@@ -616,7 +618,7 @@ def test_the_document_does_not_call_a_fully_refused_month_evidence_free(
     )
 
     web.post(f"/client/{mandate.id}/plan/{hook.id}/verwerfen", follow_redirects=False)
-    words = _text(_at(web, mandate, "/plan.html").text)
+    words = _text(rendered(_at(web, mandate, "/plan.html")))
 
     assert "Kein Termin in diesem Monat." in words
     # Every other month of the window is genuinely empty and still says so.
@@ -639,7 +641,7 @@ def test_a_discarded_hook_keeps_its_state_across_a_recompute(web, session, manda
     still = session.get(PlanHook, hook.id)
     assert still is not None
     assert still.state is HookState.VERWORFEN
-    assert "hook--out" in _at(web, mandate).text
+    assert "hook--out" in rendered(_at(web, mandate))
 
 
 def test_a_moved_hook_keeps_its_month_across_a_recompute(web, session, mandate):
@@ -682,7 +684,7 @@ def test_a_move_outside_the_window_is_refused_with_a_sentence(web, session, mand
 
     session.expire_all()
     assert session.get(PlanHook, hook.id).month == _window()[1]
-    assert plan_view._NOT_A_PLAN_MONTH in _text(_at(web, mandate).text)
+    assert plan_view._NOT_A_PLAN_MONTH in _text(rendered(_at(web, mandate)))
 
 
 def test_a_refusal_is_dropped_by_the_next_click_that_works(web, session, mandate):
@@ -704,7 +706,7 @@ def test_a_refusal_is_dropped_by_the_next_click_that_works(web, session, mandate
         data={"monat": "1999-01"},
         follow_redirects=False,
     )
-    assert plan_view._NOT_A_PLAN_MONTH in _text(_at(web, mandate).text)
+    assert plan_view._NOT_A_PLAN_MONTH in _text(rendered(_at(web, mandate)))
 
     web.post(
         f"/client/{mandate.id}/plan/{hook.id}/verschieben",
@@ -714,7 +716,7 @@ def test_a_refusal_is_dropped_by_the_next_click_that_works(web, session, mandate
 
     session.expire_all()
     assert session.get(PlanHook, hook.id).month == _window()[-1]
-    assert plan_view._NOT_A_PLAN_MONTH not in _text(_at(web, mandate).text)
+    assert plan_view._NOT_A_PLAN_MONTH not in _text(rendered(_at(web, mandate)))
 
 
 def test_a_refusal_is_dropped_by_a_discard_and_by_writing_from_a_hook(
@@ -867,7 +869,7 @@ def test_writing_from_a_hook_opens_the_picker_with_the_suggested_format_ticked(
 
     picker = web.get(f"/client/{mandate.id}/advice?eintrag=anlass-{angle.id}&format=statement")
     ticked = re.search(
-        r'<input class="fmtrow__tick"[^>]*value="statement"[^>]*>', picker.text, re.S
+        r'<input class="fmtrow__tick"[^>]*value="statement"[^>]*>', rendered(picker), re.S
     )
     assert ticked is not None
     assert "checked" in ticked.group(0)
@@ -951,7 +953,7 @@ def test_a_released_text_marks_its_hook_as_done_on_the_page(web, session, mandat
     )
     session.commit()
 
-    words = _text(_at(web, mandate).text)
+    words = _text(rendered(_at(web, mandate)))
 
     assert "Erledigt" in words
     assert "Statement freigegeben" in words
@@ -1009,7 +1011,7 @@ def test_the_downloaded_document_carries_no_link_back_into_the_application(
         month=_window()[1],
     )
 
-    body = _at(web, mandate, "/plan.html").text
+    body = rendered(_at(web, mandate, "/plan.html"))
 
     assert 'href="/' not in body
     assert f"/client/{mandate.id}" not in body
@@ -1023,7 +1025,7 @@ def test_the_downloaded_document_carries_no_link_back_into_the_application(
 def test_the_document_says_an_empty_month_is_empty_rather_than_skipping_it(
     web, session, mandate
 ):
-    body = _at(web, mandate, "/plan.html").text
+    body = rendered(_at(web, mandate, "/plan.html"))
     words = _text(body)
 
     for month in _window():
@@ -1032,7 +1034,7 @@ def test_the_document_says_an_empty_month_is_empty_rather_than_skipping_it(
 
 
 def test_the_document_wears_the_mandates_own_identity(web, session, mandate):
-    body = _at(web, mandate, "/plan.html").text
+    body = rendered(_at(web, mandate, "/plan.html"))
 
     assert "Redaktionsplan: Solarhaus AG" in _text(body)
     # The monogram stands in for a logo the mandate has not uploaded, the same
@@ -1090,7 +1092,7 @@ def test_every_string_the_plan_page_shows_is_translated(web, session, mandate):
 def test_the_page_switches_language_with_the_cookie(web, session, mandate):
     web.cookies.set(i18n.COOKIE_NAME, "en")
 
-    words = _text(_at(web, mandate).text)
+    words = _text(rendered(_at(web, mandate)))
 
     assert "Editorial plan" in words
     assert "Recompute" in words
@@ -1110,7 +1112,7 @@ def test_an_undated_hooks_date_block_is_translated_too(web, session, mandate):
     )
     web.cookies.set(i18n.COOKIE_NAME, "en")
 
-    words = _text(_at(web, mandate).text)
+    words = _text(rendered(_at(web, mandate)))
 
     assert "Oct" in words
     assert "no day" in words
