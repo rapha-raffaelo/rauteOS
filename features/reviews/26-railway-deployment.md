@@ -240,3 +240,24 @@ match the reviewed build. SQLite integrity is ok, schema remains
 `0061_opportunity_assets`, and the asset count was unchanged by verification.
 Local validation passed 83 backend and 51 frontend tests plus the automatic
 preparation/editing browser flow at 1440px and 390px.
+
+### Batched AI import and shared design refinement — 2026-09-18
+
+Source `a8d0a4b` deployed successfully as
+`6111fe28-af7d-4d8a-bd8d-d21c84170d5a`. Final source `19f0fb5`, including removal
+of the conflicting profile-section CSS reset, deployed from a clean archive as
+`57878ae7-58ed-41ec-a621-be82d74bb707` (SUCCESS).
+
+The formerly failing Arrakis.finance import completed against the actual
+production providers in 360 seconds: 51 answer suggestions, web research included,
+no failed batches. These remain an uncommitted review preview. After the final
+restart the read-only status endpoint still returned all 51 rows, all marked
+Needs Verification. ClientFact count remained 94; SQLite quick_check returned ok.
+Both AI import methods are registered. Four backend/style source hashes, all 21
+public bundle files and both shared stylesheets match the reviewed checkout.
+
+Validation passed 106 backend and 52 frontend tests plus Vite build. Desktop and
+mobile browser checks covered import creation/progress/review/explicit commit on
+synthetic data, clients, archive, settings, profile/kickoff, overview and
+opportunities. Themed company/competition/market surfaces were checked after
+removing the older reset. No JavaScript errors or horizontal overflow were found.

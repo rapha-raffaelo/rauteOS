@@ -536,3 +536,11 @@ settings/editing and profile/kickoff, with no JS errors or horizontal overflow.
 An isolated synthetic import completed through submit, progress, review, explicit
 selection and persisted fact refresh. Verified primary-button computed styles and
 reviewed desktop/mobile screenshots. Live import verification follows deployment.
+
+Production verification: the actual Arrakis.finance import completed in 360
+seconds with 51 reviewable suggestions, including web research, and no failed
+batches. The status endpoint restores all 51 rows with `Cache-Control: no-store`.
+Every suggestion requires verification; the ClientFact count stayed at 94.
+No generated suggestion was committed. Additional browser checks covered overview,
+opportunities and all three lower profile sections at both widths. Removed an
+older React CSS reset that otherwise suppressed the shared section surfaces.
