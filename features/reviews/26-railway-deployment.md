@@ -222,3 +222,21 @@ and one successful completion. The partial-JSON preview decoded the expected
 58-character test body. No message was stored, released or sent by this probe.
 Local browser checks covered incremental previews, completion, persistent draft
 editing, unchanged press releases and responsive layout at 1440px and 390px.
+
+### Automatic preparation and distinct analysis/message areas — 2026-09-18
+
+Source `bf398b3` deployed from a clean git archive as
+`f72828ef-1220-4f1a-8e23-e974c9de7b7c` (SUCCESS). Existing impulses now request a
+missing default press release automatically when opened, with progress and inline
+completion. Existing drafts remain intact. Analysis and messages have distinct
+backgrounds, headings and document styling on desktop and mobile.
+
+Read-only production verification passed for all seven active client views,
+including the analysis/message separation and both preparation API methods.
+All seven latest impulses were eligible for automatic preparation; this check
+only read their status and did not generate or change client content. All 21
+public JS/CSS files, both shared stylesheets and 12 server source/template hashes
+match the reviewed build. SQLite integrity is ok, schema remains
+`0061_opportunity_assets`, and the asset count was unchanged by verification.
+Local validation passed 83 backend and 51 frontend tests plus the automatic
+preparation/editing browser flow at 1440px and 390px.
