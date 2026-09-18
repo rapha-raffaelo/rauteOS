@@ -183,3 +183,20 @@ server source/template hashes match. Read-only production checks passed for seve
 client profiles/settings, Contacts and five workbench pages. Database integrity
 is ok. This is a React presentation refinement within the existing hybrid app;
 no production content was changed for verification.
+
+
+### React navigation, archives, settings and complete profile — 2026-09-18
+
+Source `e5147b3` deployed from a clean git archive as
+`b9a37a04-5562-4dcb-8580-3007b6e608c9` (SUCCESS). React owns shared navigation,
+both archives, settings, the new-client form and the complete unified profile.
+Python retains backend jobs and persistence; specialist legacy page bodies remain
+Jinja inside React navigation.
+
+Read-only production verification passed for 17 HTML pages and 17 JSON contracts,
+including archives/profiles for all seven active mandates, settings and new-client
+creation view. Seven bundle entries are available. All 19 public JS/CSS files,
+both shared stylesheets and ten checked server source/template hashes match the
+reviewed source/build. The navigation roster matches active mandates. SQLite
+integrity is ok and schema remains `0061_opportunity_assets`. Verification used
+query-only database access and did not mutate production client data.
