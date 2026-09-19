@@ -577,3 +577,19 @@ frontend tests and Vite build passed. Synthetic browser verification covered
 incremental body growth, word count, transition to checking, preserving custom
 instructions, desktop/mobile layout and two clients finishing without open content
 pages. The first visit to the other client's content showed its saved draft.
+
+The first real queue pass exposed older format-validation bugs: role parentheses
+were read as surnames, the `Mag.` title broke the attribution sentence, and a
+short quoted headline could consume the opening mark of a later actual quote.
+Profile entries now preserve named people and their sourced roles separately;
+quotes may reference a person actually listed in that field, and selected
+speaker metadata retains that exact source entry. Role words alone and invented
+people still fail validation. Short quotation pairs are consumed before applying
+the minimum quote length. The writer also receives an exact city/date prefix and
+a valid, escaped JSON example, resolving the prompt's full-seat/country ambiguity.
+Structural refusals now retain their actionable reason in the durable job.
+
+Read-only validation of failed production previews confirmed the attribution fix
+for Zalando, Arrakis and Lucas. Regression tests cover real profile shapes,
+academic titles, role-word rejection, quote-boundary handling and city/date input.
+All 530 format, crisis, queue and brain/prompt tests passed with Node 22.22.3.

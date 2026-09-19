@@ -446,7 +446,7 @@ _DATELINE = re.compile(
 
 #: A quotation of at least a clause. The length floor is what keeps a quoted
 #: product name or a scare-quoted adjective from passing as the release's quote.
-_QUOTE = re.compile(r"[\"„»“]([^\"„»“”«]{20,}?)[\"“«”]", re.S)
+_QUOTE = re.compile(r'"[^"\n]*(?:\n[^"\n]*)*"|„[^“”]*[“”]|“[^”]*”|»[^«]*«', re.S)
 
 #: How a German release attributes a quote: the inquit. Either a speech verb
 #: beside the quotation, or the "…, so Prot" form, which carries no verb at all
@@ -502,6 +502,7 @@ _ABBREVIATIONS = frozenset(
         "hrsg",
         "inkl",
         "ing",
+        "mag",
         "max",
         "min",
         "mio",
@@ -696,37 +697,62 @@ def _clause_after(text: str) -> str:
     return parts[0] if parts else ""
 
 
-def _surname(name: str) -> str:
-    """The last word of the personal name, which is what a text refers back to.
+_NAME_TITLES = re.compile(r"^(?:(?:Prof|Dr|Mag|Dipl|Ing|Lic)\.\s*)+", re.I)
+_ROLE_WORDS = frozenset({'chief', 'executive', 'officer', 'ceo', 'cto', 'cfo', 'co-ceo',
+    'co-founder', 'founder', 'geschäftsführer', 'geschäftsführerin', 'geschäftsführender',
+    'gesellschafter', 'gesellschafterin', 'gründer', 'gründerin', 'vorstand', 'mba', 'fh'})
 
-    A profile holds "Alexandra Prot, Geschäftsführerin"; a body says "sagt Prot".
-    Matching on the whole stored value would fail on the second mention of every
-    correctly attributed quote there is.
+
+def _personal_name(value: str) -> str:
+    # Role annotations and academic additions are not a person's surname.
+    personal = re.sub(r"\([^)]*\)", "", value).strip()
+    personal = re.split(r"\s+ist\s+|\s+[–—]\s+", personal, maxsplit=1)[0]
+    personal = _NAME_TITLES.sub('', personal).strip().rstrip('.')
+    words = personal.split()
+    if not words or any(word.casefold() in _ROLE_WORDS for word in words):
+        return ''
+    if not all(re.fullmatch(r"[^\W\d_]+(?:[-’'][^\W\d_]+)*", word) for word in words):
+        return ''
+    return personal
+
+
+def _speaker_entries(value: str) -> list[str]:
+    """Separate sourced people, keeping each person's following role text.
+
+    Commas inside role parentheses stay intact. A role-only clause is never
+    treated as a second person. No name or role is supplied by the model here.
     """
-    personal = (name or "").split(",")[0].strip()
-    return personal.split()[-1] if personal.split() else ""
+    value = re.sub(r"(?<=\))\.\s+(?=[A-ZÄÖÜ])", '; ', value or '')
+    pieces, current, depth = [], [], 0
+    for char in value:
+        if char == '(': depth += 1
+        if char == ')': depth = max(0, depth - 1)
+        if char in ',;\n' and depth == 0:
+            pieces.append(''.join(current).strip()); current = []
+        else:
+            current.append(char)
+    pieces.append(''.join(current).strip())
+    entries = []
+    for piece in pieces:
+        if len(_personal_name(piece).split()) >= 2:
+            entries.append(piece)
+        elif entries and piece:
+            entries[-1] += ', ' + piece
+    return entries or ([value.strip()] if value.strip() else [])
+
+
+def _surname(name: str) -> str:
+    personal = _personal_name((name or '').split(',')[0])
+    return personal.split()[-1] if personal else ''
 
 
 def _names(text: str, person: str) -> bool:
-    """Whether ``text`` refers to this person at all.
-
-    On a word boundary, never as a bare substring. This is the check the release's
-    attribution rests on, and German surnames are ordinary words or live inside
-    them: Lang in "langfristig", Klein in "kleinen", Reich in "Bereich", Berg in
-    "Bergbau". A substring match clears a quote attributed to an invented CFO as
-    long as the paragraph happens to use one of those, which is exactly the
-    artefact this module exists to prevent.
-
-    The genitive ``s`` is allowed because "Langs Einschätzung" names the same
-    person, and the cost of a wrong refusal here is two paid calls and no text.
-    Lookarounds rather than ``\\b`` so a stored value that ends in punctuation
-    still anchors: ``\\b`` before a non-word character never matches at all.
-    """
-    surname = _surname(person)
-    if not surname:
-        return False
-    pattern = rf"(?<!\w){re.escape(surname)}(?:s|'s|’s)?(?!\w)"
-    return bool(re.search(pattern, text or "", re.IGNORECASE))
+    """Match a sourced surname in its attribution clause, never inside a word."""
+    for entry in _speaker_entries(person):
+        surname = _surname(entry)
+        if surname and re.search(rf"(?<!\w){re.escape(surname)}(?:s|'s|’s)?(?!\w)", text or '', re.I):
+            return True
+    return False
 
 
 def nogo_terms(nogos: tuple[str, ...]) -> list[str]:
@@ -905,6 +931,10 @@ def _quotations(body: str) -> list[_Quotation]:
     """
     runs: list[list[tuple[int, int]]] = []
     for match in _QUOTE.finditer(body):
+        # Consume short paired quotes too: their closing mark must never become
+        # the opening mark of a later speaker quote across paragraphs.
+        if len(match.group(0)[1:-1]) < 20:
+            continue
         span = match.span()
         if runs and _is_inquit_gap(body[runs[-1][-1][1] : span[0]]):
             runs[-1].append(span)
@@ -2020,6 +2050,7 @@ def prompt_for(
     return fmt.template().substitute(
         recipient=_recipient_block(resolved, headlines),
         today=today(),
+        dateline=f"{_city(facts[_SEAT_KEY].value) if facts.get(_SEAT_KEY) else ''}, {today()}",
         format_name=fmt.name,
         structure="\n".join(f"- {line}" for line in fmt.structure),
         refusal=_refusal_block(fmt),
@@ -2176,6 +2207,12 @@ def _attributed(
     """
     named = _speaker(fmt, facts)
     returned = draft.speaker.strip()
+    entries = _speaker_entries(named)
+    if len(entries) > 1:
+        returned_name = _personal_name(returned.split(',')[0]).casefold()
+        # Keep the exact sourced entry when the reply selects one known person.
+        named = next((entry for entry in entries
+                      if _personal_name(entry.split(',')[0]).casefold() == returned_name), named)
     if returned and returned != named:
         # Worth a line in the log: the body was written by the same call and may
         # carry the same wrong name in its quote, which FMT-02's validator reads.

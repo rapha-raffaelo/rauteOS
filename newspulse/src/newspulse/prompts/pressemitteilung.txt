@@ -46,8 +46,8 @@ Was diese Meldung leisten muss:
 - Die Schlagzeile enthält die Nachricht. Sie bewirbt sie nicht, sie kündigt sie
   nicht an, und sie stellt keine Frage.
 - Der erste Absatz beginnt mit der Dateline und enthält den Lead. Die Dateline
-  ist der Sitz des Mandanten von oben, ein Komma, das heutige Datum und ein
-  Punkt: "<Sitz>, $today." Danach in einem Satz, was passiert ist. Wer, was,
+  lautet exakt "$dateline." (nur der Ort, ohne Land oder weitere Standorte).
+  Danach in einem Satz, was passiert ist. Wer, was,
   warum jetzt.
 - Das Zitat steht in Anführungszeichen und im selben Satz wie seine
   Zuschreibung ("...", sagt <Name>, <Funktion>.), damit erkennbar bleibt, wer
@@ -60,12 +60,13 @@ Was diese Meldung leisten muss:
 - Deutsch. Der Sitz steht oben unter den belegten Angaben; das Datum ist der
   $today und steht nirgends sonst. Beides wird übernommen, nicht ersetzt.
 
-Gib AUSSCHLIESSLICH ein JSON-Objekt zurück. Kein weiterer Text, kein Markdown.
+Gib AUSSCHLIESSLICH ein gültiges JSON-Objekt zurück. Kein weiterer Text, kein Markdown.
+Maskiere Zeilenumbrüche innerhalb von JSON-Strings als \n. Keine unmaskierten
+Zeilenumbrüche innerhalb der Anführungszeichen. Bei mehreren genannten Personen
+wähle genau eine davon und übernimm ihren Namen und ihre Funktion aus dem Profil.
 
 {
   "title": "Die Schlagzeile. Eine Zeile, höchstens 90 Zeichen.",
-  "body": "Die vollständige Mitteilung, Absätze getrennt durch \n\n: Dateline
-           und Lead, Fließtext, Zitat mit Zuschreibung, zuletzt die Boilerplate,
-           die mit 'Über' beginnt. Die Mindestzahl steht oben in der Struktur.",
+  "body": "Die vollständige Mitteilung: Dateline und Lead.\n\nFließtext.\n\nGenau ein Zitat mit Zuschreibung.\n\nÜber den Mandanten: belegte Boilerplate.",
   "speaker": "Name und Funktion der zitierten Person, exakt wie oben angegeben."
 }

@@ -1845,3 +1845,42 @@ def test_every_format_name_and_description_has_an_english_entry():
     for fmt in (*assets.FORMATS, *assets.WORKSPACE_FORMATS, *assets.CRISIS_FORMATS):
         assert i18n.translate(fmt.name, "en"), fmt.name
         assert i18n.translate(fmt.description, "en") != fmt.description, fmt.key
+
+
+@pytest.mark.parametrize('profile_name,attribution', [
+    ('Alexandre Prot (Co-Founder & CEO), Steve Anavi (Co-Founder & Stellvertretender Generaldirektor)', 'sagt Alexandre Prot, CEO.'),
+    ('Alexandre Prot (Co-Founder & CEO), Steve Anavi (Co-Founder & Stellvertretender Generaldirektor)', 'sagt Steve Anavi.'),
+    ('Mag. (FH) Michael Rohrmair, MBA (Geschäftsführer, Gründer)', 'sagt Mag. (FH) Michael Rohrmair, MBA.'),
+    ('Hilmar Maximilian Orth (CEO & Co-Founder), Ari Rodriguez (CTO), Luis Schliesske (Co-Founder)', 'erklärt Hilmar Maximilian Orth.'),
+    ('Prof. Dr. Julia Schössler (Gründerin), Dr. Jochen Kalka (Geschäftsführer). Lucas Neurauter ist Chief Growth Officer und Mitglied der Geschäftsleitung.', 'erklärt Lucas Neurauter.'),
+])
+def test_profile_lists_roles_and_academic_titles_preserve_real_attribution(profile_name, attribution):
+    body = '"Verfügbarkeit ist ein wichtiger Risikoparameter", ' + attribution
+    assert assets._quote_faults(body, profile_name) == []
+    assert assets._quote_faults('"Verfügbarkeit ist ein wichtiger Risikoparameter", sagt Dr. Erfunden, CEO.', profile_name)
+
+
+def test_role_words_are_not_mistaken_for_profile_surnames():
+    allowed = 'Alexandre Prot (Co-Founder & CEO), Steve Anavi (Co-Founder)'
+    assert not assets._names('sagt ein anderer CEO', allowed)
+    assert not assets._names('sagt der Founder', allowed)
+
+
+def test_selected_speaker_metadata_is_an_exact_profile_entry(session):
+    client, angle = _mandate(session)
+    profile.save(session, client, 'ceo', 'Alexandra Prot (CEO), Michael Lang (CTO)')
+    facts = profile.stored(session, client.id)
+    result = assets._attributed(AssetDraft(title='Test', body='Test', speaker='Michael Lang, CTO'), assets.definition('pressemitteilung'), facts)
+    assert result.speaker == 'Michael Lang (CTO)'
+
+
+def test_short_quoted_headline_cannot_steal_the_next_quotes_opening_mark():
+    body = 'Eine fremde Aktion stellt die Frage "Bist du beraten?".\n\n' + '"Ein Zins auf dem Guthaben misst die verfügbare Liquidität", sagt Evgenii Tiapkin.\n\nEin weiterer Absatz.'
+    assert assets._quote_faults(body, 'Evgenii Tiapkin, Executive Director (Freedom24). Timur Turlov, Gründer und CEO.') == []
+
+
+def test_press_release_prompt_supplies_the_exact_city_date_prefix(session):
+    client, angle = _mandate(session)
+    profile.save(session, client, assets._SEAT_KEY, 'Münchendorf, Österreich')
+    prompt = assets.prompt_for(session, assets.definition('pressemitteilung'), client, angle)
+    assert f'lautet exakt "Münchendorf, {assets.today()}."' in prompt

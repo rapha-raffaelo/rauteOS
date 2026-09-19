@@ -151,7 +151,9 @@ def work(session, identity, token, *, stream=None):
         session.rollback()
         _log.warning('Default draft failed: angle=%s type=%s', identity, type(exc).__name__)
         try:
-            publish(session, identity, token, status='failed', stage='failed', note=_FAILURE)
+            state = 'blocked' if isinstance(exc, assets.RequirementsMissing) else 'failed'
+            reason = str(exc) if isinstance(exc, (assets.RequirementsMissing, assets.Malformed)) else _FAILURE
+            publish(session, identity, token, status=state, stage=state, note=reason)
         except Superseded:
             session.rollback()
 
