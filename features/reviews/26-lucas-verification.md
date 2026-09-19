@@ -593,3 +593,11 @@ Read-only validation of failed production previews confirmed the attribution fix
 for Zalando, Arrakis and Lucas. Regression tests cover real profile shapes,
 academic titles, role-word rejection, quote-boundary handling and city/date input.
 All 530 format, crisis, queue and brain/prompt tests passed with Node 22.22.3.
+
+Production completion: the background queue prepared all 76 initially visible
+missing defaults plus one new impulse, totaling 77 saved press-release drafts.
+All seven active mandates' latest impulses returned ready, with no queued,
+running, blocked or failed jobs remaining. No draft was released. This was
+verified through read-only status/ledger inspection; no content-page visit was
+needed to start the work. Four additional role-only negative cases passed in
+132 asset/crisis tests, preventing function titles from matching as person names.

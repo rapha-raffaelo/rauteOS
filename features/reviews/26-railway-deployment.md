@@ -261,3 +261,31 @@ mobile browser checks covered import creation/progress/review/explicit commit on
 synthetic data, clients, archive, settings, profile/kickoff, overview and
 opportunities. Themed company/competition/market surfaces were checked after
 removing the older reset. No JavaScript errors or horizontal overflow were found.
+
+### Durable background drafts and live writing output — 2026-09-19
+
+A SQLite backup was created and quick_check-verified on the existing data volume
+before migration `0062_default_drafts`. Source `95fbcc8` deployed as
+`286a7518-cf80-4e94-b46c-5d6bd3a25d5b` (SUCCESS), adding the durable queue and
+actual streamed preview/word count. The real first pass exposed pre-existing
+speaker/dateline/quotation validation failures. Source `d349223` corrected these
+and deployed as `4746f374-f7f1-4671-9e69-4d33588ba990` (SUCCESS). Eight failed jobs
+were explicitly requeued once after the fix, without restarting existing drafts.
+
+The completed production queue contains 77 ready jobs and 77 saved press releases:
+76 initially visible missing impulses plus one newly generated impulse. All seven
+active mandates' latest drafts are ready. No queued, running, blocked or failed
+jobs remained, and released-press-release count is zero. Status responses remain
+no-store and distinguish real writing progress from checks. All 23 public bundle
+and shared stylesheet files matched the reviewed build; eight backend hashes and
+SQLite integrity were verified.
+
+Final source `e33ed0a` additionally excludes role-only clauses from speaker-name
+matching. Final restart verification is recorded below.
+
+Final deployment `57ea106d-159f-46b3-8e2e-ad39fdcae0cc` is SUCCESS. After the
+restart, fingerprints of all 77 stored draft titles/bodies/release states matched
+the pre-restart snapshot exactly. All seven latest client drafts remain ready;
+the ledger contains only 77 ready jobs, with no pending/failed work or regeneration.
+Migration version is `0062_default_drafts`, SQLite integrity is ok, all eight
+backend hashes and all 23 public JS/CSS/shared stylesheet files match final source.
