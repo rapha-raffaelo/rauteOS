@@ -700,7 +700,10 @@ def _clause_after(text: str) -> str:
 _NAME_TITLES = re.compile(r"^(?:(?:Prof|Dr|Mag|Dipl|Ing|Lic)\.\s*)+", re.I)
 _ROLE_WORDS = frozenset({'chief', 'executive', 'officer', 'ceo', 'cto', 'cfo', 'co-ceo',
     'co-founder', 'founder', 'geschäftsführer', 'geschäftsführerin', 'geschäftsführender',
-    'gesellschafter', 'gesellschafterin', 'gründer', 'gründerin', 'vorstand', 'mba', 'fh'})
+    'gesellschafter', 'gesellschafterin', 'gründer', 'gründerin', 'vorstand', 'mba', 'fh',
+    'managing', 'director', 'directeur', 'directrice', 'general', 'général', 'générale',
+    'senior', 'president', 'vice', 'board', 'member', 'mitglied', 'geschäftsleitung',
+    'leiter', 'leiterin', 'head', 'vorsitzender', 'vorsitzende', 'sprecher', 'sprecherin'})
 
 
 def _personal_name(value: str) -> str:
@@ -734,7 +737,8 @@ def _speaker_entries(value: str) -> list[str]:
     pieces.append(''.join(current).strip())
     entries = []
     for piece in pieces:
-        if len(_personal_name(piece).split()) >= 2:
+        words = _personal_name(piece).split()
+        if len(words) >= 2 and words[0][0].isupper() and words[-1][0].isupper():
             entries.append(piece)
         elif entries and piece:
             entries[-1] += ', ' + piece

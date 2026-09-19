@@ -1884,3 +1884,11 @@ def test_press_release_prompt_supplies_the_exact_city_date_prefix(session):
     profile.save(session, client, assets._SEAT_KEY, 'Münchendorf, Österreich')
     prompt = assets.prompt_for(session, assets.definition('pressemitteilung'), client, angle)
     assert f'lautet exakt "Münchendorf, {assets.today()}."' in prompt
+
+
+@pytest.mark.parametrize('role', ['Managing Director', 'Leiter Kommunikation', 'directeur général', 'Mitglied der Geschäftsleitung'])
+def test_role_only_clause_cannot_approve_a_quote_from_an_unknown_person(role):
+    allowed = f'Michael Lang, {role}'
+    assert assets._speaker_entries(allowed) == [allowed]
+    assert not assets._names(f'sagt Dr. Erfunden, {role}', allowed)
+    assert assets._names(f'sagt Michael Lang, {role}', allowed)
