@@ -2837,6 +2837,7 @@ def produce(
     guide_generate: Callable[..., str] | None = None,
     note: Callable[[str], None] | None = None,
     only_if_missing: bool = False,
+    progress: Callable[[str, str], None] | None = None,
 ) -> Asset:
     """Write one format, have it read, and store it: the whole act, once.
 
@@ -2863,6 +2864,8 @@ def produce(
         if existing is not None:
             return existing
     draft = write(session, fmt, client, angle, invoke=invoke, note=note)
+    if progress:
+        progress("checking", draft.body)
     checked: Checked | None = None
     try:
         checked = check(
@@ -2896,6 +2899,8 @@ def produce(
         existing = current(session, [angle.id]).get(angle.id, {}).get(fmt.key)
         if existing is not None:
             return existing
+    if progress:
+        progress("storing", draft.body)
     return store(session, fmt, client, angle, draft, checked)
 
 

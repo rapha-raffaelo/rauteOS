@@ -1,21 +1,15 @@
-"""Create the default press-release draft as part of a new impulse's job.
-
-Called by generation jobs only, never by a page GET. Existing drafts and releases
-are retained. Missing facts or a model failure must not discard a valid impulse.
-"""
+"""Queue the missing default draft without delaying new-impulse generation."""
 import logging
-from . import assets
-
+from . import default_drafts
 _log = logging.getLogger(__name__)
 
 
 def press_release(session, client, angle, *, note=None):
     try:
-        return assets.produce(session, assets.definition('pressemitteilung'),
-                              client, angle, only_if_missing=True, note=note)
-    except Exception as exc:
+        return default_drafts.enqueue(session, client, angle)
+    except Exception:
         session.rollback()
-        _log.warning('Default press release could not be completed: %s', exc)
+        _log.exception('Default draft could not be queued')
         if note:
-            note(f'Pressemitteilung noch nicht erstellt: {exc}')
+            note('Die Pressemitteilung konnte noch nicht eingeplant werden.')
         return None

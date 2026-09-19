@@ -1,6 +1,7 @@
 import datetime as dt
 import pytest
 from newspulse.models import Asset, Client
+from newspulse import default_drafts
 from newspulse.web.routes import assets_view
 from test_assets_view import factory, session, web, clean_module_state
 from test_assets import _mandate
@@ -10,10 +11,11 @@ from test_assets import _mandate
 def starter(monkeypatch, no_default_starter):
     monkeypatch.setattr(assets_view, 'start_default', no_default_starter)
     calls=[]
-    def spawn(*args, **kwargs):
-        calls.append((args,kwargs))
-        assets_view._announce(kwargs['client_id'],assets_view.Progress(kwargs['angle_id'],'Pressemitteilung',0,1))
-    monkeypatch.setattr(assets_view,'_spawn',spawn)
+    real = default_drafts.enqueue
+    def enqueue(*args, **kwargs):
+        calls.append((args, kwargs))
+        return real(*args, **kwargs)
+    monkeypatch.setattr(default_drafts, 'enqueue', enqueue)
     return calls
 
 
@@ -24,9 +26,9 @@ def test_missing_legacy_draft_starts_once_and_get_stays_read_only(session,web,st
     client,angle=_mandate(session)
     assert web.get(path(client,angle)).json()['status']=='needed'
     assert not starter
-    assert web.post(path(client,angle)).json()['status']=='running'
-    assert web.post(path(client,angle)).json()['status']=='running'
-    assert len(starter)==1 and starter[0][1]['kinds']==('pressemitteilung',)
+    assert web.post(path(client,angle)).json()['status']=='queued'
+    assert web.post(path(client,angle)).json()['status']=='queued'
+    assert len(starter)==1
 
 
 @pytest.mark.parametrize('released',[False,True])
@@ -55,7 +57,7 @@ def test_busy_writer_defers_without_recording_permanent_failure(session,web,star
     try:assert web.post(path(client,angle)).json()['status']=='waiting'
     finally:assets_view._generating.release()
     assert not starter
-    assert web.post(path(client,angle)).json()['status']=='running'
+    assert web.post(path(client,angle)).json()['status']=='queued'
     assert len(starter)==1
 
 
@@ -64,5 +66,5 @@ def test_failure_does_not_autoretry_on_every_page_visit(session,web,starter):
     assets_view._remember(angle.id,'pressemitteilung','Modell nicht verfügbar')
     for _ in range(3):assert web.post(path(client,angle)).json()['status']=='failed'
     assert not starter
-    assert web.post(path(client,angle)+'?retry=true').json()['status']=='running'
+    assert web.post(path(client,angle)+'?retry=true').json()['status']=='queued'
     assert len(starter)==1

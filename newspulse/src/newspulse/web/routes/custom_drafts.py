@@ -4,7 +4,6 @@ from __future__ import annotations
 import json
 import logging
 import queue
-import re
 import threading
 from urllib.parse import urlencode
 
@@ -14,7 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session, sessionmaker
 
 from ... import assets
-from ...streaming import StreamEvent, stream_assistant
+from ...streaming import StreamEvent, stream_assistant, preview_body
 from ..app import get_db
 from ..mandates import mandate_or_404
 from ..spawn import start_or_release
@@ -28,21 +27,6 @@ class CustomInput(BaseModel):
     model_config = ConfigDict(extra='forbid', str_strip_whitespace=True)
     instruction: str = Field(min_length=1, max_length=5000)
     version: str = Field(default='', max_length=200)
-
-
-def preview_body(raw: str) -> str:
-    """Decode only complete characters from the unfinished JSON body string."""
-    found = re.search(r'"body"\s*:\s*"((?:\\.|[^"\\])*)', raw)
-    if not found:
-        return ''
-    value = found[1]
-    # A chunk may end inside a JSON unicode escape. Never display raw escapes.
-    for trim in range(min(6, len(value)) + 1):
-        try:
-            return json.loads('"' + (value[:-trim] if trim else value) + '"').encode('utf-8', 'ignore').decode('utf-8')
-        except (ValueError, UnicodeError):
-            continue
-    return ''
 
 
 def current(session, angle_id):

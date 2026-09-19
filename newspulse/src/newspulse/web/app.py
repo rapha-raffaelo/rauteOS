@@ -473,6 +473,8 @@ def main() -> None:
     # model. The deployed platform starts exactly one process — this one — so
     # without this nothing ever runs the daily sweep.
     scheduler.start()
+    from .. import default_drafts
+    default_drafts.start()
     uvicorn.run(
         create_app(),
         host=config.WEB_HOST,

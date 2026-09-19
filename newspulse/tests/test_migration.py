@@ -61,7 +61,7 @@ def test_alembic_upgrade_creates_schema_and_round_trips_arrays(tmp_path, monkeyp
             # The generated texts. Named here because the hand-authored revision
             # owns this schema, and a format that cannot be stored is six
             # formats that cannot be stored.
-            "assets",
+            "assets", "default_draft_jobs",
             # The standards the tool writes under are schema, not configuration:
             # without this table an override is silently impossible and every
             # prompt quietly falls back to the shipped text.
@@ -704,4 +704,33 @@ def test_journalist_migration_preserves_contacts_and_serializes_running_research
     command.downgrade(_alembic_config(),'0058_twin_statements')
     with engine.connect() as conn:
         assert conn.execute(text('SELECT email FROM contacts')).scalar()=='anna@example.org'
+    engine.dispose()
+
+
+def test_default_draft_ledger_upgrade_retains_existing_impulses(tmp_path, monkeypatch):
+    from sqlalchemy.orm import sessionmaker
+    from newspulse.models import Client, Angle, DefaultDraftJob
+    from newspulse import default_drafts
+    path = tmp_path / 'draft-queue.db'
+    monkeypatch.setattr(config, 'DATABASE_PATH', path)
+    command.upgrade(_alembic_config(), '0061_opportunity_assets')
+    engine = create_engine(f'sqlite:///{path}')
+    factory = sessionmaker(bind=engine, expire_on_commit=False)
+    with factory() as session:
+        client = Client(name='Existing mandate')
+        session.add(client); session.flush()
+        angle = Angle(client_id=client.id, subject='Existing impulse', message='Keep', context='Existing')
+        session.add(angle); session.commit()
+        identity = angle.id
+    command.upgrade(_alembic_config(), 'head')
+    with factory() as session:
+        angle = session.get(Angle, identity)
+        assert angle.message == 'Keep'
+        default_drafts.enqueue(session, session.get(Client, angle.client_id), angle)
+        claimed, token = default_drafts.claim(session)
+        default_drafts.publish(session, claimed, token, stage='writing', preview='Real partial text')
+    with factory() as session:
+        state = default_drafts.status(session, identity)
+        assert state['words'] == 3 and state['stage'] == 'writing'
+        assert session.get(DefaultDraftJob, identity).attempts == 1
     engine.dispose()

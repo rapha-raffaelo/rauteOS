@@ -2,43 +2,20 @@
 import datetime as dt
 from sqlalchemy import select, func
 from newspulse import assets
-from newspulse.models import Asset
+from newspulse.models import Asset, DefaultDraftJob
 from test_assets import factory, session, _mandate, _drafted
 
 
-def test_new_impulse_gets_one_unreleased_press_release(session, monkeypatch, no_default_press_release):
+def test_new_impulse_queues_once_without_waiting_for_a_model(session, monkeypatch, no_default_press_release):
     client, angle = _mandate(session)
-    real = assets.produce
-    calls = []
-    def produce(session, fmt, client, angle, **kwargs):
-        calls.append(fmt.key)
-        return real(session, fmt, client, angle, invoke=lambda *a, **k: _drafted(fmt), **kwargs)
-    monkeypatch.setattr(assets, 'produce', produce)
-    monkeypatch.setattr(assets, 'check', lambda *a, **k: None)
+    def forbidden(*a, **k): raise AssertionError('Generation belongs to the background worker')
+    monkeypatch.setattr(assets, 'produce', forbidden)
     first = no_default_press_release(session, client, angle)
-    assert first is not None and first.kind == 'pressemitteilung'
-    assert first.released_at is None and not first.reviewed_by
-    assert assets.state_of(first) is assets.AssetState.ENTWURF
-    first.body = 'Manually edited draft'
-    first.edited_at = dt.datetime.now(dt.UTC)
-    session.commit()
     again = no_default_press_release(session, client, angle)
-    assert again.id == first.id and again.body == 'Manually edited draft'
-    assert set(calls) == {'pressemitteilung'}
-    assert session.scalar(select(func.count()).select_from(Asset)) == 1
-
-
-def test_missing_profile_or_failed_writer_keeps_the_impulse(session, monkeypatch, no_default_press_release):
-    client, angle = _mandate(session, facts={})
-    notes = []
-    assert no_default_press_release(session, client, angle, note=notes.append) is None
-    assert notes and session.get(type(angle), angle.id) is not None
-    def fail(*a, **k):
-        raise RuntimeError('model unavailable')
-    monkeypatch.setattr(assets, 'produce', fail)
-    assert no_default_press_release(session, client, angle, note=notes.append) is None
+    assert first.angle_id == again.angle_id == angle.id
+    assert first.status == 'queued'
+    assert session.scalar(select(func.count()).select_from(DefaultDraftJob)) == 1
     assert session.scalar(select(func.count()).select_from(Asset)) == 0
-    assert 'model unavailable' in notes[-1]
 
 
 def test_automatic_write_keeps_a_draft_saved_while_model_was_working(session, monkeypatch):
@@ -67,23 +44,11 @@ def test_existing_release_costs_no_model_call(session, monkeypatch):
     assert result.id == row.id and result.body == 'Keep'
 
 
-def test_default_activation_only_starts_a_missing_press_release(session, monkeypatch, no_default_starter):
-    from newspulse.web.routes import assets_view
+def test_default_activation_only_queues_a_missing_press_release(session, no_default_starter):
     client, angle = _mandate(session)
-    calls = []
-    monkeypatch.setattr(assets_view, '_spawn', lambda *args, **kwargs: calls.append((args, kwargs)))
     no_default_starter(session, client, angle)
-    assert len(calls) == 1 and calls[0][1]['kinds'] == ('pressemitteilung',)
+    assert session.get(DefaultDraftJob, angle.id).status == 'queued'
     session.add(Asset(client_id=client.id, angle_id=angle.id, kind='pressemitteilung', title='Draft', body='Saved'))
     session.commit()
     no_default_starter(session, client, angle)
-    assert len(calls) == 1
-
-
-def test_default_activation_waits_for_required_profile_data(session, monkeypatch, no_default_starter):
-    from newspulse.web.routes import assets_view
-    client, angle = _mandate(session, facts={})
-    calls = []
-    monkeypatch.setattr(assets_view, '_spawn', lambda *args, **kwargs: calls.append(args))
-    no_default_starter(session, client, angle)
-    assert not calls
+    assert session.scalar(select(func.count()).select_from(DefaultDraftJob)) == 1

@@ -19,6 +19,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 import subprocess
 import threading
 from collections.abc import Iterator
@@ -261,3 +262,18 @@ def stream_claude(
 
 
 __all__ = ["StreamEvent", "stream_assistant", "stream_claude", "stream_gemini"]
+
+
+def preview_body(raw: str) -> str:
+    """Decode only complete characters from the unfinished JSON body string."""
+    found = re.search(r'"body"\s*:\s*"((?:\\.|[^"\\])*)', raw)
+    if not found:
+        return ''
+    value = found[1]
+    # A chunk may end inside a JSON unicode escape. Never display raw escapes.
+    for trim in range(min(6, len(value)) + 1):
+        try:
+            return json.loads('"' + (value[:-trim] if trim else value) + '"').encode('utf-8', 'ignore').decode('utf-8')
+        except (ValueError, UnicodeError):
+            continue
+    return ''

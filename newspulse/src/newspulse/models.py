@@ -1330,6 +1330,22 @@ class PlanHook(Base):
         return self.state is not HookState.VORGESCHLAGEN or self.moved_at is not None
 
 
+class DefaultDraftJob(Base):
+    """One resumable default draft per impulse; preview is never a released asset."""
+    __tablename__ = "default_draft_jobs"
+    angle_id: Mapped[int] = mapped_column(ForeignKey("angles.id", ondelete="CASCADE"), primary_key=True)
+    client_id: Mapped[int] = mapped_column(ForeignKey("clients.id", ondelete="CASCADE"), index=True)
+    status: Mapped[str] = mapped_column(String(20), default="queued", index=True)
+    stage: Mapped[str] = mapped_column(String(20), default="queued")
+    preview: Mapped[str] = mapped_column(Text, default="")
+    note: Mapped[str] = mapped_column(Text, default="")
+    token: Mapped[str] = mapped_column(String(36), default="")
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[dt.datetime] = mapped_column(UTCDateTime(), default=_utcnow)
+    updated_at: Mapped[dt.datetime] = mapped_column(UTCDateTime(), default=_utcnow)
+    lease_until: Mapped[dt.datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+
+
 class Angle(Base):
     """One drafted positioning message for a client, off a market development.
 

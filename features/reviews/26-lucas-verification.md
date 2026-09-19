@@ -544,3 +544,36 @@ Every suggestion requires verification; the ClientFact count stayed at 94.
 No generated suggestion was committed. Additional browser checks covered overview,
 opportunities and all three lower profile sections at both widths. Removed an
 older React CSS reset that otherwise suppressed the shared section surfaces.
+
+### Durable default press releases and actual writing progress — 2026-09-19
+
+Production inspection confirmed missing defaults for all seven active mandates
+(77 total impulses before filtering dismissals). The previous automatic UI only
+started legacy drafts when their page was opened. Its indeterminate bar carried
+no writing output. New-impulse jobs also waited synchronously for their drafts.
+
+Added the `0062_default_drafts` migration and a durable per-impulse job ledger.
+The web service now discovers missing drafts independently of page visits and
+of the feed-scheduler switch, starting with each mandate's latest visible impulse
+before processing older ones in round-robin insertion order. New daily impulses
+outrank the historical backlog. Existing assets, inactive mandates, competitors
+and dismissed impulses are excluded. Per-job compare-and-swap leases protect
+claims, recover interrupted work, and reject stale progress updates. Failed jobs
+require explicit retry; missing-profile jobs become eligible when facts are filled.
+The writer yields to existing interactive generation and source-collection locks.
+New-impulse hooks now enqueue rather than waiting on a model.
+
+Real streamed JSON body deltas are decoded into a durable text preview and word
+count, with separate preparing/writing/checking/storing stages. The UI displays
+that growing text, actual word count, and completed workflow steps. It does not
+invent a percentage of an unknown final message length. Closing the browser does
+not cancel work. Sources, structure, guide checks and only-if-missing preservation
+still run through the existing asset pipeline; no draft is released or sent.
+
+Validation: 113 asset/custom-writer tests and 124 queue/routes/migration/scheduler
+tests passed. Three additional regression cases passed in a 30-test queue/migration
+run, covering priority, yielding and migration of an existing database. All 53
+frontend tests and Vite build passed. Synthetic browser verification covered
+incremental body growth, word count, transition to checking, preserving custom
+instructions, desktop/mobile layout and two clients finishing without open content
+pages. The first visit to the other client's content showed its saved draft.

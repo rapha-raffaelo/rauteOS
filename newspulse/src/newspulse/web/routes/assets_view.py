@@ -19,7 +19,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from ... import assets, config, pitch, profile
+from ... import assets, config, pitch, profile, default_drafts
 from ...db import get_session
 from ...models import (
     Angle,
@@ -727,18 +727,9 @@ def _start(client_id: int, angle_id: int, kinds: tuple[str, ...]) -> None:
     )
 
 
-def _run_default(client_id: int, angle_id: int) -> None:
-    _run_write(client_id, angle_id, ('pressemitteilung',), only_if_missing=True)
-
-
 def start_default(session: Session, client: Client, angle: Angle) -> None:
-    """An explicit idea/plan activation starts its missing default draft once."""
-    stored = assets.current(session, [angle.id]).get(angle.id, {})
-    if not _missing(session, client, angle, stored):
-        return
-    _spawn(_run_default, (client.id, angle.id), client_id=client.id,
-           angle_id=angle.id, kinds=('pressemitteilung',),
-           name=f'newspulse-default-release-{angle.id}', refuse_under='pressemitteilung')
+    """Persist the request; the background worker runs without an open page."""
+    default_drafts.enqueue(session, client, angle, retry=True)
 
 
 def _default_status(session: Session, client: Client, angle: Angle) -> dict:
@@ -750,6 +741,11 @@ def _default_status(session: Session, client: Client, angle: Angle) -> dict:
                 'url': f'/client/{client.id}/advice?' + urlencode({
                     'eintrag': f'anlass-{angle.id}', 'entwurf': row.id,
                     'stand': assets.version(row)}) + f'#pane-{angle.id}-pressemitteilung'}
+    queued = default_drafts.status(session, angle.id)
+    if queued is not None:
+        if queued['status'] == 'blocked':
+            queued['url'] = f'/client/{client.id}/twin'
+        return queued
     with _state:
         progress = _progress.get(client.id)
     if progress and progress.angle_id == angle.id:

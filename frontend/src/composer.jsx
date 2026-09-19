@@ -10,7 +10,7 @@ function mount() {
     const root = createRoot(node); roots.set(node, root);
     const onState = state => {
       const label = node.closest('.pack')?.querySelector('.pack__st');
-      if (label) label.textContent = state.status === 'ready' ? state.label : state.status === 'blocked' ? 'Angaben fehlen' : state.status === 'failed' ? 'Erstellung unterbrochen' : 'Wird vorbereitet';
+      if (label) label.textContent = state.status === 'ready' ? state.label : state.status === 'blocked' ? 'Angaben fehlen' : state.status === 'failed' ? 'Erstellung unterbrochen' : state.status === 'queued' ? 'Im Hintergrund eingeplant' : state.stage === 'writing' ? `${state.words || 0} Wörter geschrieben` : state.stage === 'checking' ? 'Text geschrieben · Prüfung läuft' : 'Wird vorbereitet';
     };
     root.render(<AutoPressRelease clientId={Number(node.dataset.clientId)} angleId={Number(node.dataset.angleId)} onState={onState} />);
   });
