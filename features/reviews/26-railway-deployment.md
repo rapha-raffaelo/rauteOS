@@ -289,3 +289,27 @@ the pre-restart snapshot exactly. All seven latest client drafts remain ready;
 the ledger contains only 77 ready jobs, with no pending/failed work or regeneration.
 Migration version is `0062_default_drafts`, SQLite integrity is ok, all eight
 backend hashes and all 23 public JS/CSS/shared stylesheet files match final source.
+
+### Compact profile and opportunity writing — 2026-09-21
+
+Source `25dd0d0` deployed from a clean git archive as
+`1e7353fc-5af3-47f7-b5fe-4e03fd46bd38` (SUCCESS). Profile editing now starts with
+answer and source directly at the question; company, guide, competition and
+market tools remain available in contextual sections. Opportunity workspaces
+show existing press releases directly and replace five inner tabs with sections.
+Common text formats are one click away, while all ten formats remain available.
+Client management and shared buttons use quieter secondary actions.
+
+Validation: 57 frontend tests and the Vite build passed. The targeted
+backend/navigation suite passed 124 tests; the additional profile, guide,
+workbench, React contract and workspace suite passed 104 tests (workspace coverage
+overlaps the first suite). Desktop/mobile Playwright interactions and ten
+axe-core scans passed, with no page errors, horizontal overflow or detected
+WCAG-2A/AA or WCAG-2.1-AA violations in those states. Details and comparative
+measurements are recorded in `ux-assessment-2026-09-21.md`.
+
+Read-only postdeployment checks verified 23 public bundle/style files and 11
+server source hashes against the reviewed checkout, including `workspaces.py`.
+All seven React entries, 17 page responses and 17 JSON contracts passed. All seven
+active mandates remain present, SQLite quick_check is ok, and the schema remains
+`0062_default_drafts`. Verification did not generate texts or write profile data.
