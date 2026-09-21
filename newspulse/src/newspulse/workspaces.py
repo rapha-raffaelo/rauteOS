@@ -54,7 +54,7 @@ def read(session: Session,client_id,kind,identity):
     title=article.title if article else row.reason if kind=='detected' else row.subject
     status='closed' if ended(row,kind,now) else saved.status if saved else 'draft'
     return dict(client_id=client_id,context_kind=kind,context_id=identity,id=saved.id if saved else None,
-        title=title,revision=saved.revision if saved else 0,status=status,
+        title=title,revision=saved.revision if saved else 0,status=status,angle_id=angle.id if angle else None,
         evidence_type=info.get('evidence_type','External Observation' if kind=='detected' else 'RAUTE Hypothesis'),
         situation=info.get('situation',article.title if article else row.context if kind=='developed' else row.reason),
         relevance=info.get('relevance',row.reason if kind=='detected' else row.credibility or row.message),

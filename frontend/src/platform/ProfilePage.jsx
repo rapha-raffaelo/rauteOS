@@ -348,6 +348,11 @@ function Company({ data: d, base }) {
   return (
     <>
       <Panel title="Unternehmen & Kommunikation" id="profilebody">
+        <dl className="profile-fact-sheet">{d.fields.filter(f => d.facts[f.key]?.value).slice(0, 4).map(f =>
+          <div key={f.key}><dt>{t(f.label)}</dt><dd>{d.facts[f.key].value}</dd></div>)}</dl>
+        {!d.filled && <p>Ergänze Unternehmen, Produkte und Sprecher als Grundlage für deine Texte.</p>}
+        <details className="profile-edit" open={Boolean(d.proposals.length || d.contradictions.length || d.research_error || d.stale_click || d.researching)}>
+        <summary>Unternehmensangaben bearbeiten <span>{d.filled}/{d.fillable} ausgefüllt</span></summary>
         <p>
           {d.filled}/{d.fillable} Felder gefüllt · {d.kickoff.settled}/
           {d.kickoff.total}{" "}
@@ -541,8 +546,12 @@ function Company({ data: d, base }) {
               action={`${base}/profil/${f.key}/forget`}
             />
           ))}
+        </details>
       </Panel>
-      <Guide data={d} base={base} />
+      <details className="profile-fold" open={Boolean(d.proposal || d.guide_error || d.coach_error || d.saved)}>
+        <summary><span>Kommunikations-Guide<small>Positionierung, Tonalität, No-Gos und Unterlagen</small></span><span>{d.guide_text ? 'Hinterlegt' : 'Noch offen'}</span></summary>
+        <Guide data={d} base={base} />
+      </details>
     </>
   );
 }
@@ -872,6 +881,18 @@ export function ProfilePage({ data: d, onData }) {
       controller.abort();
     };
   }, [d.company.researching, d.client.id, dirty, ready, onData]);
+  useEffect(() => {
+    function reveal() {
+      const target = document.getElementById(decodeURIComponent(window.location.hash.slice(1)));
+      if (!target) return;
+      for (let node = target; node; node = node.parentElement) if (node.tagName === 'DETAILS') node.open = true;
+      if (['unternehmen', 'profilebody'].includes(target.id)) target.querySelector('details')?.setAttribute('open', '');
+      if (['wettbewerb', 'marktumfeld'].includes(target.id)) target.querySelector('details')?.setAttribute('open', '');
+      target.scrollIntoView?.({block:'start'});
+    }
+    reveal(); window.addEventListener('hashchange', reveal);
+    return () => window.removeEventListener('hashchange', reveal);
+  }, [d.client.id]);
   const base = `/client/${d.client.id}`;
   return (
     <div className="profile-page">
@@ -904,10 +925,10 @@ export function ProfilePage({ data: d, onData }) {
         <Company data={d.company} base={base} />
       </section>
       <section id="wettbewerb" className="profile-section">
-        <Rivals data={d.rivals} base={base} />
+        <details className="profile-fold"><summary><span>Wettbewerb<small>Vergleichsgruppe, Berichterstattung und offene Themen</small></span><span>{d.rivals.rivals.length} Unternehmen</span></summary><Rivals data={d.rivals} base={base} /></details>
       </section>
       <section id="marktumfeld" className="profile-section">
-        <Market data={d.market} base={base} />
+        <details className="profile-fold"><summary><span>Marktumfeld<small>Aktuelle Entwicklungen, Studien und Termine</small></span><span>{d.market.items.length} Meldungen</span></summary><Market data={d.market} base={base} /></details>
       </section>
       {d.company.kickoff_open && (
         <Kickoff clientId={d.client.id} data={d.company} />

@@ -68,24 +68,9 @@ export function ClientTabs({ data, path = window.location.pathname }) {
         ))}
       </nav>
       {group === "opportunities" && active !== "heute" && (
-        <div className="workspace-view">
-          <label htmlFor="workspace-view">Opportunities · {t("Ansicht")}</label>
-          <select
-            id="workspace-view"
-            value={
-              base +
-              (views.find((v) => v[0] === active)?.[1] || "/opportunities")
-            }
-            onChange={(e) => window.location.assign(e.target.value)}
-            aria-label={t("Ansicht in Opportunities")}
-          >
-            {views.map(([key, suffix, label]) => (
-              <option key={key} value={base + suffix}>
-                {t(label)}
-              </option>
-            ))}
-          </select>
-        </div>
+        <nav className="workspace-links" aria-label={t("Ansicht in Opportunities")}>
+          {views.map(([key, suffix, label]) => <a key={key} href={base + suffix} aria-current={key === active ? 'page' : undefined}>{t(label)}</a>)}
+        </nav>
       )}
       {crisis?.offer && (
         <div className="koffer">

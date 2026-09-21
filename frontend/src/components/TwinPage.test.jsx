@@ -68,3 +68,17 @@ it('requires a new preview after changing column mapping',async()=>{
  fireEvent.change(screen.getByLabelText('Antwort'),{target:{value:'ID'}});
  expect(screen.getByRole('button',{name:'Ausgewählte Aussagen importieren'}).disabled).toBe(true);
 });
+it('edits in the field and keeps permission values when using the compact form',async()=>{
+ const fetch=vi.fn().mockResolvedValueOnce(response(data)).mockResolvedValueOnce(response(row)).mockResolvedValue(response(data));
+ vi.stubGlobal('fetch',fetch);render(<TwinPage clientId={1}/>);
+ fireEvent.click(await screen.findByRole('button',{name:'Bearbeiten'}));
+ const form=screen.getByRole('form',{name:'Aussage bearbeiten'});
+ expect(form.closest('.twin-question')).toBeTruthy();
+ expect(form.querySelector('details').open).toBe(false);
+ expect(screen.getByText('Kundenaussage · Vertraulich · Freigabe nötig')).toBeTruthy();
+ expect(screen.getByLabelText('Bereich').closest('fieldset').disabled).toBe(true);
+ fireEvent.change(screen.getByLabelText('Aussage'),{target:{value:'Neue Formulierung'}});
+ fireEvent.click(screen.getByRole('button',{name:'Aussage speichern'}));
+ await waitFor(()=>expect(fetch).toHaveBeenCalledTimes(3));
+ expect(JSON.parse(fetch.mock.calls[1][1].body)).toMatchObject({confidentiality:'Client Confidential',external_use:'Approval Required',evidence_type:'Client Statement'});
+});

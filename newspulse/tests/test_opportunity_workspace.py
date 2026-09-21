@@ -54,7 +54,9 @@ def launch(web):
 
 
 def test_get_is_read_only_and_is_scoped(web,db):
-    assert web.get(base()+'/developed/1').status_code==200
+    response = web.get(base()+'/developed/1')
+    assert response.status_code==200
+    assert response.json()['angle_id']==1
     assert db.scalar(select(func.count()).select_from(OpportunityWorkspace))==0
     assert web.get(base(2)+'/developed/1').status_code==404
     assert web.get(base(3)).status_code==404

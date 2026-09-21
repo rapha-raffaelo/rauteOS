@@ -20,7 +20,7 @@ it("keeps the six workspace tabs with no Today option or profile submenu", () =>
   const { rerender } = render(
     <ClientTabs data={data} path="/client/1/opportunities" />,
   );
-  expect(screen.getAllByRole("link").map((l) => l.textContent)).toEqual([
+  expect(within(screen.getByRole("navigation", {name:"Mandant"})).getAllByRole("link").map((l) => l.textContent)).toEqual([
     "Overview",
     "Opportunities",
     "Profil",
@@ -28,7 +28,7 @@ it("keeps the six workspace tabs with no Today option or profile submenu", () =>
     "Archiv",
     "KI-Sichtbarkeit",
   ]);
-  expect(screen.getAllByRole("option").map((o) => o.textContent)).toEqual([
+  expect(within(screen.getByRole("navigation", {name:"Ansicht in Opportunities"})).getAllByRole("link").map((o) => o.textContent)).toEqual([
     "Chancen",
     "Impulse",
     "Issues",

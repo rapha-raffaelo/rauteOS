@@ -395,8 +395,8 @@ def test_specialist_views_select_their_primary_workspace(web, mandate, suffix, p
 ])
 def test_each_workspace_keeps_its_tools_reachable(web, mandate, suffix, options):
     body = rendered(web.get(f"/client/{mandate.id}{suffix}"))
-    select = body.split('id="workspace-view"', 1)[1].split('</select>', 1)[0]
-    targets = re.findall(r'<option value="([^"]+)"', select)
+    tools = body.split('class="workspace-links"', 1)[1].split('</nav>', 1)[0]
+    targets = re.findall(r'<a href="([^"]+)"', tools)
     assert targets == [f"/client/{mandate.id}{path}" for path in options]
     for target in targets:
         assert web.get(target).status_code == 200

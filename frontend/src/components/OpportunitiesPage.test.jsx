@@ -9,14 +9,21 @@ const data={id:null,context_kind:'developed',context_id:1,title:'Data story',rev
  contact_ids:[],contacts:[{id:9,name:'A Journalist',outlet:'Paper'}],recommended_actions:['kundenmail','pitch'],risks:['Verify the client claim'],
  research:[],sources:[],proof_points:[],assets:[],events:[],legacy_href:'/client/1/advice'};
 afterEach(()=>vi.unstubAllGlobals());
+it('shows a prepared release before a workspace is saved without creating anything',async()=>{
+ const fetch=vi.fn().mockImplementation(url=>Promise.resolve(response(url.includes('/press-release')?{status:'ready',title:'Existing release',body:'Saved draft body',url:'/draft/8'}:url.includes('journalist-research')?{context:{title:'Data story'},research:null}:{...data,angle_id:42,assets:[{id:8,kind:'pressemitteilung',href:'/draft/8'}]})));
+ vi.stubGlobal('fetch',fetch);render(<OpportunityWorkspace clientId={1} kind="detected" identity={3}/>);
+ await screen.findByText('Saved draft body');
+ expect(screen.getByRole('link',{name:'Bearbeiten & prüfen'}).getAttribute('href')).toBe('/draft/8');
+ expect(fetch.mock.calls.some(([url])=>url==='/api/v1/clients/1/impulses/42/press-release')).toBe(true);
+ expect(fetch.mock.calls.every(([,options])=>!options?.method)).toBe(true);
+});
 it('opens the workspace without activation and sends explicit choices',async()=>{
  const fetch=vi.fn().mockImplementation((url,options)=>Promise.resolve(response(url.includes('journalist-research')?{context:{title:'Data story'},research:null}:options?.method?{...data,revision:1,status:'active'}:data)));
  vi.stubGlobal('fetch',fetch);render(<OpportunityWorkspace clientId={1} kind="developed" identity={1}/>);
  await screen.findByText('A study idea');expect(fetch.mock.calls.every(([,options])=>!options?.method)).toBe(true);
- fireEvent.click(screen.getByRole('button',{name:'Strategie & Auswahl'}));
  fireEvent.change(screen.getByLabelText('Sprecher aus dem Profil'),{target:{value:'7'}});
  fireEvent.click(screen.getByRole('checkbox',{name:'A Journalist · Paper'}));
- fireEvent.click(screen.getByRole('button',{name:'ACTIVATE'}));
+ fireEvent.click(screen.getByRole('button',{name:'Opportunity aktivieren'}));
  await screen.findByText('Gelegenheit aktiviert. Wählen Sie den nächsten Arbeitsschritt.');
  const call=fetch.mock.calls.find(([url])=>url.endsWith('/activate'));
  expect(JSON.parse(call[1].body)).toEqual({revision:0,storyline:'Publish a study',speaker_statement_id:7,contact_ids:[9]});
@@ -25,14 +32,13 @@ it('preserves unsaved storyline on a conflict',async()=>{
  vi.stubGlobal('fetch',vi.fn().mockImplementation((url,options)=>Promise.resolve(response(url.includes('journalist-research')?{context:{title:'Data story'},research:null}:options?.method?{detail:'Neu laden und vergleichen.'}:data,options?.method?409:200))));
  render(<OpportunityWorkspace clientId={1} kind="developed" identity={1}/>);
  fireEvent.change(await screen.findByLabelText('Gewählte Storyline'),{target:{value:'My unsaved angle'}});
- fireEvent.click(screen.getByRole('button',{name:'Strategie & Auswahl'}));
  fireEvent.click(screen.getByRole('button',{name:'Auswahl speichern'}));await screen.findByRole('alert');
  expect(screen.getByLabelText('Gewählte Storyline').value).toBe('My unsaved angle');
 });
 it('does not offer activation for a closed opportunity',async()=>{
  vi.stubGlobal('fetch',vi.fn().mockImplementation(url=>Promise.resolve(response(url.includes('journalist-research')?{context:{title:'Data story'},research:null}:{...data,status:'closed'}))));
  render(<OpportunityWorkspace clientId={1} kind="developed" identity={1}/>);await screen.findByText('A study idea');
- expect(screen.queryByRole('button',{name:'ACTIVATE'})).toBeNull();expect(screen.getByLabelText('Gewählte Storyline').disabled).toBe(true);
+ expect(screen.queryByRole('button',{name:'Opportunity aktivieren'})).toBeNull();expect(screen.getByLabelText('Gewählte Storyline').disabled).toBe(true);
 });
 it('develops a chance only after submission and distinguishes no opportunity from failure',async()=>{
  const fetch=vi.fn().mockResolvedValueOnce(response({client:{name:'Demo'},opportunities:[],development:null})).mockResolvedValue(response({status:'no_opportunity',note:'Not enough evidence',queries:[],sources:[],started_at:'2026-09-10T10:00:00Z'}));

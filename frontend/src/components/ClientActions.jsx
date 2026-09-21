@@ -20,7 +20,7 @@ export function ClientActions({client,onChanged=()=>window.location.assign('/cli
  }
  function input(key,label){return <label key={key}>{label}<input required={key==='name'} type={key==='actions_per_quarter'?'number':'text'} min={key==='actions_per_quarter'?0:undefined} step={key==='actions_per_quarter'?1:undefined}
   value={settings.values[key]} onChange={e=>setSettings({...settings,values:{...settings.values,[key]:e.target.value}})}/></label>;}
- return <><div className="client-card-actions"><button className="btn" aria-label={`${client.name} bearbeiten`} onClick={()=>open('edit')}>Bearbeiten</button><button className="btn client-delete" aria-label={`${client.name} löschen`} onClick={()=>open('delete')}>Löschen</button></div>
+ return <><details className="client-card-actions action-disclosure"><summary aria-label={`${client.name} verwalten`}>Verwalten</summary><div className="action-disclosure-body"><button className="btn" aria-label={`${client.name} bearbeiten`} onClick={()=>open('edit')}>Bearbeiten</button><button className="btn client-delete" aria-label={`${client.name} löschen`} onClick={()=>open('delete')}>Löschen</button></div></details>
  {mode&&<dialog ref={dialog} className="client-dialog" aria-labelledby={titleId} onCancel={e=>{e.preventDefault();close();}}>
  <form onSubmit={submit}><h2 id={titleId}>{mode==='edit'?'Mandant bearbeiten':'Mandant löschen?'}</h2><p>{client.name}</p>
  {mode==='delete'?<p>„{client.name}“ wird aus der aktiven Mandantenliste entfernt und nicht mehr überwacht. Archiv, Profil und bisherige Arbeit bleiben erhalten. Unter Einstellungen kann der Mandant reaktiviert werden.</p>

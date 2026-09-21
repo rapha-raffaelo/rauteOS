@@ -44,3 +44,17 @@ it('only offers selected journalists for a pitch and clears recipient from a cus
  fireEvent.click(screen.getByRole('button',{name:'Entwurf erstellen'}));await screen.findByText('In Arbeit');
  expect(JSON.parse(fetch.mock.calls[1][1].body).contact_id).toBeNull();
 });
+it('reads an existing press release without generating or replacing it',async()=>{
+ const fetch=vi.fn().mockImplementation(url=>Promise.resolve(response(url.endsWith('/press-release')?{status:'ready',title:'Vorbereiteter Text',body:'Vorhandener Inhalt.',url:'/client/1/advice#asset-8'}:{formats,texts:[],latest:null})));
+ vi.stubGlobal('fetch',fetch);
+ render(<ActivationPanel clientId={1} kind="developed" identity={1} angleId={1} existingAssets={[{id:8,kind:'pressemitteilung',title:'Vorbereiteter Text',href:'/client/1/advice#asset-8'}]}/>);
+ await screen.findByText('Vorhandener Inhalt.');
+ expect(fetch.mock.calls.every(([,options])=>!options?.method)).toBe(true);
+ expect(screen.getByRole('link',{name:'Bearbeiten & prüfen'}).getAttribute('href')).toBe('/client/1/advice#asset-8');
+});
+it('blocks generation until the changed storyline or recipients have been saved',async()=>{
+ const fetch=vi.fn().mockResolvedValue(response({...data,texts:[]}));vi.stubGlobal('fetch',fetch);
+ render(<ActivationPanel clientId={1} kind="developed" identity={1} contextDirty/>);
+ expect((await screen.findByRole('button',{name:'Entwurf erstellen'})).disabled).toBe(true);
+ expect(fetch).toHaveBeenCalledTimes(1);
+});
