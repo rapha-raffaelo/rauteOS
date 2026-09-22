@@ -4,7 +4,7 @@ import {fireEvent,render,screen,waitFor} from '@testing-library/react';
 import {TwinAIImport} from './TwinAIImport.jsx';
 const response=value=>({ok:true,headers:new Headers({'content-type':'application/json'}),json:async()=>value});
 const fields=[{key:'A01.01',label:'Name?',section:'Unternehmen'}];
-const preview={id:'preview',unanswered:2,rows:[{index:0,data:{key:'A01.01',value:'Company GmbH'},message:'From source',sources:[{id:'input',title:'Deck',text:'Company GmbH',url:''}]}]};
+const preview={id:'preview',unanswered:2,rows:[{index:0,fingerprint:'abc',data:{key:'A01.01',value:'Company GmbH'},message:'From source',sources:[{id:'input',title:'Deck',text:'Company GmbH',url:''}]}]};
 afterEach(()=>vi.unstubAllGlobals());
 it('starts only after explicit submission and sends chosen source context',async()=>{
  const fetch=vi.fn().mockResolvedValueOnce(response({job:null,preview:null})).mockResolvedValueOnce(response({status:'running',note:'Quellen werden ausgewertet.'}));vi.stubGlobal('fetch',fetch);
@@ -21,7 +21,7 @@ it('restores review but requires selection before committing the saved preview',
  render(<TwinAIImport clientId={1} fields={fields} onImported={imported}/>);
  await screen.findByText('1 Vorschläge zur Prüfung');expect(screen.getByRole('button',{name:'0 geprüfte Antworten übernehmen'}).disabled).toBe(true);
  fireEvent.click(screen.getByRole('checkbox',{name:'A01.01 · Name?'}));fireEvent.click(screen.getByRole('button',{name:'1 geprüfte Antworten übernehmen'}));
- await waitFor(()=>expect(imported).toHaveBeenCalledWith({created:1,skipped:0}));expect(JSON.parse(fetch.mock.calls[1][1].body)).toEqual({preview_id:'preview',selected:[0]});
+ await waitFor(()=>expect(imported).toHaveBeenCalledWith({created:1,skipped:0}));expect(JSON.parse(fetch.mock.calls[1][1].body)).toEqual({preview_id:'preview',selected:[0],fingerprints:{0:'abc'}});
 });
 it('shows an import failure as an alert and retries only on explicit request',async()=>{
  const fetch=vi.fn().mockResolvedValueOnce(response({job:{status:'failed',error_code:'invalid_response',note:'Keine gültigen Antwortvorschläge.'},preview:null})).mockResolvedValueOnce(response({status:'running',note:'Quellen werden ausgewertet.'}));
@@ -61,4 +61,30 @@ it('can reopen an earlier saved import without submitting a generation',async()=
  await screen.findByText('Older saved answer');
  expect(fetch.mock.calls[1][0]).toContain('?preview_id=old');
  expect(fetch.mock.calls.every(([,options])=>!options?.method)).toBe(true);
+});
+it('saves a directly edited answer on blur before allowing reviewed import',async()=>{
+ const updated={...preview.rows[0],fingerprint:'new',edited_at:'2026-09-22',original_value:'Company GmbH',data:{...preview.rows[0].data,value:'Corrected GmbH'}};
+ const fetch=vi.fn().mockResolvedValueOnce(response({job:{status:'complete'},preview})).mockResolvedValueOnce(response(updated)).mockResolvedValueOnce(response({created:1}));
+ vi.stubGlobal('fetch',fetch);render(<TwinAIImport clientId={1} fields={fields} onImported={()=>{}}/>);
+ const input=await screen.findByLabelText('Antwort A01.01');
+ fireEvent.click(screen.getByRole('checkbox',{name:'A01.01 · Name?'}));
+ fireEvent.change(input,{target:{value:'Corrected GmbH'}});
+ expect(screen.getByRole('button',{name:'1 geprüfte Antworten übernehmen'}).disabled).toBe(true);
+ fireEvent.blur(input);
+ await screen.findByText('Änderung gespeichert');
+ expect(fetch.mock.calls[1][1].method).toBe('PATCH');
+ expect(JSON.parse(fetch.mock.calls[1][1].body)).toEqual({value:'Corrected GmbH',fingerprint:'abc'});
+ expect(screen.getByRole('button',{name:'1 geprüfte Antworten übernehmen'}).disabled).toBe(false);
+ fireEvent.click(screen.getByRole('button',{name:'1 geprüfte Antworten übernehmen'}));
+ await waitFor(()=>expect(fetch).toHaveBeenCalledTimes(3));
+ expect(JSON.parse(fetch.mock.calls[2][1].body).fingerprints).toEqual({0:'new'});
+});
+it('retains edited text when saving fails and keeps import blocked',async()=>{
+ const fetch=vi.fn().mockResolvedValueOnce(response({job:{status:'complete'},preview})).mockRejectedValueOnce(new Error('Offline'));
+ vi.stubGlobal('fetch',fetch);render(<TwinAIImport clientId={1} fields={fields} onImported={()=>{}}/>);
+ const input=await screen.findByLabelText('Antwort A01.01');
+ fireEvent.change(input,{target:{value:'Keep my answer'}});fireEvent.blur(input);
+ await screen.findByRole('alert');
+ expect(input.value).toBe('Keep my answer');
+ expect(screen.getByRole('button',{name:'0 geprüfte Antworten übernehmen'}).disabled).toBe(true);
 });

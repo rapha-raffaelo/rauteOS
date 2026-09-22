@@ -90,6 +90,7 @@ class ImportCommit(BaseModel):
     model_config = ConfigDict(extra="forbid")
     preview_id: str = Field(min_length=1, max_length=36)
     selected: list[int] = Field(min_length=1, max_length=twin_import.MAX_ROWS)
+    fingerprints: dict[int, str] | None = None
 
 
 def _person(request: Request):
@@ -191,6 +192,17 @@ def history(client_id: int, statement_id: int, response: Response, session: Sess
     return [dict(changed_at=r.changed_at, changed_by=r.changed_by, snapshot=r.snapshot) for r in rows]
 
 
+@router.get('/questionnaire/{format}')
+def download_questionnaire(client_id: int, format: str, session: Session = Depends(get_db)):
+    mandate_or_404(session, client_id)
+    from ... import twin_questionnaire
+    if format not in {'xlsx', 'pdf'}:
+        raise HTTPException(404, 'Unbekanntes Dateiformat.')
+    content = twin_questionnaire.excel() if format == 'xlsx' else twin_questionnaire.pdf()
+    return Response(content, media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' if format == 'xlsx' else 'application/pdf',
+                    headers={'Content-Disposition': f'attachment; filename="RAUTE-Fragebogen-{client_id}.{format}"', 'Cache-Control': 'no-store'})
+
+
 @router.post("/import/preview")
 async def import_preview(client_id: int, response: Response, file: UploadFile = File(...),
                          mapping: str = Form('{}'), session: Session = Depends(get_db)):
@@ -211,15 +223,42 @@ async def import_preview(client_id: int, response: Response, file: UploadFile = 
 def import_commit(client_id: int, data: ImportCommit, request: Request, session: Session = Depends(get_db)):
     mandate_or_404(session, client_id)
     try:
-        return twin_import.commit(session, client_id, data.preview_id, data.selected, _person(request))
+        return twin_import.commit(session, client_id, data.preview_id, data.selected, _person(request), data.fingerprints)
     except LookupError as exc:
         raise HTTPException(404, str(exc)) from None
+    except twin_import.PreviewConflict as exc:
+        session.rollback()
+        raise HTTPException(409, str(exc)) from None
     except ValueError as exc:
         session.rollback()
         raise HTTPException(422, str(exc)) from None
     except (IntegrityError, StaleDataError):
         session.rollback()
         raise HTTPException(409, 'Gleichzeitiger Import. Vorschau erneut laden.') from None
+
+class AIAnswerEdit(BaseModel):
+    model_config = ConfigDict(extra='forbid', str_strip_whitespace=True)
+    value: str = Field(min_length=1, max_length=20000)
+    fingerprint: str = Field(pattern=r'^[a-f0-9]{64}$')
+
+
+@router.patch('/ai-import/{preview_id}/answers/{index}')
+def ai_edit_answer(client_id: int, preview_id: str, index: int, body: AIAnswerEdit,
+                   request: Request, response: Response, session: Session = Depends(get_db)):
+    mandate_or_404(session, client_id)
+    response.headers['Cache-Control'] = 'no-store'
+    try:
+        return twin_import.edit_ai_answer(session, client_id, preview_id, index,
+                                         body.value, body.fingerprint, _person(request))
+    except LookupError as exc:
+        raise HTTPException(404, str(exc)) from None
+    except twin_import.PreviewConflict as exc:
+        session.rollback()
+        raise HTTPException(409, str(exc)) from None
+    except ValueError as exc:
+        session.rollback()
+        raise HTTPException(422, str(exc)) from None
+
 
 # AI drafts share the reviewed-import ledger; only explicit commit creates facts.
 

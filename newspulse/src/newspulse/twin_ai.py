@@ -304,6 +304,8 @@ def save_checkpoint(session, identity, generation, client_id, checkpoint, total)
         return True
     preview = session.get(TwinImportPreview, preview_id)
     if preview:
+        edited = {r['data']['key']: r for r in preview.payload.get('rows', []) if r.get('edited_at')}
+        payload['rows'] = [{**edited[r['data']['key']], 'index': r['index']} if r['data']['key'] in edited else r for r in rows]
         preview.payload = payload
     else:
         session.add(TwinImportPreview(id=preview_id, client_id=client_id, created_at=now,

@@ -39,7 +39,6 @@ export function ClientTabs({ data, path = window.location.pathname }) {
     ["client_overview", "/overview", "Overview"],
     ["opportunities", "/opportunities", "Opportunities"],
     ["profile", "/twin", "Profil"],
-    ["actions", "/actions", "Actions"],
     ["archive", "", "Archiv"],
     ["visibility", "/ki", "KI-Sichtbarkeit"],
   ];

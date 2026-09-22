@@ -350,3 +350,48 @@ def test_startup_recovery_rotates_interrupted_job_and_spawns_worker(db, monkeypa
     assert len(launches) == 1 and launches[0][0] is twin_api.ai_worker
     assert launches[0][1]['args'][1:] == (identity, resumed.payload['generation'])
     assert not twin_ai.progress(db, identity, generation, note='stale result')
+
+
+def test_review_answer_edit_persists_without_facts_and_stale_commit_is_rejected(web, db):
+    identity, generation = prepare(db)
+    twin_ai.generate(db, identity, generation, invoke=lambda p: json.dumps({'answers':[answer()]}))
+    saved = web.get('/api/v1/clients/1/twin/ai-import').json()['preview']
+    original = saved['rows'][0]
+    path = f"/api/v1/clients/1/twin/ai-import/{saved['id']}/answers/0"
+    edit = dict(value='Korrigierter Name GmbH', fingerprint=original['fingerprint'])
+    assert web.patch(path.replace('/clients/1/', '/clients/2/'), json=edit).status_code == 404
+    assert web.patch(path,json={**edit,'value':' '}).status_code == 422
+    changed = web.patch(path, json=edit)
+    assert changed.status_code == 200, changed.text
+    row = changed.json()
+    assert row['original_value'] == original['data']['value']
+    assert row['data']['evidence_type'] == 'Derived Insight'
+    assert row['data']['external_use'] == 'Approval Required'
+    assert row['data']['fact_status'] == 'Needs Verification'
+    assert row['sources'] == original['sources']
+    assert not db.scalars(select(ClientFact)).all()
+    restored = web.get('/api/v1/clients/1/twin/ai-import').json()['preview']['rows'][0]
+    assert restored['data']['value'] == edit['value']
+    assert web.patch(path, json={**edit,'value':'Stale overwrite'}).status_code == 409
+    request = {'preview_id':saved['id'],'selected':[0], 'fingerprints':{'0':original['fingerprint']}}
+    assert web.post('/api/v1/clients/1/twin/import/commit',json=request).status_code == 409
+    assert web.post('/api/v1/clients/1/twin/import/commit',json={**request,'fingerprints':{'0':row['fingerprint']}}).json()['created'] == 1
+    fact = db.scalar(select(ClientFact))
+    assert fact.value == edit['value'] and fact.verified_at is None
+    assert 'manuell angepasst' in fact.note
+
+
+def test_resumed_checkpoint_preserves_manual_answer(db):
+    identity, generation = prepare(db)
+    twin_ai.generate(db, identity, generation, invoke=lambda p: json.dumps({'answers':[answer()]}))
+    job = db.get(TwinImportPreview, identity)
+    preview = db.get(TwinImportPreview, job.payload['preview_id'])
+    first = preview.payload['rows'][0]
+    updated = twin_import.edit_ai_answer(db, 1, preview.id, 0, 'Edited before resuming', first['fingerprint'], 'Reviewer')
+    job.payload = {**job.payload, 'status':'running'}
+    db.commit()
+    assert twin_ai.save_checkpoint(db,identity,generation,1,job.payload['checkpoint'],job.payload['total_batches'])
+    db.expire_all()
+    assert db.get(TwinImportPreview,preview.id).payload['rows'][0]['fingerprint'] == updated['fingerprint']
+    with pytest.raises(twin_import.PreviewConflict, match='läuft noch'):
+        twin_import.edit_ai_answer(db, 1, preview.id, 0, 'During generation', updated['fingerprint'], 'Reviewer')

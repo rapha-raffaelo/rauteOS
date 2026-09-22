@@ -2978,3 +2978,9 @@ body:has([id^="react-"]) .content{padding-top:16px}
 .profile-page .prof__row,.profile-page .props__val{min-width:0}.profile-page .guide__cols{grid-template-columns:minmax(0,380px) minmax(0,1fr)}
 @media(max-width:980px){.profile-page .guide__cols{grid-template-columns:1fr}}
 @media(max-width:600px){.profile-section{padding:18px}.profile-page .prof{grid-template-columns:1fr}.profile-page .props__row,.profile-page .rival__head{flex-wrap:wrap}.profile-page .voice{font-size:12px}.profile-page .voice th,.profile-page .voice td{padding-right:8px}.profile-page .guide__actions{flex-wrap:wrap}}
+
+/* Keep the measurement question visible before its statistics. */
+.vis-standard { border-top: 3px solid var(--accent, #7353ff); }
+.vis-standard__question { font-size: clamp(1.15rem, 2vw, 1.6rem); line-height: 1.4; max-width: 65ch; margin: .6rem 0; }
+.vis-add-question > summary { padding: 1rem 1.25rem; cursor: pointer; font-weight: 600; }
+.vis-add-question textarea { display: block; width: 100%; margin: .5rem 0 1rem; }

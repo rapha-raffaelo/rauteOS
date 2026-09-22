@@ -31,6 +31,17 @@ COOKIE_MAX_AGE = 60 * 60 * 24 * 365
 
 # German source string -> English. Ordered roughly by where it appears.
 _EN: dict[str, str] = {
+    "Standardfrage": "Default question",
+    "Wird bei jeder Messung automatisch verwendet": "Used automatically for every measurement",
+    "Diese Frage bestimmt, in welchem Markt wir die Sichtbarkeit messen. Weitere Fragen sind optional.": "This question defines the market in which visibility is measured. Additional questions are optional.",
+    "Weitere Frage ergänzen": "Add another question",
+    "Eigene Standardfrage festlegen": "Set your default question",
+    "Deine Frage": "Your question",
+    "Welche Anbieter gibt es für …?": "Which providers offer …?",
+    "Frage speichern": "Save question",
+    "Der Fragensatz wurde geändert. Die Ergebnisse unten gehören noch zum vorherigen Fragensatz. Über „Aktualisieren“ die neuen Fragen messen; frühere Messungen bleiben erhalten.": "The question set has changed. The results below still belong to the previous question set. Use “Refresh” to measure the new questions; previous measurements are retained.",
+    "Fehler im Nachrichtenlauf": "errors in news run",
+
     "Wissen, Unternehmensangaben, Wettbewerb und Marktumfeld an einem Ort.": "Knowledge, company details, competitors and market context in one place.",
     "Ansicht": "View",
     "Krise offen": "Open crisis",

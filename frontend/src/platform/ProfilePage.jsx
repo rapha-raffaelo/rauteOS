@@ -558,7 +558,7 @@ function Company({ data: d, base }) {
 function Rivals({ data: d, base }) {
   const redirect_to = base + "/twin#wettbewerb";
   return (
-    <Panel title="Wettbewerb">
+    <Panel title="Wettbewerbsanalyse">
       <p>Vergleich aus den letzten {d.window_days} Tagen.</p>
       {d.voice.length > 1 ? (
         <table className="data">
@@ -622,11 +622,19 @@ function Rivals({ data: d, base }) {
         <p>Noch keine mehrfach belegten Lücken.</p>
       )}
       <a href={base + "/map"}>{t("Ganze Coverage Map")} →</a>
-      <h3>{t("Vergleichsgruppe")}</h3>
+
+    </Panel>
+  );
+}
+function RivalManagement({data: d, base}) {
+  const redirect_to = base + "/twin#wettbewerber";
+  return <Panel title="Wettbewerber">
+
       <p>
         Verknüpfte Wettbewerber zählen nur hier, nicht bei den anderen
         Mandanten.
       </p>
+      {!d.client.competitors.length && <p>Noch keine Wettbewerber hinterlegt.</p>}
       {d.client.competitors.map((r) => (
         <Action
           key={r.id}
@@ -671,8 +679,7 @@ function Rivals({ data: d, base }) {
           />
         </Action>
       )}
-    </Panel>
-  );
+  </Panel>;
 }
 const kinds = {
   studie: "Studien",
@@ -903,6 +910,7 @@ export function ProfilePage({ data: d, onData }) {
           "Wissen, Unternehmensangaben, Wettbewerb und Marktumfeld an einem Ort.",
         )}
       />
+      <section id="wettbewerber" className="profile-section"><RivalManagement data={d.rivals} base={base}/></section>
       <section
         id="wissen"
         className="profile-knowledge"
@@ -925,7 +933,7 @@ export function ProfilePage({ data: d, onData }) {
         <Company data={d.company} base={base} />
       </section>
       <section id="wettbewerb" className="profile-section">
-        <details className="profile-fold"><summary><span>Wettbewerb<small>Vergleichsgruppe, Berichterstattung und offene Themen</small></span><span>{d.rivals.rivals.length} Unternehmen</span></summary><Rivals data={d.rivals} base={base} /></details>
+        <details className="profile-fold"><summary><span>Wettbewerbsanalyse<small>Vergleichsgruppe, Berichterstattung und offene Themen</small></span><span>{d.rivals.rivals.length} Unternehmen</span></summary><Rivals data={d.rivals} base={base} /></details>
       </section>
       <section id="marktumfeld" className="profile-section">
         <details className="profile-fold"><summary><span>Marktumfeld<small>Aktuelle Entwicklungen, Studien und Termine</small></span><span>{d.market.items.length} Meldungen</span></summary><Market data={d.market} base={base} /></details>

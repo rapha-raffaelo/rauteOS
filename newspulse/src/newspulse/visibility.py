@@ -1293,8 +1293,12 @@ def measure(
     ask: dict[str, Callable[[str], str]] | None = None,
     invoke: Callable[..., str] = invoke_with_fallback,
     now: dt.datetime | None = None,
+    force: bool = False,
 ) -> VisibilityRun | None:
     """Put the accepted set to every configured provider and store what came back.
+
+    Manual refresh may pass force=True to bypass the weekly window; an active
+    run still prevents a second concurrent measurement.
 
     Returns the stored run unchanged when one is still inside the window, without
     spending a call: at most one measurement per mandate per
@@ -1326,7 +1330,7 @@ def measure(
     if not questions:
         return None
     standing = _standing(session, client)
-    if standing is not None and not _is_due(standing, now=now):
+    if not force and standing is not None and not _is_due(standing, now=now):
         return standing
     running = _in_flight(session, client, now=now)
     if running is not None:

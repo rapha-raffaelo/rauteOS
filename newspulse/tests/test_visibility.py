@@ -529,7 +529,7 @@ def test_a_domain_inside_a_longer_domain_is_not_a_citation(mandate):
 # --- The measurement --------------------------------------------------------------
 
 
-def _measure(session, mandate, *, ask, now=_NOW):
+def _measure(session, mandate, *, ask, now=_NOW, force=False):
     return visibility.measure(
         session,
         mandate,
@@ -542,6 +542,7 @@ def _measure(session, mandate, *, ask, now=_NOW):
             }
         ),
         now=now,
+        force=force,
     )
 
 
@@ -1151,3 +1152,14 @@ def test_a_set_a_person_curated_is_never_reseeded(session, mandate, monkeypatch,
     assert [q.text for q in visibility.accepted(session, mandate)] == [
         "Meine eigene Frage?"
     ]
+
+
+def test_manual_force_refresh_bypasses_window_but_not_an_active_run(session, mandate):
+    _two_questions(session, mandate)
+    answers = {_AUSWAHL:_answer('auswahl_claude'), _KATEGORIE:_answer('kategorie_ohne_quelle')}
+    first = _measure(session, mandate, ask={visibility.PROVIDER_CLAUDE:_asker(answers)})
+    fresh = _measure(session, mandate, ask={visibility.PROVIDER_CLAUDE:_asker(answers)}, now=_NOW+dt.timedelta(hours=1), force=True)
+    assert fresh.id != first.id and len(fresh.answers) == 2
+    fresh.finished_at = None;session.commit()
+    blocked = visibility.measure(session,mandate,ask={visibility.PROVIDER_CLAUDE:_never_called},invoke=_never_called,now=_NOW+dt.timedelta(hours=1,minutes=1),force=True)
+    assert blocked.id == fresh.id

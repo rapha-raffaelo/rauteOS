@@ -878,6 +878,10 @@ def _context(
     attempt = _attempt(session, client)
     return {
         "questions": questions,
+        "question_set_changed": current is not None and (
+            any(q.accepted_at and q.accepted_at > current.run.ran_at for q in questions)
+            or bool({a.question_id for a in current.run.answers} - {q.id for q in questions})
+        ),
         "question_rows": _question_rows(None if current is None else current.run, questions),
         "standing": standing,
         "occupants": occupants,
@@ -1045,15 +1049,15 @@ def _measure_one(client_id: int) -> None:
     """Put one mandate's set to the providers. Both guards are already held.
 
     :func:`newspulse.visibility.measure` is the same call the sweep makes and
-    obeys the same window: pressed inside it, it hands back the stored run and
-    spends nothing.
+    bypasses the weekly window for this explicit manual request. The active-run
+    guard still prevents overlapping measurements.
     """
     with get_session() as session:
         client = session.get(Client, client_id)
         if client is None or client.is_competitor:
             return
         name = client.name
-        run = visibility.measure(session, client)
+        run = visibility.measure(session, client, force=True)
         if run is None:
             _log.info("nothing to measure for %r", name)
             return

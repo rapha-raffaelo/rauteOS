@@ -25,6 +25,7 @@ dependencies = [
     # Markdown need no library at all, and .docx is deliberately not supported yet
     # rather than half-supported — see web/routes/guide.py.
     "pypdf>=5.0",
+    "reportlab>=5.0.1",
 ]
 
 [project.scripts]

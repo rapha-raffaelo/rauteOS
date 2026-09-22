@@ -11,7 +11,7 @@ beforeEach(() => {
   };
 });
 afterEach(() => vi.unstubAllGlobals());
-it("keeps the six workspace tabs with no Today option or profile submenu", () => {
+it("keeps the five workspace tabs with no Today option or profile submenu", () => {
   const data = {
     client: { id: 1, name: "Alpha" },
     active: "opportunities",
@@ -24,7 +24,6 @@ it("keeps the six workspace tabs with no Today option or profile submenu", () =>
     "Overview",
     "Opportunities",
     "Profil",
-    "Actions",
     "Archiv",
     "KI-Sichtbarkeit",
   ]);

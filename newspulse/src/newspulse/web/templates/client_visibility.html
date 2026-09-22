@@ -111,6 +111,27 @@
 {% endmacro %}
 
 <div id="visbody">
+{% if questions %}
+<section class="vis-panel vis-standard" aria-label="{{ t('Standardfrage') }}">
+  <div class="vis-panel__h"><span class="vis-panel__t">{{ t('Standardfrage') }}</span><span class="vis-panel__s">{{ t('Wird bei jeder Messung automatisch verwendet') }}</span></div>
+  <div class="vis-panel__b"><h2 class="vis-standard__question">{{ questions[0].text }}</h2>
+    <p class="vis-note__p">{{ t('Diese Frage bestimmt, in welchem Markt wir die Sichtbarkeit messen. Weitere Fragen sind optional.') }}</p>
+  </div>
+</section>
+{% endif %}
+<details class="vis-panel vis-add-question">
+  <summary>{{ t('Weitere Frage ergänzen') if questions else t('Eigene Standardfrage festlegen') }}</summary>
+  <form method="post" action="/client/{{ client.id }}/ki/fragen" class="vis-panel__b">
+    <label for="visibility-question">{{ t('Deine Frage') }}</label>
+    <textarea id="visibility-question" name="text" rows="2" maxlength="1000" required placeholder="{{ t('Welche Anbieter gibt es für …?') }}"></textarea>
+    <input type="hidden" name="band" value="auswahl">
+    <button type="submit" class="btn btn--go">{{ t('Frage speichern') }}</button>
+  </form>
+</details>
+{% if question_set_changed %}
+  <div class="notice">{{ t('Der Fragensatz wurde geändert. Die Ergebnisse unten gehören noch zum vorherigen Fragensatz. Über „Aktualisieren“ die neuen Fragen messen; frühere Messungen bleiben erhalten.') }}</div>
+{% endif %}
+
 
 {% if visibility_error %}
   <div class="notice notice--error">{{ visibility_error }}</div>

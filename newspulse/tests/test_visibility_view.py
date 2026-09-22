@@ -1224,3 +1224,34 @@ def test_the_switch_still_governs_the_button(web, session, mandate, monkeypatch)
     assert f'action="/client/{mandate.id}/ki/messen"' not in rendered(web.get(
         f"/client/{mandate.id}/ki"
     ))
+
+
+def test_standard_question_is_prominent_and_manual_add_preserves_it(web, session, mandate):
+    primary = _question(session, mandate, _AUSWAHL)
+    page = web.get(f'/client/{mandate.id}/ki')
+    body = rendered(page)
+    assert 'vis-standard__question' in body
+    assert body.index(_AUSWAHL) < body.index('Weitere Frage ergänzen')
+    result = web.post(f'/client/{mandate.id}/ki/fragen', data={'text':_PROBLEM,'band':'auswahl'})
+    assert result.status_code == 200
+    assert visibility.accepted(session,mandate)[0].id == primary.id
+    assert len(visibility.accepted(session,mandate)) == 2
+
+
+def test_replaced_question_does_not_mislabel_historical_results(web, session, mandate):
+    old = _question(session,mandate,_AUSWAHL)
+    run = _run(session,mandate,at=_NOW,cells=[(old,_CLAUDE,1,[mandate.name])])
+    visibility.retire(session,old)
+    _question(session,mandate,_PROBLEM)
+    body = rendered(web.get(f'/client/{mandate.id}/ki'))
+    assert 'Ergebnisse unten gehören noch zum vorherigen Fragensatz' in body
+    assert session.get(VisibilityRun,run.id).answers[0].question_id == old.id
+
+
+def test_manual_worker_requests_fresh_measurement(factory, session, mandate, monkeypatch):
+    _question(session,mandate,_AUSWAHL)
+    calls = []
+    monkeypatch.setattr(visibility_view,'get_session',factory)
+    monkeypatch.setattr(visibility,'measure',lambda s,c,**kw:calls.append((c.id,kw)))
+    visibility_view._measure_one(mandate.id)
+    assert calls == [(mandate.id,{'force':True})]

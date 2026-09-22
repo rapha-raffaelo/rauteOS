@@ -27,11 +27,12 @@ export function TwinPage({clientId, embedded = false, initialLimit = 20}) {
   const [filter, setFilter] = useState('all');
   const [limit, setLimit] = useState(initialLimit);
   const [editing, setEditing] = useState(null);
-  const importPanel = useRef(null);
+  const importPanel = useRef(null), filePanel = useRef(null), chosenImport = useRef(null);
   const [aiImporting, setAIImporting] = useState(false);
   const [aiStatus, setAIStatus] = useState(null);
   const [importing, setImporting] = useState(false);
   useEffect(() => {if (aiImporting) importPanel.current?.scrollIntoView?.({behavior: 'smooth', block: 'start'});}, [aiImporting]);
+  useEffect(()=>{if(importing)filePanel.current?.scrollIntoView?.({behavior:'smooth',block:'start'});},[importing]);
   const load = async () => setData(await twinRequest(clientId));
   useEffect(() => {
     const controller = new AbortController();
@@ -68,9 +69,10 @@ export function TwinPage({clientId, embedded = false, initialLimit = 20}) {
   return <div className="twin-page">
     <header>{embedded ? <h2>Wissen & Aussagen</h2> : <><p className="twin-eyebrow">PROFIL · {data.client.name}</p><h1>Was wir wissen. Und woher.</h1></>}
       <p>Jede Aussage mit ihrer Quelle, ihrem Stand und ihrer Freigabe.</p>
-      <div className="twin-toolbar"><button className="btn btn--go" type="button" aria-controls={`twin-ai-${clientId}`} aria-expanded={aiImporting} onClick={()=>setAIImporting(!aiImporting)}>Mit KI importieren</button>{aiStatus&&<span role="status">{aiStatus.preview?`${aiStatus.preview.rows.length} KI-Vorschläge gespeichert`:aiStatus.job?.note}</span>}<button className="btn btn--quiet" aria-expanded={importing} onClick={() => setImporting(!importing)}>Fragebogen importieren</button></div>
+      <div className="twin-toolbar"><button className="btn btn--go" type="button" aria-controls={`twin-ai-${clientId}`} aria-expanded={aiImporting} onClick={()=>{chosenImport.current='ai';setAIImporting(!aiImporting);setImporting(false);}}>Mit KI importieren</button>{aiStatus&&<span role="status">{aiStatus.preview?`${aiStatus.preview.rows.length} KI-Vorschläge gespeichert`:aiStatus.job?.note}</span>}<button className="btn btn--quiet" aria-expanded={importing} aria-controls={`twin-file-${clientId}`} onClick={() => {chosenImport.current='file';setImporting(!importing);setAIImporting(false);}}>Fragebogen importieren</button></div>
     </header>
-    {<div hidden={!aiImporting} ref={importPanel} id={`twin-ai-${clientId}`}><TwinAIImport clientId={clientId} fields={data.fields} onStatus={setAIStatus} onRestore={v=>{if(v.preview||v.job?.status==='running'||v.job?.status==='failed')setAIImporting(true);}} onImported={async result=>{await load();setNotice(`${result.created} KI-Vorschläge übernommen; ${result.skipped} bereits beantwortet oder vorhanden.`);}}/></div>}
+    <div hidden={!importing} ref={filePanel} id={`twin-file-${clientId}`}><ImportPanel clientId={clientId} onImported={async result=>{await load();setNotice(`${result.created} Aussagen importiert; ${result.skipped} bereits vorhanden.`);}}/></div>
+    {<div hidden={!aiImporting} ref={importPanel} id={`twin-ai-${clientId}`}><TwinAIImport clientId={clientId} fields={data.fields} onStatus={setAIStatus} onRestore={v=>{if(chosenImport.current!=='file'&&(v.preview||v.job?.status==='running'||v.job?.status==='failed'))setAIImporting(true);}} onImported={async result=>{await load();setNotice(`${result.created} KI-Vorschläge übernommen; ${result.skipped} bereits beantwortet oder vorhanden.`);}}/></div>}
     <section className="twin-progress" aria-label="Vollständigkeit">
       <div className="twin-progress-main"><span className="twin-progress-label">Profilvollständigkeit</span><strong>{data.progress.percent} % vollständig</strong>
         <progress max="100" value={data.progress.percent} aria-label="Beantwortete Pflichtfelder" /></div>
@@ -80,9 +82,6 @@ export function TwinPage({clientId, embedded = false, initialLimit = 20}) {
     </section>
     {errors}{notice && <p role="status">{notice}</p>}
 
-    {importing && <ImportPanel clientId={clientId} onImported={async result => {
-      await load(); setNotice(`${result.created} Aussagen importiert; ${result.skipped} bereits vorhanden.`);
-    }} />}
     <fieldset disabled={Boolean(editing)} className="twin-toolbar twin-filters">
       <label>Suche<input type="search" value={query} onChange={e => {setQuery(e.target.value); setLimit(initialLimit);}} placeholder="Feld oder Aussage suchen" /></label>
       <label>Bereich<select aria-label="Bereich" value={section} onChange={e => {setSection(e.target.value); setLimit(initialLimit);}}>
@@ -196,8 +195,10 @@ export function ImportPanel({clientId, onImported}) {
     finally {setBusy(false);}
   }
   return <section className="twin-import"><h2>Fragebogen importieren</h2>
-    <p>RAUTE-Arbeitsmappe (.xlsx) oder CSV, bis 5 MB. Die Vorschau verändert noch keine Aussagen. Vorhandene Aussagen bleiben erhalten.</p>
-    <label>Datei<input type="file" accept=".xlsx,.csv" onChange={e => {setFile(e.target.files[0]); setPreview(null); setMapping({}); setDirty(true);}} /></label>
+    <p>Vorlage herunterladen, Antworten ausfüllen und die gespeicherte Datei hier wieder hochladen.</p>
+    <div className="twin-toolbar"><a className="btn" href={`/api/v1/clients/${clientId}/twin/questionnaire/xlsx`} download>Excel-Vorlage herunterladen</a><a className="btn btn--quiet" href={`/api/v1/clients/${clientId}/twin/questionnaire/pdf`} download>Ausfüllbares PDF herunterladen</a></div>
+    <p className="twin-muted">Excel, CSV oder unsere digital ausgefüllte PDF-Vorlage, bis 5 MB. PDF mit Formulardaten speichern; Scans können nicht eingelesen werden. Vor der Übernahme prüfst du die Vorschau. Vorhandene Aussagen bleiben erhalten.</p>
+    <label>Datei<input type="file" accept=".xlsx,.csv,.pdf" onChange={e => {setFile(e.target.files[0]); setPreview(null); setMapping({}); setDirty(true);}} /></label>
     <button className="btn" disabled={!file || busy} onClick={review}>{busy ? 'Prüft…' : 'Vorschau erstellen'}</button>
     {error && <p role="alert">{error}</p>}
     {preview && <>

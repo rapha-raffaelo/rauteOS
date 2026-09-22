@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import csv
+import copy
 import datetime as dt
 import hashlib
 import io
@@ -36,6 +37,24 @@ def _tables(data: bytes, filename: str):
         except (UnicodeDecodeError, csv.Error):
             raise ValueError("CSV bitte als UTF-8 mit Kopfzeile exportieren.") from None
         yield 'CSV', list(itertools.islice(csv.reader(io.StringIO(text), dialect), MAX_ROWS + 2))
+    elif filename.lower().endswith('.pdf'):
+        from pypdf import PdfReader
+        from pypdf.errors import PdfReadError
+        try:
+            reader = PdfReader(io.BytesIO(data))
+            if reader.is_encrypted or len(reader.pages) > 200:
+                raise ValueError('Bitte ein unverschlüsseltes PDF aus unserer Fragebogen-Vorlage verwenden.')
+            form = reader.get_fields() or {}
+            answers = [(name.removeprefix('answer__'), field.get('/V', ''))
+                       for name, field in form.items() if name.startswith('answer__')]
+            if not answers or len(answers) > MAX_ROWS:
+                raise ValueError('Keine ausfüllbaren Antwortfelder gefunden. Bitte die PDF-Vorlage digital ausfüllen und mit Formulardaten speichern; gescannte PDFs können nicht eingelesen werden.')
+            table = [['ID', 'Antwort / Input', 'Quelle / Dokument', 'Source URL', 'Notizen']]
+            for key, value in answers:
+                table.append([key, value] + [form.get(prefix+'__'+key, {}).get('/V', '') for prefix in ['source', 'url', 'note']])
+            yield 'PDF', table
+        except (PdfReadError, KeyError, TypeError, OSError):
+            raise ValueError('Keine lesbare PDF-Datei. Bitte die ausfüllbare PDF-Vorlage verwenden.') from None
     elif filename.lower().endswith('.xlsx'):
         try:
             with zipfile.ZipFile(io.BytesIO(data)) as archive:
@@ -57,7 +76,7 @@ def _tables(data: bytes, filename: str):
         except (zipfile.BadZipFile, KeyError, OSError):
             raise ValueError("Keine lesbare XLSX-Datei.") from None
     else:
-        raise ValueError("Bitte eine XLSX- oder CSV-Datei wählen.")
+        raise ValueError("Bitte eine XLSX-, CSV- oder ausgefüllte PDF-Vorlage wählen.")
 
 
 def preview(session: Session, client_id: int, data: bytes, filename: str, mapping: dict[str, str]) -> dict:
@@ -146,7 +165,7 @@ def preview(session: Session, client_id: int, data: bytes, filename: str, mappin
     return dict(id=record.id, **payload)
 
 
-def commit(session: Session, client_id: int, preview_id: str, selected: list[int], person: str) -> dict:
+def commit(session: Session, client_id: int, preview_id: str, selected: list[int], person: str, fingerprints: dict[int, str] | None = None) -> dict:
     record = session.get(TwinImportPreview, preview_id)
     now = dt.datetime.now(dt.UTC)
     if record is None or record.client_id != client_id:
@@ -165,12 +184,18 @@ def commit(session: Session, client_id: int, preview_id: str, selected: list[int
     rows = {r['index']: r for r in record.payload['rows']}
     if not selected or any(i not in rows or rows[i]['state'] != 'ready' for i in selected):
         raise ValueError('Nur gültige, ausgewählte Aussagen können importiert werden.')
+    for index in selected:
+        item = rows[index]
+        if (fingerprints is not None or item.get('edited_at')) and (fingerprints or {}).get(index) != item['fingerprint']:
+            raise PreviewConflict('Eine ausgewählte Antwort wurde inzwischen geändert. Bitte die Vorschau neu laden und erneut prüfen.')
     # Claim this preview in the same transaction as its rows: retries are idempotent.
     changed = session.execute(update(TwinImportPreview).where(
-        TwinImportPreview.id == preview_id, TwinImportPreview.committed_at.is_(None)
+        TwinImportPreview.id == preview_id, TwinImportPreview.committed_at.is_(None),
+        TwinImportPreview.payload == record.payload
     ).values(committed_at=now)).rowcount
     if not changed:
-        return dict(created=0, skipped=len(selected), already_committed=True)
+        session.rollback()
+        raise PreviewConflict('Die Vorschau wurde inzwischen geändert. Bitte neu laden.')
     existing = set(session.scalars(select(ClientFact.import_hash).where(ClientFact.client_id == client_id)))
     ai_import = record.payload.get('kind') == 'ai'
     occupied = set(session.scalars(select(ClientFact.key).where(ClientFact.client_id == client_id,
@@ -193,3 +218,51 @@ def commit(session: Session, client_id: int, preview_id: str, selected: list[int
     record.payload = {}
     session.commit()
     return dict(created=created, skipped=skipped, already_committed=False)
+
+
+class PreviewConflict(ValueError):
+    pass
+
+
+def edit_ai_answer(session, client_id, preview_id, index, value, fingerprint, person):
+    """Edit the review draft only, preserving AI provenance and permission gates."""
+    record = session.get(TwinImportPreview, preview_id)
+    if not record or record.client_id != client_id or record.payload.get('kind') != 'ai':
+        raise LookupError('KI-Vorschau nicht gefunden.')
+    if record.committed_at:
+        raise PreviewConflict('Dieser Import wurde bereits übernommen. Bitte das Profil bearbeiten.')
+    from . import twin_ai
+    job = session.get(TwinImportPreview, twin_ai.slot_id(client_id))
+    if job and job.payload.get('preview_id') == preview_id and job.payload.get('status') == 'running' and job.expires_at > dt.datetime.now(dt.UTC):
+        raise PreviewConflict('Der Import läuft noch. Bitte nach Abschluss bearbeiten.')
+    previous = record.payload
+    payload = copy.deepcopy(previous)
+    item = next((r for r in payload['rows'] if r['index'] == index), None)
+    if not item:
+        raise LookupError('Antwortvorschlag nicht gefunden.')
+    if item['fingerprint'] != fingerprint:
+        raise PreviewConflict('Diese Antwort wurde inzwischen geändert. Deine Eingabe bleibt erhalten; bitte mit dem gespeicherten Stand vergleichen.')
+    if not value.strip():
+        raise ValueError('Bitte eine Antwort eintragen oder den Vorschlag abwählen.')
+    if value.strip() == item['data']['value']:
+        return item
+    item.setdefault('original_value', item['data']['value'])
+    item.setdefault('original_note', item['data'].get('note', ''))
+    item['data']['value'] = value.strip()
+    item['data']['fact_status'] = 'Needs Verification'
+    item['data']['note'] = (item['original_note'][:3500] + '\nAntwort vor Übernahme manuell angepasst von ' + person[:200]
+        + '. Quellen und KI-Herleitung beziehen sich auf den ursprünglichen Vorschlag; die Änderung ist nicht unabhängig bestätigt.')[:5000]
+    # Validate length and all evidence constraints before persisting the draft.
+    item['data'] = StatementInput.model_validate(item['data']).model_dump(mode='json')
+    item['fingerprint'] = hashlib.sha256(json.dumps(item['data'], sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+    item['edited_at'] = dt.datetime.now(dt.UTC).isoformat()
+    item['edited_by'] = person
+    changed = session.execute(update(TwinImportPreview).where(
+        TwinImportPreview.id == preview_id, TwinImportPreview.client_id == client_id,
+        TwinImportPreview.committed_at.is_(None), TwinImportPreview.payload == previous
+    ).values(payload=payload)).rowcount
+    if not changed:
+        session.rollback()
+        raise PreviewConflict('Die Vorschau wurde inzwischen geändert. Deine Eingabe bleibt erhalten; bitte erneut speichern.')
+    session.commit()
+    return item
