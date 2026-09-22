@@ -13,15 +13,22 @@ RUN npm run build
 
 FROM python:3.11-slim
 
+# Use the same supported Node runtime for the AI CLI as for the frontend build.
+# Debian's nodejs package can lag behind the CLI's minimum required version.
+COPY --from=frontend /usr/local/bin/node /usr/local/bin/node
+COPY --from=frontend /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/npm
+RUN ln -s ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm
+
 # curl for the CLI installer and the healthcheck; ca-certificates so the feed
 # fetches can verify TLS at all.
 RUN apt-get update \
- && apt-get install -y --no-install-recommends curl ca-certificates nodejs npm \
+ && apt-get install -y --no-install-recommends curl ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 
 # The analyzer and the assistant both invoke `claude`; without it the sweep
 # fails per batch and the drawer reports "CLI not found".
-RUN npm install -g @anthropic-ai/claude-code && npm cache clean --force
+RUN npm install -g @anthropic-ai/claude-code && npm cache clean --force \
+ && node --version && claude --version
 
 # This file lives at the repository root, and the app lives in newspulse/, hence
 # the prefixed COPY paths. It sits here so a PaaS that auto-detects a Dockerfile
