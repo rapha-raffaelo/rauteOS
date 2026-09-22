@@ -382,3 +382,46 @@ processing the remaining packages. The older 51-row preview is separately
 accessible through the review API and history. ClientFact count remains 94.
 All 23 public bundle/style files, 15 server hashes, 24 page responses and 17 JSON
 contracts passed. SQLite integrity is ok; schema remains `0062_default_drafts`.
+
+## Profile review, questionnaires and visibility — 2026-09-22
+
+Release source: `8adacf8`.
+
+- AI suggestions can be edited directly in the review preview. Blur saves the
+  draft; failed saves retain input and block import. Original wording, sources
+  and AI provenance remain available, and edits are still unverified. Fingerprint
+  checks reject stale edits/commits; resumed jobs preserve saved manual edits.
+- The file-import panel now opens before long AI previews. Blank Excel and
+  fillable PDF questionnaires contain all 356 stable field IDs; both formats
+  round-trip through the existing reviewed, selected import. Scanned/flattened
+  PDFs return a useful error rather than creating statements.
+- Competitor management is visible near the top of Profile, including manual
+  additions. Existing competitor links are preserved. Actions is hidden from
+  navigation; its route and records remain available.
+- Visibility leads with its stored default question and an optional manual
+  question form. Changed question sets are identified against historical results.
+  Manual Refresh now bypasses the weekly schedule while keeping the active-run
+  guard. The scheduler retains its weekly window.
+- The daily header identifies news-run errors separately from visibility.
+  Production daily run 69 reported Perigon HTTP 403, allowed requests exceeded;
+  Arrakis visibility run 14 (18 September) had two answers and no provider errors.
+
+Validation: 62 React tests and the production build passed. Targeted Python
+suites covered Twin/AI import, questionnaire round trips, visibility, shell,
+React page contracts and profile behavior. The added manual-refresh regression
+and visibility suite passed together (56 tests). Playwright checked competitor
+addition/reload, inline editing/reload, both downloads, the visible file panel,
+mobile overflow, saving a default question and absence of Actions. The generated
+PDF was visually inspected; all 1,424 form fields stay within page bounds.
+
+Railway deployment `4cfc3190-9164-4b4a-be43-b5ec0c9c27de` reached SUCCESS,
+from a clean archive of `8adacf8`. Production checks verified 7 React entries,
+24 pages, 17 JSON contracts, 20 source hashes and 23 public bundle/style files.
+SQLite quick check was `ok`; all 7 mandates and 94 profile statements remained.
+Live template endpoints generated a 24,668-byte Excel file and a 1,403,612-byte
+PDF with 1,424 fillable fields. Arrakis retained its G-20 competitor link.
+
+Arrakis question 37 now stores the requested default without V3. Question 1 is
+retired, retaining the V3 wording and its historical answers. A fresh production
+measurement 18 completed at 12:43:20 UTC against question 37: two answers,
+no failed providers and no unread answers.
