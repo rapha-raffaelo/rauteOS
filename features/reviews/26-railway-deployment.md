@@ -340,3 +340,45 @@ Read-only production verification passed 24 page responses, including all seven
 mandates' impulse pages, 17 JSON contracts, seven React entries, 12 source hashes
 including the changed template, and 23 public bundle/style files. SQLite integrity
 is ok; schema remains `0062_default_drafts`, with seven active mandates.
+
+### Durable AI import checkpoints and recovery — 2026-09-22
+
+The Arrakis import started at 10:08 UTC had recorded five of six attempted
+packages and a suggestion counter of 46 when the earlier deployment restarted
+the server. Its answers were still held in process memory. An older preview of
+51 suggestions from September 18 remained in SQLite but was hidden by a one-hour
+expiry. The 46 in-memory answers could not be recovered.
+
+Source `0be6a9a`, deployed from a clean archive as
+`635dac4b-47f9-494e-8c15-3f2f61949014` (SUCCESS), now saves frozen source context,
+completed package answers, validated review rows and the next package index.
+Each package checkpoint and its review preview are committed together. Startup
+recovery rotates the generation token, resumes interrupted jobs and rejects
+results from obsolete workers. Explicit resume retains the original input.
+AI previews no longer expire in the review/commit API or get removed by file
+import cleanup. Completed packages remain reviewable after later failures.
+
+The profile restores import status automatically. Collapsing the panel retains
+its state, and a history selector opens older saved previews. No AI suggestion
+becomes a live statement without explicit selection and commit; active previews
+cannot be committed while still being written. Import input/checkpoint internals
+are excluded from public job responses, and imported facts retain verification
+and external-use constraints.
+
+Validation passed 60 frontend tests, 61 targeted backend/React-contract tests and
+the Vite build. Tests cover interrupted/resumed packages, generation fencing,
+startup recovery, expired preview recovery, cross-client scope, cleanup and
+explicit review. A Playwright run against an isolated local SQLite database was
+interrupted by stopping the process after two packages. Restart finished all six;
+only the in-flight third package repeated. Desktop/mobile reload and panel-toggle
+checks passed with no page errors or overflow. Artifacts are under
+`/tmp/raute-import-*` and `/tmp/raute-browser-check/import-restart.cjs`.
+
+Production startup automatically resumed the authorized Arrakis run using its
+saved input; this older run required recalculation because it lacked checkpoints.
+Read-only verification at 10:32 UTC found the first package durably saved with 18
+review rows in preview `eea304a6-2e19-48e4-8cfd-909791f992c0`. The run was still
+processing the remaining packages. The older 51-row preview is separately
+accessible through the review API and history. ClientFact count remains 94.
+All 23 public bundle/style files, 15 server hashes, 24 page responses and 17 JSON
+contracts passed. SQLite integrity is ok; schema remains `0062_default_drafts`.
