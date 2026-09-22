@@ -72,30 +72,37 @@
   .send__rub { font-size: var(--t-caption); text-transform: uppercase; letter-spacing: 0.06em;
                font-weight: 600; color: var(--muted); margin-bottom: var(--s2); }
   .send__rub--led { margin-top: var(--s5); padding-top: var(--s3); border-top: 1px solid var(--line); }
-  /* The send stage in two columns: what was written, and whom it can go to.
-     minmax(0, 1fr) rather than 1fr on the left — a long unbroken subject line
-     in a letter card would otherwise set the column's min-content width and
-     push the recipients off the page instead of wrapping. */
+  /* Messages and recipients share the available width. A fixed recipient rail
+     left an empty column when no message existed and made six contacts a long
+     vertical strip. */
   .send__cols {
-    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 320px);
+    display: grid; grid-template-columns: minmax(0, 1fr);
     gap: var(--s4); align-items: start;
   }
   .send__main { min-width: 0; }
-  /* In the column the list is a panel of its own, not a footnote ruled off from
-     the letter above it — there is no letter above it any more. */
   .send__cols > .pitchlist {
-    margin-top: 0; padding: var(--s3) var(--s3) var(--s3);
+    margin-top: 0; padding: var(--s3);
     border: 1px solid var(--line); border-top: 1px solid var(--line);
     border-radius: var(--radius); background: var(--surface);
-    position: sticky; top: var(--s3);
+    min-width: 0;
   }
-  /* Below the breakpoint the two columns stack, and the list goes back to
-     reading as the section it was: full width, ruled off, not sticky. */
-  @media (max-width: 900px) {
-    .send__cols { grid-template-columns: minmax(0, 1fr); }
+  .send__cols .pitchlist > ul {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+    gap: var(--s3);
+  }
+  .send__cols .pitchlist li {
+    min-width: 0; padding: var(--s3); border: 1px solid var(--line);
+    border-radius: 8px; overflow-wrap: anywhere;
+  }
+  .send__cols .pitchlist__caveat { max-width: none; }
+  @media (max-width: 600px) {
     .send__cols > .pitchlist {
-      position: static; border: 0; border-top: 1px solid var(--line);
+      border: 0; border-top: 1px solid var(--line);
       border-radius: 0; padding: var(--s3) 0 0; background: none;
+    }
+    .send__cols .pitchlist > ul { gap: 0; }
+    .send__cols .pitchlist li {
+      padding: var(--s3) 0; border: 0; border-bottom: 1px solid var(--line); border-radius: 0;
     }
   }
 
@@ -133,12 +140,12 @@
   .fmtpane__when { font-size: var(--t-caption); color: var(--muted); }
   .fmtpane__acts { margin-left: auto; display: flex; align-items: center; gap: var(--s2); }
   .fmtsheet { background: var(--fill-2); border: 1px solid var(--line); border-radius: 8px;
-              padding: var(--s4); max-width: 72ch; }
+              padding: var(--s4); width: 100%; min-width: 0; overflow-wrap: anywhere; }
   .fmtsheet__title { font-size: var(--t-body); font-weight: 700; line-height: 1.3; margin-bottom: var(--s2); }
   .fmtsheet__body { font-size: var(--t-footnote); line-height: 1.7; white-space: pre-wrap; }
   .fmtpane__empty { max-width: 72ch; }
   .fmtpane__what { font-size: var(--t-subhead); color: var(--muted); margin-bottom: var(--s3); }
-  .fmtedit { margin-top: var(--s3); max-width: 72ch; }
+  .fmtedit { margin-top: var(--s3); }
   .fmtedit > summary { cursor: pointer; font-size: var(--t-caption); color: var(--accent); font-weight: 600; }
   .fmtedit label { display: block; margin-top: var(--s3); }
   .fmtedit label span { display: block; font-size: var(--t-caption); color: var(--muted); margin-bottom: 3px; }
@@ -683,12 +690,10 @@
           <p class="sect__empty sect__refusal"><strong>{{ t("Keine Nachricht erzeugt.") }}</strong> {{ message_error }}</p>
         {% endif %}
 
-        {# Two columns from here: the letters on the left, the people they can go
-           to on the right. The recipient list used to run on below the last
-           letter, which on a stage with three released letters put it a screen
-           and a half down — read only by someone who already knew it was there.
-           They are chosen together, so they stand together. #}
+        {# Render the message area only when it has content. Contact suggestions
+           use the full width below it, including before the first message. #}
         <div class="send__cols">
+        {% if written %}
         <div class="send__main">
         {% if written %}
           <div class="send__rub send__rub--led">{{ t("Geschriebene Nachrichten") }}</div>
@@ -1163,6 +1168,7 @@
            "vorname.nachname@medium.de" is worse than an empty field, because it
            gets used and reaches the wrong person. #}
         </div>{# /send__main #}
+        {% endif %}
         {% set targets = pitch_targets.get(angle.id) %}
         {% if targets %}
           <div class="pitchlist">
