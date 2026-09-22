@@ -313,3 +313,30 @@ server source hashes against the reviewed checkout, including `workspaces.py`.
 All seven React entries, 17 page responses and 17 JSON contracts passed. All seven
 active mandates remain present, SQLite quick_check is ok, and the schema remains
 `0062_default_drafts`. Verification did not generate texts or write profile data.
+
+### Remove empty impulse-page columns — 2026-09-22
+
+Layout source `3f0e767` removes the reserved empty message column, lays out contact
+suggestions across the available width and expands press-release display/editing
+to the full content width. Contact suggestions form a responsive grid on desktop
+and a single list on mobile. Existing message and release forms are unchanged.
+
+The rebuild exposed an AI CLI engine warning: the newly installed Claude Code
+requires Node >=22 while Debian provided Node 20. Final source `3772746` uses the
+same Node 22.22.3 runtime as the frontend build, and smoke-checks Node and the AI
+CLI during image creation. Build output verified Node v22.22.3 and Claude Code
+2.1.278 successfully starting. Final clean-archive deployment
+`8dc1e277-ae5f-4de0-973f-fe6c1f81b867` is SUCCESS.
+
+Validation: 203 existing asset/outreach/ledger/navigation tests passed. Playwright
+checked six synthetic states (with/without written messages, without contacts,
+each at 1440px and 390px). No page errors or horizontal overflow. Empty message
+containers are absent; stored messages remain visible. Drafts and contact panels
+use the full available width. Six desktop contacts take two rows and about 380px
+height, compared with 923px previously. Browser artifacts are in
+`/tmp/raute-spacing/`; tests did not send messages or generate content.
+
+Read-only production verification passed 24 page responses, including all seven
+mandates' impulse pages, 17 JSON contracts, seven React entries, 12 source hashes
+including the changed template, and 23 public bundle/style files. SQLite integrity
+is ok; schema remains `0062_default_drafts`, with seven active mandates.
