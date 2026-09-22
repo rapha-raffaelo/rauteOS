@@ -249,7 +249,7 @@ def ai_failed(factory, identity, generation, error=None):
                identity, generation, code, type(error).__name__,
                ','.join(f'{frame.name}:{frame.lineno}' for frame in frames))
     with factory() as session:
-        twin_ai.finish(session, identity, generation, dict(status='failed', preview_id=None,
+        twin_ai.finish(session, identity, generation, dict(status='failed',
             error_code=code, note=note))
 
 
@@ -283,17 +283,68 @@ def ai_start(client_id: int, body: AIImportInput, response: Response, session: S
 
 
 @router.get('/ai-import')
-def ai_status(client_id: int, response: Response, session: Session = Depends(get_db)):
+def ai_status(client_id: int, response: Response, session: Session = Depends(get_db), preview_id: str = ''):
     mandate_or_404(session, client_id)
     response.headers['Cache-Control'] = 'no-store'
     row = session.get(TwinImportPreview, twin_ai.slot_id(client_id))
-    if not row:
-        return dict(job=None, preview=None)
-    job = twin_ai.job_data(row)
-    if job['status'] == 'running' and row.expires_at < dt.datetime.now(dt.UTC):
+    job = twin_ai.job_data(row) if row else None
+    if job and job['status'] == 'running' and row.expires_at < dt.datetime.now(dt.UTC):
         job.update(status='failed', note='Import unterbrochen oder Zeitlimit überschritten. Bitte erneut starten.')
-    preview = session.get(TwinImportPreview, job.get('preview_id')) if job.get('preview_id') else None
+    preview = session.get(TwinImportPreview, job.get('preview_id')) if job and job.get('preview_id') else None
+    if not preview or preview.committed_at:
+        preview = session.scalar(select(TwinImportPreview).where(
+            TwinImportPreview.client_id == client_id, TwinImportPreview.committed_at.is_(None),
+            TwinImportPreview.payload['kind'].as_string() == 'ai'
+        ).order_by(TwinImportPreview.created_at.desc()).limit(1))
+    previews = list(session.scalars(select(TwinImportPreview).where(
+        TwinImportPreview.client_id == client_id, TwinImportPreview.committed_at.is_(None),
+        TwinImportPreview.payload['kind'].as_string() == 'ai'
+    ).order_by(TwinImportPreview.created_at.desc())))
+    if preview_id:
+        preview = next((p for p in previews if p.id == preview_id), None)
+        if preview is None:
+            raise HTTPException(404, 'Gespeicherter Import nicht gefunden.')
     result = None
-    if preview and preview.client_id == client_id and not preview.committed_at and preview.expires_at > dt.datetime.now(dt.UTC):
+    if preview and preview.client_id == client_id and not preview.committed_at:
         result = dict(id=preview.id, **preview.payload)
-    return dict(job=job, preview=result)
+    return dict(job=job, preview=result, previews=[dict(id=p.id, created_at=p.created_at.isoformat(), count=len(p.payload['rows'])) for p in previews])
+
+
+@router.post('/ai-import/resume', status_code=202)
+def ai_resume(client_id: int, response: Response, session: Session = Depends(get_db)):
+    mandate_or_404(session, client_id)
+    response.headers['Cache-Control'] = 'no-store'
+    try:
+        row = twin_ai.resume(session, client_id)
+    except ValueError as exc:
+        raise HTTPException(409, str(exc)) from None
+    result = twin_ai.job_data(row)
+    factory = sessionmaker(bind=session.get_bind(), expire_on_commit=False)
+    try:
+        start_or_release(ai_worker, args=(factory, row.id, result['generation']), name=f'twin-ai-{client_id}',
+            release=lambda: ai_failed(factory, row.id, result['generation']))
+    except RuntimeError:
+        raise HTTPException(503, 'KI-Import konnte nicht fortgesetzt werden.') from None
+    return result
+
+
+def recover_ai_imports():
+    """Single-process server startup recovery; generation fencing rejects old workers."""
+    from ...db import get_session
+    with get_session() as session:
+        clients = list(session.scalars(select(TwinImportPreview.client_id).where(
+            TwinImportPreview.payload['kind'].as_string() == 'ai-job',
+            TwinImportPreview.payload['status'].as_string() == 'running')))
+    for client_id in clients:
+        with get_session() as session:
+            try:
+                mandate_or_404(session, client_id)
+                row = twin_ai.resume(session, client_id, recovering=True)
+            except (ValueError, HTTPException):
+                continue
+            identity, generation = row.id, row.payload['generation']
+        try:
+            start_or_release(ai_worker, args=(get_session, identity, generation), name=f'twin-ai-{client_id}',
+                release=lambda i=identity, g=generation: ai_failed(get_session, i, g))
+        except RuntimeError:
+            _log.error('AI import restart failed: client=%s', client_id)

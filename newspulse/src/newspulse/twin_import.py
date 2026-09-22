@@ -12,7 +12,7 @@ import zipfile
 
 import openpyxl
 from pydantic import ValidationError
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, select, update, or_
 from sqlalchemy.orm import Session
 
 from .models import ClientFact, TwinImportPreview
@@ -136,7 +136,8 @@ def preview(session: Session, client_id: int, data: bytes, filename: str, mappin
             row.update(state='duplicate', message='Bereits importiert oder doppelt in dieser Datei.')
         seen.add(fingerprint)
     now = dt.datetime.now(dt.UTC)
-    session.execute(delete(TwinImportPreview).where(TwinImportPreview.expires_at < now))
+    session.execute(delete(TwinImportPreview).where(TwinImportPreview.expires_at < now,
+        or_(TwinImportPreview.payload['kind'].as_string().is_(None), TwinImportPreview.payload['kind'].as_string().notin_(['ai', 'ai-job']))))
     payload = dict(columns=columns, mapping=selected, rows=results)
     record = TwinImportPreview(id=str(uuid.uuid4()), client_id=client_id, created_at=now,
                               expires_at=now + dt.timedelta(hours=1), payload=payload)
@@ -150,12 +151,17 @@ def commit(session: Session, client_id: int, preview_id: str, selected: list[int
     now = dt.datetime.now(dt.UTC)
     if record is None or record.client_id != client_id:
         raise LookupError('Importvorschau nicht gefunden.')
-    if record.expires_at < now:
+    if record.expires_at < now and record.payload.get('kind') not in {'ai', 'ai-job'}:
         raise ValueError('Vorschau ist abgelaufen. Datei erneut prüfen.')
     if record.committed_at:
         return dict(created=0, skipped=len(selected), already_committed=True)
     if record.payload.get('kind') == 'ai-job':
         raise ValueError('Zunächst die Antwortvorschläge prüfen.')
+    if record.payload.get('kind') == 'ai':
+        from . import twin_ai
+        job = session.get(TwinImportPreview, twin_ai.slot_id(client_id))
+        if job and job.payload.get('preview_id') == preview_id and job.payload.get('status') == 'running' and job.expires_at > now:
+            raise ValueError('Der Import läuft noch. Die gespeicherten Vorschläge können nach Abschluss übernommen werden.')
     rows = {r['index']: r for r in record.payload['rows']}
     if not selected or any(i not in rows or rows[i]['state'] != 'ready' for i in selected):
         raise ValueError('Nur gültige, ausgewählte Aussagen können importiert werden.')

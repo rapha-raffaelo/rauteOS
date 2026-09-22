@@ -475,6 +475,8 @@ def main() -> None:
     scheduler.start()
     from .. import default_drafts
     default_drafts.start()
+    from .routes.twin_api import recover_ai_imports
+    recover_ai_imports()
     uvicorn.run(
         create_app(),
         host=config.WEB_HOST,

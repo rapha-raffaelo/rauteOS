@@ -12,10 +12,11 @@ const data = {client:{id:1,name:'Demo'},fields:[{key:'A02.01',label:'Was verkauf
  statements:[row],progress:{percent:1,required_filled:1,required_total:127,verified:0,missing:[]},options};
 const response = (body, status=200) => ({ok:status<400,status,headers:new Headers({'content-type':'application/json'}),json:async()=>body});
 afterEach(()=>vi.unstubAllGlobals());
+const stubFetch=fetch=>vi.stubGlobal('fetch',(url,options)=>url.endsWith('/ai-import')?Promise.resolve(response({job:null,preview:null})):fetch(url,options));
 
 it('edits a statement by id and revision without flattening its evidence', async()=>{
  const fetch=vi.fn().mockResolvedValueOnce(response(data)).mockResolvedValueOnce(response({...row,value:'Revised',revision:5})).mockResolvedValue(response({...data,statements:[{...row,value:'Revised',revision:5}]}));
- vi.stubGlobal('fetch',fetch); render(<TwinPage clientId={1}/>);
+ stubFetch(fetch); render(<TwinPage clientId={1}/>);
  await screen.findByText(row.value);
  expect(screen.getByText('Nicht unabhängig bestätigt')).toBeTruthy();
  fireEvent.click(screen.getByRole('button',{name:'Bearbeiten'}));
@@ -27,7 +28,7 @@ it('edits a statement by id and revision without flattening its evidence', async
 });
 
 it('keeps unsaved text visible after a conflict',async()=>{
- vi.stubGlobal('fetch',vi.fn().mockResolvedValueOnce(response(data)).mockResolvedValue(response({detail:'Aussage wurde inzwischen geändert.'},409)));
+ stubFetch(vi.fn().mockResolvedValueOnce(response(data)).mockResolvedValue(response({detail:'Aussage wurde inzwischen geändert.'},409)));
  render(<TwinPage clientId={1}/>); fireEvent.click(await screen.findByRole('button',{name:'Bearbeiten'}));
  fireEvent.change(screen.getByLabelText('Aussage'),{target:{value:'My unsaved correction'}});
  fireEvent.click(screen.getByRole('button',{name:'Aussage speichern'}));
@@ -36,7 +37,7 @@ it('keeps unsaved text visible after a conflict',async()=>{
 });
 
 it('rejects only the selected statement with its revision',async()=>{
- const fetch=vi.fn().mockResolvedValue(response(data));vi.stubGlobal('fetch',fetch);
+ const fetch=vi.fn().mockResolvedValue(response(data));stubFetch(fetch);
  render(<TwinPage clientId={1}/>);fireEvent.click(await screen.findByRole('button',{name:'Verwerfen'}));
  await waitFor(()=>expect(fetch).toHaveBeenCalledTimes(3));
  expect(fetch.mock.calls[1][0]).toContain('/statements/3/reject');
@@ -48,7 +49,7 @@ it('never imports on file selection or preview; sends only checked rows',async()
   {index:0,state:'ready',sheet:'CSV',line:2,data:{key:'A02.01',value:'First'}},
   {index:1,state:'ready',sheet:'CSV',line:3,data:{key:'A02.01',value:'Second'}}]};
  const fetch=vi.fn().mockResolvedValueOnce(response(preview)).mockResolvedValueOnce(response({created:1,skipped:0}));
- vi.stubGlobal('fetch',fetch);const imported=vi.fn();render(<ImportPanel clientId={1} onImported={imported}/>);
+ stubFetch(fetch);const imported=vi.fn();render(<ImportPanel clientId={1} onImported={imported}/>);
  fireEvent.change(screen.getByLabelText('Datei'),{target:{files:[new File(['ID,Answer\nA02.01,First'],'q.csv')]}});
  expect(fetch).not.toHaveBeenCalled();
  fireEvent.click(screen.getByRole('button',{name:'Vorschau erstellen'}));await screen.findByText('First');
@@ -70,7 +71,7 @@ it('requires a new preview after changing column mapping',async()=>{
 });
 it('edits in the field and keeps permission values when using the compact form',async()=>{
  const fetch=vi.fn().mockResolvedValueOnce(response(data)).mockResolvedValueOnce(response(row)).mockResolvedValue(response(data));
- vi.stubGlobal('fetch',fetch);render(<TwinPage clientId={1}/>);
+ stubFetch(fetch);render(<TwinPage clientId={1}/>);
  fireEvent.click(await screen.findByRole('button',{name:'Bearbeiten'}));
  const form=screen.getByRole('form',{name:'Aussage bearbeiten'});
  expect(form.closest('.twin-question')).toBeTruthy();
@@ -81,4 +82,17 @@ it('edits in the field and keeps permission values when using the compact form',
  fireEvent.click(screen.getByRole('button',{name:'Aussage speichern'}));
  await waitFor(()=>expect(fetch).toHaveBeenCalledTimes(3));
  expect(JSON.parse(fetch.mock.calls[1][1].body)).toMatchObject({confidentiality:'Client Confidential',external_use:'Approval Required',evidence_type:'Client Statement'});
+});
+it('automatically reveals a saved AI preview on returning to the profile',async()=>{
+ const saved={id:'saved',rows:[{index:0,data:{key:'A02.01',value:'Saved answer'},sources:[],message:'Source'}],unanswered:0};
+ const fetch=vi.fn().mockImplementation(url=>Promise.resolve(response(url.endsWith('/ai-import')?{job:{status:'complete',note:'Ready'},preview:saved}:data)));
+ vi.stubGlobal('fetch',fetch);render(<TwinPage clientId={1}/>);
+ await screen.findByText('Saved answer');
+ expect(screen.getByRole('button',{name:'Mit KI importieren'}).getAttribute('aria-expanded')).toBe('true');
+ expect(screen.getByText('1 KI-Vorschläge gespeichert')).toBeTruthy();
+ expect(fetch.mock.calls.every(([,options])=>!options?.method)).toBe(true);
+ fireEvent.click(screen.getByRole('button',{name:'Mit KI importieren'}));
+ fireEvent.click(screen.getByRole('button',{name:'Mit KI importieren'}));
+ expect(screen.getByText('Saved answer')).toBeTruthy();
+ expect(fetch).toHaveBeenCalledTimes(2);
 });

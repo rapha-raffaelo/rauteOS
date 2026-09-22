@@ -29,6 +29,7 @@ export function TwinPage({clientId, embedded = false, initialLimit = 20}) {
   const [editing, setEditing] = useState(null);
   const importPanel = useRef(null);
   const [aiImporting, setAIImporting] = useState(false);
+  const [aiStatus, setAIStatus] = useState(null);
   const [importing, setImporting] = useState(false);
   useEffect(() => {if (aiImporting) importPanel.current?.scrollIntoView?.({behavior: 'smooth', block: 'start'});}, [aiImporting]);
   const load = async () => setData(await twinRequest(clientId));
@@ -67,9 +68,9 @@ export function TwinPage({clientId, embedded = false, initialLimit = 20}) {
   return <div className="twin-page">
     <header>{embedded ? <h2>Wissen & Aussagen</h2> : <><p className="twin-eyebrow">PROFIL · {data.client.name}</p><h1>Was wir wissen. Und woher.</h1></>}
       <p>Jede Aussage mit ihrer Quelle, ihrem Stand und ihrer Freigabe.</p>
-      <div className="twin-toolbar"><button className="btn btn--go" type="button" aria-controls={`twin-ai-${clientId}`} aria-expanded={aiImporting} onClick={()=>setAIImporting(!aiImporting)}>Mit KI importieren</button><button className="btn btn--quiet" aria-expanded={importing} onClick={() => setImporting(!importing)}>Fragebogen importieren</button></div>
+      <div className="twin-toolbar"><button className="btn btn--go" type="button" aria-controls={`twin-ai-${clientId}`} aria-expanded={aiImporting} onClick={()=>setAIImporting(!aiImporting)}>Mit KI importieren</button>{aiStatus&&<span role="status">{aiStatus.preview?`${aiStatus.preview.rows.length} KI-Vorschläge gespeichert`:aiStatus.job?.note}</span>}<button className="btn btn--quiet" aria-expanded={importing} onClick={() => setImporting(!importing)}>Fragebogen importieren</button></div>
     </header>
-    {aiImporting && <div ref={importPanel} id={`twin-ai-${clientId}`}><TwinAIImport clientId={clientId} fields={data.fields} onImported={async result=>{await load();setNotice(`${result.created} KI-Vorschläge übernommen; ${result.skipped} bereits beantwortet oder vorhanden.`);}}/></div>}
+    {<div hidden={!aiImporting} ref={importPanel} id={`twin-ai-${clientId}`}><TwinAIImport clientId={clientId} fields={data.fields} onStatus={setAIStatus} onRestore={v=>{if(v.preview||v.job?.status==='running'||v.job?.status==='failed')setAIImporting(true);}} onImported={async result=>{await load();setNotice(`${result.created} KI-Vorschläge übernommen; ${result.skipped} bereits beantwortet oder vorhanden.`);}}/></div>}
     <section className="twin-progress" aria-label="Vollständigkeit">
       <div className="twin-progress-main"><span className="twin-progress-label">Profilvollständigkeit</span><strong>{data.progress.percent} % vollständig</strong>
         <progress max="100" value={data.progress.percent} aria-label="Beantwortete Pflichtfelder" /></div>

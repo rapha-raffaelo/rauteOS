@@ -44,3 +44,21 @@ it('blocks submission until the persisted job is restored and shows real batch p
  expect(screen.getByRole('button',{name:'KI wertet die Quellen aus…'}).disabled).toBe(true);
  expect(screen.getByRole('status').textContent).toContain('Fragenpaket 3 von 6');
 });
+it('resumes the persisted input without creating a new import and keeps the partial preview',async()=>{
+ const fetch=vi.fn().mockResolvedValueOnce(response({job:{status:'failed',resumable:true,note:'Unterbrochen'},preview})).mockResolvedValueOnce(response({status:'running',note:'Fortsetzung'}));
+ vi.stubGlobal('fetch',fetch);render(<TwinAIImport clientId={1} fields={fields} onImported={()=>{}}/>);
+ fireEvent.click(await screen.findByRole('button',{name:'Gespeicherten Import fortsetzen'}));
+ await screen.findByText('Fortsetzung');
+ expect(fetch.mock.calls[1][0]).toBe('/api/v1/clients/1/twin/ai-import/resume');
+ expect(fetch.mock.calls[1][1].body).toBeUndefined();
+ expect(screen.getAllByText('Company GmbH').length).toBeGreaterThan(0);
+ expect(screen.getByRole('button',{name:'0 geprüfte Antworten übernehmen'}).disabled).toBe(true);
+});
+it('can reopen an earlier saved import without submitting a generation',async()=>{
+ const fetch=vi.fn().mockResolvedValueOnce(response({job:{status:'complete',note:'Ready'},preview,previews:[{id:'preview',count:1,created_at:'2026-09-22T10:00:00Z'},{id:'old',count:1,created_at:'2026-09-18T10:00:00Z'}]})).mockResolvedValueOnce(response({job:{status:'complete',note:'Ready'},preview:{...preview,id:'old',rows:[{...preview.rows[0],data:{...preview.rows[0].data,value:'Older saved answer'}}]}}));
+ vi.stubGlobal('fetch',fetch);render(<TwinAIImport clientId={1} fields={fields} onImported={()=>{}}/>);
+ fireEvent.change(await screen.findByLabelText('Gespeicherte Importläufe'),{target:{value:'old'}});
+ await screen.findByText('Older saved answer');
+ expect(fetch.mock.calls[1][0]).toContain('?preview_id=old');
+ expect(fetch.mock.calls.every(([,options])=>!options?.method)).toBe(true);
+});
