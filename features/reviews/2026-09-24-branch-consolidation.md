@@ -40,6 +40,12 @@ version in the repository.
 - 174 targeted backend tests passed: onboarding questions and clarity, Twin,
   questionnaire round trips, and AI imports.
 - Every local and fetched branch tip is an ancestor of the consolidated commit.
-- The existing crisis-navigation test expects an HTML `option` while the React
-  shell renders links. The failure also reproduces on the pre-merge `e895d6a`
-  baseline.
+- The broad backend run passed 3,306 tests. After the frontend assets were built,
+  another 28 initially failing tests passed on rerun. Thirteen tests collected
+  from the intermediate, superseded direct-write importer were removed during
+  merge resolution; the deployed importer is covered by the Twin suites above.
+- Three remaining failures reproduced identically on the pre-merge `e895d6a`
+  baseline. Updated crisis and Issues navigation assertions to check React links,
+  and the responsive-layout assertion to check the deployed full-width grid.
+  The CSS test helper now accepts indented rules in inline styles.
+- Reran the crisis, Issues and stylesheet suites after updating the assertions.

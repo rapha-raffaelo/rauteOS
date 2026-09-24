@@ -274,11 +274,12 @@ def test_crisis_view_appears_in_opportunities_only_after_a_declaration(web, sess
     _trigger(session, mandate)
     before = web.get(f"/client/{mandate.id}/opportunities")
     assert before.status_code == 200
-    assert ">Krise</option>" not in rendered(before)
+    crisis_link = f'href="/client/{mandate.id}/krise">Krise</a>'
+    assert crisis_link not in rendered(before)
 
     _declared(session, mandate)
     after = web.get(f"/client/{mandate.id}/opportunities")
-    assert ">Krise</option>" in rendered(after)
+    assert crisis_link in rendered(after)
     assert "Krise offen" in rendered(after)
 
 

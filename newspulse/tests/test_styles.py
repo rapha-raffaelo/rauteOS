@@ -140,7 +140,7 @@ def _app_css() -> str:
 def _rule(css: str, selector: str) -> str:
     import re
 
-    match = re.search(r"(?m)^" + re.escape(selector) + r"\s*\{([^}]*)\}", css)
+    match = re.search(r"(?m)^[ \t]*" + re.escape(selector) + r"\s*\{([^}]*)\}", css)
     assert match, f"{selector} is not declared at all"
     return match.group(1)
 
@@ -307,9 +307,8 @@ def test_the_second_column_has_a_width_of_its_own():
     assert "minmax(0, 1fr)" in rule
 
 
-def test_the_columns_stack_on_a_narrow_screen():
-    """Two columns in 360 points is one unreadable column and one sliver."""
+def test_messages_and_recipients_stack_without_needing_a_breakpoint():
+    """The full-width layout must also fit narrow screens without a second track."""
     css = _inline_styles(ADVICE)
-    narrow = css[css.index("@media (max-width: 900px)") :]
-
-    assert ".send__cols { grid-template-columns: minmax(0, 1fr); }" in narrow
+    rule = _rule(css, ".send__cols")
+    assert "grid-template-columns: minmax(0, 1fr)" in rule
