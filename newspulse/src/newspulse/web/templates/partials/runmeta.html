@@ -48,7 +48,20 @@
        their feed subscriptions. And "Artikel geprüft" was the count of articles
        newly *stored* — zero on a day where every feed was fetched and every item
        turned out to be a duplicate, which reads as "nothing was checked". #}
-    {% if last_run.feed_errors == 0 %}
+    {# Die abgelaufene Anmeldung ist kein Grad von "Fehler", sondern ein anderer
+       Zustand, und sie kommt zuerst. Gemessen am 13.10.2026: vierzehn Läufe in
+       Folge gescheitert, seit dem 30. September, 3154 Artikel unanalysiert — und
+       in der Kopfzeile stand "11 Fehler im Nachrichtenlauf" mit dem Hinweis
+       "Details im Log". Elf Fehler lesen sich wie elf Feed-Schluckaufe. Es war
+       ein einziger, elfmal wiederholt, und er legt jede Modellfunktion zugleich
+       still: Analyse, Impulse, Chancen, Profile, Sichtbarkeit. #}
+    {% if last_run.signin_expired %}
+      <span class="runstop" title="{{ t('Das Werkzeug kann sich nicht mehr bei Claude anmelden. Artikel werden weiter geholt, aber keiner wird analysiert — und es entstehen keine Impulse, Chancen oder Profile. Die Anmeldung erneuern: railway ssh, dann CLAUDE_CONFIG_DIR=/data/claude claude /login') }}">{{ t("Anmeldung abgelaufen — nichts wird analysiert") }}</span>
+      {% if last_run.other_errors %}
+        <span class="dot">·</span>
+        <span class="runbad">{{ last_run.other_errors }} {{ t("weitere Fehler") }}</span>
+      {% endif %}
+    {% elif last_run.feed_errors == 0 %}
       <span class="runok">{{ t("Lauf ok") }}</span>
     {% else %}
       <span class="runbad" title="{{ t('Fehler aus Feed-Abruf, Zuordnung oder Analyse — Details im Log') }}">{{ last_run.feed_errors }} {{ t("Fehler im Nachrichtenlauf") }}</span>

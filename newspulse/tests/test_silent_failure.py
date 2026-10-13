@@ -199,3 +199,127 @@ def test_the_market_ranking_still_counts_what_the_radar_found(session):
         o.name == "Handelsblatt"
         for o in _nominations(session, client.id, days=90)["market_outlets"]
     )
+
+
+# --- Die abgelaufene Anmeldung ---------------------------------------------------
+#
+# Am 13.10.2026 an der Produktion gemessen: vierzehn Läufe in Folge gescheitert,
+# seit dem 30. September, 3154 Artikel unanalysiert, 685 davon aus den letzten
+# sieben Tagen. In der Kopfzeile stand die ganze Zeit "11 Fehler im
+# Nachrichtenlauf" mit dem Hinweis "Details im Log" — und elf Fehler lesen sich
+# wie elf Feed-Schluckaufe an einem schlechten Morgen.
+#
+# Es war ein einziger Fehler, elfmal wiederholt, und er legt jede modellgestützte
+# Funktion zugleich still: Analyse, Impulse, Chancen, Profile, Sichtbarkeit.
+
+_OAUTH = (
+    "analysis 'Zalando': 25 batch(es) dropped: claude -p exited 1: "
+    "Failed to authenticate: OAuth session expired and could not be refreshed"
+)
+
+
+@pytest.fixture
+def web():
+    from fastapi.testclient import TestClient
+    from sqlalchemy import create_engine
+    from sqlalchemy.pool import StaticPool
+
+    from newspulse.web.app import create_app, get_db
+
+    engine = create_engine(
+        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
+    )
+    Base.metadata.create_all(engine)
+    factory = sessionmaker(bind=engine, expire_on_commit=False)
+    app = create_app()
+
+    def _override():
+        open_session = factory()
+        try:
+            yield open_session
+        finally:
+            open_session.close()
+
+    app.dependency_overrides[get_db] = _override
+    return TestClient(app), factory
+
+
+def _run_with(factory, errors, *, found=91):
+    from newspulse.models import Run
+
+    now = dt.datetime.now(dt.UTC)
+    with factory() as session:
+        session.add(
+            Run(
+                started_at=now,
+                finished_at=now,
+                status=RunStatus.PARTIAL,
+                articles_found=found,
+                errors=list(errors),
+            )
+        )
+        session.commit()
+
+
+def test_an_expired_sign_in_is_named_rather_than_counted(web):
+    """Die Zeile, um die es geht. Elf gleiche Fehler sind keine elf Fehler."""
+    from react_render import rendered
+
+    client, factory = web
+    _run_with(factory, [_OAUTH] * 11)
+
+    body = rendered(client.get("/today"))
+
+    assert "Anmeldung abgelaufen" in body
+    assert "11 Fehler im Nachrichtenlauf" not in body
+
+
+def test_the_header_says_that_nothing_is_being_analysed(web):
+    """Nicht nur "Fehler", sondern die Folge: Artikel kommen weiter herein, und
+    kein einziger wird ausgewertet. Ohne diesen Halbsatz liest sich die Meldung
+    wie ein technisches Detail statt wie ein stillgelegtes Werkzeug."""
+    from react_render import rendered
+
+    client, factory = web
+    _run_with(factory, [_OAUTH])
+
+    body = rendered(client.get("/today"))
+
+    assert "nichts wird analysiert" in body
+
+
+def test_an_ordinary_run_still_reads_as_ok(web):
+    """Der teure Irrtum in die andere Richtung."""
+    from react_render import rendered
+
+    client, factory = web
+    _run_with(factory, [])
+
+    assert "Anmeldung abgelaufen" not in rendered(client.get("/today"))
+
+
+def test_a_feed_failure_is_not_turned_into_a_sign_in_alarm(web):
+    """Es schickte sonst jemanden zum Neuanmelden statt zum Feed."""
+    from react_render import rendered
+
+    client, factory = web
+    _run_with(factory, ["feed 'Handelsblatt': timed out"])
+
+    body = rendered(client.get("/today"))
+
+    assert "Anmeldung abgelaufen" not in body
+    assert "Fehler im Nachrichtenlauf" in body
+
+
+def test_a_broken_feed_beside_the_dead_sign_in_is_still_counted(web):
+    """Sonst verdeckt der eine Ausfall den anderen — und der Feed bleibt auch
+    nach dem Neuanmelden kaputt, ohne dass es jemand gesehen hätte."""
+    from react_render import rendered
+
+    client, factory = web
+    _run_with(factory, [_OAUTH, _OAUTH, "feed 'Handelsblatt': timed out"])
+
+    body = rendered(client.get("/today"))
+
+    assert "Anmeldung abgelaufen" in body
+    assert "1" in body and "weitere Fehler" in body

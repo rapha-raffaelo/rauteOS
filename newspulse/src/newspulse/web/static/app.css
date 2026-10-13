@@ -2984,3 +2984,13 @@ body:has([id^="react-"]) .content{padding-top:16px}
 .vis-standard__question { font-size: clamp(1.15rem, 2vw, 1.6rem); line-height: 1.4; max-width: 65ch; margin: .6rem 0; }
 .vis-add-question > summary { padding: 1rem 1.25rem; cursor: pointer; font-weight: 600; }
 .vis-add-question textarea { display: block; width: 100%; margin: .5rem 0 1rem; }
+
+/* Die abgelaufene Anmeldung in der Kopfzeile. Lauter als .runbad, weil sie
+   etwas anderes ist: ein Feed-Fehler kostet eine Quelle, diese hier kostet
+   jede Modellfunktion des Werkzeugs auf einmal — und sie blieb zwei Wochen
+   unbemerkt, als sie wie elf gewöhnliche Fehler aussah. */
+.runstop {
+  color: #fff; background: var(--alert); font-weight: 700;
+  padding: 1px 8px; border-radius: var(--radius-s);
+  white-space: nowrap;
+}

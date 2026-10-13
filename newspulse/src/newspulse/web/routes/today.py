@@ -16,7 +16,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from ... import angles, config, crisis, newsjack, reputation
+from ... import angles, config, crisis, newsjack, reputation, signin
 from ...models import (
     Analysis,
     Angle,
@@ -332,6 +332,17 @@ class RunStatusView:
     status: str
     articles_checked: int
     feed_errors: int
+    #: Die Anmeldung des CLI ist abgelaufen. Ein eigenes Feld und keine Zahl,
+    #: weil es kein Grad von "Fehler" ist, sondern ein anderer Zustand: bei
+    #: abgelaufener Anmeldung wird *nichts* analysiert, und jede andere Zahl auf
+    #: der Seite beschreibt dann eine Hälfte des Werkzeugs.
+    signin_expired: bool = False
+    #: Wie viele Mandanten die abgelaufene Anmeldung getroffen hat.
+    signin_affected: int = 0
+    #: Fehler, die nichts mit der Anmeldung zu tun haben. Sonst verdeckt der
+    #: eine Ausfall jeden anderen — ein kaputter Feed neben elf Anmeldezeilen
+    #: geht in der Zahl unter und bleibt es auch nach dem Neuanmelden.
+    other_errors: int = 0
 
 
 def _local_tz() -> dt.tzinfo:
@@ -696,6 +707,9 @@ def _fetch_last_run(session: Session) -> RunStatusView | None:
         status=run.status.value,
         articles_checked=run.articles_found,
         feed_errors=len(run.errors),
+        signin_expired=signin.failed(run.errors),
+        signin_affected=signin.affected(run.errors),
+        other_errors=len(signin.other(run.errors)),
     )
 
 
