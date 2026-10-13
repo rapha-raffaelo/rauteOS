@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import { createPortal } from "react-dom";
+import { NAVIGATED } from "./router.jsx";
 import { t, Action } from "./platform/shared.jsx";
 export function ClientTabs({ data, path = window.location.pathname }) {
   const { client, active, crisis } = data;
@@ -100,7 +101,20 @@ export function ClientTabs({ data, path = window.location.pathname }) {
 export function Shell({ data, portals = true }) {
   const [open, setOpen] = useState(false);
   const toggle = useRef();
-  const { path, query, clients, crumbs, language, assistant } = data;
+  const { query, clients, crumbs, language, assistant } = data;
+  // Der Pfad kommt vom Server, aber die Seitenleiste überlebt jetzt einen
+  // Wechsel ohne Neuladen — ohne diesen Hörer bliebe die Markierung auf der
+  // Seite stehen, die man gerade verlassen hat.
+  const [path, setPath] = useState(data.path);
+  useEffect(() => {
+    const follow = () => setPath(window.location.pathname);
+    window.addEventListener(NAVIGATED, follow);
+    window.addEventListener("popstate", follow);
+    return () => {
+      window.removeEventListener(NAVIGATED, follow);
+      window.removeEventListener("popstate", follow);
+    };
+  }, []);
   useEffect(() => {
     const side = document.getElementById("react-sidebar");
     side?.classList.add("has-menu-toggle");
