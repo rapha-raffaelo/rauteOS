@@ -2228,6 +2228,16 @@ class Asset(Base):
         UTCDateTime(), nullable=True
     )
     released_by: Mapped[str] = mapped_column(String(80), nullable=False, default="")
+    # Aus der Liste genommen, nicht gelöscht.
+    #
+    # Ein Entwurf darf verschwinden — ihn hat nie jemand ausser uns gesehen.
+    # Ein freigegebener Text nicht: ihn zu löschen hiesse, nachträglich
+    # verschwinden zu lassen, was ein Kunde gesehen und freigegeben hat. Er
+    # wird archiviert und bleibt über seinen Link erreichbar.
+    #
+    # Ein Zeitstempel und kein Boolean, weil "wann" eine Frage ist, die beim
+    # Aufräumen eines Quartals gestellt wird.
+    archived_at: Mapped[dt.datetime | None] = mapped_column(UTCDateTime, nullable=True)
 
     #: The standards this text was written under, on the same terms as
     #: :attr:`Angle.brain_version`: captured with the prompt, NULL for a text

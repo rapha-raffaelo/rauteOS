@@ -335,3 +335,24 @@
 }
 .raute-ui .client-card-actions[open] > summary::before { transform: rotate(90deg); }
 .raute-ui .client-card-actions > summary:hover { background: var(--ground); color: var(--ink); }
+
+/* --- Verwalten auf der Asset-Karte -------------------------------------------
+   Zwei Fälle, zwei Angebote: ein Entwurf lässt sich bearbeiten und löschen, ein
+   freigegebener Text nur archivieren. Welcher Fall vorliegt, sagt die Liste
+   (`editable`) — die Oberfläche leitet es nicht aus dem Datum her. */
+.raute-ui .asset-actions {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px;
+  margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line);
+}
+.raute-ui .asset-action {
+  font: inherit; font-size: 11px; color: var(--muted);
+  background: transparent; border: 1px solid transparent; border-radius: 7px;
+  padding: 4px 9px; min-height: 28px; cursor: pointer;
+}
+.raute-ui .asset-action:hover { background: var(--ground); color: var(--ink); }
+/* Löschen trägt seine Farbe erst beim Zeigen — rot in der Ruhelage macht aus
+   jeder Karte eine Warnung. */
+.raute-ui .asset-action--stop:hover { background: var(--alert-wash, #fdecee); color: var(--alert); }
+.raute-ui .asset-confirm { font-size: 11px; color: var(--alert); font-weight: 600; }
+.raute-ui .asset-error { font-size: 11px; color: var(--alert); flex-basis: 100%; }
+.raute-ui .asset-date { font-size: 11px; color: var(--muted); }
