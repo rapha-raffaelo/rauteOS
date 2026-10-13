@@ -101,6 +101,13 @@ export function OnboardingPage({ token = window.location.hash.slice(1) }) {
     catch (e) {setError(e.message);}
     finally {lock.current = false; setBusy(false);}
   }
+  function renderPrefill(p) {
+    return <div key={p.key} className="onb-prefill-row"><strong>{p.label}</strong>
+              {editingPrefill ? <textarea aria-label={p.label} maxLength={20000} value={prefillEdits[p.key] ?? p.customer_value ?? p.value} disabled={busy} onChange={e=>setPrefillEdits({...prefillEdits,[p.key]:e.target.value})}/> : <p>{p.customer_value || p.value}</p>}
+              <a href={p.source_url} target="_blank" rel="noopener noreferrer">{p.source_title || 'Öffentliche Quelle'} ↗</a>
+              <small> · recherchiert {new Date(p.researched_at).toLocaleDateString('de-DE')}{p.customer_value ? ' · von Ihnen korrigiert' : ''}</small>
+            </div>;
+  }
   const settled = data ? Object.keys(data.answers).length : 0;
   const answered = data ? Object.values(data.answers).filter(a => a.value).length : 0;
   return <div className="onboarding">
@@ -120,14 +127,13 @@ export function OnboardingPage({ token = window.location.hash.slice(1) }) {
 
           <h1 ref={heading} tabIndex={-1}>Das wissen wir schon.</h1>
           <p>Aus öffentlichen Quellen für Sie vorbereitet. Ein kurzer Blick genügt — stimmt das so?</p>
-          <div className="onb-prefill">{(data.prefill || []).map((p,i) => {
-            const row = <div key={p.key} className="onb-prefill-row"><strong>{p.label}</strong>
-              {editingPrefill ? <textarea aria-label={p.label} maxLength={20000} value={prefillEdits[p.key] ?? p.customer_value ?? p.value} disabled={busy} onChange={e=>setPrefillEdits({...prefillEdits,[p.key]:e.target.value})}/> : <p>{p.customer_value || p.value}</p>}
-              <a href={p.source_url} target="_blank" rel="noopener noreferrer">{p.source_title || 'Öffentliche Quelle'} ↗</a>
-              <small> · recherchiert {new Date(p.researched_at).toLocaleDateString('de-DE')}{p.customer_value ? ' · von Ihnen korrigiert' : ''}</small>
-            </div>;
-            return i < 3 || editingPrefill ? row : <details key={p.key}><summary>{p.label}</summary>{row}</details>;
-          })}</div>
+          <div className="onb-prefill">
+            {(editingPrefill ? data.prefill : data.prefill.slice(0, 3)).map(renderPrefill)}
+            {!editingPrefill && data.prefill.length > 3 && <details>
+              <summary>{data.prefill.length - 3} weitere recherchierte Angaben ansehen</summary>
+              {data.prefill.slice(3).map(renderPrefill)}
+            </details>}
+          </div>
           <button className="onb-primary" disabled={busy} onClick={confirmPrefill}>{busy ? 'Wird gespeichert …' : editingPrefill ? 'Korrekturen speichern & weiter' : 'Stimmt, weiter'}</button>
           {!editingPrefill && <button className="onb-skip" disabled={busy} onClick={()=>setEditingPrefill(true)}>Eine Angabe korrigieren</button>}
           <p className="onb-note">Was öffentlich nicht belegt ist, recherchiert unser Team weiter. Sie müssen nichts nachtragen.</p>
