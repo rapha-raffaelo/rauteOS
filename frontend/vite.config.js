@@ -9,6 +9,7 @@ export default defineConfig({
     manifest: true,
     rolldownOptions: {
       input: {
+        onboarding: fileURLToPath(new URL("./src/onboarding.jsx", import.meta.url)),
         composer: fileURLToPath(new URL("./src/composer.jsx", import.meta.url)),
         shell: fileURLToPath(new URL("./src/shell.jsx", import.meta.url)),
         platform: fileURLToPath(new URL("./src/platform.jsx", import.meta.url)),

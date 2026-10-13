@@ -717,9 +717,8 @@ def test_default_draft_ledger_upgrade_retains_existing_impulses(tmp_path, monkey
     engine = create_engine(f'sqlite:///{path}')
     factory = sessionmaker(bind=engine, expire_on_commit=False)
     with factory() as session:
-        client = Client(name='Existing mandate')
-        session.add(client); session.flush()
-        angle = Angle(client_id=client.id, subject='Existing impulse', message='Keep', context='Existing')
+        session.execute(text("INSERT INTO clients (id,name,aliases,keywords,alert_topics,country,active,created_at) VALUES (1,'Existing mandate','[]','[]','[]','DE',1,'2026-09-10')"))
+        angle = Angle(client_id=1, subject='Existing impulse', message='Keep', context='Existing')
         session.add(angle); session.commit()
         identity = angle.id
     command.upgrade(_alembic_config(), 'head')

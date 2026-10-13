@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Ihr Start mit raute+kopf</title>
+  {% for href in frontend.css %}<link rel="stylesheet" href="{{ href }}">{% endfor %}
+</head>
+<body>
+  <div id="onboarding-root"></div>
+  <noscript>Bitte aktivieren Sie JavaScript, um den Fragebogen auszufüllen.</noscript>
+  <script type="module" src="{{ frontend.script }}"></script>
+</body>
+</html>

@@ -328,6 +328,10 @@ class Client(Base):
     # The company's own site, used to fetch its logo once at creation and as the
     # obvious place to click through from a card.
     website: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    contact_name: Mapped[str] = mapped_column(String(255), default='', server_default='', nullable=False)
+    contact_email: Mapped[str] = mapped_column(String(320), default='', server_default='', nullable=False)
+    contact_role: Mapped[str] = mapped_column(String(255), default='', server_default='', nullable=False)
+    contact_phone: Mapped[str] = mapped_column(String(80), default='', server_default='', nullable=False)
     # An optional logo. Stored as a URL rather than a blob: the dashboard is the
     # only consumer, and a client's own CDN logo is always more current than a
     # copy. Empty is the normal case — a generated monogram stands in, so the
@@ -4530,3 +4534,35 @@ __all__ = [
     "SCORE_MIN",
     "SCORE_MAX",
 ]
+
+
+class CustomerOnboardingInvite(Base):
+    """Revocable bearer link. Only the hash is stored; answers belong to this link."""
+    __tablename__ = 'customer_onboarding_invites'
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    client_id: Mapped[int] = mapped_column(ForeignKey('clients.id', ondelete='CASCADE'), index=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    expires_at: Mapped[dt.datetime] = mapped_column(UTCDateTime(), nullable=False)
+    revoked: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    answers: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
+    completed_at: Mapped[dt.datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    prefill: Mapped[list] = mapped_column(JSON, default=list, nullable=False)
+    prefill_confirmed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    __mapper_args__ = {'version_id_col': version}
+
+
+class CustomerOnboardingJob(Base):
+    """Durable, restartable public research and personal-link preparation."""
+    __tablename__ = 'customer_onboarding_jobs'
+    client_id: Mapped[int] = mapped_column(ForeignKey('clients.id', ondelete='CASCADE'), primary_key=True)
+    status: Mapped[str] = mapped_column(String(20), default='queued', nullable=False)
+    stage: Mapped[str] = mapped_column(String(100), default='Vorbereitung', nullable=False)
+    note: Mapped[str] = mapped_column(Text, default='', nullable=False)
+    token: Mapped[str] = mapped_column(String(64), default='', nullable=False)
+    lease_until: Mapped[dt.datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+    checkpoint: Mapped[dict] = mapped_column(JSON, default=dict, nullable=False)
+    invite_id: Mapped[int | None] = mapped_column(ForeignKey('customer_onboarding_invites.id'), nullable=True)
+    attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    created_at: Mapped[dt.datetime] = mapped_column(UTCDateTime(), default=_utcnow, nullable=False)
+    updated_at: Mapped[dt.datetime] = mapped_column(UTCDateTime(), default=_utcnow, nullable=False)

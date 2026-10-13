@@ -1,0 +1,58 @@
+import React from 'react';
+import {render,screen,fireEvent,waitFor,cleanup} from '@testing-library/react';
+import {afterEach,expect,it,vi} from 'vitest';
+import {OnboardingPage} from './OnboardingPage.jsx';
+const questions=[{key:'A01.01',text:'Wie heißen Sie?',help:'Offizieller Name',section:'Unternehmen',choices:[]},{key:'B03.01',text:'Wohin geht es?',help:'Ihre Ziele',section:'Zukunft',choices:['Premium','Challenger']}];
+const data={customer:'Testfirma',questions,answers:{},completed:false,prefill:[],prefill_confirmed:true};
+const ok=d=>Promise.resolve({ok:true,json:async()=>d});
+afterEach(()=>{cleanup();vi.restoreAllMocks();delete window.SpeechRecognition;});
+it('retains failed answers and advances only after the database confirms saving',async()=>{
+  global.fetch=vi.fn().mockImplementationOnce(()=>ok(data)).mockResolvedValueOnce({ok:false,json:async()=>({detail:'Offline. Bitte erneut versuchen.'})}).mockImplementationOnce(()=>ok({value:'Firma',skipped:false}));
+  render(<OnboardingPage token="test"/>);
+  fireEvent.click(await screen.findByText('Los geht’s'));
+  fireEvent.change(screen.getByLabelText('Ihre Antwort'),{target:{value:'Firma'}});
+  fireEvent.click(screen.getByText('Speichern & weiter'));
+  expect((await screen.findByRole('alert')).textContent).toContain('Offline');
+  expect(screen.getByLabelText('Ihre Antwort').value).toBe('Firma');
+  fireEvent.click(screen.getByText('Speichern & weiter'));
+  expect(await screen.findByText('Wohin geht es?')).toBeTruthy();
+  expect(fetch.mock.calls[1][1].headers['X-Onboarding-Token']).toBe('test');
+});
+it('resumes saved answers, accepts tap choices and allows reviewing skipped answers',async()=>{
+  global.fetch=vi.fn().mockImplementationOnce(()=>ok({...data,answers:{'A01.01':{value:'Firma',skipped:false}}})).mockImplementationOnce(()=>ok({value:'Premium',skipped:false}));
+  render(<OnboardingPage token="test"/>);
+  fireEvent.click(await screen.findByText('Weiter, wo ich war'));
+  fireEvent.click(screen.getByText('Premium'));
+  expect(screen.getByLabelText('Ihre Antwort').value).toBe('Premium');
+  fireEvent.click(screen.getByText('Antworten ansehen'));
+  expect(await screen.findByText('So klingt Ihr Unternehmen.')).toBeTruthy();
+  expect(screen.getByText('Firma')).toBeTruthy();
+});
+it('dictates into an editable answer and stops the microphone before navigation',async()=>{
+  let recognition;
+  window.SpeechRecognition=class{constructor(){recognition=this;} start=vi.fn();stop=vi.fn(()=>this.onend());abort=vi.fn();};
+  global.fetch=vi.fn(()=>ok(data));
+  render(<OnboardingPage token="test"/>);
+  fireEvent.click(await screen.findByText('Los geht’s'));
+  fireEvent.click(screen.getByText('Antwort einsprechen'));
+  expect(screen.getByText('Speichern & weiter').closest('button').disabled).toBe(true);
+  const result=[{transcript:'Gesprochene Antwort'}];result.isFinal=true;
+  const {act}=await import('@testing-library/react');
+  act(()=>recognition.onresult({results:[result]}));
+  fireEvent.click(screen.getByText('Aufnahme stoppen'));
+  expect(screen.getByLabelText('Ihre Antwort').value).toBe('Gesprochene Antwort');
+  expect(screen.getByLabelText('Ihre Antwort').disabled).toBe(false);
+});
+it('shows sourced public prefills once and moves straight to the CEO questions after confirmation',async()=>{
+  const prefill=[{key:'A02.01',label:'Geschäftsfeld',value:'Public business',source_url:'https://example.org',source_title:'Website',researched_at:'2026-10-13T10:00:00Z'}];
+  global.fetch=vi.fn().mockImplementationOnce(()=>ok({...data,prefill,prefill_confirmed:false})).mockImplementationOnce(()=>ok({ok:true}));
+  render(<OnboardingPage token="test"/>);
+  fireEvent.click(await screen.findByText('Los geht’s'));
+  expect(screen.getByText('Public business')).toBeTruthy();
+  expect(screen.getByText('Website ↗').getAttribute('href')).toBe('https://example.org');
+  fireEvent.click(screen.getByText('Eine Angabe korrigieren'));
+  fireEvent.change(screen.getByLabelText('Geschäftsfeld'),{target:{value:'Corrected business'}});
+  fireEvent.click(screen.getByText('Korrekturen speichern & weiter'));
+  expect(await screen.findByText('Wie heißen Sie?')).toBeTruthy();
+  expect(JSON.parse(fetch.mock.calls[1][1].body)).toEqual({corrections:{'A02.01':'Corrected business'}});
+});

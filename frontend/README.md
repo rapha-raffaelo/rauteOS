@@ -94,3 +94,63 @@ with React's static renderer. They do not reconstruct the retired Jinja markup.
 The helper creates an ignored `frontend/.test-render/` bundle and requires Node
 and `npm ci`, just like the production build. Vitest covers interactive behavior;
 browser checks cover real form submissions and responsive layout.
+
+## Customer onboarding
+
+The separate `/onboarding#<personal-token>` React page targets a five-minute CEO
+onboarding: one public company summary to confirm or correct, followed by five
+questions from `RAUTE_OS_INPUT-Master.xlsx` about ambition, positioning, boldness,
+market beliefs and confidential plans. Stable field IDs and copy live in
+`newspulse/customer_onboarding.py`. Public information is not asked again.
+
+Apply migrations through `0064_onboarding_workflow` before serving the updated
+Profile. Creating a customer starts preparation automatically; existing customers
+can start it in **Profile → Kunden-Onboarding**. The worker uses the configured
+grounded web-research provider and stores sourced findings before creating a link. Explicitly public, sourced existing statements can supplement the snapshot.
+If research fails, the agency sees a warning; an empty snapshot blocks link
+creation. Missing public facts remain research tasks for the agency. No provider
+call happens when a customer opens the link. Internal notes and CEO answers are
+never used as public prefills. Each prefill includes its source and research date.
+
+Links expire after 14 days and can be revoked from Profile. Only hashes are
+stored; the token remains in the URL fragment and travels in a scoped request
+header. Customers see only the prepared public snapshot and their link's answers.
+Confirming the summary records the review; corrections are saved as separate
+customer statements without overwriting public research evidence.
+
+Each **Speichern & weiter** writes directly to the customer's Twin statements,
+attributed to customer onboarding, confidential and requiring external approval.
+Confidential strategic plans are restricted to internal use. Existing agency
+facts are preserved. Skipped questions are distinct from answers; review and
+completion resume from the database. No audio is stored: the browser's speech
+service transcribes into editable text, with a disclosure before activation and
+typing fallback. Use HTTPS in production. Failed saves retain the current input.
+The five-minute duration is a design target, not a measured CEO usability result.
+
+### Automatic Railway workflow
+
+Creating a mandate at `/mandant/neu` persists company details, the contact and a
+queued job in one transaction, then opens **Profile → Kunden-Onboarding**.
+The web process starts the durable worker independently of the daily scheduler.
+The crawler respects robots.txt, public-network restrictions, page/byte limits
+and omits news/article paths. Grounded research processes the public A/D workbook
+fields in batches. It never guesses private CEO answers or RAUTE hypotheses.
+Each accepted answer must cite a crawled or provider-returned source. Raw crawl
+excerpts stay in the private job checkpoint; the customer sees a sourced snapshot.
+
+Migration `0064_onboarding_workflow` adds contact fields and the durable job table.
+Completed batches and their facts commit together. Expired worker leases can be
+reclaimed after a restart; stale workers cannot publish. Failed jobs are resumed
+from Profile. No existing customer is automatically re-researched on deployment.
+
+A ready job creates its 14-day customer link automatically. The authenticated
+agency view can retrieve/copy the same link after reload, see answer progress and
+completion, revoke links and renew expired ones while retaining customer answers.
+No email is sent automatically. Contact details can be edited in the same panel.
+
+The link signing key is generated with mode 0600 beside the SQLite database
+(`/data/.onboarding-link-key` on Railway). Preserve it with the database during
+volume moves/restores; redeploys retain it on the existing `/data` volume. Only
+token hashes are stored in invite rows. Browser links carry the token in their
+fragment and use a scoped header for the customer API. Agency routes retain the
+existing Google allowlist authentication. Do not copy production keys into Git.

@@ -417,6 +417,8 @@ def create_app() -> FastAPI:
     app.include_router(rivals_view.router)
     app.include_router(report_routes.router)
     app.include_router(onboarding_routes.router)
+    from .routes import customer_onboarding
+    app.include_router(customer_onboarding.router)
     # The other channel: what an assistant answers when somebody asks about this
     # mandate's market, measured weekly by the sweep (DEC-3).
     app.include_router(visibility_view.router)
@@ -475,6 +477,8 @@ def main() -> None:
     scheduler.start()
     from .. import default_drafts
     default_drafts.start()
+    from .. import onboarding_workflow
+    onboarding_workflow.start()
     from .routes.twin_api import recover_ai_imports
     recover_ai_imports()
     uvicorn.run(

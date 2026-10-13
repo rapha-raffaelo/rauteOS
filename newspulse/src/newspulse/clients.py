@@ -368,6 +368,7 @@ def create_client(
     excluded_terms: list[str] | None = None,
     required_terms: list[str] | None = None,
     actions_per_quarter: int | None = None,
+    commit: bool = True,
 ) -> Client:
     """Create and persist a client. List defaults use ``None`` sentinels rather
     than mutable ``[]`` defaults to avoid a shared-list footgun.
@@ -394,7 +395,10 @@ def create_client(
         actions_per_quarter=actions_per_quarter,
     )
     session.add(client)
-    session.commit()
+    if commit:
+        session.commit()
+    else:
+        session.flush()
     return client
 
 

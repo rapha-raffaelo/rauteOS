@@ -94,7 +94,7 @@ def test_creating_lands_on_the_mandate_it_created(web, factory, monkeypatch):
         created = session.scalars(select(Client).where(Client.name == "Neu AG")).one()
         assert created.website == "https://neu-ag.de"
     assert answer.status_code == 303
-    assert answer.headers["location"] == f"/client/{created.id}/heute"
+    assert answer.headers["location"] == f"/client/{created.id}/twin#kunden-onboarding"
 
 
 def test_creating_starts_the_onboarding(web, monkeypatch):

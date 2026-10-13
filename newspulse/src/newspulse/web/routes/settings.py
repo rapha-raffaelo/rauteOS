@@ -276,6 +276,9 @@ def _research_profile(session: Session, client: Client) -> None:
     onboarded when the research is unavailable, and an empty profile is a
     smaller problem than a half-created client.
     """
+    from ...models import CustomerOnboardingJob
+    if session.get(CustomerOnboardingJob, client.id):
+        return  # The durable public-research workflow owns this new mandate.
     try:
         profile_refresh.refresh(session, client, now=dt.datetime.now(dt.UTC))
         written = profile_refresh.adopt(
@@ -1615,7 +1618,7 @@ def remove_competitor_route(
 
 
 def _mask_context(
-    *, name: str = "", website: str = "", country: str = "DE", error: str = ""
+    *, name: str = "", website: str = "", country: str = "DE", error: str = "", **contact
 ) -> dict:
     """The creation mask's context, plus the one thing the shell asks of every
     page: ``header_date``, which the toolbar's run meta prints."""
@@ -1623,6 +1626,7 @@ def _mask_context(
         "prefill_name": name,
         "prefill_website": website,
         "prefill_country": country,
+        "contact": contact,
         "error": error,
         "header_date": dt.datetime.now(config.local_zone()).date(),
     }
@@ -1653,6 +1657,10 @@ def create_client_from_mask(
     name: str = Form(...),
     website: str = Form(""),
     country: str = Form(""),
+    contact_name: str = Form(""),
+    contact_email: str = Form(""),
+    contact_role: str = Form(""),
+    contact_phone: str = Form(""),
     session: Session = Depends(get_db),
 ) -> Response:
     """Create the mandate and land on it, not back in a settings table.
@@ -1661,27 +1669,43 @@ def create_client_from_mask(
     the consultant arrives on the mandate he just created, where the onboarding
     he started is visibly running.
     """
+    from .customer_onboarding import ContactInput
+    from ... import onboarding_workflow
+    from pydantic import ValidationError
+    raw_contact = dict(contact_name=contact_name, contact_email=contact_email,
+                       contact_role=contact_role, contact_phone=contact_phone)
     try:
+        contact = ContactInput(**raw_contact)
+        if len(website) > 512:
+            raise ValueError('Die Website ist zu lang.')
+        site = normalize_website(website)
+        if website.strip() and not site:
+            raise ValueError('Bitte eine gültige Website eingeben.')
+        if site:
+            from urllib.parse import urlsplit
+            parsed = urlsplit(site)
+            if parsed.username or parsed.password or not parsed.hostname or parsed.hostname in {'localhost', 'localhost.localdomain'}:
+                raise ValueError('Bitte eine öffentliche Unternehmenswebsite eingeben.')
         fields = _parse_client_form(
             name=name, aliases="", industry="", country=country,
             keywords="", alert_topics="",
         )
-        created = create_client(session, **fields)
-    except ValueError as exc:
+        created = create_client(session, **fields, commit=False)
+        created.website = site
+        for key, value in contact.model_dump().items():
+            setattr(created, key, value)
+        onboarding_workflow.enqueue(session, created)
+        session.commit()
+    except (ValueError, ValidationError) as exc:
+        session.rollback()
         return render_react(
             request,
             "new_client",
-            _mask_context(name=name, website=website, country=country, error=str(exc)),
+            _mask_context(name=name, website=website, country=country,
+                          error='Bitte Ansprechpartner und E-Mail prüfen.' if isinstance(exc, ValidationError) else str(exc), **raw_contact),
         )
-    site = normalize_website(website)
-    if site:
-        created.website = site
-        # Best-effort and inline, as the settings form does it: a new mandate
-        # should look finished at once, and the monogram covers a miss.
-        created.logo_url = fetch_logo(site)
-        session.commit()
     _start_onboarding(created.id, created.name)
-    return RedirectResponse(f"/client/{created.id}/heute", status_code=_SEE_OTHER)
+    return RedirectResponse(f"/client/{created.id}/twin#kunden-onboarding", status_code=_SEE_OTHER)
 
 
 @router.post("/settings/clients")
@@ -1714,6 +1738,9 @@ def add_client_route(
             # immediately, and the monogram covers the case where it fails.
             created.logo_url = fetch_logo(site)
             session.commit()
+        from ... import onboarding_workflow
+        onboarding_workflow.enqueue(session, created)
+        session.commit()
         _start_onboarding(created.id, created.name)
     except ValueError as exc:
         return _render_settings(request, session, client_error=str(exc))

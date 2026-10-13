@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { OnboardingLinks } from "../components/OnboardingLinks.jsx";
 import { TwinPage } from "../components/TwinPage.jsx";
 import { PageHeading } from "../components/PageHeading.jsx";
 import {
@@ -910,6 +911,7 @@ export function ProfilePage({ data: d, onData }) {
           "Wissen, Unternehmensangaben, Wettbewerb und Marktumfeld an einem Ort.",
         )}
       />
+      <OnboardingLinks clientId={d.client.id} />
       <section id="wettbewerber" className="profile-section"><RivalManagement data={d.rivals} base={base}/></section>
       <section
         id="wissen"
