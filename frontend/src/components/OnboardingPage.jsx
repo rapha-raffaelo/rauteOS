@@ -7,9 +7,10 @@ export function OnboardingPage({ token = window.location.hash.slice(1), demoApi 
   const [prefillEdits, setPrefillEdits] = useState({}), [editingPrefill, setEditingPrefill] = useState(false);
   const [listening, setListening] = useState(false), [interim, setInterim] = useState('');
   const recognition = useRef(null), heading = useRef(null), touch = useRef(null), lock = useRef(false);
+  const drafts = useRef({}), prefillReturn = useRef(null);
   const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
   const question = data?.questions[index];
-  const dirty = (screen === 'question' && draft !== (data?.answers[question?.key]?.value || '')) || Object.keys(prefillEdits).length > 0;
+  const dirty = (screen === 'question' && draft !== (data?.answers[question?.key]?.value || '')) || Object.keys(prefillEdits).length > 0 || Object.entries(drafts.current).some(([key, value]) => value !== (data?.answers[key]?.value || ''));
 
   async function api(path = '', method = 'GET', body) {
     if (demoApi) return demoApi(path, method, body);
@@ -38,7 +39,7 @@ export function OnboardingPage({ token = window.location.hash.slice(1), demoApi 
   useEffect(() => () => { if (recognition.current) { recognition.current.onresult = null; recognition.current.onend = null; recognition.current.abort(); } }, []);
 
   function openQuestion(i) {
-    setIndex(i); setDraft(data.answers[data.questions[i].key]?.value || '');
+    setIndex(i); setDraft(drafts.current[data.questions[i].key] ?? data.answers[data.questions[i].key]?.value ?? '');
     setError(''); setScreen('question');
   }
   function resume() {
@@ -52,7 +53,8 @@ export function OnboardingPage({ token = window.location.hash.slice(1), demoApi 
     try {
       await api('/prefill', 'POST', {corrections: prefillEdits});
       setData({...data, prefill_confirmed: true, prefill: data.prefill.map(p => ({...p, ...(prefillEdits[p.key] ? {customer_value: prefillEdits[p.key]} : {})}))});
-      setPrefillEdits({}); setEditingPrefill(false); resume();
+      setPrefillEdits({}); setEditingPrefill(false);
+      if (prefillReturn.current !== null) {const target = prefillReturn.current; prefillReturn.current = null; openQuestion(target);} else resume();
     } catch(e) {setError(e.message);}
     finally {lock.current = false; setBusy(false);}
   }
@@ -63,15 +65,19 @@ export function OnboardingPage({ token = window.location.hash.slice(1), demoApi 
     try {
       const answer = await api('/answers/' + question.key, 'PUT', {value: skip ? '' : draft, skipped: skip});
       const next = {...data, answers: {...data.answers, [question.key]: answer}};
+      delete drafts.current[question.key];
       setData(next);
       if (target >= data.questions.length) setScreen('review');
-      else {setIndex(target); setDraft(next.answers[next.questions[target].key]?.value || '');}
+      else {setIndex(target); setDraft(drafts.current[next.questions[target].key] ?? next.answers[next.questions[target].key]?.value ?? '');}
     } catch (e) { setError(e.message); }
     finally { lock.current = false; setBusy(false); }
   }
   function back() {
-    if (dirty) {saveAndMove(false, index - 1); return;}
-    openQuestion(index - 1);
+    if (busy || listening) return;
+    drafts.current[question.key] = draft;
+    setError('');
+    if (index === 0) {prefillReturn.current = 0; setScreen('prefill');}
+    else openQuestion(index - 1);
   }
   function dictate() {
     if (listening) { recognition.current?.stop(); return; }
@@ -114,60 +120,59 @@ export function OnboardingPage({ token = window.location.hash.slice(1), demoApi 
   return <div className="onboarding">
     <header className="onb-header"><div className="onb-logo"><img src="/static/brand/raute-kopf.jpg" alt="raute+kopf" width="2048" height="683" /></div></header>
     <main>
-      {demoApi && <aside className="onb-demo"><strong>Testversion · fiktiver Kunde</strong><p>Antworten bleiben nur in diesem Browser-Tab. Es werden keine Kundendaten angelegt.</p><button onClick={() => {demoApi.reset(); window.location.reload();}}>Test neu starten</button></aside>}
+      {demoApi && <aside className="onb-demo"><span>Demo · nur in diesem Tab gespeichert</span><button onClick={() => {demoApi.reset(); window.location.reload();}}>Neustart</button></aside>}
       {!data ? <section className="onb-card"><h1>Ihr Start mit raute+kopf.</h1><p role={error ? 'alert' : 'status'}>{error || 'Ihr Fragebogen wird geladen …'}</p>{token && error && <button onClick={() => window.location.reload()}>Erneut versuchen</button>}</section> : <>
         <div className="onb-context"><span>{data.customer}</span><span>ONBOARDING</span></div>
         {screen === 'welcome' && <section className="onb-card onb-welcome">
 
           <h1 ref={heading} tabIndex={-1}>Ihre Perspektive.</h1>
-          <p>Die öffentlichen Fakten haben wir vorbereitet. Jetzt fehlt nur Ihre Perspektive: Wohin soll es gehen — und was sollen wir wissen?</p>
+          <p>Die Fakten stehen. Jetzt Ihre Perspektive.</p>
           <p className="onb-meta">{data.questions.length} Fragen · ca. 5 Minuten</p>
           <button className="onb-primary" onClick={() => data.prefill_confirmed ? resume() : setScreen('prefill')}>{settled ? 'Weiter, wo ich war' : 'Los geht’s'}</button>
-          <p className="onb-note">Jede bestätigte Antwort wird gespeichert. Mit diesem Link können Sie jederzeit weitermachen.</p>
+          <p className="onb-note">Speichern & später weitermachen — jederzeit.</p>
         </section>}
         {screen === 'prefill' && <section className="onb-card">
 
           <h1 ref={heading} tabIndex={-1}>Das wissen wir schon.</h1>
-          <p>Aus öffentlichen Quellen für Sie vorbereitet. Ein kurzer Blick genügt — stimmt das so?</p>
+          <p>Aus öffentlichen Quellen. Stimmt das so?</p>
+          <button className="onb-edit" disabled={busy} onClick={() => {setEditingPrefill(!editingPrefill); setPrefillEdits({});}}>{editingPrefill ? 'Bearbeitung abbrechen' : 'Angaben bearbeiten'}</button>
           <div className="onb-prefill">
             {(editingPrefill ? data.prefill : data.prefill.slice(0, 3)).map(renderPrefill)}
             {!editingPrefill && data.prefill.length > 3 && <details>
-              <summary>{data.prefill.length - 3} weitere recherchierte Angaben ansehen</summary>
+              <summary>{data.prefill.length - 3} weitere Angaben</summary>
               {data.prefill.slice(3).map(renderPrefill)}
             </details>}
           </div>
-          <button className="onb-primary" disabled={busy} onClick={confirmPrefill}>{busy ? 'Wird gespeichert …' : editingPrefill ? 'Korrekturen speichern & weiter' : 'Stimmt, weiter'}</button>
-          {!editingPrefill && <button className="onb-skip" disabled={busy} onClick={()=>setEditingPrefill(true)}>Eine Angabe korrigieren</button>}
-          <p className="onb-note">Was öffentlich nicht belegt ist, recherchiert unser Team weiter. Sie müssen nichts nachtragen.</p>
+          <button className="onb-primary" disabled={busy} onClick={confirmPrefill}>{busy ? 'Wird gespeichert …' : editingPrefill ? 'Speichern & weiter' : 'Stimmt, weiter'}</button>
         </section>}
         {screen === 'question' && <>
-          <div className="onb-progress-label"><span>Frage {index + 1} von {data.questions.length}</span><span>{settled} gespeichert</span></div>
+          <div className="onb-progress-label"><span>{index + 1} / {data.questions.length}</span></div>
           <progress value={settled} max={data.questions.length} aria-label="Gespeicherte Fragen"/>
           <section className="onb-card onb-question" key={question.key}
             onTouchStart={e => {if (e.target.closest('textarea,button,input')) return; touch.current = {x:e.touches[0].clientX,y:e.touches[0].clientY};}}
-            onTouchEnd={e => {const start = touch.current; touch.current = null; if (!start || busy || listening) return; const dx = e.changedTouches[0].clientX-start.x, dy = e.changedTouches[0].clientY-start.y; if (Math.abs(dx)>100 && Math.abs(dy)<45) {if(dx<0 && draft.trim()) saveAndMove(); else if(dx>0 && index>0) back();}}}>
+            onTouchEnd={e => {const start = touch.current; touch.current = null; if (!start || busy || listening) return; const dx = e.changedTouches[0].clientX-start.x, dy = e.changedTouches[0].clientY-start.y; if (Math.abs(dx)>100 && Math.abs(dy)<45) {if(dx<0 && draft.trim()) saveAndMove(); else if(dx>0) back();}}}>
 
-            <h1 id="onb-question-title" ref={heading} tabIndex={-1}>{question.text}</h1><p id="onb-help">{question.help}</p>
+            <h1 id="onb-question-title" ref={heading} tabIndex={-1}>{question.text}</h1>
             {question.choices.length > 0 && <div className="onb-choices" aria-label="Antwortvorschläge">{question.choices.map(c => <button key={c} disabled={busy || listening} aria-pressed={draft.split('; ').includes(c)} onClick={() => setDraft(previous => {if(question.single_choice) return previous === c ? '' : c; const parts=previous ? previous.split('; ') : []; return (parts.includes(c) ? parts.filter(p=>p!==c) : [...parts,c]).join('; ');})}>{c}</button>)}</div>}
-            <label className="onb-input-label" htmlFor="onb-answer">Ihre Antwort</label>
-            <textarea id="onb-answer" aria-describedby="onb-help" value={draft} maxLength={20000} disabled={busy || listening} onChange={e=>setDraft(e.target.value)} placeholder="Ein paar Worte reichen für den Anfang …"/>
+            <label className="onb-input-label onb-sr-only" htmlFor="onb-answer">Ihre Antwort</label>
+            <textarea id="onb-answer" value={draft} maxLength={20000} disabled={busy || listening} onChange={e=>setDraft(e.target.value)} placeholder="Kurz antworten …"/>
             {interim && <p className="onb-interim" role="status">{interim}</p>}
             <button className={'onb-voice ' + (listening ? 'is-listening' : '')} disabled={!Speech || busy} onClick={dictate} aria-pressed={listening}>
               <svg width="19" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><rect x="8" y="2" width="8" height="13" rx="4"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8"/></svg>
               {listening ? 'Aufnahme stoppen' : 'Antwort einsprechen'}{listening && <span className="onb-recording"/>}
             </button>
-            <p className="onb-note">{Speech ? 'Beim Sprechen kann Ihr Browser Audio an seinen Sprachdienst senden. Wir speichern den Text. Bitte vor dem Weitergehen prüfen.' : 'Spracheingabe ist in diesem Browser nicht verfügbar. Nutzen Sie die Diktierfunktion Ihrer Tastatur oder tippen Sie Ihre Antwort.'}</p>
-            <div className="onb-actions"><button disabled={!index || busy || listening} onClick={back} aria-label="Vorherige Frage">←</button><button className="onb-primary" disabled={busy || listening || !draft.trim()} onClick={()=>saveAndMove()}>{busy ? 'Wird gespeichert …' : index === data.questions.length-1 ? 'Antworten ansehen' : 'Speichern & weiter'}</button></div>
+            <p className="onb-note">{Speech ? 'Audio kann vom Sprachdienst Ihres Browsers verarbeitet werden.' : 'Spracheingabe hier nicht verfügbar. Alternativ: Tastatur-Diktat.'}</p>
+            <div className="onb-actions"><button disabled={busy || listening} onClick={back} aria-label={index === 0 ? "Zurück zu den Unternehmensangaben" : "Vorherige Frage"}>←</button><button className="onb-primary" disabled={busy || listening || !draft.trim()} onClick={()=>saveAndMove()}>{busy ? 'Wird gespeichert …' : index === data.questions.length-1 ? 'Antworten ansehen' : 'Weiter'}</button></div>
             {!data.answers[question.key]?.value && <button className="onb-skip" disabled={busy || listening} onClick={()=>saveAndMove(true)}>Später beantworten</button>}
           </section>
 
         </>}
         {screen === 'review' && <section className="onb-card"><h1 ref={heading} tabIndex={-1}>So klingt Ihr Unternehmen.</h1><p>{answered} Antworten gespeichert · {data.questions.length-answered} Fragen noch offen.</p>
-          <button className="onb-skip" disabled={busy} onClick={()=>setScreen('prefill')}>Vorbereitete Unternehmensangaben ansehen</button>
+          <button className="onb-skip" disabled={busy} onClick={()=>setScreen('prefill')}>Unternehmensangaben</button>
           <div className="onb-review">{data.questions.map((q,i)=><button disabled={busy} key={q.key} onClick={()=>openQuestion(i)}><strong>{q.text}</strong><span>{data.answers[q.key]?.value || 'Noch offen — später beantworten'}</span><small>Bearbeiten ↗</small></button>)}</div>
-          <button className="onb-primary" disabled={busy} onClick={complete}>{busy ? 'Wird abgeschlossen …' : 'Für jetzt abschließen'}</button>
+          <button className="onb-primary" disabled={busy} onClick={complete}>{busy ? 'Wird abgeschlossen …' : 'Abschließen'}</button>
         </section>}
-        {screen === 'done' && <section className="onb-card onb-welcome"><span className="onb-eyebrow">DER ANFANG IST GEMACHT</span><h1 ref={heading} tabIndex={-1}>Danke für<br/><em>Ihre Einblicke.</em></h1><p>{demoApi ? `Test abgeschlossen: ${answered} Antworten wurden nur in diesem Browser-Tab gespeichert.` : `Ihre ${answered} Antworten sind bei Ihrem raute+kopf-Team angekommen. Sie bilden die Grundlage für unsere Zusammenarbeit.`}</p><p className="onb-note">{demoApi ? "Sie können Ihre Testantworten ansehen oder den Test neu starten." : "Sie können diesen Link bis zu seinem Ablauf erneut öffnen und Ihre Antworten ergänzen."}</p><button className="onb-primary" onClick={()=>setScreen('review')}>Antworten ansehen</button></section>}
+        {screen === 'done' && <section className="onb-card onb-welcome"><span className="onb-eyebrow">DER ANFANG IST GEMACHT</span><h1 ref={heading} tabIndex={-1}>Danke für<br/><em>Ihre Einblicke.</em></h1><p>{demoApi ? `Demo abgeschlossen. ${answered} Antworten lokal gespeichert.` : `Ihre ${answered} Antworten sind gespeichert.`}</p><p className="onb-note">{demoApi ? "Sie können Ihre Antworten jederzeit bearbeiten." : "Über diesen Link können Sie Ihre Antworten weiter bearbeiten."}</p><button className="onb-primary" onClick={()=>setScreen('review')}>Antworten ansehen</button></section>}
         {error && <p className="onb-error" role="alert">{error}</p>}
       </>}
     </main>

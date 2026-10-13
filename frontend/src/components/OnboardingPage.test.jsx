@@ -11,10 +11,10 @@ it('retains failed answers and advances only after the database confirms saving'
   render(<OnboardingPage token="test"/>);
   fireEvent.click(await screen.findByText('Los geht’s'));
   fireEvent.change(screen.getByLabelText('Ihre Antwort'),{target:{value:'Firma'}});
-  fireEvent.click(screen.getByText('Speichern & weiter'));
+  fireEvent.click(screen.getByText('Weiter'));
   expect((await screen.findByRole('alert')).textContent).toContain('Offline');
   expect(screen.getByLabelText('Ihre Antwort').value).toBe('Firma');
-  fireEvent.click(screen.getByText('Speichern & weiter'));
+  fireEvent.click(screen.getByText('Weiter'));
   expect(await screen.findByText('Wohin geht es?')).toBeTruthy();
   expect(fetch.mock.calls[1][1].headers['X-Onboarding-Token']).toBe('test');
 });
@@ -35,7 +35,7 @@ it('dictates into an editable answer and stops the microphone before navigation'
   render(<OnboardingPage token="test"/>);
   fireEvent.click(await screen.findByText('Los geht’s'));
   fireEvent.click(screen.getByText('Antwort einsprechen'));
-  expect(screen.getByText('Speichern & weiter').closest('button').disabled).toBe(true);
+  expect(screen.getByText('Weiter').closest('button').disabled).toBe(true);
   const result=[{transcript:'Gesprochene Antwort'}];result.isFinal=true;
   const {act}=await import('@testing-library/react');
   act(()=>recognition.onresult({results:[result]}));
@@ -50,9 +50,46 @@ it('shows sourced public prefills once and moves straight to the CEO questions a
   fireEvent.click(await screen.findByText('Los geht’s'));
   expect(screen.getByText('Public business')).toBeTruthy();
   expect(screen.getByText('Website ↗').getAttribute('href')).toBe('https://example.org');
-  fireEvent.click(screen.getByText('Eine Angabe korrigieren'));
+  fireEvent.click(screen.getByText('Angaben bearbeiten'));
   fireEvent.change(screen.getByLabelText('Geschäftsfeld'),{target:{value:'Corrected business'}});
-  fireEvent.click(screen.getByText('Korrekturen speichern & weiter'));
+  fireEvent.click(screen.getByText('Speichern & weiter'));
   expect(await screen.findByText('Wie heißen Sie?')).toBeTruthy();
   expect(JSON.parse(fetch.mock.calls[1][1].body)).toEqual({corrections:{'A02.01':'Corrected business'}});
+});
+
+it.each(['', 'Mein noch ungespeicherter Entwurf'])('returns from question one to prefills and preserves draft %j', async value => {
+  const {createDemoApi} = await import('../onboardingDemo.js');
+  sessionStorage.clear();
+  const demoApi = createDemoApi(data);
+  render(<OnboardingPage demoApi={demoApi} />);
+  fireEvent.click(await screen.findByText('Los geht’s'));
+  fireEvent.change(screen.getByLabelText('Ihre Antwort'), {target: {value}});
+  const back = screen.getByRole('button', {name: 'Zurück zu den Unternehmensangaben'});
+  expect(back.disabled).toBe(false);
+  fireEvent.click(back);
+  expect(await screen.findByText('Das wissen wir schon.')).toBeTruthy();
+  expect(screen.getByRole('button', {name: 'Angaben bearbeiten'})).toBeTruthy();
+  fireEvent.click(screen.getByText('Stimmt, weiter'));
+  expect(await screen.findByText('Wie heißen Sie?')).toBeTruthy();
+  expect(screen.getByLabelText('Ihre Antwort').value).toBe(value);
+});
+
+it('retains a cleared answer when going back without requiring an answer or skipping the question', async () => {
+  const {createDemoApi} = await import('../onboardingDemo.js');
+  sessionStorage.clear();
+  const demoApi = createDemoApi({...data, answers: {'A01.01': {value: 'Saved', skipped: false}}});
+  render(<OnboardingPage demoApi={demoApi} />);
+  fireEvent.click(await screen.findByText('Weiter, wo ich war'));
+  fireEvent.change(screen.getByLabelText('Ihre Antwort'), {target: {value: 'Unfinished second answer'}});
+  fireEvent.click(screen.getByRole('button', {name: 'Vorherige Frage'}));
+  expect(screen.getByLabelText('Ihre Antwort').value).toBe('Saved');
+  fireEvent.change(screen.getByLabelText('Ihre Antwort'), {target: {value: ''}});
+  fireEvent.click(screen.getByRole('button', {name: 'Zurück zu den Unternehmensangaben'}));
+  fireEvent.click(screen.getByText('Stimmt, weiter'));
+  expect(await screen.findByText('Wie heißen Sie?')).toBeTruthy();
+  expect(screen.getByLabelText('Ihre Antwort').value).toBe('');
+  fireEvent.change(screen.getByLabelText('Ihre Antwort'), {target: {value: 'Updated'}});
+  fireEvent.click(screen.getByText('Weiter'));
+  await screen.findByText('Wohin geht es?');
+  expect(screen.getByLabelText('Ihre Antwort').value).toBe('Unfinished second answer');
 });

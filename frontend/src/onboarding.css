@@ -102,6 +102,12 @@ h1:focus { outline: none; }
 
 .onb-card .onb-meta { margin: 24px 0; font-size: 13px; color: #555; }
 
-.onb-demo { margin-bottom: 28px; padding-bottom: 20px; border-bottom: 1px solid #ddd; font-size: 13px; }
-.onb-demo p { margin: 6px 0; color: #666; }
-.onb-demo button { padding: 6px 0; background: none; border: 0; text-decoration: underline; font-size: 13px; }
+ .onb-demo { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid #ddd; font-size: 11px; color: #666; }
+.onb-demo button { min-height: 44px; padding: 8px 0; background: none; border: 0; text-decoration: underline; font-size: 12px; }
+.onb-edit { min-height: 48px; border-color: #111; font-weight: 600; margin-top: 4px; }
+.onb-prefill { margin-top: 16px; }
+.onb-header { padding-top: 20px; padding-bottom: 16px; }
+.onboarding main { margin-top: 12px; }
+.onb-card h1 { margin: 16px 0 24px; }
+.onb-question textarea { min-height: 120px; }
+.onb-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
