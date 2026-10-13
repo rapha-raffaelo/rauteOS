@@ -2,6 +2,7 @@
 import datetime as dt
 import hashlib
 import secrets
+from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
@@ -10,7 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.exc import StaleDataError
 
-from ... import customer_onboarding, twin
+from ... import customer_onboarding, twin, onboarding_audio
 from ...evidence import Confidentiality, ExternalUse, InputOwner, SourceType
 from ...models import Client, ClientFact, CustomerOnboardingInvite
 from ..app import get_db, templates
@@ -76,7 +77,7 @@ def list_invites(client_id: int, session: Session = Depends(get_db)):
     rows = session.scalars(select(CustomerOnboardingInvite).where(
         CustomerOnboardingInvite.client_id == client_id).order_by(CustomerOnboardingInvite.id.desc()))
     return result([dict(id=r.id, expires_at=r.expires_at.isoformat(), revoked=r.revoked,
-                        answered=sum(bool(r.answers.get(k, {}).get('value')) for k in customer_onboarding.QUESTION_KEYS),
+                        answered=sum(bool(r.answers.get(k, {}).get('value') or r.answers.get(k, {}).get('audio_id')) for k in customer_onboarding.QUESTION_KEYS),
                         total=len(customer_onboarding.QUESTION_KEYS),
                         completed=bool(r.completed_at)) for r in rows])
 
@@ -122,7 +123,8 @@ def read(request: Request, session: Session = Depends(get_db)):
     return result(dict(customer=client.name, questions=customer_onboarding.questions(),
         prefill=[{k: v for k, v in item.items() if k not in {'fact_id', 'correction_fact_id'}} for item in invite.prefill],
         prefill_confirmed=invite.prefill_confirmed,
-        answers={k: {'value': a['value'], 'skipped': a['skipped']} for k, a in invite.answers.items()},
+        answers={k: public_answer(a) for k, a in invite.answers.items()},
+        transcription_configured=onboarding_audio.configured(),
         completed=bool(invite.completed_at)))
 
 
@@ -130,6 +132,8 @@ class Answer(BaseModel):
     model_config = ConfigDict(extra='forbid', str_strip_whitespace=True)
     value: str = Field(default='', max_length=20000)
     skipped: bool = False
+    audio_id: str | None = Field(default=None, pattern=r'^[a-f0-9]{32}$')
+    mode: Literal['transcript', 'audio'] = 'transcript'
 
 
 class PrefillReview(BaseModel):
@@ -161,18 +165,19 @@ def confirm_prefill(data: PrefillReview, request: Request, session: Session = De
     return result({'ok': True})
 
 
-@router.put('/api/onboarding/answers/{key}')
-def save(key: str, data: Answer, request: Request, session: Session = Depends(get_db)):
-    invite, client = invite_for(request, session)
-    if key not in customer_onboarding.QUESTION_KEYS:
-        raise HTTPException(404, 'Unbekannte Frage.')
-    if data.skipped and data.value or not data.skipped and not data.value:
-        raise HTTPException(422, 'Bitte antworten oder die Frage überspringen.')
+def public_answer(answer):
+    result = {'value': answer['value'], 'skipped': answer['skipped']}
+    if answer.get('audio_id'):
+        result.update(audio_id=answer['audio_id'], mode=answer.get('mode', 'audio'))
+    return result
+
+
+def store_answer(session, invite, client, key, data):
     prior = invite.answers.get(key, {})
-    if data.skipped and prior.get('value'):
+    if data.skipped and (prior.get('value') or prior.get('audio_id')):
         raise HTTPException(409, 'Eine gespeicherte Antwort kann bearbeitet, aber nicht übersprungen werden.')
     fact_id = prior.get('fact_id')
-    if not data.skipped and data.value != prior.get('value'):
+    if data.value and (data.value != prior.get('value') or data.audio_id != prior.get('audio_id')):
         row = session.get(ClientFact, fact_id) if fact_id else None
         if row and (row.client_id != client.id or row.key != key):
             raise HTTPException(409, 'Antwort konnte nicht zugeordnet werden.')
@@ -181,16 +186,38 @@ def save(key: str, data: Answer, request: Request, session: Session = Depends(ge
             row = None
         field = twin.CATALOG_BY_KEY[key]
         statement = twin.StatementInput(key=key, value=data.value,
-            source_title='Kunden-Onboarding', source_type=SourceType.CLIENT_INTERVIEW,
+            source_title='Kunden-Onboarding · KI-Transkript (Deepgram Nova-3)' if data.audio_id and data.mode == 'audio' else 'Kunden-Onboarding', source_type=SourceType.CLIENT_INTERVIEW,
             input_owner=InputOwner(field['input_owner']),
             confidentiality=Confidentiality.HIGHLY_RESTRICTED if key == 'B07.11' else Confidentiality.CLIENT_CONFIDENTIAL,
             external_use=ExternalUse.INTERNAL_ONLY if key == 'B07.11' else ExternalUse.APPROVAL_REQUIRED)
         row = twin.apply(session, client.id, statement, 'Kunde · Onboarding', row=row)
         fact_id = row.id
-    invite.answers = {**invite.answers, key: dict(value=data.value, skipped=data.skipped, fact_id=fact_id)}
+    answer = dict(value=data.value, skipped=data.skipped, fact_id=fact_id)
+    if data.audio_id: answer.update(audio_id=data.audio_id, mode=data.mode)
+    invite.answers = {**invite.answers, key: answer}
+    return public_answer(answer)
+
+
+@router.put('/api/onboarding/answers/{key}')
+def save(key: str, data: Answer, request: Request, session: Session = Depends(get_db)):
+    invite, client = invite_for(request, session)
+    if key not in customer_onboarding.QUESTION_KEYS:
+        raise HTTPException(404, 'Unbekannte Frage.')
+    if data.audio_id:
+        from .customer_audio import media_for
+        media = media_for(session, invite, data.audio_id)
+        if media.question_key != key or media.mode != data.mode or data.skipped:
+            raise HTTPException(422, 'Audio gehört nicht zu dieser Antwort.')
+        if data.mode == 'audio':
+            data.value = media.transcript if media.status == 'ready' else ''
+        elif media.status != 'ready':
+            raise HTTPException(409, 'Bitte auf das Transkript warten.')
+    if data.skipped and data.value or not data.skipped and not data.value and not (data.audio_id and data.mode == 'audio'):
+        raise HTTPException(422, 'Bitte antworten oder die Frage überspringen.')
+    answer = store_answer(session, invite, client, key, data)
     invite.completed_at = None
     commit(session)
-    return result({'value': data.value, 'skipped': data.skipped})
+    return result(answer)
 
 
 @router.post('/api/onboarding/complete')

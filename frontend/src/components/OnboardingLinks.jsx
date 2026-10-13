@@ -1,4 +1,5 @@
 import React, {useEffect, useState} from 'react';
+import {OnboardingAudioList} from './OnboardingAudioList.jsx';
 
 export function OnboardingLinks({clientId}) {
   const [state,setState]=useState(null), [items,setItems]=useState([]), [error,setError]=useState(''), [busy,setBusy]=useState(false), [copied,setCopied]=useState(false);
@@ -43,6 +44,7 @@ export function OnboardingLinks({clientId}) {
         <button disabled={busy} type="submit">Ansprechpartner speichern</button>
       </form>
     </details>}
+    <OnboardingAudioList clientId={clientId}/>
     {error && <p role="alert">{error}</p>}
     {items.length>0 && <details><summary>Kundenlinks verwalten</summary><ul>{items.map(i=><li key={i.id}>Link {i.id} · {i.answered}/{i.total} Antworten · {i.revoked?'Deaktiviert':i.completed?'Abgeschlossen':new Date(i.expires_at)<new Date()?'Abgelaufen':'Offen'} {!i.revoked && <button disabled={busy} onClick={()=>act(`/client/${clientId}/onboarding-invites/${i.id}/revoke`)}>Deaktivieren</button>}</li>)}</ul></details>}
   </section>;

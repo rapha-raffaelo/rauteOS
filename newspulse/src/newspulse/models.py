@@ -26,6 +26,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    LargeBinary,
     String,
     Text,
     UniqueConstraint,
@@ -4566,3 +4567,25 @@ class CustomerOnboardingJob(Base):
     attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     created_at: Mapped[dt.datetime] = mapped_column(UTCDateTime(), default=_utcnow, nullable=False)
     updated_at: Mapped[dt.datetime] = mapped_column(UTCDateTime(), default=_utcnow, nullable=False)
+
+
+class CustomerOnboardingAudio(Base):
+    """Private audio, durable transcription queue and derived text."""
+    __tablename__ = 'customer_onboarding_audio'
+    id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    client_id: Mapped[int] = mapped_column(ForeignKey('clients.id', ondelete='CASCADE'), index=True)
+    invite_id: Mapped[int] = mapped_column(ForeignKey('customer_onboarding_invites.id', ondelete='CASCADE'), index=True)
+    question_key: Mapped[str] = mapped_column(String(32))
+    mode: Mapped[str] = mapped_column(String(20))
+    filename: Mapped[str] = mapped_column(String(200), default='Audio')
+    mime: Mapped[str] = mapped_column(String(80))
+    size: Mapped[int] = mapped_column(Integer)
+    content: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True, deferred=True)
+    status: Mapped[str] = mapped_column(String(20), default='queued', index=True)
+    transcript: Mapped[str] = mapped_column(Text, default='')
+    note: Mapped[str] = mapped_column(Text, default='')
+    duration: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    token: Mapped[str] = mapped_column(String(64), default='')
+    lease_until: Mapped[dt.datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+    created_at: Mapped[dt.datetime] = mapped_column(UTCDateTime(), default=_utcnow)
+    updated_at: Mapped[dt.datetime] = mapped_column(UTCDateTime(), default=_utcnow)

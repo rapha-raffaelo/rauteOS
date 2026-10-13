@@ -122,9 +122,7 @@ Each **Speichern & weiter** writes directly to the customer's Twin statements,
 attributed to customer onboarding, confidential and requiring external approval.
 Confidential strategic plans are restricted to internal use. Existing agency
 facts are preserved. Skipped questions are distinct from answers; review and
-completion resume from the database. No audio is stored: the browser's speech
-service transcribes into editable text, with a disclosure before activation and
-typing fallback. Use HTTPS in production. Failed saves retain the current input.
+completion resume from the database. Audio uses MediaRecorder and Deepgram Nova-3; see the storage modes below. Use HTTPS in production. Failed saves retain the current input.
 The five-minute duration is a design target, not a measured CEO usability result.
 
 ### Automatic Railway workflow
@@ -154,3 +152,34 @@ volume moves/restores; redeploys retain it on the existing `/data` volume. Only
 token hashes are stored in invite rows. Browser links carry the token in their
 fragment and use a scoped header for the customer API. Agency routes retain the
 existing Google allowlist authentication. Do not copy production keys into Git.
+
+### Onboarding audio (Nova-3)
+
+`DEEPGRAM_API_KEY` is a Railway server secret (alternatively
+`NEWSPULSE_DEEPGRAM_API_KEY`). It never enters the frontend. The worker uses
+Deepgram's prerecorded `/v1/listen` endpoint, `model=nova-3`, multilingual speech,
+smart formatting, company-name keyterms, and model-improvement opt-out.
+
+Customers record, pause/resume, stop and play recordings, or upload MP3, M4A,
+WAV, WebM, OGG or FLAC (25 MB maximum). They choose before submitting:
+
+- **Transkript:** temporary audio is transcribed into editable text; the audio
+  blob is cleared after successful processing. Only an explicitly saved answer
+  becomes customer evidence. Abandoned failed/queued temporary recordings expire
+  after 24 hours.
+- **Audio:** the original is retained privately as a SQLite blob with customer,
+  invite and question IDs. Saving the answer may happen before transcription
+  finishes. The durable worker adds an attributed, unverified Nova-3 transcript
+  to the customer's statements, preserving subsequent agency edits.
+
+The audio queue has leases and survives restarts. Failed processing keeps the
+recording available for retry. Agency users can play retained originals, inspect
+transcripts and retry from Profile → Onboarding-Audio. Scoped customer headers
+protect downloads; agency access uses the existing login. Renewed links retain
+access only to audio attached to their copied answers. Upload quotas are per
+invite (20 uploads / 100 MB). No audio is placed in public static files.
+
+The public `/onboarding/demo` records and plays audio locally, retaining demo
+blobs in IndexedDB across reloads. Reset removes them. It never invokes the paid
+transcription API or writes customer records. Live transcription requires a
+personal customer link. No browser SpeechRecognition service is used.

@@ -28,21 +28,6 @@ it('resumes saved answers, accepts tap choices and allows reviewing skipped answ
   expect(await screen.findByText('So klingt Ihr Unternehmen.')).toBeTruthy();
   expect(screen.getByText('Firma')).toBeTruthy();
 });
-it('dictates into an editable answer and stops the microphone before navigation',async()=>{
-  let recognition;
-  window.SpeechRecognition=class{constructor(){recognition=this;} start=vi.fn();stop=vi.fn(()=>this.onend());abort=vi.fn();};
-  global.fetch=vi.fn(()=>ok(data));
-  render(<OnboardingPage token="test"/>);
-  fireEvent.click(await screen.findByText('Los geht’s'));
-  fireEvent.click(screen.getByText('Antwort einsprechen'));
-  expect(screen.getByText('Weiter').closest('button').disabled).toBe(true);
-  const result=[{transcript:'Gesprochene Antwort'}];result.isFinal=true;
-  const {act}=await import('@testing-library/react');
-  act(()=>recognition.onresult({results:[result]}));
-  fireEvent.click(screen.getByText('Aufnahme stoppen'));
-  expect(screen.getByLabelText('Ihre Antwort').value).toBe('Gesprochene Antwort');
-  expect(screen.getByLabelText('Ihre Antwort').disabled).toBe(false);
-});
 it('shows sourced public prefills once and moves straight to the CEO questions after confirmation',async()=>{
   const prefill=[{key:'A02.01',label:'Geschäftsfeld',value:'Public business',source_url:'https://example.org',source_title:'Website',researched_at:'2026-10-13T10:00:00Z'}];
   global.fetch=vi.fn().mockImplementationOnce(()=>ok({...data,prefill,prefill_confirmed:false})).mockImplementationOnce(()=>ok({ok:true}));

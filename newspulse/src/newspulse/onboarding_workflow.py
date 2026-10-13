@@ -176,7 +176,7 @@ def status(session, client):
         researched_fields=len(checkpoint.get('answered_keys', [])), total_fields=len(onboarding_crawler.PUBLIC_FIELDS),
         sources=len(checkpoint.get('sources', [])), pages=len(checkpoint.get('pages', [])),
         path=invite_path(invite), invite_id=job.invite_id, expires_at=invite.expires_at.isoformat() if invite else None,
-        answered=sum(bool(a.get('value')) for a in invite.answers.values()) if invite else 0,
+        answered=sum(bool(a.get('value') or a.get('audio_id')) for a in invite.answers.values()) if invite else 0,
         completed=bool(invite and invite.completed_at), contact=contact)
 
 

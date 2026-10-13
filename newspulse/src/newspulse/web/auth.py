@@ -122,7 +122,7 @@ class BasicAuthMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next) -> Response:
         # These endpoints authenticate a scoped customer bearer link themselves.
-        if request.url.path in {"/onboarding", "/onboarding/demo", "/api/onboarding", "/api/onboarding/complete", "/api/onboarding/prefill"} or request.url.path.startswith("/api/onboarding/answers/"):
+        if request.url.path in {"/onboarding", "/onboarding/demo", "/api/onboarding", "/api/onboarding/complete", "/api/onboarding/prefill"} or request.url.path.startswith(("/api/onboarding/answers/", "/api/onboarding/audio/")):
             return await call_next(request)
         if request.url.path.startswith(_PUBLIC_PREFIXES):
             return await call_next(request)

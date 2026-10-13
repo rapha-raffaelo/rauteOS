@@ -111,3 +111,17 @@ h1:focus { outline: none; }
 .onb-card h1 { margin: 16px 0 24px; }
 .onb-question textarea { min-height: 120px; }
 .onb-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+.onb-audio { margin-top: 18px; }
+.onb-audio-mode { display: inline-flex; padding: 3px; border: 1px solid #ccc; border-radius: 6px; gap: 3px; }
+.onb-audio-mode button { border: 0; padding: 8px 18px; min-height: 40px; font-size: 13px; background: transparent; }
+.onb-audio-mode button[aria-pressed=true] { background: #111; color: white; }
+.onb-audio-toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 14px; }
+.onb-audio-icon { display: inline-flex; align-items: center; justify-content: center; width: 48px; height: 48px; padding: 0; }
+.onb-audio-icon:hover:not(:disabled) { background: #eee; }
+.onb-audio-timer { font-size: 12px; font-variant-numeric: tabular-nums; }
+.onb-audio-file { font-size: 12px !important; overflow-wrap: anywhere; }
+.onb-audio-submit { min-height: 44px; font-size: 13px; font-weight: 600; border-color: #111; }
+.onb-audio audio { display: none; }
+
+.onb-audio > textarea { display: block; margin-top: 16px; }
