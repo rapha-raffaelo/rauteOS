@@ -292,6 +292,43 @@ templates.env.filters["monogram"] = branding.monogram
 templates.env.filters["brand_colour"] = branding.colour
 
 
+class _CachedStatic(StaticFiles):
+    """Statische Dateien mit einer Cache-Anweisung, nicht nur mit einem ETag.
+
+    Gemessen am 13.10.2026 an der Produktion: die Antwort trug ein ETag und
+    *kein* ``Cache-Control``. Damit fragt der Browser bei jedem Seitenwechsel
+    jede Datei erneut nach und wartet auf je eine 304-Antwort — app.css mit
+    156 kB, jsx-runtime mit 214 kB, platform mit 50 kB, dazu der Chunk der
+    Seite. Der Server antwortet in 40 ms; die Zeit, die beim Durchklicken
+    spürbar ist, verging im Warten auf diese Rückfragen.
+
+    Zwei Klassen von Dateien, zwei Antworten:
+
+    * **Namen mit Inhalts-Hash** (``platform-D-D-sGf3.js``, wie Vite sie baut)
+      dürfen ein Jahr lang unverändert liegen bleiben. Ändert sich der Inhalt,
+      ändert sich der Name — ``immutable`` sagt dem Browser genau das, und er
+      fragt nicht einmal mehr nach.
+    * **alles übrige** (``app.css``, Schriften, Bilder) bekommt eine kurze
+      Frist. Hier trägt nicht der Name den Stand, sondern die Abfrage dahinter
+      (:func:`asset_version`), und eine Stunde ist kurz genug, dass ein
+      vergessener Versionsparameter nicht zum Tagesproblem wird.
+    """
+
+    #: Ein Vite-Dateiname: Name, Bindestrich, acht und mehr Zeichen aus dem
+    #: Hash-Alphabet, Endung. Absichtlich eng — eine Datei, die *nicht* so
+    #: heisst, ein Jahr lang festzuschreiben, ist der teure Fehler.
+    _HASHED = re.compile(r"-[A-Za-z0-9_-]{8,}\.[a-z0-9]+$")
+
+    def file_response(self, *args, **kwargs):  # type: ignore[override]
+        response = super().file_response(*args, **kwargs)
+        path = str(getattr(response, "path", "") or "")
+        if self._HASHED.search(path):
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        else:
+            response.headers["Cache-Control"] = "public, max-age=3600"
+        return response
+
+
 def asset_version(name: str) -> str:
     """A short fingerprint of one file in ``static/``, for the URL that links it.
 
@@ -357,7 +394,7 @@ def create_app() -> FastAPI:
     # Added after the auth middleware, so it runs *before* it: a cross-site
     # write is refused without the app having to work out who is asking.
     app.add_middleware(origin.SameOriginMiddleware)
-    app.mount("/static", StaticFiles(directory=str(_STATIC_DIR)), name="static")
+    app.mount("/static", _CachedStatic(directory=str(_STATIC_DIR)), name="static")
 
     # Imported here (not at module top) to avoid a circular import: the route
     # modules import ``get_db``/``templates`` from this module.

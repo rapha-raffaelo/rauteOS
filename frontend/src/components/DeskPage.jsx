@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Motion, m, appear, list } from "../motion.jsx";
 import { fetchDesk } from '../api.js';
 
 export function DeskPage({ translations = {}, language = 'de' }) {
@@ -33,15 +34,19 @@ export function DeskPage({ translations = {}, language = 'de' }) {
     ['Entscheidungen offen', board.decisions_open],
     ['Profile mit Lücken', board.twins_with_gaps, `${t('Schnitt')} ${board.twin_average} %`],
   ];
-  return <>
+  return <Motion>
     <div className="desk__h"><div className="desk__hi">{t('Guten Morgen.')}</div>
       <h1 className="desk__t">{t('Der Desk')}</h1>
       <p className="desk__sub">{t('Was zugesagt ist, was geliefert wurde, und was heute eine Entscheidung braucht.')}</p>
     </div>
-    <div className="kpis">{metrics.map(([label, value, note]) => <div className="kpi" key={label}>
+    {/* Die Kennzahlenreihe erscheint gestaffelt. Sie ist das erste, was am
+        Morgen gelesen wird, und die Staffelung führt das Auge von links nach
+        rechts statt alles auf einmal hinzustellen. 25 ms je Kachel: bei sechs
+        Kacheln ist die letzte nach 150 ms da — bemerkbar, nicht abwartbar. */}
+    <m.div className="kpis" variants={list} initial="hidden" animate="shown">{metrics.map(([label, value, note]) => <m.div className="kpi" key={label} variants={appear}>
       <div className="kpi__l">{t(label)}</div><div className="kpi__v">{value}</div>
       {note && <div className="kpi__n">{note}</div>}
-    </div>)}</div>
+    </m.div>)}</m.div>
     <div className="desk-workspace"><div><div className="board">
       <div className="board__h"><h2 className="board__t">{t('Mandantenüberblick')}</h2>
         <span className="board__d">{t('Alle aktiven Mandanten auf einen Blick.')}</span></div>
@@ -101,7 +106,7 @@ export function DeskPage({ translations = {}, language = 'de' }) {
       </Pane>
     </div>
     </div></div>
-  </>;
+  </Motion>;
 }
 
 function Pane({ title, count, children }) {

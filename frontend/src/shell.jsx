@@ -149,8 +149,22 @@ export function Shell({ data, portals = true }) {
       }}
       style={{ display: "contents" }}
     >
-      <a className="side__brand" href="/">
-        <span className="side__mark">#</span>RauteOS
+      {/* Die Marke. Liegt als Datei unter /static/logo.svg; fehlt sie, steht
+          die Wortmarke da — so ist der Platz schon richtig, bevor die Datei
+          da ist, und das Austauschen ändert keine Zeile Code. */}
+      <a className="side__brand" href="/" aria-label="raute + kopf">
+        <img
+          className="side__logo"
+          src="/static/logo.svg"
+          alt=""
+          onError={(e) => {
+            e.currentTarget.hidden = true;
+            e.currentTarget.nextSibling?.removeAttribute("hidden");
+          }}
+        />
+        <span className="side__word" hidden>
+          raute<span className="side__plus">+</span>kopf
+        </span>
       </a>
       <button
         ref={toggle}
