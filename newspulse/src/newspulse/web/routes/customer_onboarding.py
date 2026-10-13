@@ -92,13 +92,27 @@ def revoke(client_id: int, invite_id: int, session: Session = Depends(get_db)):
     return result({'ok': True})
 
 
+def demo_data():
+    return dict(customer='Nordlicht Studio · Beispielkunde', questions=customer_onboarding.questions(),
+        answers={}, completed=False, prefill_confirmed=False,
+        prefill=[dict(key=key, label=label, value=value, source_url='https://example.org',
+            source_title='Fiktive Beispielquelle', researched_at='2026-10-13T12:00:00Z')
+            for key, label, value in [
+                ('A02.01', 'Unternehmen', 'Nordlicht Studio ist ein fiktives Design- und Technologieunternehmen aus Hamburg.'),
+                ('A03.01', 'Angebot', 'Digitale Produkte und Markenauftritte für mittelständische Unternehmen.'),
+                ('A04.01', 'Team', 'Ein interdisziplinäres Team aus Design, Strategie und Entwicklung.'),
+                ('A05.01', 'Zielgruppe', 'Wachsende Unternehmen im deutschsprachigen Raum.'),
+            ]])
+
+
+@router.get('/onboarding/demo')
 @router.get('/onboarding')
 def page(request: Request):
     assets = page_assets('onboarding')
     if not assets:
         raise HTTPException(503, 'Der Fragebogen wird vorbereitet. Bitte später erneut öffnen.')
     return templates.TemplateResponse(request, 'customer_onboarding.html',
-                                      {'frontend': assets}, headers=HEADERS)
+                                      {'frontend': assets, 'demo': demo_data() if request.url.path == '/onboarding/demo' else None}, headers=HEADERS)
 
 
 @router.get('/api/onboarding')

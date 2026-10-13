@@ -10,6 +10,7 @@
 </head>
 <body>
   <div id="onboarding-root"></div>
+  {% if demo %}<script id="onboarding-demo" type="application/json">{{ demo | tojson }}</script>{% endif %}
   <noscript>Bitte aktivieren Sie JavaScript, um den Fragebogen auszufüllen.</noscript>
   <script type="module" src="{{ frontend.script }}"></script>
 </body>

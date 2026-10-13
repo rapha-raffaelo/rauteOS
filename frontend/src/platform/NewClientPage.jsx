@@ -3,7 +3,7 @@ import { PageHeading } from "../components/PageHeading.jsx";
 import { Field, Notice, Panel, t } from "./shared.jsx";
 export function NewClientPage({ data: d }) {
   return (
-    <div className="platform-page">
+    <div className="platform-page new-client-page">
       <PageHeading eyebrow="Clients" title={t("Neuer Mandant")} />
       <Notice>{d.error}</Notice>
       <div className="platform-columns">
@@ -14,7 +14,6 @@ export function NewClientPage({ data: d }) {
               label="Name des Unternehmens"
               value={d.prefill_name}
               required
-              autoFocus
               autoComplete="off"
               placeholder={t("Wie die Presse es nennt")}
             >
@@ -58,6 +57,7 @@ export function NewClientPage({ data: d }) {
           </form>
         </Panel>
         <Panel title="Was danach von selbst passiert">
+          <p><a href="/onboarding/demo" target="_blank" rel="noopener noreferrer">Onboarding mit Beispieldaten testen ↗</a></p>
           <ol>
             {[
               "Das Profil wird von der Website gelesen und durch öffentliche Quellen ergänzt.",

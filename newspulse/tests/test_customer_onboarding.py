@@ -200,3 +200,17 @@ def test_confidential_ceo_plans_are_internal_only(setup):
         row=s.scalar(select(ClientFact).where(ClientFact.key=='B07.11'))
         assert row.external_use=='Internal Only'
         assert row.confidentiality=='Highly Restricted'
+
+
+def test_demo_is_public_and_contains_only_fictional_data(setup):
+    web, factory = setup
+    response = web.get('/onboarding/demo')
+    assert response.status_code == 200
+    assert 'Nordlicht Studio' in response.text
+    assert 'onboarding-demo' in response.text
+    assert 'First' not in response.text and 'Second' not in response.text
+    assert 'onboarding-demo' not in web.get('/onboarding').text
+    assert web.get('/api/onboarding').status_code == 401
+    with factory() as session:
+        assert list(session.scalars(select(CustomerOnboardingInvite))) == []
+        assert list(session.scalars(select(ClientFact))) == []

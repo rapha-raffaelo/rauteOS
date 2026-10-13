@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 
-export function OnboardingPage({ token = window.location.hash.slice(1) }) {
+export function OnboardingPage({ token = window.location.hash.slice(1), demoApi = null }) {
   const [data, setData] = useState(null), [error, setError] = useState('');
   const [screen, setScreen] = useState('welcome'), [index, setIndex] = useState(0);
   const [draft, setDraft] = useState(''), [busy, setBusy] = useState(false);
@@ -12,6 +12,7 @@ export function OnboardingPage({ token = window.location.hash.slice(1) }) {
   const dirty = (screen === 'question' && draft !== (data?.answers[question?.key]?.value || '')) || Object.keys(prefillEdits).length > 0;
 
   async function api(path = '', method = 'GET', body) {
+    if (demoApi) return demoApi(path, method, body);
     const response = await fetch('/api/onboarding' + path, {method, credentials: 'omit',
       headers: {'X-Onboarding-Token': token, 'Content-Type': 'application/json'},
       ...(body === undefined ? {} : {body: JSON.stringify(body)})});
@@ -23,11 +24,11 @@ export function OnboardingPage({ token = window.location.hash.slice(1) }) {
   }
   useEffect(() => {
     let active = true;
-    if (!token) { setError('Dieser Link ist unvollständig. Bitte öffnen Sie den persönlichen Link von raute+kopf.'); return; }
+    if (!token && !demoApi) { setError('Dieser Link ist unvollständig. Bitte öffnen Sie den persönlichen Link von raute+kopf.'); return; }
     api().then(d => { if (active) {setData(d); if (d.completed) setScreen('done');} })
       .catch(e => {if (active) setError(e.message);});
     return () => { active = false; };
-  }, [token]);
+  }, [token, demoApi]);
   useEffect(() => { heading.current?.focus(); }, [screen, index]);
   useEffect(() => {
     const warn = e => { if (dirty || busy || listening) { e.preventDefault(); e.returnValue = ''; } };
@@ -113,6 +114,7 @@ export function OnboardingPage({ token = window.location.hash.slice(1) }) {
   return <div className="onboarding">
     <header className="onb-header"><div className="onb-logo"><img src="/static/brand/raute-kopf.jpg" alt="raute+kopf" width="2048" height="683" /></div></header>
     <main>
+      {demoApi && <aside className="onb-demo"><strong>Testversion · fiktiver Kunde</strong><p>Antworten bleiben nur in diesem Browser-Tab. Es werden keine Kundendaten angelegt.</p><button onClick={() => {demoApi.reset(); window.location.reload();}}>Test neu starten</button></aside>}
       {!data ? <section className="onb-card"><h1>Ihr Start mit raute+kopf.</h1><p role={error ? 'alert' : 'status'}>{error || 'Ihr Fragebogen wird geladen …'}</p>{token && error && <button onClick={() => window.location.reload()}>Erneut versuchen</button>}</section> : <>
         <div className="onb-context"><span>{data.customer}</span><span>ONBOARDING</span></div>
         {screen === 'welcome' && <section className="onb-card onb-welcome">
@@ -165,7 +167,7 @@ export function OnboardingPage({ token = window.location.hash.slice(1) }) {
           <div className="onb-review">{data.questions.map((q,i)=><button disabled={busy} key={q.key} onClick={()=>openQuestion(i)}><strong>{q.text}</strong><span>{data.answers[q.key]?.value || 'Noch offen — später beantworten'}</span><small>Bearbeiten ↗</small></button>)}</div>
           <button className="onb-primary" disabled={busy} onClick={complete}>{busy ? 'Wird abgeschlossen …' : 'Für jetzt abschließen'}</button>
         </section>}
-        {screen === 'done' && <section className="onb-card onb-welcome"><span className="onb-eyebrow">DER ANFANG IST GEMACHT</span><h1 ref={heading} tabIndex={-1}>Danke für<br/><em>Ihre Einblicke.</em></h1><p>Ihre {answered} Antworten sind bei Ihrem raute+kopf-Team angekommen. Sie bilden die Grundlage für unsere Zusammenarbeit.</p><p className="onb-note">Sie können diesen Link bis zu seinem Ablauf erneut öffnen und Ihre Antworten ergänzen.</p><button className="onb-primary" onClick={()=>setScreen('review')}>Antworten ansehen</button></section>}
+        {screen === 'done' && <section className="onb-card onb-welcome"><span className="onb-eyebrow">DER ANFANG IST GEMACHT</span><h1 ref={heading} tabIndex={-1}>Danke für<br/><em>Ihre Einblicke.</em></h1><p>{demoApi ? `Test abgeschlossen: ${answered} Antworten wurden nur in diesem Browser-Tab gespeichert.` : `Ihre ${answered} Antworten sind bei Ihrem raute+kopf-Team angekommen. Sie bilden die Grundlage für unsere Zusammenarbeit.`}</p><p className="onb-note">{demoApi ? "Sie können Ihre Testantworten ansehen oder den Test neu starten." : "Sie können diesen Link bis zu seinem Ablauf erneut öffnen und Ihre Antworten ergänzen."}</p><button className="onb-primary" onClick={()=>setScreen('review')}>Antworten ansehen</button></section>}
         {error && <p className="onb-error" role="alert">{error}</p>}
       </>}
     </main>

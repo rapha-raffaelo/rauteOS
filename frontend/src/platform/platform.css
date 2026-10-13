@@ -240,3 +240,11 @@
     font-size: 16px;
   }
 }
+
+/* Keep the customer form readable at all viewport sizes. */
+.new-client-page .platform-columns { align-items: start; }
+.new-client-page input { min-height: 44px; padding: 10px 12px; font: inherit; line-height: 1.4; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: var(--ink); }
+.new-client-page .platform-actions { margin-top: 24px; }
+.new-client-page .platform-actions button { min-height: 44px; white-space: normal; }
+.new-client-page ol { padding-left: 22px; }
+@media (max-width: 1000px) { .new-client-page .platform-columns { grid-template-columns: minmax(0, 1fr); gap: 0; } }
