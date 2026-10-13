@@ -6,7 +6,12 @@ import {PageHeading} from './PageHeading.jsx';
 const activityLabels={idea_developed:'Idee entwickelt',activated:'Opportunity aktiviert',choices_saved:'Auswahl gespeichert',text_created:'Text erstellt',text_checked:'Aussagen geprüft',text_edited:'Text bearbeitet'};
 const date=v=>v?new Date(v).toLocaleDateString('de-DE'):'–';
 function Summary({row}){return <p>Profil: {row.twin.percent} % · Quartal: {row.actions_quarter.total} geliefert{row.promised_quarter!==null?` / ${row.promised_quarter} zugesagt`:' · Zusage offen'} · {row.opportunities} Opportunities</p>;}
-function Texts({items}){return <div className="workbench-list">{items.length?items.map(t=><article key={`${t.type}-${t.id}`}><span>{t.client} · {t.format} · {t.released_at?'Freigegeben':'Entwurf'}</span><h2><a href={t.href}>{t.title||'Ohne Titel'}</a></h2><p>{date(t.generated_at)}</p></article>):<p>Noch keine Texte.</p>}</div>;}
+function Texts({items}){return <div className="workbench-list">{items.length?items.map(t=><article key={`${t.type}-${t.id}`}><span>{t.client} · {t.format} · {t.released_at?'Freigegeben':'Entwurf'}</span><h2><a href={t.href}>{t.title||'Ohne Titel'}</a></h2>
+ {/* Das Datum sagt, *welches* Datum es ist — und bei einem freigegebenen Text
+     ist die Freigabe das Ereignis, nicht die Erzeugung. Vorher stand hier eine
+     nackte Zahl, die bei Entwürfen das eine und bei freigegebenen Texten
+     ebenfalls das eine meinte, obwohl das andere zählt. */}
+ <p className="asset-date">{t.released_at?`Freigegeben am ${date(t.released_at)}`:`Entwurf vom ${date(t.generated_at)}`}</p></article>):<p>Noch keine Texte.</p>}</div>;}
 export function WorkbenchPage({page,clientId}){
  const [data,setData]=useState(null),[error,setError]=useState(''),[search,setSearch]=useState(''),[filter,setFilter]=useState('all');
  useEffect(()=>{if(page==='ask')return;let live=true;fetch(`/api/v1/workbench/${clientId?`clients/${clientId}`:page}`).then(r=>{if(!r.ok)throw Error('Ansicht konnte nicht geladen werden.');return r.json();}).then(v=>{if(live)setData(v);}).catch(e=>{if(live)setError(e.message);});return()=>{live=false;};},[page,clientId]);

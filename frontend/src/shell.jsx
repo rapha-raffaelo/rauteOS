@@ -155,7 +155,7 @@ export function Shell({ data, portals = true }) {
       <a className="side__brand" href="/" aria-label="raute + kopf">
         <img
           className="side__logo"
-          src="/static/logo.svg"
+          src="/static/logo.png"
           alt=""
           onError={(e) => {
             e.currentTarget.hidden = true;
