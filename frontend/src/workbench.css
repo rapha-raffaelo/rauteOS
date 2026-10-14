@@ -43,3 +43,7 @@
 .client-edit-fields{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}.client-dialog details{margin:16px 0}.client-dialog summary{cursor:pointer;color:var(--tint)}
 .client-dialog-actions{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:10px;margin-top:24px}
 @media(max-width:600px){.client-dialog{padding:20px}.client-edit-fields{grid-template-columns:1fr}}
+
+.raute-ui .client-card-actions .client-action-icon {display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;min-height:36px;padding:0;border-radius:8px;}
+.client-action-icon:focus-visible {outline:2px solid var(--tint);outline-offset:2px;}
+@media(pointer:coarse){.raute-ui .client-card-actions .client-action-icon{width:44px;height:44px;min-height:44px;}}

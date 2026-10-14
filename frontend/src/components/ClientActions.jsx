@@ -20,7 +20,10 @@ export function ClientActions({client,onChanged=()=>window.location.assign('/cli
  }
  function input(key,label){return <label key={key}>{label}<input required={key==='name'} type={key==='actions_per_quarter'?'number':'text'} min={key==='actions_per_quarter'?0:undefined} step={key==='actions_per_quarter'?1:undefined}
   value={settings.values[key]} onChange={e=>setSettings({...settings,values:{...settings.values,[key]:e.target.value}})}/></label>;}
- return <><details className="client-card-actions action-disclosure"><summary aria-label={`${client.name} verwalten`}>Verwalten</summary><div className="action-disclosure-body"><button className="btn" aria-label={`${client.name} bearbeiten`} onClick={()=>open('edit')}>Bearbeiten</button><button className="btn client-delete" aria-label={`${client.name} löschen`} onClick={()=>open('delete')}>Löschen</button></div></details>
+ return <><div className="client-card-actions" role="group" aria-label={`${client.name} verwalten`}>
+ <button type="button" className="btn client-action-icon" title="Bearbeiten" aria-label={`${client.name} bearbeiten`} onClick={()=>open('edit')}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m16 3 5 5M3 21l5-1L21 7a2.1 2.1 0 0 0-5-5L3 16z"/></svg></button>
+ <button type="button" className="btn client-delete client-action-icon" title="Löschen" aria-label={`${client.name} löschen`} onClick={()=>open('delete')}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7"/></svg></button>
+ </div>
  {mode&&<dialog ref={dialog} className="client-dialog" aria-labelledby={titleId} onCancel={e=>{e.preventDefault();close();}}>
  <form onSubmit={submit}><h2 id={titleId}>{mode==='edit'?'Mandant bearbeiten':'Mandant löschen?'}</h2><p>{client.name}</p>
  {mode==='delete'?<p>„{client.name}“ wird aus der aktiven Mandantenliste entfernt und nicht mehr überwacht. Archiv, Profil und bisherige Arbeit bleiben erhalten. Unter Einstellungen kann der Mandant reaktiviert werden.</p>
