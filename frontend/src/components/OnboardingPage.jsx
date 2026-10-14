@@ -93,8 +93,6 @@ export function OnboardingPage({ token = window.location.hash.slice(1), demoApi 
   function renderPrefill(p) {
     return <div key={p.key} className="onb-prefill-row"><strong>{p.label}</strong>
               {editingPrefill ? <textarea aria-label={p.label} maxLength={20000} value={prefillEdits[p.key] ?? p.customer_value ?? p.value} disabled={busy} onChange={e=>setPrefillEdits({...prefillEdits,[p.key]:e.target.value})}/> : <p>{p.customer_value || p.value}</p>}
-              <a href={p.source_url} target="_blank" rel="noopener noreferrer">{p.source_title || 'Öffentliche Quelle'} ↗</a>
-              <small> · recherchiert {new Date(p.researched_at).toLocaleDateString('de-DE')}{p.customer_value ? ' · von Ihnen korrigiert' : ''}</small>
             </div>;
   }
   const settled = data ? Object.keys(data.answers).length : 0;
@@ -116,14 +114,10 @@ export function OnboardingPage({ token = window.location.hash.slice(1), demoApi 
         {screen === 'prefill' && <section className="onb-card">
 
           <h1 ref={heading} tabIndex={-1}>Das wissen wir schon.</h1>
-          <p>Aus öffentlichen Quellen. Stimmt das so?</p>
+          <p>Stimmt das so?</p>
           <button className="onb-edit" disabled={busy} onClick={() => {setEditingPrefill(!editingPrefill); setPrefillEdits({});}}>{editingPrefill ? 'Bearbeitung abbrechen' : 'Angaben bearbeiten'}</button>
           <div className="onb-prefill">
-            {(editingPrefill ? data.prefill : data.prefill.slice(0, 3)).map(renderPrefill)}
-            {!editingPrefill && data.prefill.length > 3 && <details>
-              <summary>{data.prefill.length - 3} weitere Angaben</summary>
-              {data.prefill.slice(3).map(renderPrefill)}
-            </details>}
+            {data.prefill.map(renderPrefill)}
           </div>
           <button className="onb-primary" disabled={busy} onClick={confirmPrefill}>{busy ? 'Wird gespeichert …' : editingPrefill ? 'Speichern & weiter' : 'Stimmt, weiter'}</button>
         </section>}
@@ -137,6 +131,7 @@ export function OnboardingPage({ token = window.location.hash.slice(1), demoApi 
             <h1 id="onb-question-title" ref={heading} tabIndex={-1}>{question.text}</h1>
             <OnboardingAudio questionKey={question.key} token={token} demoApi={demoApi} state={audioState} saved={savedAnswer}
               configured={data.transcription_configured} onActivity={setListening}
+              onDelete={answer=>setData(previous=>{const answers={...previous.answers};if(answer)answers[question.key]=answer;else delete answers[question.key];return {...previous,answers,completed:false};})}
               onChange={value=>setAudioDrafts(previous=>({...previous,[question.key]:value}))}
               onText={value=>setDraft(previous=>[previous.trim(),value].filter(Boolean).join('\n'))}>
             {audioMode === 'transcript' && question.choices.length > 0 && <div className="onb-choices" aria-label="Antwortvorschläge">{question.choices.map(c => <button key={c} disabled={busy || listening} aria-pressed={draft.split('; ').includes(c)} onClick={() => setDraft(previous => {if(question.single_choice) return previous === c ? '' : c; const parts=previous ? previous.split('; ') : []; return (parts.includes(c) ? parts.filter(p=>p!==c) : [...parts,c]).join('; ');})}>{c}</button>)}</div>}

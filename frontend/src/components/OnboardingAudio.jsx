@@ -6,16 +6,21 @@ const icons = {
   play: <path d="m8 5 11 7-11 7z" fill="currentColor"/>,
   pause: <><path d="M8 5v14M16 5v14" stroke="currentColor" strokeWidth="4"/></>,
   stop: <rect x="6" y="6" width="12" height="12" rx="1" fill="currentColor"/>,
+  back: <><path d="m12 5-9 7 9 7zm9 0-9 7 9 7z" fill="currentColor"/></>,
+  forward: <><path d="m3 5 9 7-9 7zm9 0 9 7-9 7z" fill="currentColor"/></>,
+  delete: <path d="M4 6h16M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7m4-7v7" fill="none" stroke="currentColor" strokeWidth="1.7"/>,
   upload: <><path d="M12 16V3m-5 5 5-5 5 5M4 16v5h16v-5" fill="none" stroke="currentColor" strokeWidth="1.7"/></>,
 };
 function IconButton({icon, label, ...props}) {
-  return <button type="button" className="onb-audio-icon" aria-label={label} title={label} {...props}><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">{icons[icon]}</svg></button>;
+  return <button type="button" className={`onb-audio-icon${icon==='record'?' onb-audio-record':''}`} aria-label={label} title={label} {...props}><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">{icons[icon]}</svg></button>;
 }
 
-export function OnboardingAudio({questionKey, token, demoApi, state = {}, saved, configured, onChange, onText, onActivity, children}) {
+export function OnboardingAudio({questionKey, token, demoApi, state = {}, saved, configured, onChange, onText, onActivity, onDelete, children}) {
   const [recording, setRecording] = useState('idle'), [playing, setPlaying] = useState(false);
   const [seconds, setSeconds] = useState(0), [busy, setBusy] = useState(false), [error, setError] = useState('');
   const [url, setUrl] = useState('');
+  const autoplay = useRef(false);
+  const [position,setPosition]=useState(0), [duration,setDuration]=useState(0);
   const recorder = useRef(null), stream = useRef(null), player = useRef(null), fileInput = useRef(null);
   const alive = useRef(true), chunks = useRef([]), current = useRef(state), change = useRef(onChange), text = useRef(onText);
   current.current = state; change.current = onChange; text.current = onText;
@@ -48,7 +53,7 @@ export function OnboardingAudio({questionKey, token, demoApi, state = {}, saved,
   useEffect(()=>{
     if(!pending)return;let active=true,timer;
     async function poll(){
-      try{const m=await api('/audio/'+uploaded.id);if(!active)return;
+      try{const m=await api('/audio/'+uploaded.id);if(!active||current.current.uploaded?.id!==uploaded.id)return;
         const latest=current.current;
         change.current({...latest,uploaded:m,delivered:latest.delivered||m.status==='ready'});
         if(m.status==='ready' && m.mode==='transcript' && !latest.delivered)text.current(m.transcript,m);
@@ -64,6 +69,7 @@ export function OnboardingAudio({questionKey, token, demoApi, state = {}, saved,
     change.current({mode,blob,name,uploaded:null,delivered:false});
   }
   async function record(){
+    if(recording==='paused'){recorder.current.resume();setRecording('recording');return;}
     if(busy||recording!=='idle')return;
     setBusy(true);setError('');
     try{
@@ -84,12 +90,21 @@ export function OnboardingAudio({questionKey, token, demoApi, state = {}, saved,
     else{player.current?.pause();setPlaying(false);}
   }
   async function play(){
-    if(recording==='paused'){recorder.current.resume();setRecording('recording');return;}
+    if(recording==='paused'){autoplay.current=true;recorder.current.stop();return;}
     try{await player.current.play();setPlaying(true);}catch{setError('Diese Datei kann hier nicht abgespielt werden. Sie können sie trotzdem hochladen.');}
   }
   function stop(){
     if(recording!=='idle'){recorder.current?.stop();}
-    else{player.current?.pause();if(player.current)player.current.currentTime=0;setPlaying(false);}
+    else{player.current?.pause();if(player.current)player.current.currentTime=0;setPosition(0);setPlaying(false);}
+  }
+  function seek(delta){const p=player.current;if(p)p.currentTime=Math.max(0,Math.min(Number.isFinite(p.duration)?p.duration:duration,p.currentTime+delta));}
+  async function remove(){
+    setBusy(true);setError('');
+    try{
+      if(uploaded){const result=await api('/audio/'+uploaded.id,'DELETE');onDelete?.(result.answer);}
+      player.current?.pause();setPlaying(false);setPosition(0);setDuration(0);
+      change.current({mode,uploaded:null,delivered:false});
+    }catch(e){setError(e.message);}finally{setBusy(false);}
   }
   async function upload(){
     if(!state.blob||busy)return;setBusy(true);setError('');
@@ -103,15 +118,21 @@ export function OnboardingAudio({questionKey, token, demoApi, state = {}, saved,
     <div className="onb-audio-mode" role="group" aria-label="Speichern als">{['transcript','audio'].map(m=><button key={m} type="button" aria-pressed={mode===m} disabled={busy||recording!=='idle'||!!pending} onClick={()=>{setError('');change.current({...state,mode:m,uploaded:null,delivered:false});}}>{m==='transcript'?'Transkript':'Audio'}</button>)}</div>
     {children}
     <div className="onb-audio-toolbar">
-      <IconButton icon="record" label="Aufnahme starten" disabled={!supportsRecording||busy||recording!=='idle'||!!pending} onClick={record}/>
-      <IconButton icon="play" label={recording==='paused'?'Aufnahme fortsetzen':'Audio abspielen'} disabled={busy||(recording!=='paused'&&(!url||recording!=='idle'||playing))} onClick={play}/>
+      <IconButton icon="record" label={recording==='paused'?'Aufnahme fortsetzen':'Aufnahme starten'} disabled={!supportsRecording||busy||recording==='recording'||!!pending} onClick={record}/>
+      <IconButton icon="play" label="Audio abspielen" disabled={busy||(recording!=='paused'&&(!url||recording!=='idle'||playing))} onClick={play}/>
       <IconButton icon="pause" label={recording==='recording'?'Aufnahme pausieren':'Wiedergabe pausieren'} disabled={busy||(recording!=='recording'&&!playing)} onClick={pause}/>
       <IconButton icon="stop" label="Stopp" disabled={busy||(recording==='idle'&&!url)} onClick={stop}/>
+      {url&&recording==='idle'&&<>
+        <IconButton icon="back" label="10 Sekunden zurück" disabled={busy} onClick={()=>seek(-10)}/>
+        <IconButton icon="forward" label="10 Sekunden vor" disabled={busy} onClick={()=>seek(10)}/>
+        <IconButton icon="delete" label="Aufnahme löschen" disabled={busy} onClick={remove}/>
+      </>}
       <IconButton icon="upload" label="Audiodatei auswählen" disabled={busy||recording!=='idle'||!!pending} onClick={()=>fileInput.current.click()}/>
       {recording!=='idle'&&<span role="status" className="onb-audio-timer">{Math.floor(seconds/60)}:{String(seconds%60).padStart(2,'0')}{recording==='paused'?' · Pause':''}</span>}
     </div>
     <input ref={fileInput} className="onb-sr-only" type="file" accept="audio/*,.m4a,.mp3,.wav,.ogg,.webm,.flac" aria-label="Audiodatei hochladen" onChange={e=>{if(e.target.files[0])selectBlob(e.target.files[0],e.target.files[0].name);e.target.value='';}}/>
-    <audio ref={player} src={url||undefined} onEnded={()=>setPlaying(false)}/>
+    <audio ref={player} src={url||undefined} onTimeUpdate={e=>setPosition(e.currentTarget.currentTime)} onLoadedMetadata={e=>{const d=e.currentTarget.duration;setDuration(Number.isFinite(d)?d:seconds);}} onCanPlay={()=>{if(autoplay.current){autoplay.current=false;play();}}} onEnded={()=>setPlaying(false)}/>
+    {url&&recording==='idle'&&<input className="onb-audio-seek" type="range" aria-label="Wiedergabeposition" min="0" max={duration||0} step="0.1" value={position} onChange={e=>{player.current.currentTime=Number(e.target.value);setPosition(Number(e.target.value));}}/>}
     <p className="onb-note">{mode==='audio'?'Original speichern · KI-Transkript zusätzlich': 'Nur Text speichern · Audio danach löschen'}{demoApi?' · Demo: nur lokal':' · Verarbeitung durch Deepgram'}</p>
     {state.blob&&<p className="onb-audio-file">{state.name||'Aufnahme'} · {state.blob.size < 1024*1024 ? Math.max(1,Math.round(state.blob.size/1024))+' KB' : (state.blob.size/1024/1024).toFixed(1)+' MB'}</p>}
     {state.blob&&!uploaded&&<button type="button" className="onb-audio-submit" disabled={busy||recording!=='idle'||(mode==='transcript'&&(!configured||!!demoApi))} onClick={upload}>{busy?'Wird übertragen …':mode==='audio'?'Audio übernehmen':'Transkript erstellen'}</button>}

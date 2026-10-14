@@ -88,3 +88,23 @@ def test_audio_survives_link_renewal_but_not_accessible_to_other_link(setup):
     assert web.get('/api/onboarding/audio/'+a['id']+'/content',headers=renewed).content==WAV
     assert web.get('/api/onboarding',headers=renewed).json()['answers']['B01.01']['value']=='Ein klares Ziel.'
     assert web.get('/api/onboarding/audio/'+a['id'],headers=h).status_code==401
+
+def test_delete_scoped_audio_preserves_text(setup):
+    web,f=setup;_,h=invite(web);_,other=invite(web,2);a=upload(web,h);path='/api/onboarding/audio/'+a['id']
+    assert web.delete(path,headers=other).status_code==404
+    web.put('/api/onboarding/answers/B01.01',headers=h,json={'audio_id':a['id'],'mode':'audio'})
+    run(f)
+    response=web.delete(path,headers=h)
+    assert response.status_code==200
+    assert response.json()['answer']['value']=='Ein klares Ziel.'
+    assert 'audio_id' not in response.json()['answer']
+    assert web.get(path+'/content',headers=h).status_code==404
+    with f() as s: assert s.get(Audio,a['id']) is None
+
+def test_deleted_pending_audio_cannot_publish(setup):
+    web,f=setup;_,h=invite(web);a=upload(web,h)
+    web.put('/api/onboarding/answers/B01.01',headers=h,json={'audio_id':a['id'],'mode':'audio'})
+    with f() as s: job=audio.claim(s)
+    assert web.delete('/api/onboarding/audio/'+a['id'],headers=h).json()['answer'] is None
+    audio.work(f,*job,invoke=lambda *a:('Should not appear',4))
+    assert 'B01.01' not in web.get('/api/onboarding',headers=h).json()['answers']

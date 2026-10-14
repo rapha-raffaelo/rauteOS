@@ -29,12 +29,14 @@ it('resumes saved answers, accepts tap choices and allows reviewing skipped answ
   expect(screen.getByText('Firma')).toBeTruthy();
 });
 it('shows sourced public prefills once and moves straight to the CEO questions after confirmation',async()=>{
-  const prefill=[{key:'A02.01',label:'Geschäftsfeld',value:'Public business',source_url:'https://example.org',source_title:'Website',researched_at:'2026-10-13T10:00:00Z'}];
+  const prefill=[...Array.from({length:4},(_,i)=>({key:'extra'+i,label:'Angabe '+i,value:'Inhalt '+i})),{key:'A02.01',label:'Geschäftsfeld',value:'Public business',source_url:'https://example.org',source_title:'Website',researched_at:'2026-10-13T10:00:00Z'}];
   global.fetch=vi.fn().mockImplementationOnce(()=>ok({...data,prefill,prefill_confirmed:false})).mockImplementationOnce(()=>ok({ok:true}));
   render(<OnboardingPage token="test"/>);
   fireEvent.click(await screen.findByText('Los geht’s'));
   expect(screen.getByText('Public business')).toBeTruthy();
-  expect(screen.getByText('Website ↗').getAttribute('href')).toBe('https://example.org');
+  expect(screen.queryByText('Website ↗')).toBeNull();
+  expect(screen.getByText('Inhalt 3')).toBeTruthy();
+  expect(document.querySelector('details')).toBeNull();
   fireEvent.click(screen.getByText('Angaben bearbeiten'));
   fireEvent.change(screen.getByLabelText('Geschäftsfeld'),{target:{value:'Corrected business'}});
   fireEvent.click(screen.getByText('Speichern & weiter'));

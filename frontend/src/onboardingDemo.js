@@ -18,6 +18,15 @@ export function createDemoApi(initial) {
     if(path.startsWith('/audio/')) {
       const url=new URL(path,'https://demo.local');
       const parts=url.pathname.split('/');
+      if(method==='DELETE') {
+        await audioStore('delete',parts[2]);
+        let answer=null;
+        for(const [id,a] of Object.entries(state.answers))if(a.audio_id===parts[2]){
+          if(a.value){answer={value:a.value,skipped:false};state.answers[id]=answer;}else delete state.answers[id];
+        }
+        state.completed=false;sessionStorage.setItem(key,JSON.stringify(state));
+        return {answer};
+      }
       if(method==='POST') {
         if(url.searchParams.get('mode')!=='audio')throw new Error('KI-Transkription ist nur über einen persönlichen Kundenlink verfügbar.');
         const id=crypto.randomUUID().replaceAll('-','');

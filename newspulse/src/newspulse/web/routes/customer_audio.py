@@ -6,7 +6,7 @@ from fastapi.responses import Response
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 from ... import customer_onboarding, onboarding_audio as audio
-from ...models import CustomerOnboardingAudio as Audio
+from ...models import CustomerOnboardingAudio as Audio, CustomerOnboardingInvite as Invite
 from ..app import get_db
 from ..mandates import mandate_or_404
 from .customer_onboarding import HEADERS, invite_for, result, commit
@@ -71,6 +71,26 @@ def status(identity: str, request: Request, session: Session = Depends(get_db)):
 def content(identity: str, request: Request, session: Session = Depends(get_db)):
     invite, _ = invite_for(request, session)
     return audio_response(media_for(session, invite, identity))
+
+
+@router.delete('/api/onboarding/audio/{identity}')
+def delete(identity: str, request: Request, session: Session = Depends(get_db)):
+    invite, _ = invite_for(request, session)
+    row = media_for(session, invite, identity)
+    for link in session.scalars(select(Invite).where(Invite.client_id == invite.client_id)):
+        answers = dict(link.answers)
+        for key, answer in list(answers.items()):
+            if answer.get('audio_id') != identity: continue
+            if answer.get('value'):
+                answers[key] = {k: v for k, v in answer.items() if k not in {'audio_id', 'mode'}}
+            else:
+                del answers[key]
+            link.answers = answers
+            link.completed_at = None
+    session.delete(row)
+    commit(session)
+    answer = invite.answers.get(row.question_key)
+    return result({'answer': {k:v for k,v in answer.items() if k != 'fact_id'} if answer else None})
 
 
 def retry_row(row, session):

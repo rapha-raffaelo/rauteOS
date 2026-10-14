@@ -39,3 +39,21 @@ it('retains a failed upload for retry and sends the scoped token',async()=>{
   expect(fetch.mock.calls[0][1].headers['X-Onboarding-Token']).toBe('test');
   expect(fetch.mock.calls[0][1].body).toBeInstanceOf(Blob);
 });
+it('plays a paused take instead of resuming recording, and deletes the take',async()=>{
+  render(<Harness/>);
+  fireEvent.click(screen.getByRole('button',{name:'Aufnahme starten'}));
+  fireEvent.click(await screen.findByRole('button',{name:'Aufnahme pausieren'}));
+  fireEvent.click(screen.getByRole('button',{name:'Audio abspielen'}));
+  expect(recorder.state).toBe('inactive');
+  const audio=document.querySelector('audio');
+  fireEvent.canPlay(audio);
+  await waitFor(()=>expect(audio.play).toHaveBeenCalled());
+  Object.defineProperty(audio,'duration',{value:60,configurable:true});
+  audio.currentTime=25;
+  fireEvent.click(screen.getByRole('button',{name:'10 Sekunden zurück'}));expect(audio.currentTime).toBe(15);
+  fireEvent.click(screen.getByRole('button',{name:'10 Sekunden vor'}));expect(audio.currentTime).toBe(25);
+  fireEvent.click(screen.getByRole('button',{name:'Wiedergabe pausieren'}));expect(audio.currentTime).toBe(25);
+  fireEvent.click(screen.getByRole('button',{name:'Stopp'}));expect(audio.currentTime).toBe(0);
+  fireEvent.click(screen.getByRole('button',{name:'Aufnahme löschen'}));
+  await waitFor(()=>expect(screen.queryByRole('button',{name:'Transkript erstellen'})).toBeNull());
+});
