@@ -55,6 +55,23 @@
        "Details im Log". Elf Fehler lesen sich wie elf Feed-Schluckaufe. Es war
        ein einziger, elfmal wiederholt, und er legt jede Modellfunktion zugleich
        still: Analyse, Impulse, Chancen, Profile, Sichtbarkeit. #}
+    {# Vorher warnen statt hinterher melden. Die Zugangsdatei trägt ihr eigenes
+       Ablaufdatum; im Fall vom Oktober 2026 stand dort der 23. September — die
+       Warnung wäre am 16. erschienen, der erste Ausfall war am 30. Vierzehn
+       Tage Vorlauf statt zwei Wochen Stille.
+
+       Steht erst, wenn noch nichts kaputt ist: sobald der Lauf tatsächlich
+       scheitert, sagt die Zeile darunter das Deutlichere, und zwei Meldungen
+       über dieselbe Sache nebeneinander sind eine zu viel. #}
+    {% set signin = signin_standing() %}
+    {% if signin.soon and not last_run.signin_expired %}
+      <span class="runwarn" title="{{ t('Danach wird nichts mehr analysiert — keine Impulse, keine Chancen, keine Profile. Erneuern: railway ssh, dann CLAUDE_CONFIG_DIR=/data/claude claude /login') }}">
+        {% if signin.days_left == 0 %}{{ t("Anmeldung läuft heute ab") }}
+        {% elif signin.days_left == 1 %}{{ t("Anmeldung läuft morgen ab") }}
+        {% else %}{{ t("Anmeldung läuft in %(days)s Tagen ab") | format(days=signin.days_left) }}{% endif %}
+      </span>
+      <span class="dot">·</span>
+    {% endif %}
     {% if last_run.signin_expired %}
       <span class="runstop" title="{{ t('Das Werkzeug kann sich nicht mehr bei Claude anmelden. Artikel werden weiter geholt, aber keiner wird analysiert — und es entstehen keine Impulse, Chancen oder Profile. Die Anmeldung erneuern: railway ssh, dann CLAUDE_CONFIG_DIR=/data/claude claude /login') }}">{{ t("Anmeldung abgelaufen — nichts wird analysiert") }}</span>
       {% if last_run.other_errors %}

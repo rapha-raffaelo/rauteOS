@@ -22,6 +22,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from .. import branding, config, gnews, i18n, onboarding
+from .. import signin
 from ..db import get_session
 from . import google_auth, navigation, origin, runlock
 from .auth import BasicAuthMiddleware, is_loopback, require_auth_for_public_bind
@@ -315,6 +316,7 @@ templates.env.globals["run_active"] = runlock.is_running
 templates.env.globals["shares_field"] = gnews.same_field
 templates.env.globals["translator"] = translator
 templates.env.globals["request_language"] = request_language
+templates.env.globals["signin_standing"] = signin.standing
 templates.env.globals["LANGUAGES"] = i18n.LANGUAGES
 # The sidebar lists the mandates on every page, so the roster is a global for
 # the same reason ``run_active`` is: the shared layout needs it and no route

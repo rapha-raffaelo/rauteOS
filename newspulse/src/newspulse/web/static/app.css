@@ -3012,3 +3012,8 @@ body:has([id^="react-"]) .content{padding-top:16px}
 /* Der Ersatz, falls die Datei fehlt. */
 .side__word { font-weight: 700; letter-spacing: -0.02em; font-size: 17px; }
 .side__plus { color: var(--tint); }
+
+/* Die Anmeldung läuft bald ab. Gelb und nicht rot: es ist noch nichts kaputt,
+   und wer eine Warnung in Alarmfarbe sieht, obwohl alles läuft, lernt die
+   Alarmfarbe zu übersehen. */
+.runwarn { color: var(--warn); font-weight: 600; }
