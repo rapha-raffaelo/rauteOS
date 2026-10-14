@@ -83,7 +83,7 @@ def test_audio_survives_link_renewal_but_not_accessible_to_other_link(setup):
         s.add(CustomerOnboardingJob(client_id=1,status='ready',invite_id=link['id']));s.commit()
     response=web.post('/client/1/onboarding-workflow/link',auth=('agency','test-password'))
     assert response.status_code==200
-    renewed={'X-Onboarding-Token':response.json()['path'].split('#')[1]}
+    renewed={'X-Onboarding-Token':response.json()['path'].split('#')[1].split('/')[0]}
     run(f)
     assert web.get('/api/onboarding/audio/'+a['id']+'/content',headers=renewed).content==WAV
     assert web.get('/api/onboarding',headers=renewed).json()['answers']['B01.01']['value']=='Ein klares Ziel.'

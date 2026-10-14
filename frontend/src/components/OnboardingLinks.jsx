@@ -23,11 +23,22 @@ export function OnboardingLinks({clientId}) {
     try{await request(path,method,body);setState(await request(base));setItems(await request(`/client/${clientId}/onboarding-invites`));}
     catch(e){setError(e.message);}finally{setBusy(false);}
   }
+  async function ensureLink(){
+    setBusy(true);setError('');setCopied(false);
+    try{
+      const next=await request(base+'/link/ensure','POST');setState(next);
+      setItems(await request(`/client/${clientId}/onboarding-invites`));
+      try{await navigator.clipboard.writeText(window.location.origin+next.path);setCopied(true);}
+      catch{setError('Link erstellt. Bitte im Textfeld kopieren.');}
+    }catch(e){setError(e.message);}finally{setBusy(false);}
+  }
   const link=state?.path?window.location.origin+state.path:'';
   const running=['queued','running'].includes(state?.status);
   const contact=state?.contact||{};
   return <section id="kunden-onboarding" className="profile-section" aria-labelledby="onboarding-links-title">
     <h2 id="onboarding-links-title">Kunden-Onboarding</h2>
+    <div className="platform-actions"><button type="button" className="btn btn-primary" disabled={busy} onClick={ensureLink}>{busy?'Link wird vorbereitet …':copied?'Link kopiert':link?'Onboarding-Link kopieren':'Onboarding-Link erstellen'}</button></div>
+    {link&&<div><label className="platform-field" style={{marginTop:16}}><span>Kundenlink</span><input readOnly value={link} onFocus={e=>e.target.select()}/></label><a href={link} target="_blank" rel="noopener noreferrer">Fragebogen öffnen ↗</a><p><small>Gültig bis {new Date(state.expires_at).toLocaleDateString('de-DE')}.</small></p></div>}
     {!state && !error && <p role="status">Status wird geladen …</p>}
     {running && <div role="status"><p><strong>{state.status==='queued'?'Recherche wartet auf den Start':state.stage}</strong></p><progress style={{width:'100%'}} aria-label="Recherchefortschritt" value={state.completed_batches||0} max={state.total_batches||1}/><p>{state.researched_fields||0} belegte Angaben · {state.sources||0} Quellen. Die Recherche läuft auch bei geschlossenem Browser weiter.</p></div>}
     {state?.status==='failed' && <div role="alert"><p>{state.note}</p><button disabled={busy} onClick={()=>act(base)}>Recherche fortsetzen</button></div>}
@@ -35,7 +46,7 @@ export function OnboardingLinks({clientId}) {
     {state?.status==='ready' && <>
       <p><strong>{state.completed?'Vom Kunden abgeschlossen':state.answered?'Kunde beantwortet den Fragebogen':'Bereit für den Kunden'}</strong></p>
       <p>{state.researched_fields} belegte Angaben · {state.sources} Quellen · {state.answered}/5 CEO-Antworten</p>
-      {link?<div><label>Kundenlink<input style={{width:'100%'}} readOnly value={link} onFocus={e=>e.target.select()}/></label><div className="platform-actions"><button onClick={async()=>{try{await navigator.clipboard.writeText(link);setCopied(true);}catch{setError('Bitte den Link im Textfeld markieren und kopieren.');}}}>{copied?'Kopiert':'Link kopieren'}</button><a href={link} target="_blank" rel="noopener noreferrer">Fragebogen öffnen</a></div><p><small>Gültig bis {new Date(state.expires_at).toLocaleDateString('de-DE')}. Der Link bleibt hier verfügbar. Wer ihn hat, kann den Fragebogen bearbeiten.</small></p></div>:<><p>Der bisherige Kundenlink ist abgelaufen oder deaktiviert.</p><button disabled={busy} onClick={()=>act(base+'/link')}>Neuen Link erstellen</button></>}
+
       <details><summary>Rechercheumfang</summary><p>{state.pages} Unternehmensseiten gelesen. {state.researched_fields} von {state.total_fields} öffentlichen Katalogfeldern konnten belegt werden. Nicht öffentlich belegbare Angaben bleiben offen. Die Quellen stehen bei den Aussagen im Profil.</p></details>
     </>}
     {state && <details><summary>Ansprechpartner{contact.contact_name?` · ${contact.contact_name}`:''}</summary>

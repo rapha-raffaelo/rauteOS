@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {OnboardingAudio} from './OnboardingAudio.jsx';
 
-export function OnboardingPage({ token = window.location.hash.slice(1), demoApi = null }) {
+export function OnboardingPage({ token = window.location.hash.slice(1).split('/')[0], demoApi = null }) {
   const [data, setData] = useState(null), [error, setError] = useState('');
   const [screen, setScreen] = useState('welcome'), [index, setIndex] = useState(0);
   const [draft, setDraft] = useState(''), [busy, setBusy] = useState(false);

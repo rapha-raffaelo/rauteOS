@@ -911,7 +911,7 @@ export function ProfilePage({ data: d, onData }) {
           "Wissen, Unternehmensangaben, Wettbewerb und Marktumfeld an einem Ort.",
         )}
       />
-      <OnboardingLinks clientId={d.client.id} />
+      <OnboardingLinks key={d.client.id} clientId={d.client.id} />
       <section id="wettbewerber" className="profile-section"><RivalManagement data={d.rivals} base={base}/></section>
       <section
         id="wissen"

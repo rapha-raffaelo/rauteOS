@@ -51,7 +51,7 @@ def test_create_research_link_customer_answer_end_to_end(setup):
     assert 'checkpoint' not in status and 'token' not in status
     path=status['path']
     assert path==web.get('/client/1/onboarding-workflow').json()['path']
-    header={'X-Onboarding-Token':path.split('#')[1]}
+    header={'X-Onboarding-Token':path.split('#')[1].split('/')[0]}
     customer=web.get('/api/onboarding',headers=header).json()
     assert customer['customer']=='Example AG'
     assert 'alex@example.org' not in str(customer)
@@ -68,7 +68,7 @@ def test_create_research_link_customer_answer_end_to_end(setup):
     renewed=web.post('/client/1/onboarding-workflow/link').json()['path']
     assert renewed!=path
     assert web.get('/api/onboarding',headers=header).status_code==401
-    resumed=web.get('/api/onboarding',headers={'X-Onboarding-Token':renewed.split('#')[1]}).json()
+    resumed=web.get('/api/onboarding',headers={'X-Onboarding-Token':renewed.split('#')[1].split('/')[0]}).json()
     assert resumed['answers']['B01.01']['value']=='CEO ambition'
 
 
@@ -153,3 +153,29 @@ def test_completed_empty_research_can_be_retried(setup):
         item=flow.claim(s)
     flow.work(factory,*item,crawl=lambda _:[],research=researched)
     assert web.get('/client/1/onboarding-workflow').json()['status']=='ready'
+
+
+def test_link_available_before_research_and_stable_after_research(setup):
+    web,factory=setup
+    create(web)
+    response=web.post('/client/1/onboarding-workflow/link/ensure')
+    assert response.status_code==200,response.text
+    path=response.json()['path']
+    assert path.endswith('/example-ag')
+    assert web.post('/client/1/onboarding-workflow/link/ensure').json()['path']==path
+    header={'X-Onboarding-Token':path.split('#')[1].split('/')[0]}
+    assert web.get('/api/onboarding',headers=header).status_code==200
+    with factory() as s: claimed=flow.claim(s)
+    flow.work(factory,*claimed,crawl=lambda _:[],research=researched)
+    assert web.get('/client/1/onboarding-workflow').json()['path']==path
+    assert len(web.get('/api/onboarding',headers=header).json()['prefill'])==2
+    with factory() as s:
+        assert len(list(s.scalars(select(CustomerOnboardingInvite))))==1
+        s.get(CustomerOnboardingInvite,1).expires_at=dt.datetime.now(dt.UTC)-dt.timedelta(seconds=1)
+        s.commit()
+    renewed=web.post('/client/1/onboarding-workflow/link/ensure').json()['path']
+    assert renewed!=path and renewed.endswith('/example-ag')
+
+
+def test_customer_name_slug():
+    assert flow.customer_link('token','Müller & Söhne GmbH').endswith('/mueller-soehne-gmbh')

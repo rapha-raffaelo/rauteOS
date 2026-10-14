@@ -80,3 +80,12 @@ it('retains a cleared answer when going back without requiring an answer or skip
   await screen.findByText('Wohin geht es?');
   expect(screen.getByLabelText('Ihre Antwort').value).toBe('Unfinished second answer');
 });
+
+it('reads the protected token from links ending in a customer name',async()=>{
+  window.location.hash='personal-token/example-ag';
+  global.fetch=vi.fn().mockImplementation(()=>ok(data));
+  render(<OnboardingPage/>);
+  await screen.findByText('Los geht’s');
+  expect(fetch.mock.calls[0][1].headers['X-Onboarding-Token']).toBe('personal-token');
+  window.location.hash='';
+});

@@ -65,8 +65,9 @@ def create_invite(client_id: int, session: Session = Depends(get_db)):
         expires_at=dt.datetime.now(dt.UTC) + dt.timedelta(days=14), answers={}, prefill=prefill)
     session.add(invite)
     commit(session)
+    from ...onboarding_workflow import customer_link
     # Fragment never travels in request URLs, server access logs or Referrer.
-    return result(dict(id=invite.id, path='/onboarding#' + token,
+    return result(dict(id=invite.id, path=customer_link(token, client.name),
                        expires_at=invite.expires_at.isoformat(), research_warning=warning,
                        missing_public_fields=missing, prefilled=len(prefill)))
 
@@ -255,16 +256,21 @@ def workflow_start(client_id: int, session: Session = Depends(get_db)):
     return JSONResponse(onboarding_workflow.status(session, client), status_code=202, headers=HEADERS)
 
 
+@router.post('/client/{client_id}/onboarding-workflow/link/ensure')
 @router.post('/client/{client_id}/onboarding-workflow/link')
-def workflow_link(client_id: int, session: Session = Depends(get_db)):
+def workflow_link(client_id: int, request: Request, session: Session = Depends(get_db)):
     from ... import onboarding_workflow
     from ...models import CustomerOnboardingJob
     client = mandate_or_404(session, client_id)
     job = session.get(CustomerOnboardingJob, client_id)
-    if not job or job.status != 'ready' or not client.active:
-        raise HTTPException(409, 'Bitte zuerst die Recherche abschließen.')
-    prefill, _, _ = customer_onboarding.prepare(session, client, research=False)
+    if not client.active:
+        raise HTTPException(409, 'Bitte das Mandat zuerst aktivieren.')
+    if not job:
+        job = onboarding_workflow.enqueue(session, client)
     previous = session.get(CustomerOnboardingInvite, job.invite_id) if job.invite_id else None
+    if request.url.path.endswith('/ensure') and onboarding_workflow.invite_path(previous):
+        return result(onboarding_workflow.status(session, client))
+    prefill, _, _ = customer_onboarding.prepare(session, client, research=False, allow_empty=True)
     invite = onboarding_workflow.issue_invite(session, client_id, prefill)
     if previous:
         # A renewed link resumes its predecessor's saved answers.

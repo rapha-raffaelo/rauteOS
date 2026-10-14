@@ -47,7 +47,7 @@ PUBLIC_SOURCES = {SourceType.WEBSITE, SourceType.MEDIA, SourceType.EXTERNAL_RESE
                   SourceType.STUDY, SourceType.PUBLIC_DATABASE}
 
 
-def prepare(session, client, *, research=True):
+def prepare(session, client, *, research=True, allow_empty=False):
     """Prepare before handing over a link; a customer GET never runs research.
 
     Fresh grounded research supplements explicitly public stored evidence. If the
@@ -95,7 +95,7 @@ def prepare(session, client, *, research=True):
         public[proposal.key] = dict(key=key, label=profile.FIELDS_BY_KEY[proposal.key].label,
             value=proposal.value, source_url=proposal.source_url, source_title=proposal.source_title,
             researched_at=now, fact_id=existing.id)
-    if not public:
+    if not public and not allow_empty:
         raise ValueError('Noch keine belegten öffentlichen Angaben vorhanden. Bitte Website und Recherche-Zugang prüfen und die Vorbereitung erneut starten. Es wurde kein Kundenlink erstellt.')
     missing = [f.label for f in profile.RESEARCHED if f.key not in public]
     ordered = [public[f.key] for f in profile.RESEARCHED if f.key in public]

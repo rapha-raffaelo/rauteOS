@@ -6,6 +6,8 @@ import hmac
 import logging
 import os
 import secrets
+import re
+import unicodedata
 import threading
 import tempfile
 from pathlib import Path
@@ -47,11 +49,18 @@ def invite_token(invite):
         f'raute-onboarding:{invite.id}:{invite.client_id}:{invite.expires_at.isoformat()}'.encode(), hashlib.sha256).digest()).decode().rstrip('=')
 
 
-def invite_path(invite):
+def customer_link(token, name):
+    name = name.lower().replace('ä', 'ae').replace('ö', 'oe').replace('ü', 'ue').replace('ß', 'ss')
+    name = unicodedata.normalize('NFKD', name).encode('ascii', 'ignore').decode()
+    slug = re.sub(r'[^a-z0-9]+', '-', name).strip('-')[:100].rstrip('-') or 'kunde'
+    return '/onboarding#' + token + '/' + slug
+
+
+def invite_path(invite, name='kunde'):
     if not invite or invite.revoked or invite.expires_at <= dt.datetime.now(dt.UTC): return None
     token = invite_token(invite)
     if not hmac.compare_digest(hashlib.sha256(token.encode()).hexdigest(), invite.token_hash): return None
-    return '/onboarding#' + token
+    return customer_link(token, name)
 
 
 def issue_invite(session, client_id, prefill):
@@ -148,7 +157,11 @@ def work(factory, identity, token, *, crawl=None, research=None):
             client = session.get(Client, identity)
             if not client.active or client.is_competitor: raise ValueError('Mandat ist nicht aktiv.')
             prefill, _, _ = customer_onboarding.prepare(session, client, research=False)
-            invite = issue_invite(session, identity, prefill)
+            invite = session.get(CustomerOnboardingInvite, job.invite_id) if job.invite_id else None
+            if not invite_path(invite):
+                invite = issue_invite(session, identity, prefill)
+            elif not invite.prefill_confirmed:
+                invite.prefill = prefill
             job.invite_id = invite.id; job.status = 'ready'; job.stage = 'Bereit für den Kunden'
             job.note = ''; job.lease_until = None
             session.commit()
@@ -175,7 +188,7 @@ def status(session, client):
         completed_batches=checkpoint.get('next_batch', 0), total_batches=len(onboarding_crawler.BATCHES),
         researched_fields=len(checkpoint.get('answered_keys', [])), total_fields=len(onboarding_crawler.PUBLIC_FIELDS),
         sources=len(checkpoint.get('sources', [])), pages=len(checkpoint.get('pages', [])),
-        path=invite_path(invite), invite_id=job.invite_id, expires_at=invite.expires_at.isoformat() if invite else None,
+        path=invite_path(invite, client.name), invite_id=job.invite_id, expires_at=invite.expires_at.isoformat() if invite else None,
         answered=sum(bool(a.get('value') or a.get('audio_id')) for a in invite.answers.values()) if invite else 0,
         completed=bool(invite and invite.completed_at), contact=contact)
 

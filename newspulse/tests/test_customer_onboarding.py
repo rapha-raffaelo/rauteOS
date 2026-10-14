@@ -34,7 +34,7 @@ def setup(monkeypatch):
 def invite(web, client=1):
     r=web.post(f'/client/{client}/onboarding-invites',auth=('agency','test-password'))
     assert r.status_code==200
-    return r.json(), {'X-Onboarding-Token':r.json()['path'].split('#')[1]}
+    return r.json(), {'X-Onboarding-Token':r.json()['path'].split('#')[1].split('/')[0]}
 
 
 def test_link_scope_resume_and_fact_provenance(setup):
@@ -173,7 +173,7 @@ def test_research_failure_blocks_empty_links_and_never_exposes_internal_data(set
     r=web.post('/client/1/onboarding-invites',auth=('agency','test-password'))
     assert r.status_code==200
     assert r.json()['research_warning']
-    header={'X-Onboarding-Token':r.json()['path'].split('#')[1]}
+    header={'X-Onboarding-Token':r.json()['path'].split('#')[1].split('/')[0]}
     snapshot=web.get('/api/onboarding',headers=header).json()
     assert 'Secret plans' not in str(snapshot)
     assert 'Public product' in str(snapshot)
