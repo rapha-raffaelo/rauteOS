@@ -629,9 +629,15 @@ def test_a_discarded_hook_keeps_its_state_across_a_recompute(web, session, manda
     """The contract a plan lives or dies by: a refusal that came back the next
     morning would train the reader to stop deciding."""
     signal = _signal(session, mandate, effective_at=_NOW + dt.timedelta(days=30))
+    # Der Monat kommt aus dem *lebenden* Fenster, nicht aus dem Datum des
+    # Signals. Die Seite zeigt sechs Monate ab heute; ein Hook im September 2026
+    # fiel am 1. Oktober hinten heraus, und dieser Test schlug von da an jeden
+    # Tag fehl — nicht weil etwas kaputt war, sondern weil er gegen eine feste
+    # Vergangenheit sät und gegen die Wanduhr prüft. Das Signal behält sein
+    # eigenes Datum: es ist der Beleg, nicht der Platz im Plan.
     hook = _hook(
         session, mandate, source_kind=HookSource.MARKTSIGNAL, source_id=signal.id,
-        month=plan.month_key(signal.effective_at),
+        month=_window()[0],
     )
     web.post(f"/client/{mandate.id}/plan/{hook.id}/verwerfen", follow_redirects=False)
 

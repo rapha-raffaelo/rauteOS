@@ -14,25 +14,25 @@
      hx-swap="outerHTML"
      {% endif %}>
   {# The viewed day on Today; the current day on every other page. #}
-  {{ (day if day is defined else header_date) | de_long_date }}<br>
+  {{ (day if day is defined else header_date) | de_long_date(request_language(request)) }}<br>
   {% if run_active() %}
     {# The one state the header could never show before: the runs row is written
        when a sweep finishes, so "in progress" had to come from the process lock. #}
     <span class="runbusy"><span class="spinner" aria-hidden="true"></span>{{ t("Aktualisierung läuft…") }}</span>
     {% if last_run %}
       <span class="dot">·</span>
-      <span class="runstale">{{ t("Stand von") }} {{ last_run.ran_at | de_when }}</span>
+      <span class="runstale">{{ t("Stand von") }} {{ last_run.ran_at | de_when(request_language(request)) }}</span>
     {% endif %}
   {% elif last_run and last_run.status == "import" %}
     {# Not a sweep: the archive was filled by a mandate's onboarding backfill.
        Saying "Letzter Lauf" here would name a thing that never happened, and
        saying "Noch kein Lauf" above thirty imported articles reads as broken. #}
-    {{ t("Erst-Import") }} {{ last_run.ran_at | de_when }}
+    {{ t("Erst-Import") }} {{ last_run.ran_at | de_when(request_language(request)) }}
     <span class="dot">·</span> {{ last_run.articles_checked }} {{ t("Artikel") }}
     <span class="dot">·</span>
     <span class="runempty">{{ t("noch kein täglicher Lauf") }}</span>
   {% elif last_run %}
-    {{ t("Letzter Lauf") }} {{ last_run.ran_at | de_when }}
+    {{ t("Letzter Lauf") }} {{ last_run.ran_at | de_when(request_language(request)) }}
     {# A sweep is meant to happen every morning. When one has not, that is the
        most important thing on the page and the header is where it is read: a
        portfolio of zeros under "Lauf ok" reads as a quiet week, not as a tool
@@ -48,7 +48,37 @@
        their feed subscriptions. And "Artikel geprüft" was the count of articles
        newly *stored* — zero on a day where every feed was fetched and every item
        turned out to be a duplicate, which reads as "nothing was checked". #}
-    {% if last_run.feed_errors == 0 %}
+    {# Die abgelaufene Anmeldung ist kein Grad von "Fehler", sondern ein anderer
+       Zustand, und sie kommt zuerst. Gemessen am 13.10.2026: vierzehn Läufe in
+       Folge gescheitert, seit dem 30. September, 3154 Artikel unanalysiert — und
+       in der Kopfzeile stand "11 Fehler im Nachrichtenlauf" mit dem Hinweis
+       "Details im Log". Elf Fehler lesen sich wie elf Feed-Schluckaufe. Es war
+       ein einziger, elfmal wiederholt, und er legt jede Modellfunktion zugleich
+       still: Analyse, Impulse, Chancen, Profile, Sichtbarkeit. #}
+    {# Vorher warnen statt hinterher melden. Die Zugangsdatei trägt ihr eigenes
+       Ablaufdatum; im Fall vom Oktober 2026 stand dort der 23. September — die
+       Warnung wäre am 16. erschienen, der erste Ausfall war am 30. Vierzehn
+       Tage Vorlauf statt zwei Wochen Stille.
+
+       Steht erst, wenn noch nichts kaputt ist: sobald der Lauf tatsächlich
+       scheitert, sagt die Zeile darunter das Deutlichere, und zwei Meldungen
+       über dieselbe Sache nebeneinander sind eine zu viel. #}
+    {% set signin = signin_standing() %}
+    {% if signin.soon and not last_run.signin_expired %}
+      <span class="runwarn" title="{{ t('Danach wird nichts mehr analysiert — keine Impulse, keine Chancen, keine Profile. Erneuern: railway ssh, dann CLAUDE_CONFIG_DIR=/data/claude claude /login') }}">
+        {% if signin.days_left == 0 %}{{ t("Anmeldung läuft heute ab") }}
+        {% elif signin.days_left == 1 %}{{ t("Anmeldung läuft morgen ab") }}
+        {% else %}{{ t("Anmeldung läuft in %(days)s Tagen ab") | format(days=signin.days_left) }}{% endif %}
+      </span>
+      <span class="dot">·</span>
+    {% endif %}
+    {% if last_run.signin_expired %}
+      <span class="runstop" title="{{ t('Das Werkzeug kann sich nicht mehr bei Claude anmelden. Artikel werden weiter geholt, aber keiner wird analysiert — und es entstehen keine Impulse, Chancen oder Profile. Die Anmeldung erneuern: railway ssh, dann CLAUDE_CONFIG_DIR=/data/claude claude /login') }}">{{ t("Anmeldung abgelaufen — nichts wird analysiert") }}</span>
+      {% if last_run.other_errors %}
+        <span class="dot">·</span>
+        <span class="runbad">{{ last_run.other_errors }} {{ t("weitere Fehler") }}</span>
+      {% endif %}
+    {% elif last_run.feed_errors == 0 %}
       <span class="runok">{{ t("Lauf ok") }}</span>
     {% else %}
       <span class="runbad" title="{{ t('Fehler aus Feed-Abruf, Zuordnung oder Analyse — Details im Log') }}">{{ last_run.feed_errors }} {{ t("Fehler im Nachrichtenlauf") }}</span>

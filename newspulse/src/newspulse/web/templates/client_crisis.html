@@ -39,7 +39,7 @@
     </div>
     <h1 class="kbar__t">{{ crisis.article.title }}</h1>
     <p class="kbar__m">
-      {{ t("Erklärt von") }} {{ crisis.declared_by }} {{ t("um") }} {{ crisis.declared_at | de_when }}.
+      {{ t("Erklärt von") }} {{ crisis.declared_by }} {{ t("um") }} {{ crisis.declared_at | de_when(request_language(request)) }}.
       {% if crisis.closed_at %}
         {{ t("Grund der Schließung:") }} {{ crisis.close_reason }}
       {% else %}
@@ -120,7 +120,7 @@
             {% if loop.first and story.is_syndicated %}
               <span class="kpill">{{ story.pickup_count }} {{ t("Aufgriffe") }}</span>
             {% endif %}
-            <span class="kcard__time">{{ row.published_at | de_when }}</span>
+            <span class="kcard__time">{{ row.published_at | de_when(request_language(request)) }}</span>
           </div>
           <p class="kcard__t">{{ row.headline }}</p>
           {% if row.summary %}<p class="kcard__d">{{ row.summary }}</p>{% endif %}
@@ -182,7 +182,7 @@
             <span class="kpill kpill--ok">{{ t("Geprüft") }}</span>
           {% endif %}
           {% if view.released %}<span class="kpill kpill--ok">{{ t("Freigegeben") }}</span>{% endif %}
-          <span class="kcard__time">{{ (view.released_at or view.generated_at) | de_when }}</span>
+          <span class="kcard__time">{{ (view.released_at or view.generated_at) | de_when(request_language(request)) }}</span>
         </div>
         <p class="kcard__q">{{ view.body }}</p>
         {% if view.speaker %}
@@ -202,7 +202,7 @@
           {% else %}
             <span class="kpill">{{ t("keine Frist genannt") }}</span>
           {% endif %}
-          <span class="kcard__time">{{ view.received_at | de_when }}</span>
+          <span class="kcard__time">{{ view.received_at | de_when(request_language(request)) }}</span>
         </div>
         <p class="kcard__d">{{ view.snippet }}</p>
       </article>

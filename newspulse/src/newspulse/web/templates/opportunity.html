@@ -47,7 +47,7 @@
           {% else %}{{ t("Fenster läuft aus") }}{% endif %}
         </span>
       {% endif %}
-      <span class="chip">{{ t("Erkannt") }} {{ opp.created_at | de_when }}</span>
+      <span class="chip">{{ t("Erkannt") }} {{ opp.created_at | de_when(request_language(request)) }}</span>
     </div>
   </div>
   <div class="dhd__r">

@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-from ... import desk, workspaces
+from ... import asset_edit, desk, workspaces
 from ...models import Client, Asset, Outreach, ClientAction, Report, OpportunityWorkspace, OpportunityEvent
 from .. import frontend
 from ..app import get_db, templates
@@ -38,12 +38,17 @@ def client_page(client_id: int, request: Request, session: Session = Depends(get
     return render(request, session, request.url.path.rsplit('/', 1)[-1], mandate_or_404(session, client_id))
 
 
-def texts(session, client_id=None, released_only=False):
+def texts(session, client_id=None, released_only=False, archived=False):
     items = []
     for kind, model in [('asset', Asset), ('outreach', Outreach)]:
         query = select(model, Client.name).join(Client, Client.id == model.client_id).where(Client.is_competitor.is_(False))
         if released_only:
             query = query.where(model.released_at.is_not(None))
+        # Archiviertes fällt aus der Liste, bleibt aber in der Datenbank und
+        # über seinen Link erreichbar. Nur Assets kennen die Spalte; ein
+        # Anschreiben wird nicht archiviert, es hat seinen eigenen Verlauf.
+        if model is Asset and not archived:
+            query = query.where(model.archived_at.is_(None))
         if client_id is not None:
             query = query.where(model.client_id == client_id)
         for row, name in session.execute(query.order_by(model.generated_at.desc()).limit(100)):
@@ -57,6 +62,11 @@ def texts(session, client_id=None, released_only=False):
                 title=row.title if kind == 'asset' else row.subject,
                 format=row.kind if kind == 'asset' else 'pitch', generated_at=row.generated_at,
                 released_at=row.released_at,
+                # Ob der Text noch bearbeitet und gelöscht werden darf. Die
+                # Oberfläche soll diese Regel nicht aus released_at nachbauen —
+                # sie steht in asset_edit und wird hier einmal ausgewertet.
+                editable=kind == 'asset' and row.released_at is None,
+                archived_at=getattr(row, 'archived_at', None),
                 href=href))
     return sorted(items, key=lambda r: r['generated_at'], reverse=True)[:100]
 
@@ -163,3 +173,46 @@ def delete_client(client_id: int, body: ClientDeleteInput, session: Session = De
         raise HTTPException(409, 'Der Mandantenname wurde inzwischen geändert. Bitte die Liste neu laden.')
     deactivate_client(session, client_id)
     return dict(id=client.id, deleted=True)
+
+
+class AssetEdit(BaseModel):
+    title: str = ""
+    body: str
+
+
+def _asset_or_404(session: Session, asset_id: int) -> Asset:
+    row = session.get(Asset, asset_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Text nicht gefunden")
+    return row
+
+
+@router.put('/api/v1/workbench/assets/{asset_id}')
+def edit_asset(asset_id: int, body: AssetEdit, session: Session = Depends(get_db)):
+    """Einen Entwurf ändern. Freigegebene Texte lehnt der Dienst ab."""
+    row = _asset_or_404(session, asset_id)
+    try:
+        asset_edit.edit(session, row, title=body.title, body=body.body)
+    except asset_edit.Refused as exc:
+        # 409 und nicht 403: es fehlt keine Berechtigung, der Text ist in einem
+        # Zustand, in dem die Handlung nicht vorgesehen ist.
+        raise HTTPException(status_code=409, detail=str(exc)) from None
+    return {'ok': True}
+
+
+@router.delete('/api/v1/workbench/assets/{asset_id}')
+def delete_asset(asset_id: int, session: Session = Depends(get_db)):
+    """Einen Entwurf löschen. Endgültig, und nur einen Entwurf."""
+    row = _asset_or_404(session, asset_id)
+    try:
+        asset_edit.delete(session, row)
+    except asset_edit.Refused as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from None
+    return {'ok': True}
+
+
+@router.post('/api/v1/workbench/assets/{asset_id}/archive')
+def archive_asset(asset_id: int, session: Session = Depends(get_db)):
+    """Aus der Liste nehmen, ohne zu verlieren — der Weg für freigegebene Texte."""
+    asset_edit.archive(session, _asset_or_404(session, asset_id))
+    return {'ok': True}

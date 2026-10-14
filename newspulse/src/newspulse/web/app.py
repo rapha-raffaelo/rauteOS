@@ -22,6 +22,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from .. import branding, config, gnews, i18n, onboarding
+from .. import signin
 from ..db import get_session
 from . import google_auth, navigation, origin, runlock
 from .auth import BasicAuthMiddleware, is_loopback, require_auth_for_public_bind
@@ -90,8 +91,39 @@ _DE_MONTHS = (
 )
 
 
-def de_long_date(value: dt.date | dt.datetime) -> str:
-    """Format a date the way the header shows it: ``Mittwoch, 22. Juli 2026``."""
+#: Dieselben Namen auf Englisch. Von Hand und nicht über ``locale``: das
+#: Setzen einer Locale ist prozessweit und wirkt in jeden Thread hinein, und
+#: welche Locales in einem Container überhaupt erzeugt sind, weiss man nicht.
+_EN_WEEKDAYS = (
+    "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday",
+)
+_EN_MONTHS = (
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
+)
+
+
+def de_long_date(value: dt.date | dt.datetime, lang: str = "de") -> str:
+    """Das Datum, wie die Kopfzeile es zeigt: ``Mittwoch, 22. Juli 2026``.
+
+    Und auf Englisch ``Wednesday, 22 July 2026``. Der Name des Filters ist
+    geblieben, obwohl er jetzt beides kann: ihn umzubenennen hiesse, ihn von
+    seinen sechs numerischen Geschwistern (``de_date``, ``de_short_date`` …)
+    zu trennen, die tatsächlich deutsche Schreibweise sind und es bleiben.
+
+    Gefunden am 13.10.2026 durch einen roten Test: in der Kopfzeile einer
+    englischen Seite stand "Dienstag, 13. Oktober 2026". Das fiel niemandem auf,
+    solange der Monatsname auf beiden Sprachen gleich anfing — "Januar/January",
+    "August/August" —, und fiel in dem Moment auf, in dem er es nicht mehr tat.
+    Ein halb übersetztes Werkzeug sieht nicht halb fertig aus, sondern kaputt.
+    """
+    if lang == "en":
+        # Ohne Punkt nach dem Tag und ohne Komma davor: britische Schreibweise,
+        # weil der Rest der englischen Oberfläche sie auch verwendet.
+        return (
+            f"{_EN_WEEKDAYS[value.weekday()]}, {value.day} "
+            f"{_EN_MONTHS[value.month - 1]} {value.year}"
+        )
     return (
         f"{_DE_WEEKDAYS[value.weekday()]}, {value.day}. "
         f"{_DE_MONTHS[value.month - 1]} {value.year}"
@@ -140,7 +172,7 @@ def de_date(value: dt.datetime) -> str:
     return _local(value).strftime("%d.%m.%Y")
 
 
-def de_when(value: dt.datetime) -> str:
+def de_when(value: dt.datetime, lang: str = "de") -> str:
     """A timestamp as the header has to read it: the clock alone only for today.
 
     The header prints the reader's date on one line and the last sweep on the
@@ -155,6 +187,14 @@ def de_when(value: dt.datetime) -> str:
     """
     local = _local(value)
     days = (dt.datetime.now(config.local_zone()).date() - local.date()).days
+    if lang == "en":
+        # Kein "Uhr" und kein "gestern" auf einer englischen Seite — dieselbe
+        # Hälfte des Fehlers wie in :func:`de_long_date`.
+        if days <= 0:
+            return f"{local:%H:%M}"
+        if days == 1:
+            return f"yesterday {local:%H:%M}"
+        return f"{local:%d/%m}, {local:%H:%M}"
     if days <= 0:
         return f"{local:%H:%M} Uhr"
     if days == 1:
@@ -276,6 +316,7 @@ templates.env.globals["run_active"] = runlock.is_running
 templates.env.globals["shares_field"] = gnews.same_field
 templates.env.globals["translator"] = translator
 templates.env.globals["request_language"] = request_language
+templates.env.globals["signin_standing"] = signin.standing
 templates.env.globals["LANGUAGES"] = i18n.LANGUAGES
 # The sidebar lists the mandates on every page, so the roster is a global for
 # the same reason ``run_active`` is: the shared layout needs it and no route
@@ -290,6 +331,43 @@ templates.env.globals["signed_in_as"] = lambda request: request.scope.get("user_
 templates.env.globals["google_login_active"] = google_auth.is_configured
 templates.env.filters["monogram"] = branding.monogram
 templates.env.filters["brand_colour"] = branding.colour
+
+
+class _CachedStatic(StaticFiles):
+    """Statische Dateien mit einer Cache-Anweisung, nicht nur mit einem ETag.
+
+    Gemessen am 13.10.2026 an der Produktion: die Antwort trug ein ETag und
+    *kein* ``Cache-Control``. Damit fragt der Browser bei jedem Seitenwechsel
+    jede Datei erneut nach und wartet auf je eine 304-Antwort — app.css mit
+    156 kB, jsx-runtime mit 214 kB, platform mit 50 kB, dazu der Chunk der
+    Seite. Der Server antwortet in 40 ms; die Zeit, die beim Durchklicken
+    spürbar ist, verging im Warten auf diese Rückfragen.
+
+    Zwei Klassen von Dateien, zwei Antworten:
+
+    * **Namen mit Inhalts-Hash** (``platform-D-D-sGf3.js``, wie Vite sie baut)
+      dürfen ein Jahr lang unverändert liegen bleiben. Ändert sich der Inhalt,
+      ändert sich der Name — ``immutable`` sagt dem Browser genau das, und er
+      fragt nicht einmal mehr nach.
+    * **alles übrige** (``app.css``, Schriften, Bilder) bekommt eine kurze
+      Frist. Hier trägt nicht der Name den Stand, sondern die Abfrage dahinter
+      (:func:`asset_version`), und eine Stunde ist kurz genug, dass ein
+      vergessener Versionsparameter nicht zum Tagesproblem wird.
+    """
+
+    #: Ein Vite-Dateiname: Name, Bindestrich, acht und mehr Zeichen aus dem
+    #: Hash-Alphabet, Endung. Absichtlich eng — eine Datei, die *nicht* so
+    #: heisst, ein Jahr lang festzuschreiben, ist der teure Fehler.
+    _HASHED = re.compile(r"-[A-Za-z0-9_-]{8,}\.[a-z0-9]+$")
+
+    def file_response(self, *args, **kwargs):  # type: ignore[override]
+        response = super().file_response(*args, **kwargs)
+        path = str(getattr(response, "path", "") or "")
+        if self._HASHED.search(path):
+            response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        else:
+            response.headers["Cache-Control"] = "public, max-age=3600"
+        return response
 
 
 def asset_version(name: str) -> str:
@@ -357,7 +435,7 @@ def create_app() -> FastAPI:
     # Added after the auth middleware, so it runs *before* it: a cross-site
     # write is refused without the app having to work out who is asking.
     app.add_middleware(origin.SameOriginMiddleware)
-    app.mount("/static", StaticFiles(directory=str(_STATIC_DIR)), name="static")
+    app.mount("/static", _CachedStatic(directory=str(_STATIC_DIR)), name="static")
 
     # Imported here (not at module top) to avoid a circular import: the route
     # modules import ``get_db``/``templates`` from this module.

@@ -293,3 +293,66 @@
 @media(min-width:1600px){.raute-ui .asset-review-layout{grid-template-columns:minmax(0,1.5fr) minmax(240px,1fr)}}
 @media(max-width:900px){.raute-ui .opportunity-layout{grid-template-columns:1fr}.raute-ui .opportunity-layout>aside .journalist-roster{max-height:220px;overflow:auto}.raute-ui .profile-fact-sheet{grid-template-columns:1fr}}
 @media(max-width:600px){.raute-ui .profile-knowledge{padding:16px}.raute-ui .workspace-writing{padding:16px}.raute-ui .twin-field-head{flex-direction:row;align-items:center}.raute-ui .twin-field-head>.btn{max-width:100px;white-space:normal;font-size:12px;min-height:44px}.raute-ui .profile-fold>summary{padding:18px;gap:12px}.raute-ui .profile-fold>summary>span:last-of-type{display:none}.raute-ui .opportunity-workspace>details>summary>span{margin-left:24px;width:100%}.raute-ui .editor-actions .btn,.raute-ui .format-choices>button{min-height:44px}.raute-ui .workspace-links{gap:4px 16px}.raute-ui .workspace-links a{min-height:40px;display:flex;align-items:center}}
+
+/* --- Die ganze Mandantenkachel ist das Ziel ----------------------------------
+   "bearbeitung sollte passieren wenn ich auf die Kachel drücke, nicht wenn ich
+   unten den kleinen Pfeil klicke oder?" — ja. Ein zwölf Pixel breites Dreieck
+   ist kein Klickziel, und der Name daneben ist auch nur eine Zeile hoch,
+   während darunter 250 Pixel Kachel liegen, die nichts tun.
+
+   Gelöst über den Namenslink, nicht über einen Klick-Handler auf der Kachel:
+   ein Handler bricht Mittelklick, "in neuem Tab öffnen", Ziehen und die
+   Tastaturbedienung. Der Link bleibt genau ein Link — sein ::after wird nur
+   über die Kachel gelegt. */
+.raute-ui .workbench-list .client-card { position: relative; }
+.raute-ui .client-card h2 a::after {
+  content: ""; position: absolute; inset: 0; border-radius: 12px;
+}
+/* Die Fusszeile liegt darüber, sonst verschluckt die Fläche "Verwalten". */
+.raute-ui .client-card-footer { position: relative; z-index: 1; background: inherit; }
+/* Die Kachel zeigt beim Zeigen, dass sie anfassbar ist — nicht nur der Rand. */
+.raute-ui .client-card:hover { cursor: pointer; }
+.raute-ui .client-card:hover h2 a { color: var(--tint); }
+/* Tastatur: der Fokus sitzt auf dem Link, sichtbar wird die ganze Kachel. */
+.raute-ui .client-card:focus-within { border-color: var(--tint); }
+.raute-ui .client-card h2 a:focus-visible { outline: none; }
+.raute-ui .client-card:focus-within h2 a { text-decoration: underline; }
+
+/* "Verwalten" wird ein richtiges Ziel statt eines Dreiecks: volle Zeilenhöhe,
+   eigener Rahmen beim Zeigen. Es bleibt die zweite Handlung — die erste ist
+   jetzt die Kachel selbst. */
+.raute-ui .client-card-actions > summary {
+  list-style: none; cursor: pointer; display: inline-flex; align-items: center;
+  gap: 6px; min-height: 30px; padding: 4px 10px; border-radius: 7px;
+  font-size: 11px; color: var(--muted);
+}
+.raute-ui .client-card-actions > summary::-webkit-details-marker { display: none; }
+.raute-ui .client-card-actions > summary::before {
+  content: ""; width: 0; height: 0; flex: none;
+  border-left: 4px solid currentColor;
+  border-top: 3.5px solid transparent; border-bottom: 3.5px solid transparent;
+  transition: transform .15s ease;
+}
+.raute-ui .client-card-actions[open] > summary::before { transform: rotate(90deg); }
+.raute-ui .client-card-actions > summary:hover { background: var(--ground); color: var(--ink); }
+
+/* --- Verwalten auf der Asset-Karte -------------------------------------------
+   Zwei Fälle, zwei Angebote: ein Entwurf lässt sich bearbeiten und löschen, ein
+   freigegebener Text nur archivieren. Welcher Fall vorliegt, sagt die Liste
+   (`editable`) — die Oberfläche leitet es nicht aus dem Datum her. */
+.raute-ui .asset-actions {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px;
+  margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line);
+}
+.raute-ui .asset-action {
+  font: inherit; font-size: 11px; color: var(--muted);
+  background: transparent; border: 1px solid transparent; border-radius: 7px;
+  padding: 4px 9px; min-height: 28px; cursor: pointer;
+}
+.raute-ui .asset-action:hover { background: var(--ground); color: var(--ink); }
+/* Löschen trägt seine Farbe erst beim Zeigen — rot in der Ruhelage macht aus
+   jeder Karte eine Warnung. */
+.raute-ui .asset-action--stop:hover { background: var(--alert-wash, #fdecee); color: var(--alert); }
+.raute-ui .asset-confirm { font-size: 11px; color: var(--alert); font-weight: 600; }
+.raute-ui .asset-error { font-size: 11px; color: var(--alert); flex-basis: 100%; }
+.raute-ui .asset-date { font-size: 11px; color: var(--muted); }

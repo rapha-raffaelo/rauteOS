@@ -31,6 +31,21 @@ COOKIE_MAX_AGE = 60 * 60 * 24 * 365
 
 # German source string -> English. Ordered roughly by where it appears.
 _EN: dict[str, str] = {
+    "Anmeldung läuft heute ab": "Sign-in expires today",
+    "Anmeldung läuft morgen ab": "Sign-in expires tomorrow",
+    "Anmeldung läuft in %(days)s Tagen ab": "Sign-in expires in %(days)s days",
+    "Danach wird nichts mehr analysiert — keine Impulse, keine Chancen, keine Profile. Erneuern: railway ssh, dann CLAUDE_CONFIG_DIR=/data/claude claude /login":
+        "After that nothing is analysed \u2014 no impulses, no opportunities, no "
+        "profiles. To renew: railway ssh, then "
+        "CLAUDE_CONFIG_DIR=/data/claude claude /login",
+    "Anmeldung abgelaufen — nichts wird analysiert":
+        "Sign-in expired \u2014 nothing is being analysed",
+    "weitere Fehler": "further errors",
+    "Das Werkzeug kann sich nicht mehr bei Claude anmelden. Artikel werden weiter geholt, aber keiner wird analysiert — und es entstehen keine Impulse, Chancen oder Profile. Die Anmeldung erneuern: railway ssh, dann CLAUDE_CONFIG_DIR=/data/claude claude /login":
+        "The tool can no longer sign in to Claude. Articles are still fetched, but "
+        "none are analysed \u2014 and no impulses, opportunities or profiles are "
+        "produced. To renew: railway ssh, then "
+        "CLAUDE_CONFIG_DIR=/data/claude claude /login",
     "Standardfrage": "Default question",
     "Wird bei jeder Messung automatisch verwendet": "Used automatically for every measurement",
     "Diese Frage bestimmt, in welchem Markt wir die Sichtbarkeit messen. Weitere Fragen sind optional.": "This question defines the market in which visibility is measured. Additional questions are optional.",
