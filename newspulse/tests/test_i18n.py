@@ -7,6 +7,8 @@ tests check both the lookup and that real pages actually change.
 
 from __future__ import annotations
 
+import datetime as dt
+
 from react_render import rendered
 
 import pytest
@@ -256,3 +258,59 @@ def test_no_german_source_string_is_translated_twice():
     )
     counted = collections.Counter(ast.literal_eval(key) for key in table.value.keys)
     assert [word for word, times in counted.items() if times > 1] == []
+
+
+# --- Das Datum spricht die Sprache der Seite ---------------------------------------
+#
+# Gefunden am 13.10.2026 durch einen roten Test: in der Kopfzeile einer
+# englischen Seite stand "Dienstag, 13. Oktober 2026". Das fiel niemandem auf,
+# solange der Monatsname in beiden Sprachen gleich anfing — "Januar/January",
+# "August/August" — und fiel in dem Moment auf, in dem er es nicht mehr tat.
+#
+# Ein halb übersetztes Werkzeug sieht nicht halb fertig aus, sondern kaputt.
+
+
+def test_the_long_date_speaks_the_page_language():
+    from newspulse.web.app import de_long_date
+
+    day = dt.date(2026, 10, 13)
+
+    assert de_long_date(day) == "Dienstag, 13. Oktober 2026"
+    assert de_long_date(day, "en") == "Tuesday, 13 October 2026"
+
+
+def test_every_month_is_named_in_english_on_an_english_page():
+    """Jeder Monat, nicht nur Oktober. Geprüft wird, was dastehen *soll*, nicht
+    bloss was nicht dastehen darf: vier Monate heissen in beiden Sprachen gleich
+    (April, August, September, November), und eine Prüfung auf "kein deutsches
+    Wort" würde genau die durchwinken, bei denen nichts zu prüfen ist, und
+    genau die melden, bei denen nichts falsch ist."""
+    from newspulse.web.app import de_long_date
+
+    expected = ["January", "February", "March", "April", "May", "June", "July",
+                "August", "September", "October", "November", "December"]
+    for index, name in enumerate(expected, start=1):
+        assert de_long_date(dt.date(2026, index, 15), "en").endswith(f" {name} 2026")
+
+
+def test_no_german_weekday_reaches_an_english_page():
+    from newspulse.web.app import de_long_date
+
+    german = {"Montag,", "Dienstag,", "Mittwoch,", "Donnerstag,",
+              "Freitag,", "Samstag,", "Sonntag,"}
+    for day in range(12, 19):  # eine volle Woche
+        english = de_long_date(dt.date(2026, 10, day), "en")
+        assert english.split()[0] not in german, english
+
+
+def test_the_clock_line_drops_its_german_words():
+    """Dieselbe Hälfte des Fehlers: "Uhr" und "gestern" stehen auf einer
+    englischen Seite genauso falsch wie "Oktober"."""
+    from newspulse.web.app import de_when
+
+    now = dt.datetime.now(dt.UTC)
+
+    assert "Uhr" in de_when(now)
+    assert "Uhr" not in de_when(now, "en")
+    assert "gestern" not in de_when(now - dt.timedelta(days=1), "en")
+    assert "yesterday" in de_when(now - dt.timedelta(days=1), "en")

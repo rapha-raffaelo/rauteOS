@@ -90,8 +90,39 @@ _DE_MONTHS = (
 )
 
 
-def de_long_date(value: dt.date | dt.datetime) -> str:
-    """Format a date the way the header shows it: ``Mittwoch, 22. Juli 2026``."""
+#: Dieselben Namen auf Englisch. Von Hand und nicht über ``locale``: das
+#: Setzen einer Locale ist prozessweit und wirkt in jeden Thread hinein, und
+#: welche Locales in einem Container überhaupt erzeugt sind, weiss man nicht.
+_EN_WEEKDAYS = (
+    "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday",
+)
+_EN_MONTHS = (
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
+)
+
+
+def de_long_date(value: dt.date | dt.datetime, lang: str = "de") -> str:
+    """Das Datum, wie die Kopfzeile es zeigt: ``Mittwoch, 22. Juli 2026``.
+
+    Und auf Englisch ``Wednesday, 22 July 2026``. Der Name des Filters ist
+    geblieben, obwohl er jetzt beides kann: ihn umzubenennen hiesse, ihn von
+    seinen sechs numerischen Geschwistern (``de_date``, ``de_short_date`` …)
+    zu trennen, die tatsächlich deutsche Schreibweise sind und es bleiben.
+
+    Gefunden am 13.10.2026 durch einen roten Test: in der Kopfzeile einer
+    englischen Seite stand "Dienstag, 13. Oktober 2026". Das fiel niemandem auf,
+    solange der Monatsname auf beiden Sprachen gleich anfing — "Januar/January",
+    "August/August" —, und fiel in dem Moment auf, in dem er es nicht mehr tat.
+    Ein halb übersetztes Werkzeug sieht nicht halb fertig aus, sondern kaputt.
+    """
+    if lang == "en":
+        # Ohne Punkt nach dem Tag und ohne Komma davor: britische Schreibweise,
+        # weil der Rest der englischen Oberfläche sie auch verwendet.
+        return (
+            f"{_EN_WEEKDAYS[value.weekday()]}, {value.day} "
+            f"{_EN_MONTHS[value.month - 1]} {value.year}"
+        )
     return (
         f"{_DE_WEEKDAYS[value.weekday()]}, {value.day}. "
         f"{_DE_MONTHS[value.month - 1]} {value.year}"
@@ -140,7 +171,7 @@ def de_date(value: dt.datetime) -> str:
     return _local(value).strftime("%d.%m.%Y")
 
 
-def de_when(value: dt.datetime) -> str:
+def de_when(value: dt.datetime, lang: str = "de") -> str:
     """A timestamp as the header has to read it: the clock alone only for today.
 
     The header prints the reader's date on one line and the last sweep on the
@@ -155,6 +186,14 @@ def de_when(value: dt.datetime) -> str:
     """
     local = _local(value)
     days = (dt.datetime.now(config.local_zone()).date() - local.date()).days
+    if lang == "en":
+        # Kein "Uhr" und kein "gestern" auf einer englischen Seite — dieselbe
+        # Hälfte des Fehlers wie in :func:`de_long_date`.
+        if days <= 0:
+            return f"{local:%H:%M}"
+        if days == 1:
+            return f"yesterday {local:%H:%M}"
+        return f"{local:%d/%m}, {local:%H:%M}"
     if days <= 0:
         return f"{local:%H:%M} Uhr"
     if days == 1:

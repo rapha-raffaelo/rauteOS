@@ -245,7 +245,7 @@
         <div class="crisis__counts">
           {{ open_crisis.outlet_count }} {{ t("Medien") }} <span>·</span>
           {{ open_crisis.negative_count }}/{{ open_crisis.article_count }} {{ t("negativ") }} <span>·</span>
-          {{ t("erklärt von") }} {{ open_crisis.declared_by }}, {{ open_crisis.declared_at | de_when }}
+          {{ t("erklärt von") }} {{ open_crisis.declared_by }}, {{ open_crisis.declared_at | de_when(request_language(request)) }}
         </div>
         {# The reason is required at the button as well as in ``crisis.close``:
            "why did we stand this down" is the first question the review asks. #}
