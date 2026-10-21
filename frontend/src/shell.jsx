@@ -174,20 +174,8 @@ export function Shell({ data, portals = true }) {
         {link("/desk", "Desk", "desk")}
         {link("/clients", "Clients", "clients")}
         {link("/assets", "Assets", "texte")}
-        <details
-          className="side-tools"
-          open={
-            ["/today", "/", "/archive", "/contacts", "/journalists"].includes(
-              path,
-            ) || undefined
-          }
-        >
-          <summary className="side__sect">{t("Weitere Werkzeuge")}</summary>
-          {link("/today", "Heute")}
-          {link("/", "Portfolio")}
-          {link("/archive", "Archiv")}
-          {link("/contacts", "Kontakte")}
-        </details>
+        {link("/today", "News Heute", "heute")}
+        {link("/contacts", "Kontakte", "profil")}
         {!!clients.length && (
           <div className="side__sect">
             {t("Mandanten")}
@@ -216,25 +204,7 @@ export function Shell({ data, portals = true }) {
         </a>
       </nav>
       <div id="workspace-account" className="side__foot">
-        <details className="quiet-actions side-language">
-          <summary>{t("Sprache")}</summary>
-          <div className="seg" role="group" aria-label={t("Sprache")}>
-            {["de", "en"].map((code) => (
-              <form
-                key={code}
-                method="post"
-                action={`/language/${code}?next=${encodeURIComponent(path + (query ? "?" + query : ""))}`}
-              >
-                <button
-                  className={`seg__b${language === code ? " is-on" : ""}`}
-                  aria-pressed={language === code}
-                >
-                  {code.toUpperCase()}
-                </button>
-              </form>
-            ))}
-          </div>
-        </details>
+        {link("/archive", "Archiv", "archiv")}
         {link("/settings", "Einstellungen")}
         {data.login && (
           <form method="post" action="/logout" className="side__out">
@@ -293,6 +263,22 @@ export function Shell({ data, portals = true }) {
           </svg>
           Ask RAUTE
         </a>
+        <div className="seg topbar__lang" role="group" aria-label={t("Sprache")}>
+          {["de", "en"].map((code) => (
+            <form
+              key={code}
+              method="post"
+              action={`/language/${code}?next=${encodeURIComponent(path + (query ? "?" + query : ""))}`}
+            >
+              <button
+                className={`seg__b${language === code ? " is-on" : ""}`}
+                aria-pressed={language === code}
+              >
+                {code.toUpperCase()}
+              </button>
+            </form>
+          ))}
+        </div>
       </div>
     </div>
   );

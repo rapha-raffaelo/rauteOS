@@ -103,7 +103,7 @@ def test_an_unknown_language_code_stores_the_default(client):
 @pytest.mark.parametrize(
     "path,german,english",
     [
-        ("/", "Heute", "Today"),
+        ("/", "News Heute", "News today"),
         ("/clients?view=classic", "Mandanten", "Clients"),
         ("/archive", "Archiv", "Archive"),
         ("/settings", "Einstellungen", "Settings"),

@@ -120,19 +120,19 @@ _AREAS: tuple[tuple[str, str], ...] = (
     ("/clients", "Clients"),
     ("/assets", "Assets"),
     ("/ask", "Ask RAUTE"),
-    ("/today", "Heute"),
+    ("/today", "News Heute"),
     ("/archive", "Archiv"),
     ("/journalists", "Kontakte"),
     ("/contacts", "Kontakte"),
     ("/settings", "Einstellungen"),
 )
-#: Everything else, and the workspace a mandate's own pages hang under. The
-#: sidebar calls "/" Portfolio; "Mandanten" is the section header above the
-#: roster, which is not a link and not this destination. A crumb takes the word
-#: for the page it opens, not the word above the row it came from — otherwise
-#: clicking it lands the reader on a page whose sidebar highlights a
-#: differently-named row.
+#: Everything else. "/" keeps its page title but no longer has a sidebar row
+#: (only the brand mark leads there), so a mandate's own pages hang under
+#: Clients instead: a crumb takes the word for the page it opens, and the
+#: sidebar has to name that page, or clicking it lands the reader somewhere no
+#: row is highlighted.
 _PORTFOLIO = "Portfolio"
+_MANDATES = ("Clients", "/clients")
 
 #: SQLite holds a row id in a signed 64-bit integer and raises rather than
 #: answering "no such row" when asked about a larger one. A reader can put any
@@ -177,12 +177,14 @@ def _mandate_id(request) -> int | None:
 def _area(path: str) -> tuple[str, str]:
     """The workspace a path belongs to: its label and the page it opens on.
 
-    A mandate's own pages fall through to the portfolio, which is both where
-    the mandate is listed and where the crumb above it leads.
+    A mandate's own pages belong to Clients, which is where the mandate is
+    listed and where the crumb above it leads.
     """
     for prefix, label in _AREAS:
         if path.startswith(prefix):
             return label, prefix
+    if path.startswith("/client/"):
+        return _MANDATES
     return _PORTFOLIO, "/"
 
 

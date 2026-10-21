@@ -15,7 +15,6 @@
 .raute-ui .side__dot{width:6px;height:6px;opacity:.85}
 .raute-ui .side__new{color:var(--muted);margin-top:6px}
 .raute-ui .side__foot{padding-top:14px}
-.raute-ui .side-tools>summary{margin-top:8px}
 .raute-ui .topbar{background:var(--card);padding:0 36px;border-bottom:1px solid var(--line);box-shadow:none}
 .raute-ui .crumbs{font-size:12px}.raute-ui .crumbs__here{font-weight:600}
 .raute-ui .topsearch{background:var(--ground);border-radius:8px;border-color:var(--line);height:34px}

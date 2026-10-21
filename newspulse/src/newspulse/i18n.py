@@ -62,6 +62,7 @@ _EN: dict[str, str] = {
         "Researches every mandate with gaps and writes the sourced values straight in. Hand-filled fields stay untouched.",
     # --- Chrome / navigation -------------------------------------------------
     "Heute": "Today",
+    "News Heute": "News today",
     "Mandanten": "Clients",
     # --- The top bar (GEL-03, DEC-4) -----------------------------------------
     # "Ask RAUTE" is deliberately absent: it is the assistant's name, the same

@@ -2965,10 +2965,9 @@ button:disabled { opacity: .55; cursor: default; }
 [hidden]{display:none!important}
 body:has([id^="react-"]) .content{padding-top:16px}
 
-.side-tools>summary{cursor:pointer}.side-tools>summary::before{content:"▸ ";color:var(--tint)}.side-tools[open]>summary::before{content:"▾ "}
 
 /* Secondary actions stay beside the object they affect, without permanent button rows. */
-.quiet-actions{position:relative;font-size:13px;min-width:0}.quiet-actions>summary{cursor:pointer;padding:8px 4px;color:var(--muted);width:fit-content}.quiet-actions>summary:hover{color:var(--ink)}.quiet-actions-body{display:flex;flex-wrap:wrap;align-items:center;gap:10px;background:var(--fill-2);padding:12px;border:1px solid var(--line);border-radius:8px;margin:6px 0}.quiet-actions:not([open])>.quiet-actions-body{display:none}.side-language{padding:0 12px}.side-language .seg{margin:8px 0}
+.quiet-actions{position:relative;font-size:13px;min-width:0}.quiet-actions>summary{cursor:pointer;padding:8px 4px;color:var(--muted);width:fit-content}.quiet-actions>summary:hover{color:var(--ink)}.quiet-actions-body{display:flex;flex-wrap:wrap;align-items:center;gap:10px;background:var(--fill-2);padding:12px;border:1px solid var(--line);border-radius:8px;margin:6px 0}.quiet-actions:not([open])>.quiet-actions-body{display:none}.topbar__lang{flex:none}
 
 /* Unified profile: visible sections instead of a second navigation. */
 .profile-page{max-width:1300px;margin:24px 0 48px;overflow-wrap:anywhere}
