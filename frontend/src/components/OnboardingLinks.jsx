@@ -45,9 +45,10 @@ export function OnboardingLinks({clientId}) {
     {state?.status==='not_started' && <><p>Website und öffentliche Quellen recherchieren, Profil befüllen und den persönlichen Kundenlink vorbereiten.</p><button disabled={busy} onClick={()=>act(base)}>Recherche & Onboarding starten</button></>}
     {state?.status==='ready' && <>
       <p><strong>{state.completed?'Vom Kunden abgeschlossen':state.answered?'Kunde beantwortet den Fragebogen':'Bereit für den Kunden'}</strong></p>
-      <p>{state.researched_fields} belegte Angaben · {state.sources} Quellen · {state.answered}/5 CEO-Antworten</p>
+      <p>{state.researched_fields}/{state.total_fields} Themen belegt · {state.sources} Quellen · {state.answered}/{state.total_questions} Antworten im Fragebogen</p>
+      {state.outdated && <><p>Diese Recherche stammt noch aus dem alten Feldkatalog. Der Kunde sieht erst nach einer neuen Recherche die 21 Themen.</p><button disabled={busy} onClick={()=>act(base)}>Recherche auf 21 Themen aktualisieren</button></>}
 
-      <details><summary>Rechercheumfang</summary><p>{state.pages} Unternehmensseiten gelesen. {state.researched_fields} von {state.total_fields} öffentlichen Katalogfeldern konnten belegt werden. Nicht öffentlich belegbare Angaben bleiben offen. Die Quellen stehen bei den Aussagen im Profil.</p></details>
+      <details><summary>Rechercheumfang</summary><p>{state.pages} Unternehmensseiten gelesen. {state.researched_fields} von {state.total_fields} Recherchethemen konnten belegt werden. Nicht öffentlich belegbare Themen bleiben offen. Die Quellen stehen bei den Aussagen im Profil.</p></details>
     </>}
     {state && <details><summary>Ansprechpartner{contact.contact_name?` · ${contact.contact_name}`:''}</summary>
       <form onSubmit={e=>{e.preventDefault();act(`/client/${clientId}/onboarding-contact`,'PUT',Object.fromEntries(new FormData(e.currentTarget)));}}>

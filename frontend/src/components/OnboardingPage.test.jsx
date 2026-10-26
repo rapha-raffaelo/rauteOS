@@ -89,3 +89,16 @@ it('reads the protected token from links ending in a customer name',async()=>{
   expect(fetch.mock.calls[0][1].headers['X-Onboarding-Token']).toBe('personal-token');
   window.location.hash='';
 });
+it('shows each question with its explanation and lets the customer finish with open questions',async()=>{
+  global.fetch=vi.fn().mockImplementationOnce(()=>ok(data)).mockImplementationOnce(()=>ok({value:'',skipped:true})).mockImplementationOnce(()=>ok({value:'',skipped:true})).mockImplementationOnce(()=>ok({ok:true}));
+  render(<OnboardingPage token="test"/>);
+  expect(await screen.findByText(/2 Fragen · jede ist freiwillig/)).toBeTruthy();
+  fireEvent.click(screen.getByText('Los geht’s'));
+  expect(screen.getByText('Offizieller Name')).toBeTruthy();
+  fireEvent.click(screen.getByText('Später beantworten'));
+  expect(await screen.findByText('Ihre Ziele')).toBeTruthy();
+  fireEvent.click(screen.getByText('Später beantworten'));
+  expect(await screen.findByText(/0 Antworten gespeichert · 2 Fragen noch offen/)).toBeTruthy();
+  fireEvent.click(screen.getByText('Abschließen'));
+  expect(await screen.findByText(/Ihre 0 Antworten sind gespeichert/)).toBeTruthy();
+});

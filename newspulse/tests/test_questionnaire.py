@@ -3,6 +3,7 @@ import openpyxl
 from pypdf import PdfReader, PdfWriter
 from sqlalchemy import select
 from test_twin import db, web, upload
+from newspulse import twin
 from newspulse.models import ClientFact
 
 
@@ -13,7 +14,7 @@ def test_excel_download_filled_upload_and_selected_commit(web, db):
     book = openpyxl.load_workbook(io.BytesIO(download.content))
     sheet = book['Fragebogen']
     assert sheet['A2'].value == 'A01.01'
-    assert sheet.max_row == 357
+    assert sheet.max_row == len(twin.fields()) + 1
     sheet['E2'] = 'Beispiel GmbH'
     sheet['F2'] = 'Ausgefüllter Fragebogen'
     out = io.BytesIO(); book.save(out)
@@ -30,7 +31,7 @@ def test_fillable_pdf_roundtrip_and_layout_bounds(web, db):
     download = web.get('/api/v1/clients/1/twin/questionnaire/pdf')
     assert download.status_code == 200 and len(download.content) < 5*1024*1024
     reader = PdfReader(io.BytesIO(download.content))
-    assert len(reader.get_fields()) == 356*4
+    assert len(reader.get_fields()) == len(twin.fields())*4
     for page in reader.pages:
         for ref in page.get('/Annots', []):
             assert ref.get_object()['/Rect'][1] > 24

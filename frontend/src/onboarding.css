@@ -100,6 +100,7 @@ h1:focus { outline: none; }
   *, *::before, *::after { animation: none !important; scroll-behavior: auto !important; }
 }
 
+.onb-help { font-size: 14px; line-height: 1.55; color: #555; margin: 0 0 18px; }
 .onb-card .onb-meta { margin: 24px 0; font-size: 13px; color: #555; }
 
  .onb-demo { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid #ddd; font-size: 11px; color: #666; }
@@ -110,6 +111,7 @@ h1:focus { outline: none; }
 .onboarding main { margin-top: 12px; }
 .onb-card h1 { margin: 16px 0 24px; }
 .onb-question textarea { min-height: 120px; }
+.onb-question h1 { font-size: clamp(22px, 3vw, 28px); line-height: 1.2; letter-spacing: -.03em; margin-bottom: 12px; }
 .onb-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
 .onb-audio { margin-top: 18px; }

@@ -77,11 +77,18 @@ def enqueue(session, client, *, retry=False):
     if not row:
         row = CustomerOnboardingJob(client_id=client.id)
         session.add(row); session.flush()
-    elif retry and row.status == 'failed':
+    elif retry and (row.status == 'failed' or row.status == 'ready' and outdated(row.checkpoint)):
         row.status = 'queued'; row.note = ''; row.token = ''; row.lease_until = None
-        if row.checkpoint.get('next_batch', 0) >= len(onboarding_crawler.BATCHES):
+        if outdated(row.checkpoint):
+            row.checkpoint = {k: v for k, v in row.checkpoint.items() if k == 'pages'}
+        elif row.checkpoint.get('next_batch', 0) >= len(onboarding_crawler.BATCHES):
             row.checkpoint = {}  # A completed but empty search must be retryable.
     return row
+
+
+def outdated(checkpoint):
+    """Research run under an earlier topic layout; its batch index means nothing now."""
+    return bool(checkpoint) and checkpoint.get('version') != onboarding_crawler.VERSION
 
 
 def claim(session):
@@ -133,12 +140,18 @@ def work(factory, identity, token, *, crawl=None, research=None):
             context = SimpleNamespace(name=client.name, website=client.website,
                                       country=client.country, industry=client.industry)
             checkpoint = dict(job.checkpoint)
+            if outdated(checkpoint):
+                # Keep the crawled pages, research every topic afresh.
+                checkpoint = {k: v for k, v in checkpoint.items() if k == 'pages'}
+                if 'pages' in checkpoint:
+                    checkpoint.update(next_batch=0, answered_keys=[], sources=[])
+            checkpoint['version'] = onboarding_crawler.VERSION
             session.commit()
         if 'pages' not in checkpoint:
             with factory() as session:
                 own(session, identity, token, stage='Unternehmenswebsite wird gelesen'); session.commit()
             pages = crawl(context.website)
-            checkpoint.update(pages=pages, next_batch=0, answered_keys=[], sources=[])
+            checkpoint.update(pages=pages, next_batch=0, answered_keys=[], sources=[], version=onboarding_crawler.VERSION)
             with factory() as session:
                 own(session, identity, token, checkpoint=checkpoint); session.commit()
         for index in range(checkpoint.get('next_batch', 0), len(onboarding_crawler.BATCHES)):
@@ -156,7 +169,7 @@ def work(factory, identity, token, *, crawl=None, research=None):
             job = own(session, identity, token, stage='Persönlicher Link wird vorbereitet')
             client = session.get(Client, identity)
             if not client.active or client.is_competitor: raise ValueError('Mandat ist nicht aktiv.')
-            prefill, _, _ = customer_onboarding.prepare(session, client, research=False)
+            prefill, _ = customer_onboarding.prepare(session, client)
             invite = session.get(CustomerOnboardingInvite, job.invite_id) if job.invite_id else None
             if not invite_path(invite):
                 invite = issue_invite(session, identity, prefill)
@@ -184,12 +197,13 @@ def status(session, client):
     if not job: return dict(status='not_started', contact=contact)
     invite = session.get(CustomerOnboardingInvite, job.invite_id) if job.invite_id else None
     checkpoint = job.checkpoint
-    return dict(status=job.status, stage=job.stage, note=job.note,
+    return dict(status=job.status, stage=job.stage, note=job.note, outdated=outdated(checkpoint),
         completed_batches=checkpoint.get('next_batch', 0), total_batches=len(onboarding_crawler.BATCHES),
         researched_fields=len(checkpoint.get('answered_keys', [])), total_fields=len(onboarding_crawler.PUBLIC_FIELDS),
         sources=len(checkpoint.get('sources', [])), pages=len(checkpoint.get('pages', [])),
         path=invite_path(invite, client.name), invite_id=job.invite_id, expires_at=invite.expires_at.isoformat() if invite else None,
-        answered=sum(bool(a.get('value') or a.get('audio_id')) for a in invite.answers.values()) if invite else 0,
+        answered=customer_onboarding.answered(invite.answers) if invite else 0,
+        total_questions=len(customer_onboarding.QUESTION_KEYS),
         completed=bool(invite and invite.completed_at), contact=contact)
 
 

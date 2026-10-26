@@ -107,7 +107,7 @@ export function OnboardingPage({ token = window.location.hash.slice(1).split('/'
 
           <h1 ref={heading} tabIndex={-1}>Ihre Perspektive.</h1>
           <p>Die Fakten stehen. Jetzt Ihre Perspektive.</p>
-          <p className="onb-meta">{data.questions.length} Fragen · ca. 5 Minuten</p>
+          <p className="onb-meta">{data.questions.length} Fragen · jede ist freiwillig · in mehreren Etappen möglich</p>
           <button className="onb-primary" onClick={() => data.prefill_confirmed ? resume() : setScreen('prefill')}>{settled ? 'Weiter, wo ich war' : 'Los geht’s'}</button>
           <p className="onb-note">Speichern & später weitermachen — jederzeit.</p>
         </section>}
@@ -129,6 +129,7 @@ export function OnboardingPage({ token = window.location.hash.slice(1).split('/'
             onTouchEnd={e => {const start = touch.current; touch.current = null; if (!start || busy || listening) return; const dx = e.changedTouches[0].clientX-start.x, dy = e.changedTouches[0].clientY-start.y; if (Math.abs(dx)>100 && Math.abs(dy)<45) {if(dx<0 && canSave) saveAndMove(); else if(dx>0) back();}}}>
 
             <h1 id="onb-question-title" ref={heading} tabIndex={-1}>{question.text}</h1>
+            {question.help && <p className="onb-help">{question.help}</p>}
             <OnboardingAudio questionKey={question.key} token={token} demoApi={demoApi} state={audioState} saved={savedAnswer}
               configured={data.transcription_configured} onActivity={setListening}
               onDelete={answer=>setData(previous=>{const answers={...previous.answers};if(answer)answers[question.key]=answer;else delete answers[question.key];return {...previous,answers,completed:false};})}
@@ -136,7 +137,7 @@ export function OnboardingPage({ token = window.location.hash.slice(1).split('/'
               onText={value=>setDraft(previous=>[previous.trim(),value].filter(Boolean).join('\n'))}>
             {audioMode === 'transcript' && question.choices.length > 0 && <div className="onb-choices" aria-label="Antwortvorschläge">{question.choices.map(c => <button key={c} disabled={busy || listening} aria-pressed={draft.split('; ').includes(c)} onClick={() => setDraft(previous => {if(question.single_choice) return previous === c ? '' : c; const parts=previous ? previous.split('; ') : []; return (parts.includes(c) ? parts.filter(p=>p!==c) : [...parts,c]).join('; ');})}>{c}</button>)}</div>}
             {audioMode === 'transcript' && <><label className="onb-input-label onb-sr-only" htmlFor="onb-answer">Ihre Antwort</label>
-            <textarea id="onb-answer" value={draft} maxLength={20000} disabled={busy || listening} onChange={e=>setDraft(e.target.value)} placeholder="Kurz antworten …"/></>}
+            <textarea id="onb-answer" value={draft} maxLength={20000} disabled={busy || listening} onChange={e=>setDraft(e.target.value)} placeholder="Ihre Antwort …"/></>}
             </OnboardingAudio>
             <div className="onb-actions"><button disabled={busy || listening} onClick={back} aria-label={index === 0 ? "Zurück zu den Unternehmensangaben" : "Vorherige Frage"}>←</button><button className="onb-primary" disabled={busy || listening || !canSave} onClick={()=>saveAndMove()}>{busy ? 'Wird gespeichert …' : index === data.questions.length-1 ? 'Antworten ansehen' : 'Weiter'}</button></div>
             {!data.answers[question.key]?.value && !data.answers[question.key]?.audio_id && <button className="onb-skip" disabled={busy || listening} onClick={()=>saveAndMove(true)}>Später beantworten</button>}

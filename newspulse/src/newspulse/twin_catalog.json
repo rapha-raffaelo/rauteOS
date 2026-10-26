@@ -3049,5 +3049,392 @@
     "requirement": "Empfohlen",
     "input_owner": "OS / Research",
     "legacy_key": null
+  },
+  {
+    "key": "R01.01",
+    "section": "R. Onboarding-Recherche",
+    "group": "R01 Öffentliches Unternehmensbild",
+    "label": "Unternehmensidentität",
+    "requirement": "Optional",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "R02.01",
+    "section": "R. Onboarding-Recherche",
+    "group": "R01 Öffentliches Unternehmensbild",
+    "label": "Rechtliche Unternehmensdaten",
+    "requirement": "Optional",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "R03.01",
+    "section": "R. Onboarding-Recherche",
+    "group": "R01 Öffentliches Unternehmensbild",
+    "label": "Unternehmensgröße",
+    "requirement": "Optional",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "R04.01",
+    "section": "R. Onboarding-Recherche",
+    "group": "R01 Öffentliches Unternehmensbild",
+    "label": "Geschäftsführung und Führungsteam",
+    "requirement": "Optional",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "R05.01",
+    "section": "R. Onboarding-Recherche",
+    "group": "R01 Öffentliches Unternehmensbild",
+    "label": "Unternehmensbeschreibung",
+    "requirement": "Optional",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "R06.01",
+    "section": "R. Onboarding-Recherche",
+    "group": "R01 Öffentliches Unternehmensbild",
+    "label": "Produkte und Dienstleistungen",
+    "requirement": "Optional",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "R07.01",
+    "section": "R. Onboarding-Recherche",
+    "group": "R01 Öffentliches Unternehmensbild",
+    "label": "Zielmärkte und Kundensegmente",
+    "requirement": "Optional",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "R08.01",
+    "section": "R. Onboarding-Recherche",
+    "group": "R01 Öffentliches Unternehmensbild",
+    "label": "Kunden und Referenzen",
+    "requirement": "Optional",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "R09.01",
+    "section": "R. Onboarding-Recherche",
+    "group": "R01 Öffentliches Unternehmensbild",
+    "label": "Partner und Unternehmensnetzwerk",
+    "requirement": "Optional",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "R10.01",
+    "section": "R. Onboarding-Recherche",
+    "group": "R01 Öffentliches Unternehmensbild",
+    "label": "Eigentümer, Investoren und Finanzierung",
+    "requirement": "Optional",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "R11.01",
+    "section": "R. Onboarding-Recherche",
+    "group": "R01 Öffentliches Unternehmensbild",
+    "label": "Technologien, Patente und besondere Kompetenzen",
+    "requirement": "Optional",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "R12.01",
+    "section": "R. Onboarding-Recherche",
+    "group": "R01 Öffentliches Unternehmensbild",
+    "label": "Unternehmensgeschichte und Meilensteine",
+    "requirement": "Optional",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "R13.01",
+    "section": "R. Onboarding-Recherche",
+    "group": "R01 Öffentliches Unternehmensbild",
+    "label": "Markenidentität",
+    "requirement": "Optional",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "R14.01",
+    "section": "R. Onboarding-Recherche",
+    "group": "R01 Öffentliches Unternehmensbild",
+    "label": "Digitale Präsenz",
+    "requirement": "Optional",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "R15.01",
+    "section": "R. Onboarding-Recherche",
+    "group": "R01 Öffentliches Unternehmensbild",
+    "label": "Bisherige Medienpräsenz",
+    "requirement": "Optional",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "R16.01",
+    "section": "R. Onboarding-Recherche",
+    "group": "R01 Öffentliches Unternehmensbild",
+    "label": "Öffentliche Positionierung",
+    "requirement": "Optional",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "R17.01",
+    "section": "R. Onboarding-Recherche",
+    "group": "R01 Öffentliches Unternehmensbild",
+    "label": "Nachweise und Glaubwürdigkeit",
+    "requirement": "Optional",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "R18.01",
+    "section": "R. Onboarding-Recherche",
+    "group": "R01 Öffentliches Unternehmensbild",
+    "label": "Veranstaltungen und öffentliche Aktivitäten",
+    "requirement": "Optional",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "R19.01",
+    "section": "R. Onboarding-Recherche",
+    "group": "R01 Öffentliches Unternehmensbild",
+    "label": "Regulatorisches Umfeld",
+    "requirement": "Optional",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "R20.01",
+    "section": "R. Onboarding-Recherche",
+    "group": "R01 Öffentliches Unternehmensbild",
+    "label": "Öffentliche Reputation und Vorgeschichte",
+    "requirement": "Optional",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "R21.01",
+    "section": "R. Onboarding-Recherche",
+    "group": "R01 Öffentliches Unternehmensbild",
+    "label": "Wettbewerber und Wettbewerbsumfeld",
+    "requirement": "Optional",
+    "input_owner": "OS / Research",
+    "legacy_key": null
+  },
+  {
+    "key": "Q01.01",
+    "section": "Q. Onboarding-Fragebogen",
+    "group": "Q01 Unternehmensidentität und Strategie",
+    "label": "Welche Geschichten, Entscheidungen und Wendepunkte haben Ihr Unternehmen geprägt, die Außenstehenden bislang kaum bekannt sind?",
+    "requirement": "Optional",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "Q01.02",
+    "section": "Q. Onboarding-Fragebogen",
+    "group": "Q01 Unternehmensidentität und Strategie",
+    "label": "Welche unternehmerischen Ziele und strategischen Prioritäten haben für die kommenden zwölf bis 24 Monate höchste Bedeutung?",
+    "requirement": "Optional",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "Q01.03",
+    "section": "Q. Onboarding-Fragebogen",
+    "group": "Q01 Unternehmensidentität und Strategie",
+    "label": "Wie funktionieren Ihre Produkte bzw. wie werden Ihre Dienstleistungen in der Praxis tatsächlich erbracht?",
+    "requirement": "Optional",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "Q01.04",
+    "section": "Q. Onboarding-Fragebogen",
+    "group": "Q01 Unternehmensidentität und Strategie",
+    "label": "Welches konkrete Problem lösen Ihre wichtigsten Produkte oder Dienstleistungen und welchen messbaren oder nachvollziehbaren Nutzen erzeugen sie?",
+    "requirement": "Optional",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "Q01.05",
+    "section": "Q. Onboarding-Fragebogen",
+    "group": "Q01 Unternehmensidentität und Strategie",
+    "label": "Wodurch unterscheiden sich Ihre Produkte oder Dienstleistungen tatsächlich von verfügbaren Alternativen?",
+    "requirement": "Optional",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "Q01.06",
+    "section": "Q. Onboarding-Fragebogen",
+    "group": "Q01 Unternehmensidentität und Strategie",
+    "label": "Welche neuen Produkte, Dienstleistungen oder Weiterentwicklungen Ihres bestehenden Angebots planen Sie in den kommenden sechs bis 24 Monaten?",
+    "requirement": "Optional",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "Q01.07",
+    "section": "Q. Onboarding-Fragebogen",
+    "group": "Q01 Unternehmensidentität und Strategie",
+    "label": "Welche Zahlen und Entwicklungen verdeutlichen die Größe, den Erfolg und die wirtschaftliche Bedeutung Ihres Unternehmens besonders gut?",
+    "requirement": "Optional",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "Q01.08",
+    "section": "Q. Onboarding-Fragebogen",
+    "group": "Q01 Unternehmensidentität und Strategie",
+    "label": "Wer sind Ihre wichtigsten Kunden- und Nutzergruppen?",
+    "requirement": "Optional",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "Q01.09",
+    "section": "Q. Onboarding-Fragebogen",
+    "group": "Q01 Unternehmensidentität und Strategie",
+    "label": "Wie gewinnen Sie neue Kunden und wie verläuft ein typischer Vertriebs-, Kauf- beziehungsweise Beauftragungsprozess?",
+    "requirement": "Optional",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "Q01.10",
+    "section": "Q. Onboarding-Fragebogen",
+    "group": "Q01 Unternehmensidentität und Strategie",
+    "label": "Warum entscheiden sich potenzielle Kunden für oder gegen Ihr Unternehmen?",
+    "requirement": "Optional",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "Q01.11",
+    "section": "Q. Onboarding-Fragebogen",
+    "group": "Q01 Unternehmensidentität und Strategie",
+    "label": "Warum verlieren Sie Kunden beziehungsweise bestehende Kundenbeziehungen?",
+    "requirement": "Optional",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "Q01.12",
+    "section": "Q. Onboarding-Fragebogen",
+    "group": "Q01 Unternehmensidentität und Strategie",
+    "label": "Wie schätzen Sie die Position Ihres Unternehmens in den für Sie relevanten Märkten ein?",
+    "requirement": "Optional",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "Q01.13",
+    "section": "Q. Onboarding-Fragebogen",
+    "group": "Q01 Unternehmensidentität und Strategie",
+    "label": "Welche Entwicklungen beobachten Sie in Ihrem Markt und Wettbewerbsumfeld, die öffentlich noch wenig bekannt sind, den Markt aber in Zukunft maßgeblich verändern könnten?",
+    "requirement": "Optional",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "Q01.14",
+    "section": "Q. Onboarding-Fragebogen",
+    "group": "Q01 Unternehmensidentität und Strategie",
+    "label": "Von welchen externen Akteuren oder Rahmenbedingungen hängt Ihr Geschäft wesentlich ab?",
+    "requirement": "Optional",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "Q01.15",
+    "section": "Q. Onboarding-Fragebogen",
+    "group": "Q01 Unternehmensidentität und Strategie",
+    "label": "Welche konkreten Kundenfälle belegen den Nutzen Ihrer Produkte oder Dienstleistungen?",
+    "requirement": "Optional",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "Q01.16",
+    "section": "Q. Onboarding-Fragebogen",
+    "group": "Q01 Unternehmensidentität und Strategie",
+    "label": "Welche Entwicklungen laufen in Ihrem Unternehmen derzeit besonders gut oder besser als erwartet?",
+    "requirement": "Optional",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "Q01.17",
+    "section": "Q. Onboarding-Fragebogen",
+    "group": "Q01 Unternehmensidentität und Strategie",
+    "label": "Welche unternehmerischen Herausforderungen oder Wachstumsbarrieren haben derzeit die größte Bedeutung?",
+    "requirement": "Optional",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "Q01.18",
+    "section": "Q. Onboarding-Fragebogen",
+    "group": "Q01 Unternehmensidentität und Strategie",
+    "label": "Wo sehen Sie derzeit die größten noch ungenutzten Chancen?",
+    "requirement": "Optional",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "Q01.19",
+    "section": "Q. Onboarding-Fragebogen",
+    "group": "Q01 Unternehmensidentität und Strategie",
+    "label": "Welche regulatorischen, rechtlichen, operativen oder reputationsbezogenen Sachverhalte müssen wir kennen, um Ihr Unternehmen und seine Risiken richtig einzuordnen?",
+    "requirement": "Optional",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "Q01.20",
+    "section": "Q. Onboarding-Fragebogen",
+    "group": "Q01 Unternehmensidentität und Strategie",
+    "label": "Was sehen Sie in Ihrer Branche grundlegend anders als andere Marktteilnehmer?",
+    "requirement": "Optional",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "Q01.21",
+    "section": "Q. Onboarding-Fragebogen",
+    "group": "Q01 Unternehmensidentität und Strategie",
+    "label": "Welche Erfahrungen aus Ihrem Unternehmensalltag würden Außenstehenden helfen, Ihr Geschäft oder Ihren Markt besser zu verstehen?",
+    "requirement": "Optional",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
+  },
+  {
+    "key": "Q01.22",
+    "section": "Q. Onboarding-Fragebogen",
+    "group": "Q01 Unternehmensidentität und Strategie",
+    "label": "Wie wird Ihr Unternehmen von unterschiedlichen Stakeholdergruppen wahrgenommen und wo möchten Sie diese Wahrnehmung verändern?",
+    "requirement": "Optional",
+    "input_owner": "Kunde / Management",
+    "legacy_key": null
   }
 ]

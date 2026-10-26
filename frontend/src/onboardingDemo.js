@@ -1,6 +1,6 @@
 // The test page shares the real questionnaire UI but never calls customer APIs.
 export function createDemoApi(initial) {
-  const key = 'raute-onboarding-demo-v1';
+  const key = 'raute-onboarding-demo-v2';
   let state = structuredClone(initial);
   try { const saved = JSON.parse(sessionStorage.getItem(key)); if (saved) state = {...state, ...saved}; } catch {}
   async function audioStore(action, id, value) {

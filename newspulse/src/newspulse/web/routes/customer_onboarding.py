@@ -55,7 +55,7 @@ def create_invite(client_id: int, session: Session = Depends(get_db)):
     if not client.active:
         raise HTTPException(409, 'Bitte das Mandat zuerst aktivieren.')
     try:
-        prefill, warning, missing = customer_onboarding.prepare(session, client)
+        prefill, missing = customer_onboarding.prepare(session, client)
     except ValueError as exc:
         session.rollback()
         raise HTTPException(409, str(exc))
@@ -68,7 +68,7 @@ def create_invite(client_id: int, session: Session = Depends(get_db)):
     from ...onboarding_workflow import customer_link
     # Fragment never travels in request URLs, server access logs or Referrer.
     return result(dict(id=invite.id, path=customer_link(token, client.name),
-                       expires_at=invite.expires_at.isoformat(), research_warning=warning,
+                       expires_at=invite.expires_at.isoformat(),
                        missing_public_fields=missing, prefilled=len(prefill)))
 
 
@@ -78,7 +78,7 @@ def list_invites(client_id: int, session: Session = Depends(get_db)):
     rows = session.scalars(select(CustomerOnboardingInvite).where(
         CustomerOnboardingInvite.client_id == client_id).order_by(CustomerOnboardingInvite.id.desc()))
     return result([dict(id=r.id, expires_at=r.expires_at.isoformat(), revoked=r.revoked,
-                        answered=sum(bool(r.answers.get(k, {}).get('value') or r.answers.get(k, {}).get('audio_id')) for k in customer_onboarding.QUESTION_KEYS),
+                        answered=customer_onboarding.answered(r.answers),
                         total=len(customer_onboarding.QUESTION_KEYS),
                         completed=bool(r.completed_at)) for r in rows])
 
@@ -97,13 +97,13 @@ def revoke(client_id: int, invite_id: int, session: Session = Depends(get_db)):
 def demo_data():
     return dict(customer='Nordlicht Studio · Beispielkunde', questions=customer_onboarding.questions(),
         answers={}, completed=False, prefill_confirmed=False,
-        prefill=[dict(key=key, label=label, value=value, source_url='https://example.org',
+        prefill=[dict(key=key, label=twin.CATALOG_BY_KEY[key]['label'], value=value, source_url='https://example.org',
             source_title='Fiktive Beispielquelle', researched_at='2026-10-13T12:00:00Z')
-            for key, label, value in [
-                ('A02.01', 'Unternehmen', 'Nordlicht Studio ist ein fiktives Design- und Technologieunternehmen aus Hamburg.'),
-                ('A03.01', 'Angebot', 'Digitale Produkte und Markenauftritte für mittelständische Unternehmen.'),
-                ('A04.01', 'Team', 'Ein interdisziplinäres Team aus Design, Strategie und Entwicklung.'),
-                ('A05.01', 'Zielgruppe', 'Wachsende Unternehmen im deutschsprachigen Raum.'),
+            for key, value in [
+                ('R01.01', 'Nordlicht Studio ist ein fiktives Design- und Technologieunternehmen mit Sitz in Hamburg, gegründet 2014.'),
+                ('R05.01', 'Das Unternehmen entwickelt digitale Produkte und Markenauftritte für mittelständische Unternehmen.'),
+                ('R04.01', 'Geführt wird es von zwei Gründern aus Design und Softwareentwicklung.'),
+                ('R07.01', 'Kunden sind vor allem wachsende B2B-Unternehmen im deutschsprachigen Raum.'),
             ]])
 
 
@@ -124,7 +124,7 @@ def read(request: Request, session: Session = Depends(get_db)):
     return result(dict(customer=client.name, questions=customer_onboarding.questions(),
         prefill=[{k: v for k, v in item.items() if k not in {'fact_id', 'correction_fact_id'}} for item in invite.prefill],
         prefill_confirmed=invite.prefill_confirmed,
-        answers={k: public_answer(a) for k, a in invite.answers.items()},
+        answers={k: public_answer(a) for k, a in invite.answers.items() if k in customer_onboarding.QUESTION_KEYS},
         transcription_configured=onboarding_audio.configured(),
         completed=bool(invite.completed_at)))
 
@@ -189,8 +189,8 @@ def store_answer(session, invite, client, key, data):
         statement = twin.StatementInput(key=key, value=data.value,
             source_title='Kunden-Onboarding · KI-Transkript (Deepgram Nova-3)' if data.audio_id and data.mode == 'audio' else 'Kunden-Onboarding', source_type=SourceType.CLIENT_INTERVIEW,
             input_owner=InputOwner(field['input_owner']),
-            confidentiality=Confidentiality.HIGHLY_RESTRICTED if key == 'B07.11' else Confidentiality.CLIENT_CONFIDENTIAL,
-            external_use=ExternalUse.INTERNAL_ONLY if key == 'B07.11' else ExternalUse.APPROVAL_REQUIRED)
+            confidentiality=Confidentiality.HIGHLY_RESTRICTED if key in customer_onboarding.RESTRICTED else Confidentiality.CLIENT_CONFIDENTIAL,
+            external_use=ExternalUse.INTERNAL_ONLY if key in customer_onboarding.RESTRICTED else ExternalUse.APPROVAL_REQUIRED)
         row = twin.apply(session, client.id, statement, 'Kunde · Onboarding', row=row)
         fact_id = row.id
     answer = dict(value=data.value, skipped=data.skipped, fact_id=fact_id)
@@ -224,8 +224,9 @@ def save(key: str, data: Answer, request: Request, session: Session = Depends(ge
 @router.post('/api/onboarding/complete')
 def complete(request: Request, session: Session = Depends(get_db)):
     invite, _ = invite_for(request, session)
-    if not invite.prefill_confirmed or any(key not in invite.answers for key in customer_onboarding.QUESTION_KEYS):
-        raise HTTPException(409, 'Bitte alle Fragen beantworten oder überspringen.')
+    # Every question is optional; open ones stay visible to the agency as open.
+    if not invite.prefill_confirmed:
+        raise HTTPException(409, 'Bitte zuerst die Unternehmensangaben bestätigen.')
     invite.completed_at = dt.datetime.now(dt.UTC)
     commit(session)
     return result({'ok': True})
@@ -270,7 +271,7 @@ def workflow_link(client_id: int, request: Request, session: Session = Depends(g
     previous = session.get(CustomerOnboardingInvite, job.invite_id) if job.invite_id else None
     if request.url.path.endswith('/ensure') and onboarding_workflow.invite_path(previous):
         return result(onboarding_workflow.status(session, client))
-    prefill, _, _ = customer_onboarding.prepare(session, client, research=False, allow_empty=True)
+    prefill, _ = customer_onboarding.prepare(session, client, allow_empty=True)
     invite = onboarding_workflow.issue_invite(session, client_id, prefill)
     if previous:
         # A renewed link resumes its predecessor's saved answers.
