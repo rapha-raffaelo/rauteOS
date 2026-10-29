@@ -525,7 +525,9 @@ def clients_index(
             # Mandates only. A benchmark belongs to the client it is measured
             # against, not to a list of its own — with several mandates a flat
             # list mixes unrelated markets into one meaningless roster.
-            "rows": [r for r in rows if not r.is_competitor],
+            # A deactivated mandate is one the agency let go of: it stays in
+            # Settings, where it can be reactivated, and its archive is kept.
+            "rows": [r for r in rows if not r.is_competitor and r.active],
             # Only when there is nothing at all today: on any normal morning the
             # numbers speak for themselves and a sentence under them is noise.
             "quiet_since": (

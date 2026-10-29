@@ -467,6 +467,17 @@ def test_clients_index_excludes_irrelevant_and_handles_empty(factory, client):
     assert _counts(_content(body).split("Alpha AG", 1)[1]) == ["0", "0", "0"]
 
 
+def test_a_deactivated_mandate_leaves_the_portfolio(factory, client):
+    """Deactivating is how a mandate is deleted; the archive stays, the row goes."""
+    with factory() as s:
+        _seed_client(s, name="Alpha AG")
+        _seed_client(s, name="Gone GmbH", active=False)
+        s.commit()
+    body = _content(rendered(client.get("/clients?view=classic")))
+    assert "Alpha AG" in body
+    assert "Gone GmbH" not in body
+
+
 # --- Per-client competitor sets ------------------------------------------------
 
 
