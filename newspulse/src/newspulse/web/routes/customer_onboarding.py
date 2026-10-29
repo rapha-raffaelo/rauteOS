@@ -97,8 +97,8 @@ def revoke(client_id: int, invite_id: int, session: Session = Depends(get_db)):
 def demo_data():
     return dict(customer='Nordlicht Studio · Beispielkunde', questions=customer_onboarding.questions(),
         answers={}, completed=False, prefill_confirmed=False,
-        prefill=[dict(key=key, label=twin.CATALOG_BY_KEY[key]['label'], value=value, source_url='https://example.org',
-            source_title='Fiktive Beispielquelle', researched_at='2026-10-13T12:00:00Z')
+        prefill=[customer_onboarding.with_english_label(dict(key=key, label=twin.CATALOG_BY_KEY[key]['label'], value=value,
+            source_url='https://example.org', source_title='Fiktive Beispielquelle', researched_at='2026-10-13T12:00:00Z'))
             for key, value in [
                 ('R01.01', 'Nordlicht Studio ist ein fiktives Design- und Technologieunternehmen mit Sitz in Hamburg, gegründet 2014.'),
                 ('R05.01', 'Das Unternehmen entwickelt digitale Produkte und Markenauftritte für mittelständische Unternehmen.'),
@@ -122,7 +122,8 @@ def read(request: Request, session: Session = Depends(get_db)):
     invite, client = invite_for(request, session)
     # Never return existing facts or other invites' answers to a link holder.
     return result(dict(customer=client.name, questions=customer_onboarding.questions(),
-        prefill=[{k: v for k, v in item.items() if k not in {'fact_id', 'correction_fact_id'}} for item in invite.prefill],
+        prefill=[customer_onboarding.with_english_label({k: v for k, v in item.items() if k not in {'fact_id', 'correction_fact_id'}})
+                 for item in invite.prefill],
         prefill_confirmed=invite.prefill_confirmed,
         answers={k: public_answer(a) for k, a in invite.answers.items() if k in customer_onboarding.QUESTION_KEYS},
         transcription_configured=onboarding_audio.configured(),

@@ -1,4 +1,5 @@
 import React, {useEffect, useRef, useState} from 'react';
+import {say} from '../onboardingText.js';
 
 const MAX_BYTES = 25 * 1024 * 1024;
 const icons = {
@@ -15,7 +16,8 @@ function IconButton({icon, label, ...props}) {
   return <button type="button" className={`onb-audio-icon${icon==='record'?' onb-audio-record':''}`} aria-label={label} title={label} {...props}><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">{icons[icon]}</svg></button>;
 }
 
-export function OnboardingAudio({questionKey, token, demoApi, state = {}, saved, configured, onChange, onText, onActivity, onDelete, children}) {
+export function OnboardingAudio({questionKey, token, demoApi, state = {}, saved, configured, onChange, onText, onActivity, onDelete, children, language = 'de'}) {
+  const tr = text => say(language, text);
   const [recording, setRecording] = useState('idle'), [playing, setPlaying] = useState(false);
   const [seconds, setSeconds] = useState(0), [busy, setBusy] = useState(false), [error, setError] = useState('');
   const [url, setUrl] = useState('');
@@ -32,7 +34,7 @@ export function OnboardingAudio({questionKey, token, demoApi, state = {}, saved,
     if (demoApi) return demoApi(path, method, body);
     const response = await fetch('/api/onboarding' + path, {method, credentials:'omit',
       headers:{'X-Onboarding-Token':token, ...(body instanceof Blob ? {'Content-Type':body.type || 'application/octet-stream'} : {})}, body});
-    if (!response.ok) {const d=await response.json().catch(()=>({}));throw new Error(d.detail || 'Audio konnte nicht verarbeitet werden. Bitte erneut versuchen.');}
+    if (!response.ok) {const d=await response.json().catch(()=>({}));throw new Error(d.detail || tr('Audio konnte nicht verarbeitet werden. Bitte erneut versuchen.'));}
     return path.endsWith('/content') ? response.blob() : response.json();
   }
   useEffect(()=>{alive.current=true;return()=>{alive.current=false; if(recorder.current?.state!=='inactive') recorder.current?.stop();stream.current?.getTracks().forEach(t=>t.stop());};},[]);
@@ -63,8 +65,8 @@ export function OnboardingAudio({questionKey, token, demoApi, state = {}, saved,
     timer=setTimeout(poll,1000);return()=>{active=false;clearTimeout(timer);};
   },[uploaded?.id,!!pending]);
   function selectBlob(blob,name){
-    if(blob.size>MAX_BYTES){setError('Maximal 25 MB pro Datei.');return;}
-    if(!blob.size){setError('Die Aufnahme ist leer. Bitte erneut versuchen.');return;}
+    if(blob.size>MAX_BYTES){setError(tr('Maximal 25 MB pro Datei.'));return;}
+    if(!blob.size){setError(tr('Die Aufnahme ist leer. Bitte erneut versuchen.'));return;}
     player.current?.pause();setPlaying(false);setError('');
     change.current({mode,blob,name,uploaded:null,delivered:false});
   }
@@ -79,10 +81,10 @@ export function OnboardingAudio({questionKey, token, demoApi, state = {}, saved,
       const mime=['audio/webm;codecs=opus','audio/mp4','audio/ogg;codecs=opus'].find(t=>MediaRecorder.isTypeSupported(t));
       const r=new MediaRecorder(s,mime?{mimeType:mime}:undefined);recorder.current=r;chunks.current=[];
       r.ondataavailable=e=>{if(e.data.size)chunks.current.push(e.data);};
-      r.onerror=()=>{if(alive.current){setError('Aufnahme unterbrochen. Bitte erneut versuchen.');setRecording('idle');}s.getTracks().forEach(t=>t.stop());};
-      r.onstop=()=>{s.getTracks().forEach(t=>t.stop());if(!alive.current)return;selectBlob(new Blob(chunks.current,{type:r.mimeType||mime||'audio/webm'}),'Aufnahme');setRecording('idle');};
+      r.onerror=()=>{if(alive.current){setError(tr('Aufnahme unterbrochen. Bitte erneut versuchen.'));setRecording('idle');}s.getTracks().forEach(t=>t.stop());};
+      r.onstop=()=>{s.getTracks().forEach(t=>t.stop());if(!alive.current)return;selectBlob(new Blob(chunks.current,{type:r.mimeType||mime||'audio/webm'}),tr('Aufnahme'));setRecording('idle');};
       r.start(1000);setSeconds(0);setRecording('recording');
-    }catch{setError('Mikrofon nicht verfügbar. Bitte Zugriff erlauben oder eine Datei hochladen.');}
+    }catch{setError(tr('Mikrofon nicht verfügbar. Bitte Zugriff erlauben oder eine Datei hochladen.'));}
     finally{if(alive.current)setBusy(false);}
   }
   function pause(){
@@ -91,7 +93,7 @@ export function OnboardingAudio({questionKey, token, demoApi, state = {}, saved,
   }
   async function play(){
     if(recording==='paused'){autoplay.current=true;recorder.current.stop();return;}
-    try{await player.current.play();setPlaying(true);}catch{setError('Diese Datei kann hier nicht abgespielt werden. Sie können sie trotzdem hochladen.');}
+    try{await player.current.play();setPlaying(true);}catch{setError(tr('Diese Datei kann hier nicht abgespielt werden. Sie können sie trotzdem hochladen.'));}
   }
   function stop(){
     if(recording!=='idle'){recorder.current?.stop();}
@@ -108,37 +110,37 @@ export function OnboardingAudio({questionKey, token, demoApi, state = {}, saved,
   }
   async function upload(){
     if(!state.blob||busy)return;setBusy(true);setError('');
-    try{const m=await api('/audio/'+questionKey+'?mode='+mode+'&filename='+encodeURIComponent(state.name||'Audio'),'POST',state.blob);
+    try{const m=await api('/audio/'+questionKey+'?mode='+mode+'&filename='+encodeURIComponent(state.name||tr('Audio')),'POST',state.blob);
       if(!alive.current)return;change.current({...current.current,uploaded:m,delivered:false});
       if(m.status==='ready'&&mode==='transcript'){text.current(m.transcript,m);change.current({...current.current,uploaded:m,delivered:true});}
     }catch(e){if(alive.current)setError(e.message);}finally{if(alive.current)setBusy(false);}
   }
   async function retry(){setError('');try{const m=await api('/audio/'+uploaded.id+'/retry','POST');change.current({...current.current,uploaded:m});}catch(e){setError(e.message);}}
   return <div className="onb-audio">
-    <div className="onb-audio-mode" role="group" aria-label="Speichern als">{['transcript','audio'].map(m=><button key={m} type="button" aria-pressed={mode===m} disabled={busy||recording!=='idle'||!!pending} onClick={()=>{setError('');change.current({...state,mode:m,uploaded:null,delivered:false});}}>{m==='transcript'?'Transkript':'Audio'}</button>)}</div>
+    <div className="onb-audio-mode" role="group" aria-label={tr("Speichern als")}>{['transcript','audio'].map(m=><button key={m} type="button" aria-pressed={mode===m} disabled={busy||recording!=='idle'||!!pending} onClick={()=>{setError('');change.current({...state,mode:m,uploaded:null,delivered:false});}}>{m==='transcript'?tr('Transkript'):tr('Audio')}</button>)}</div>
     {children}
     <div className="onb-audio-toolbar">
-      <IconButton icon="record" label={recording==='paused'?'Aufnahme fortsetzen':'Aufnahme starten'} disabled={!supportsRecording||busy||recording==='recording'||!!pending} onClick={record}/>
-      <IconButton icon="play" label="Audio abspielen" disabled={busy||(recording!=='paused'&&(!url||recording!=='idle'||playing))} onClick={play}/>
-      <IconButton icon="pause" label={recording==='recording'?'Aufnahme pausieren':'Wiedergabe pausieren'} disabled={busy||(recording!=='recording'&&!playing)} onClick={pause}/>
-      <IconButton icon="stop" label="Stopp" disabled={busy||(recording==='idle'&&!url)} onClick={stop}/>
+      <IconButton icon="record" label={recording==='paused'?tr('Aufnahme fortsetzen'):tr('Aufnahme starten')} disabled={!supportsRecording||busy||recording==='recording'||!!pending} onClick={record}/>
+      <IconButton icon="play" label={tr("Audio abspielen")} disabled={busy||(recording!=='paused'&&(!url||recording!=='idle'||playing))} onClick={play}/>
+      <IconButton icon="pause" label={recording==='recording'?tr('Aufnahme pausieren'):tr('Wiedergabe pausieren')} disabled={busy||(recording!=='recording'&&!playing)} onClick={pause}/>
+      <IconButton icon="stop" label={tr("Stopp")} disabled={busy||(recording==='idle'&&!url)} onClick={stop}/>
       {url&&recording==='idle'&&<>
-        <IconButton icon="back" label="10 Sekunden zurück" disabled={busy} onClick={()=>seek(-10)}/>
-        <IconButton icon="forward" label="10 Sekunden vor" disabled={busy} onClick={()=>seek(10)}/>
-        <IconButton icon="delete" label="Aufnahme löschen" disabled={busy} onClick={remove}/>
+        <IconButton icon="back" label={tr("10 Sekunden zurück")} disabled={busy} onClick={()=>seek(-10)}/>
+        <IconButton icon="forward" label={tr("10 Sekunden vor")} disabled={busy} onClick={()=>seek(10)}/>
+        <IconButton icon="delete" label={tr("Aufnahme löschen")} disabled={busy} onClick={remove}/>
       </>}
-      <IconButton icon="upload" label="Audiodatei auswählen" disabled={busy||recording!=='idle'||!!pending} onClick={()=>fileInput.current.click()}/>
-      {recording!=='idle'&&<span role="status" className="onb-audio-timer">{Math.floor(seconds/60)}:{String(seconds%60).padStart(2,'0')}{recording==='paused'?' · Pause':''}</span>}
+      <IconButton icon="upload" label={tr("Audiodatei auswählen")} disabled={busy||recording!=='idle'||!!pending} onClick={()=>fileInput.current.click()}/>
+      {recording!=='idle'&&<span role="status" className="onb-audio-timer">{Math.floor(seconds/60)}:{String(seconds%60).padStart(2,'0')}{recording==='paused'?' · '+tr('Pause'):''}</span>}
     </div>
-    <input ref={fileInput} className="onb-sr-only" type="file" accept="audio/*,.m4a,.mp3,.wav,.ogg,.webm,.flac" aria-label="Audiodatei hochladen" onChange={e=>{if(e.target.files[0])selectBlob(e.target.files[0],e.target.files[0].name);e.target.value='';}}/>
+    <input ref={fileInput} className="onb-sr-only" type="file" accept="audio/*,.m4a,.mp3,.wav,.ogg,.webm,.flac" aria-label={tr("Audiodatei hochladen")} onChange={e=>{if(e.target.files[0])selectBlob(e.target.files[0],e.target.files[0].name);e.target.value='';}}/>
     <audio ref={player} src={url||undefined} onTimeUpdate={e=>setPosition(e.currentTarget.currentTime)} onLoadedMetadata={e=>{const d=e.currentTarget.duration;setDuration(Number.isFinite(d)?d:seconds);}} onCanPlay={()=>{if(autoplay.current){autoplay.current=false;play();}}} onEnded={()=>setPlaying(false)}/>
-    {url&&recording==='idle'&&<input className="onb-audio-seek" type="range" aria-label="Wiedergabeposition" min="0" max={duration||0} step="0.1" value={position} onChange={e=>{player.current.currentTime=Number(e.target.value);setPosition(Number(e.target.value));}}/>}
-    <p className="onb-note">{mode==='audio'?'Original speichern · KI-Transkript zusätzlich': 'Nur Text speichern · Audio danach löschen'}{demoApi?' · Demo: nur lokal':' · Verarbeitung durch Deepgram'}</p>
-    {state.blob&&<p className="onb-audio-file">{state.name||'Aufnahme'} · {state.blob.size < 1024*1024 ? Math.max(1,Math.round(state.blob.size/1024))+' KB' : (state.blob.size/1024/1024).toFixed(1)+' MB'}</p>}
-    {state.blob&&!uploaded&&<button type="button" className="onb-audio-submit" disabled={busy||recording!=='idle'||(mode==='transcript'&&(!configured||!!demoApi))} onClick={upload}>{busy?'Wird übertragen …':mode==='audio'?'Audio übernehmen':'Transkript erstellen'}</button>}
-    {mode==='transcript'&&state.blob&&(!configured||demoApi)&&<p className="onb-note">{demoApi?'KI-Transkription über einen persönlichen Kundenlink testen.':'Transkription wird eingerichtet. Audio kann bereits gespeichert werden.'}</p>}
-    {uploaded&&<p role="status" className="onb-note">{uploaded.status==='ready'?'Transkript bereit':uploaded.status==='local'?'Audio lokal übernommen':uploaded.status==='failed'||uploaded.status==='expired'?uploaded.note:uploaded.transcription_configured?'KI erstellt das Transkript …':'Audio gespeichert · Transkription wartet auf Einrichtung'}</p>}
-    {uploaded?.status==='failed'&&<button type="button" onClick={retry}>Erneut transkribieren</button>}
+    {url&&recording==='idle'&&<input className="onb-audio-seek" type="range" aria-label={tr("Wiedergabeposition")} min="0" max={duration||0} step="0.1" value={position} onChange={e=>{player.current.currentTime=Number(e.target.value);setPosition(Number(e.target.value));}}/>}
+    <p className="onb-note">{mode==='audio'?tr('Original speichern · KI-Transkript zusätzlich'): tr('Nur Text speichern · Audio danach löschen')}{' · '+(demoApi?tr('Demo: nur lokal'):tr('Verarbeitung durch Deepgram'))}</p>
+    {state.blob&&<p className="onb-audio-file">{state.name||tr('Aufnahme')} · {state.blob.size < 1024*1024 ? Math.max(1,Math.round(state.blob.size/1024))+' KB' : (state.blob.size/1024/1024).toFixed(1)+' MB'}</p>}
+    {state.blob&&!uploaded&&<button type="button" className="onb-audio-submit" disabled={busy||recording!=='idle'||(mode==='transcript'&&(!configured||!!demoApi))} onClick={upload}>{busy?tr('Wird übertragen …'):mode==='audio'?tr('Audio übernehmen'):tr('Transkript erstellen')}</button>}
+    {mode==='transcript'&&state.blob&&(!configured||demoApi)&&<p className="onb-note">{demoApi?tr('KI-Transkription über einen persönlichen Kundenlink testen.'):tr('Transkription wird eingerichtet. Audio kann bereits gespeichert werden.')}</p>}
+    {uploaded&&<p role="status" className="onb-note">{uploaded.status==='ready'?tr('Transkript bereit'):uploaded.status==='local'?tr('Audio lokal übernommen'):uploaded.status==='failed'||uploaded.status==='expired'?uploaded.note:uploaded.transcription_configured?tr('KI erstellt das Transkript …'):tr('Audio gespeichert · Transkription wartet auf Einrichtung')}</p>}
+    {uploaded?.status==='failed'&&<button type="button" onClick={retry}>{tr('Erneut transkribieren')}</button>}
     {error&&<p role="alert" className="onb-error">{error}</p>}
   </div>;
 }

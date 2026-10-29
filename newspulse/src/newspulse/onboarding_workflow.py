@@ -15,12 +15,18 @@ from types import SimpleNamespace
 
 from sqlalchemy import or_, select, update
 from . import config, customer_onboarding, onboarding_crawler, twin
+from .quota import is_quota_error
 from .db import session_factory
 from .evidence import Confidentiality, EvidenceType, SourceType
+from .logos import fetch_logo
 from .models import Client, ClientFact, CustomerOnboardingInvite, CustomerOnboardingJob
 
 _log = logging.getLogger(__name__)
 LEASE = dt.timedelta(minutes=8)
+# A spent search quota parks the job instead of failing it. A per-minute
+# limit clears quickly; anything longer is usually the daily cap.
+PAUSE_MINUTE = dt.timedelta(seconds=90)
+PAUSE_LONG = dt.timedelta(hours=1)
 
 
 class Superseded(Exception):
@@ -93,7 +99,9 @@ def outdated(checkpoint):
 
 def claim(session):
     now = dt.datetime.now(dt.UTC)
-    eligible = or_(CustomerOnboardingJob.status == 'queued',
+    # A queued job's lease_until is its earliest start, set while a quota recovers.
+    eligible = or_((CustomerOnboardingJob.status == 'queued')
+        & (CustomerOnboardingJob.lease_until.is_(None) | (CustomerOnboardingJob.lease_until < now)),
         (CustomerOnboardingJob.status == 'running') & (CustomerOnboardingJob.lease_until < now))
     for identity in session.scalars(select(CustomerOnboardingJob.client_id).where(eligible)
                                    .order_by(CustomerOnboardingJob.created_at)).all():
@@ -138,7 +146,8 @@ def work(factory, identity, token, *, crawl=None, research=None):
             if not client or not client.active or client.is_competitor:
                 raise ValueError('Mandat ist nicht aktiv.')
             context = SimpleNamespace(name=client.name, website=client.website,
-                                      country=client.country, industry=client.industry)
+                                      country=client.country, industry=client.industry,
+                                      has_logo=bool(client.logo_url))
             checkpoint = dict(job.checkpoint)
             if outdated(checkpoint):
                 # Keep the crawled pages, research every topic afresh.
@@ -147,6 +156,15 @@ def work(factory, identity, token, *, crawl=None, research=None):
                     checkpoint.update(next_batch=0, answered_keys=[], sources=[])
             checkpoint['version'] = onboarding_crawler.VERSION
             session.commit()
+        if not context.has_logo and context.website:
+            # First thing after creation, so the mandate carries its mark while
+            # the research is still running. Cosmetic: never fails the job.
+            logo = fetch_logo(context.website)
+            if logo:
+                with factory() as session:
+                    own(session, identity, token)
+                    session.get(Client, identity).logo_url = logo
+                    session.commit()
         if 'pages' not in checkpoint:
             with factory() as session:
                 own(session, identity, token, stage='Unternehmenswebsite wird gelesen'); session.commit()
@@ -180,7 +198,20 @@ def work(factory, identity, token, *, crawl=None, research=None):
             session.commit()
     except Superseded:
         return
-    except Exception:
+    except Exception as exc:
+        if is_quota_error(exc):
+            pause = PAUSE_MINUTE if 'per minute' in str(exc).lower() else PAUSE_LONG
+            _log.warning('Onboarding research for client %s paused %s: search quota spent', identity, pause)
+            with factory() as session:
+                try:
+                    own(session, identity, token)
+                    session.execute(update(CustomerOnboardingJob).where(CustomerOnboardingJob.client_id == identity,
+                        CustomerOnboardingJob.token == token).values(status='queued', token='',
+                        stage='Wartet auf Recherche-Kontingent', lease_until=dt.datetime.now(dt.UTC) + pause))
+                    session.commit()
+                except Superseded:
+                    session.rollback()
+            return
         _log.exception('Customer onboarding failed for client %s', identity)
         with factory() as session:
             try:
@@ -207,10 +238,33 @@ def status(session, client):
         completed=bool(invite and invite.completed_at), contact=contact)
 
 
+def backfill(session):
+    """Queue the topic research once for every active mandate that has not had it.
+
+    Covers mandates created before the onboarding queue existed and those
+    researched under the old field catalogue. A failed run is picked up again
+    where it stopped: once per restart, so a broken one never loops.
+    """
+    queued = 0
+    for client in session.scalars(select(Client).where(Client.active.is_(True), Client.is_competitor.is_(False))):
+        job = session.get(CustomerOnboardingJob, client.id)
+        if job is None or job.status == 'failed' or job.status == 'ready' and outdated(job.checkpoint):
+            enqueue(session, client, retry=True)
+            queued += 1
+    session.commit()
+    return queued
+
+
 def start():
     stop = threading.Event()
     def loop():
         factory = session_factory()
+        try:
+            with factory() as session:
+                if queued := backfill(session):
+                    _log.info('Topic research queued for %d existing mandate(s)', queued)
+        except Exception:
+            _log.exception('Topic research backfill failed')
         while not stop.is_set():
             try:
                 with factory() as session: item = claim(session)

@@ -123,7 +123,8 @@
   .legend { list-style: none; display: flex; flex-wrap: wrap; gap: 6px 20px; margin-top: 9px; font-size: 12.5px; }
   .legend b { margin-left: 5px; }
   .tblview { margin-top: 8px; font-size: 12.5px; }
-  .tblview summary { cursor: pointer; color: var(--mandate); }
+  .tblview summary { cursor: pointer; color: var(--mandate); list-style: none; }
+  .tblview summary::-webkit-details-marker { display: none; }
   table { border-collapse: collapse; margin-top: 8px; width: 100%; }
   th, td { text-align: left; padding: 5px 10px 5px 0; border-bottom: 1px solid var(--line); }
   thead th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }

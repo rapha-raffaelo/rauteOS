@@ -130,3 +130,6 @@ h1:focus { outline: none; }
 
 .onb-audio-icon.onb-audio-record { color: #d52232; }
 .onb-audio-seek { display:block; width:100%; margin:16px 0; accent-color:#111; }
+.onb-language { display: inline-flex; padding: 3px; border: 1px solid #ccc; border-radius: 6px; gap: 3px; flex: none; }
+.onb-language button { border: 0; padding: 6px 12px; min-height: 36px; font-size: 12px; font-weight: 600; letter-spacing: .04em; background: transparent; }
+.onb-language button[aria-pressed=true] { background: #111; color: white; }

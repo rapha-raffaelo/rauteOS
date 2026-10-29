@@ -1,0 +1,47 @@
+# RauteOS on its own server (Hetzner): the Railway setup, one-to-one.
+#
+# One app container with the daily sweep as a thread inside it (the scheduler is
+# on by default, exactly as on Railway), and Caddy in front for HTTPS, which
+# also serves the raute-kopf.com website straight from website/public. The
+# database and the `claude` login live in /srv/rauteos/data, the same single
+# /data mount Railway gave the service, so moving between the two is a copy.
+#
+# Deployed by .github/workflows/deploy.yml on every push to main.
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: rauteos
+    restart: unless-stopped
+    env_file: [/srv/rauteos/.env]
+    environment:
+      TZ: Europe/Berlin
+    volumes:
+      - /srv/rauteos/data:/data
+    # Only Caddy reaches it; never published on the host.
+    expose: ["8000"]
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://localhost:8000/static/app.css"]
+      interval: 60s
+      timeout: 10s
+      start_period: 120s
+      retries: 3
+
+  caddy:
+    image: caddy:2.10
+    restart: unless-stopped
+    ports: ["80:80", "443:443", "443:443/udp"]
+    environment:
+      RAUTEOS_HOSTS: ${RAUTEOS_HOSTS:-os.raute-kopf.com}
+      WEBSITE_HOSTS: ${WEBSITE_HOSTS:-raute-kopf.com, www.raute-kopf.com}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ../website/public:/srv/website:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [app]
+
+volumes:
+  caddy_data:
+  caddy_config:

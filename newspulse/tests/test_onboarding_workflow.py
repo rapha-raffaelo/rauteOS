@@ -19,6 +19,7 @@ def setup(monkeypatch):
     Base.metadata.create_all(engine)
     factory=sessionmaker(bind=engine,expire_on_commit=False)
     monkeypatch.setattr(flow,'signing_key',lambda:b'test-key'*4)
+    monkeypatch.setattr(flow,'fetch_logo',lambda site:None)
     monkeypatch.setattr(crawler,'BATCHES',[[{'key':'R01.01'}],[{'key':'R05.01'}]])
     app=create_app()
     def db():
@@ -91,6 +92,30 @@ def test_failed_batch_resumes_without_repeating_saved_work(setup):
     resumed=[]
     def finish(c,f,p):resumed.append(f[0]['key']);return researched(c,f,p)
     flow.work(factory,*claimed,crawl=lambda _:pytest.fail('crawl repeated'),research=finish)
+    assert resumed==['R05.01']
+    assert web.get('/client/1/onboarding-workflow').json()['status']=='ready'
+
+
+def test_a_spent_search_quota_pauses_the_research_instead_of_failing_it(setup):
+    from newspulse.analyzer import BackendError
+    web,factory=setup
+    create(web)
+    def limited(client,fields,pages):
+        if fields[0]['key']=='R05.01':
+            raise BackendError('Gemini HTTP 429: Quota exceeded, Generate content requests per minute limit exceeded')
+        return researched(client,fields,pages)
+    with factory() as s: claimed=flow.claim(s)
+    flow.work(factory,*claimed,crawl=lambda site:[],research=limited)
+    with factory() as s:
+        job=s.get(CustomerOnboardingJob,1)
+        assert job.status=='queued' and job.stage=='Wartet auf Recherche-Kontingent'
+        assert job.checkpoint['next_batch']==1 and job.note==''
+        assert flow.claim(s) is None
+        job.lease_until=dt.datetime.now(dt.UTC)-dt.timedelta(seconds=1);s.commit()
+        claimed=flow.claim(s)
+    resumed=[]
+    flow.work(factory,*claimed,crawl=lambda _:pytest.fail('crawl repeated'),
+              research=lambda c,f,p:resumed.append(f[0]['key']) or researched(c,f,p))
     assert resumed==['R05.01']
     assert web.get('/client/1/onboarding-workflow').json()['status']=='ready'
 
@@ -211,3 +236,43 @@ def test_link_available_before_research_and_stable_after_research(setup):
 
 def test_customer_name_slug():
     assert flow.customer_link('token','Müller & Söhne GmbH').endswith('/mueller-soehne-gmbh')
+
+
+def test_backfill_queues_each_mandate_without_topic_research_once(setup):
+    web,factory=setup
+    with factory() as s:
+        s.add_all([Client(name='Never onboarded',website='https://never.example'),
+                   Client(name='Old catalogue',website='https://old.example'),
+                   Client(name='Done',website='https://done.example'),
+                   Client(name='Paused',active=False),
+                   Client(name='Rival',is_competitor=True),
+                   Client(name='Stalled',website='https://stalled.example')]);s.commit()
+        s.add_all([CustomerOnboardingJob(client_id=2,status='ready',checkpoint={'pages':[{'url':'https://old.example','text':'x'}],'next_batch':8}),
+                   CustomerOnboardingJob(client_id=3,status='ready',checkpoint={'version':crawler.VERSION,'next_batch':21}),
+                   CustomerOnboardingJob(client_id=6,status='failed',checkpoint={'version':crawler.VERSION,'pages':[],'next_batch':1})]);s.commit()
+        assert flow.backfill(s)==3
+        assert {j.client_id:j.status for j in s.scalars(select(CustomerOnboardingJob))}=={1:'queued',2:'queued',3:'ready',6:'queued'}
+        assert s.get(CustomerOnboardingJob,6).checkpoint['next_batch']==1
+        assert s.get(CustomerOnboardingJob,2).checkpoint=={'pages':[{'url':'https://old.example','text':'x'}]}
+        assert flow.backfill(s)==0
+
+
+def test_a_new_mandate_gets_its_logo_first_and_a_missing_one_never_blocks(setup,monkeypatch):
+    web,factory=setup
+    create(web)
+    sites=[]
+    monkeypatch.setattr(flow,'fetch_logo',lambda site:sites.append(site) or 'data:image/png;base64,iVBORw0KGgo=')
+    with factory() as s: claimed=flow.claim(s)
+    flow.work(factory,*claimed,crawl=lambda _:[],research=researched)
+    with factory() as s:
+        assert s.get(Client,1).logo_url=='data:image/png;base64,iVBORw0KGgo='
+    assert sites==['https://example.org']
+    with factory() as s:
+        s.add(Client(name='No mark',website='https://nomark.example'));s.commit()
+        flow.enqueue(s,s.get(Client,2));s.commit()
+        claimed=flow.claim(s)
+    monkeypatch.setattr(flow,'fetch_logo',lambda site:None)
+    flow.work(factory,*claimed,crawl=lambda _:[],research=researched)
+    assert web.get('/client/2/onboarding-workflow').json()['status']=='ready'
+    with factory() as s:
+        assert s.get(Client,2).logo_url is None

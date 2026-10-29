@@ -15,8 +15,12 @@ def render_profile(request, session, client, **extra):
     from .client import market_context
 
     from ..react_pages import render
+    from ... import branding
+    from ..app import logo_src
     return render(request, 'profile', dict(
         client=client,
+        brand=dict(logo=logo_src(client.logo_url), monogram=branding.monogram(client.name),
+                   colour=branding.colour(client.name)),
         company=profile_context(request, session, client, **extra),
         rivals=rivals_context(session, client),
         market=market_context(session, client)))

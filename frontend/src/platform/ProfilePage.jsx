@@ -905,8 +905,13 @@ export function ProfilePage({ data: d, onData }) {
   return (
     <div className="profile-page">
       <PageHeading
-        eyebrow={d.client.name}
-        title={t("Profil")}
+        eyebrow={t("Profil")}
+        title={<span className="profile-title">
+          {d.brand?.logo
+            ? <img className="profile-logo" src={d.brand.logo} alt="" />
+            : <span className="profile-logo profile-logo--mono" style={{background: d.brand?.colour}} aria-hidden="true">{d.brand?.monogram}</span>}
+          <span>{d.client.name}</span>
+        </span>}
         description={t(
           "Wissen, Unternehmensangaben, Wettbewerb und Marktumfeld an einem Ort.",
         )}

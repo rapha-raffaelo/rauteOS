@@ -2983,3 +2983,45 @@ body:has([id^="react-"]) .content{padding-top:16px}
 .vis-standard__question { font-size: clamp(1.15rem, 2vw, 1.6rem); line-height: 1.4; max-width: 65ch; margin: .6rem 0; }
 .vis-add-question > summary { padding: 1rem 1.25rem; cursor: pointer; font-weight: 600; }
 .vis-add-question textarea { display: block; width: 100%; margin: .5rem 0 1rem; }
+
+/* --- Folds without triangles (2026-10-27) ------------------------------------
+   No disclosure triangle anywhere in RauteOS. A fold opens from a quiet button
+   instead, the same weight as .btn--quiet. Folds that style their own summary
+   (profile-fold, log, isig, the workspace panels …) keep that look and only
+   lose the marker; the plain ones and the classed ones nobody styled get the
+   button. */
+summary { list-style: none; cursor: pointer; }
+summary::-webkit-details-marker { display: none; }
+summary::marker { content: ""; }
+details:not([class]) > summary:not([class]),
+:is(.tblview, .pack__existing, .fnd__edit, .fmtedit, .add-client-toggle, .smap__add) > summary:not([class]) {
+  display: inline-flex; align-items: center; gap: var(--s2);
+  min-height: 32px; padding: 0 var(--s3); margin: var(--s1) 0;
+  border-radius: var(--radius-s); background: var(--fill-2); color: var(--ink-2);
+  font-size: var(--t-subhead); font-weight: 500; user-select: none;
+}
+details:not([class]) > summary:not([class]):hover,
+:is(.tblview, .pack__existing, .fnd__edit, .fmtedit, .add-client-toggle, .smap__add) > summary:not([class]):hover { background: var(--fill); color: var(--ink); }
+details:not([class])[open] > summary:not([class]),
+:is(.tblview, .pack__existing, .fnd__edit, .fmtedit, .add-client-toggle, .smap__add)[open] > summary:not([class]) { background: var(--fill); color: var(--ink); }
+summary:focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; }
+
+/* --- The mandate's own heading on its profile (2026-10-27) ------------------
+   The client is the subject of the page, so its name carries the heading with
+   its logo beside it; "Profil" drops to the eyebrow. The monogram stands in
+   until the onboarding queue has fetched the real mark. */
+.profile-title { display: inline-flex; align-items: center; gap: var(--s4); font-size: 44px; line-height: 1.1; min-width: 0; }
+.profile-title > span:last-child { overflow-wrap: anywhere; }
+.profile-logo {
+  flex: none; width: 56px; height: 56px; border-radius: var(--radius); object-fit: contain;
+  background: var(--card); border: 1px solid var(--line); padding: 6px;
+}
+.profile-logo--mono {
+  display: inline-flex; align-items: center; justify-content: center; padding: 0; border: 0;
+  color: #fff; font-size: 20px; font-weight: 700; letter-spacing: 0;
+}
+@media (max-width: 600px) {
+  .profile-title { font-size: 32px; gap: var(--s3); }
+  .profile-logo { width: 44px; height: 44px; }
+  .profile-logo--mono { font-size: 16px; }
+}

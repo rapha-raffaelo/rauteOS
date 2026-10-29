@@ -1,0 +1,4 @@
+*
+!public/
+!public/**
+!default.conf.template

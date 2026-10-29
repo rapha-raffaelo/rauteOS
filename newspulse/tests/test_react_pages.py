@@ -30,7 +30,7 @@ def test_profile_sources_and_disagreements_remain_scoped(web,db):
     assert data['company']['facts']['ceo']['source_title']=='Register'
     assert data['company']['facts']['ceo']['filled_by']=='research'
     assert 'Other mandate' not in json.dumps(data)
-    assert set(data)=={'client','company','rivals','market'}
+    assert set(data)=={'client','brand','company','rivals','market'}
     assert web.get('/client/3/twin',headers=JSON).status_code==404
 
 
@@ -99,3 +99,15 @@ def test_computed_research_status_is_in_the_json_contract():
     assert view_data(ThemeProbe(term='Own only',reason='',external=0,own=4))['usable'] is False
     assert 'usable' in view_data(Candidate(term='Tech',hits=50))
     assert view_data(RunView(started_at=dt.datetime.now(dt.UTC),finished_at=None,status='running',articles_found=0,errors=[]))['is_running'] is True
+
+
+def test_the_profile_heading_is_the_mandate_with_its_mark(web,db):
+    from react_render import rendered
+    client=db.get(Client,1)
+    page=rendered(web.get('/client/1/twin'))
+    heading=re.search(r'<h1>(.*?)</h1>',page,re.S).group(1)
+    assert client.name in heading and 'profile-logo--mono' in heading
+    client.logo_url='data:image/png;base64,iVBORw0KGgo=';db.commit()
+    data=web.get('/client/1/twin',headers=JSON).json()
+    assert data['brand']['logo']=='data:image/png;base64,iVBORw0KGgo='
+    assert '<img class="profile-logo" src="data:image/png;base64,iVBORw0KGgo="' in rendered(web.get('/client/1/twin'))

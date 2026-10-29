@@ -241,3 +241,15 @@ def test_demo_is_public_and_contains_only_fictional_data(setup):
     with factory() as session:
         assert list(session.scalars(select(CustomerOnboardingInvite))) == []
         assert len(list(session.scalars(select(ClientFact)))) == facts
+
+
+def test_every_question_and_topic_title_exists_in_german_and_english(setup):
+    from newspulse import customer_onboarding, onboarding_crawler
+    for q in customer_onboarding.questions():
+        assert q['text'] and q['help'] and q['text_en'] and q['help_en'] and q['section_en']
+        assert q['text_en']!=q['text'] and q['help_en']!=q['help']
+    assert set(customer_onboarding.TOPIC_LABELS_EN)==set(onboarding_crawler.TOPICS)
+    web,_=setup
+    _,header=invite(web)
+    prefill=web.get('/api/onboarding',headers=header).json()['prefill']
+    assert prefill[0]['label']=='Unternehmensbeschreibung' and prefill[0]['label_en']=='Company description'

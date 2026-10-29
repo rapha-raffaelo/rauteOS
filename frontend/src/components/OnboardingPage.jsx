@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {OnboardingAudio} from './OnboardingAudio.jsx';
+import {LANGUAGES, initialLanguage, rememberLanguage, say} from '../onboardingText.js';
 
 export function OnboardingPage({ token = window.location.hash.slice(1).split('/')[0], demoApi = null }) {
   const [data, setData] = useState(null), [error, setError] = useState('');
@@ -7,6 +8,9 @@ export function OnboardingPage({ token = window.location.hash.slice(1).split('/'
   const [draft, setDraft] = useState(''), [busy, setBusy] = useState(false);
   const [prefillEdits, setPrefillEdits] = useState({}), [editingPrefill, setEditingPrefill] = useState(false);
   const [listening, setListening] = useState(false), [audioDrafts, setAudioDrafts] = useState({});
+  const [language, setLanguage] = useState(initialLanguage);
+  const tr = text => say(language, text);
+  const en = language === 'en';
   const heading = useRef(null), touch = useRef(null), lock = useRef(false);
   const drafts = useRef({}), prefillReturn = useRef(null);
   const question = data?.questions[index];
@@ -24,13 +28,13 @@ export function OnboardingPage({ token = window.location.hash.slice(1).split('/'
       ...(body === undefined ? {} : {body: JSON.stringify(body)})});
     if (!response.ok) {
       const json = await response.json().catch(() => ({}));
-      throw new Error(typeof json.detail === 'string' ? json.detail : 'Speichern nicht möglich. Bitte erneut versuchen. Ihre Eingabe bleibt hier.');
+      throw new Error(typeof json.detail === 'string' ? json.detail : tr('Speichern nicht möglich. Bitte erneut versuchen. Ihre Eingabe bleibt hier.'));
     }
     return response.json();
   }
   useEffect(() => {
     let active = true;
-    if (!token && !demoApi) { setError('Dieser Link ist unvollständig. Bitte öffnen Sie den persönlichen Link von raute+kopf.'); return; }
+    if (!token && !demoApi) { setError(tr('Dieser Link ist unvollständig. Bitte öffnen Sie den persönlichen Link von raute+kopf.')); return; }
     api().then(d => { if (active) {setData(d); if (d.completed) setScreen('done');} })
       .catch(e => {if (active) setError(e.message);});
     return () => { active = false; };
@@ -64,7 +68,7 @@ export function OnboardingPage({ token = window.location.hash.slice(1).split('/'
   }
   async function saveAndMove(skip = false, target = index + 1) {
     if (lock.current || listening) return;
-    if (!skip && !canSave) {setError('Ein paar Worte genügen. Oder wählen Sie „Später beantworten“.'); return;}
+    if (!skip && !canSave) {setError(tr('Ein paar Worte genügen. Oder wählen Sie „Später beantworten“.')); return;}
     lock.current = true; setBusy(true); setError('');
     try {
       const answer = await api('/answers/' + question.key, 'PUT', {value: skip || audioMode === 'audio' ? '' : draft, skipped: skip, ...(!skip && audioRef ? {audio_id:audioRef.id,mode:audioMode} : {})});
@@ -91,65 +95,67 @@ export function OnboardingPage({ token = window.location.hash.slice(1).split('/'
     finally {lock.current = false; setBusy(false);}
   }
   function renderPrefill(p) {
-    return <div key={p.key} className="onb-prefill-row"><strong>{p.label}</strong>
-              {editingPrefill ? <textarea aria-label={p.label} maxLength={20000} value={prefillEdits[p.key] ?? p.customer_value ?? p.value} disabled={busy} onChange={e=>setPrefillEdits({...prefillEdits,[p.key]:e.target.value})}/> : <p>{p.customer_value || p.value}</p>}
+    const label = en ? p.label_en || p.label : p.label;
+    return <div key={p.key} className="onb-prefill-row"><strong>{label}</strong>
+              {editingPrefill ? <textarea aria-label={label} maxLength={20000} value={prefillEdits[p.key] ?? p.customer_value ?? p.value} disabled={busy} onChange={e=>setPrefillEdits({...prefillEdits,[p.key]:e.target.value})}/> : <p>{p.customer_value || p.value}</p>}
             </div>;
   }
   const settled = data ? Object.keys(data.answers).length : 0;
   const answered = data ? Object.values(data.answers).filter(a => a.value || a.audio_id).length : 0;
   return <div className="onboarding">
-    <header className="onb-header"><div className="onb-logo"><img src="/static/brand/raute-kopf.jpg" alt="raute+kopf" width="2048" height="683" /></div></header>
-    <main>
-      {demoApi && <aside className="onb-demo"><span>Demo · nur in diesem Tab gespeichert</span><button onClick={async () => {await demoApi.reset(); window.location.reload();}}>Neustart</button></aside>}
-      {!data ? <section className="onb-card"><h1>Ihr Start mit raute+kopf.</h1><p role={error ? 'alert' : 'status'}>{error || 'Ihr Fragebogen wird geladen …'}</p>{token && error && <button onClick={() => window.location.reload()}>Erneut versuchen</button>}</section> : <>
+    <header className="onb-header"><div className="onb-logo"><img src="/static/brand/raute-kopf.jpg" alt="raute+kopf" width="2048" height="683" /></div>
+      <div className="onb-language" role="group" aria-label={tr('Sprache')}>{LANGUAGES.map(code => <button key={code} type="button" lang={code} aria-pressed={language === code} onClick={() => {setLanguage(code); rememberLanguage(code);}}>{code.toUpperCase()}</button>)}</div></header>
+    <main lang={language}>
+      {demoApi && <aside className="onb-demo"><span>{tr('Demo · nur in diesem Tab gespeichert')}</span><button onClick={async () => {await demoApi.reset(); window.location.reload();}}>{tr('Neustart')}</button></aside>}
+      {!data ? <section className="onb-card"><h1>{tr('Ihr Start mit raute+kopf.')}</h1><p role={error ? 'alert' : 'status'}>{error || tr('Ihr Fragebogen wird geladen …')}</p>{token && error && <button onClick={() => window.location.reload()}>{tr('Erneut versuchen')}</button>}</section> : <>
         <div className="onb-context"><span>{data.customer}</span><span>ONBOARDING</span></div>
         {screen === 'welcome' && <section className="onb-card onb-welcome">
 
-          <h1 ref={heading} tabIndex={-1}>Ihre Perspektive.</h1>
-          <p>Die Fakten stehen. Jetzt Ihre Perspektive.</p>
-          <p className="onb-meta">{data.questions.length} Fragen · jede ist freiwillig · in mehreren Etappen möglich</p>
-          <button className="onb-primary" onClick={() => data.prefill_confirmed ? resume() : setScreen('prefill')}>{settled ? 'Weiter, wo ich war' : 'Los geht’s'}</button>
-          <p className="onb-note">Speichern & später weitermachen — jederzeit.</p>
+          <h1 ref={heading} tabIndex={-1}>{tr('Ihre Perspektive.')}</h1>
+          <p>{tr('Die Fakten stehen. Jetzt Ihre Perspektive.')}</p>
+          <p className="onb-meta">{data.questions.length} {tr('Fragen · jede ist freiwillig · in mehreren Etappen möglich')}</p>
+          <button className="onb-primary" onClick={() => data.prefill_confirmed ? resume() : setScreen('prefill')}>{settled ? tr('Weiter, wo ich war') : tr('Los geht’s')}</button>
+          <p className="onb-note">{tr('Speichern & später weitermachen — jederzeit.')}</p>
         </section>}
         {screen === 'prefill' && <section className="onb-card">
 
-          <h1 ref={heading} tabIndex={-1}>Das wissen wir schon.</h1>
-          <p>Stimmt das so?</p>
-          <button className="onb-edit" disabled={busy} onClick={() => {setEditingPrefill(!editingPrefill); setPrefillEdits({});}}>{editingPrefill ? 'Bearbeitung abbrechen' : 'Angaben bearbeiten'}</button>
+          <h1 ref={heading} tabIndex={-1}>{tr('Das wissen wir schon.')}</h1>
+          <p>{tr('Stimmt das so?')}</p>
+          <button className="onb-edit" disabled={busy} onClick={() => {setEditingPrefill(!editingPrefill); setPrefillEdits({});}}>{editingPrefill ? tr('Bearbeitung abbrechen') : tr('Angaben bearbeiten')}</button>
           <div className="onb-prefill">
             {data.prefill.map(renderPrefill)}
           </div>
-          <button className="onb-primary" disabled={busy} onClick={confirmPrefill}>{busy ? 'Wird gespeichert …' : editingPrefill ? 'Speichern & weiter' : 'Stimmt, weiter'}</button>
+          <button className="onb-primary" disabled={busy} onClick={confirmPrefill}>{busy ? tr('Wird gespeichert …') : editingPrefill ? tr('Speichern & weiter') : tr('Stimmt, weiter')}</button>
         </section>}
         {screen === 'question' && <>
           <div className="onb-progress-label"><span>{index + 1} / {data.questions.length}</span></div>
-          <progress value={settled} max={data.questions.length} aria-label="Gespeicherte Fragen"/>
+          <progress value={settled} max={data.questions.length} aria-label={tr('Gespeicherte Fragen')}/>
           <section className="onb-card onb-question" key={question.key}
             onTouchStart={e => {if (e.target.closest('textarea,button,input')) return; touch.current = {x:e.touches[0].clientX,y:e.touches[0].clientY};}}
             onTouchEnd={e => {const start = touch.current; touch.current = null; if (!start || busy || listening) return; const dx = e.changedTouches[0].clientX-start.x, dy = e.changedTouches[0].clientY-start.y; if (Math.abs(dx)>100 && Math.abs(dy)<45) {if(dx<0 && canSave) saveAndMove(); else if(dx>0) back();}}}>
 
-            <h1 id="onb-question-title" ref={heading} tabIndex={-1}>{question.text}</h1>
-            {question.help && <p className="onb-help">{question.help}</p>}
-            <OnboardingAudio questionKey={question.key} token={token} demoApi={demoApi} state={audioState} saved={savedAnswer}
+            <h1 id="onb-question-title" ref={heading} tabIndex={-1}>{en ? question.text_en || question.text : question.text}</h1>
+            {question.help && <p className="onb-help">{en ? question.help_en || question.help : question.help}</p>}
+            <OnboardingAudio language={language} questionKey={question.key} token={token} demoApi={demoApi} state={audioState} saved={savedAnswer}
               configured={data.transcription_configured} onActivity={setListening}
               onDelete={answer=>setData(previous=>{const answers={...previous.answers};if(answer)answers[question.key]=answer;else delete answers[question.key];return {...previous,answers,completed:false};})}
               onChange={value=>setAudioDrafts(previous=>({...previous,[question.key]:value}))}
               onText={value=>setDraft(previous=>[previous.trim(),value].filter(Boolean).join('\n'))}>
-            {audioMode === 'transcript' && question.choices.length > 0 && <div className="onb-choices" aria-label="Antwortvorschläge">{question.choices.map(c => <button key={c} disabled={busy || listening} aria-pressed={draft.split('; ').includes(c)} onClick={() => setDraft(previous => {if(question.single_choice) return previous === c ? '' : c; const parts=previous ? previous.split('; ') : []; return (parts.includes(c) ? parts.filter(p=>p!==c) : [...parts,c]).join('; ');})}>{c}</button>)}</div>}
-            {audioMode === 'transcript' && <><label className="onb-input-label onb-sr-only" htmlFor="onb-answer">Ihre Antwort</label>
-            <textarea id="onb-answer" value={draft} maxLength={20000} disabled={busy || listening} onChange={e=>setDraft(e.target.value)} placeholder="Ihre Antwort …"/></>}
+            {audioMode === 'transcript' && question.choices.length > 0 && <div className="onb-choices" aria-label={tr('Antwortvorschläge')}>{question.choices.map(c => <button key={c} disabled={busy || listening} aria-pressed={draft.split('; ').includes(c)} onClick={() => setDraft(previous => {if(question.single_choice) return previous === c ? '' : c; const parts=previous ? previous.split('; ') : []; return (parts.includes(c) ? parts.filter(p=>p!==c) : [...parts,c]).join('; ');})}>{c}</button>)}</div>}
+            {audioMode === 'transcript' && <><label className="onb-input-label onb-sr-only" htmlFor="onb-answer">{tr('Ihre Antwort')}</label>
+            <textarea id="onb-answer" value={draft} maxLength={20000} disabled={busy || listening} onChange={e=>setDraft(e.target.value)} placeholder={tr('Ihre Antwort …')}/></>}
             </OnboardingAudio>
-            <div className="onb-actions"><button disabled={busy || listening} onClick={back} aria-label={index === 0 ? "Zurück zu den Unternehmensangaben" : "Vorherige Frage"}>←</button><button className="onb-primary" disabled={busy || listening || !canSave} onClick={()=>saveAndMove()}>{busy ? 'Wird gespeichert …' : index === data.questions.length-1 ? 'Antworten ansehen' : 'Weiter'}</button></div>
-            {!data.answers[question.key]?.value && !data.answers[question.key]?.audio_id && <button className="onb-skip" disabled={busy || listening} onClick={()=>saveAndMove(true)}>Später beantworten</button>}
+            <div className="onb-actions"><button disabled={busy || listening} onClick={back} aria-label={tr(index === 0 ? 'Zurück zu den Unternehmensangaben' : 'Vorherige Frage')}>←</button><button className="onb-primary" disabled={busy || listening || !canSave} onClick={()=>saveAndMove()}>{busy ? tr('Wird gespeichert …') : index === data.questions.length-1 ? tr('Antworten ansehen') : tr('Weiter')}</button></div>
+            {!data.answers[question.key]?.value && !data.answers[question.key]?.audio_id && <button className="onb-skip" disabled={busy || listening} onClick={()=>saveAndMove(true)}>{tr('Später beantworten')}</button>}
           </section>
 
         </>}
-        {screen === 'review' && <section className="onb-card"><h1 ref={heading} tabIndex={-1}>So klingt Ihr Unternehmen.</h1><p>{answered} Antworten gespeichert · {data.questions.length-answered} Fragen noch offen.</p>
-          <button className="onb-skip" disabled={busy} onClick={()=>setScreen('prefill')}>Unternehmensangaben</button>
-          <div className="onb-review">{data.questions.map((q,i)=><button disabled={busy} key={q.key} onClick={()=>openQuestion(i)}><strong>{q.text}</strong><span>{data.answers[q.key]?.mode === 'audio' ? 'Audio gespeichert' : data.answers[q.key]?.value || 'Noch offen — später beantworten'}</span><small>Bearbeiten ↗</small></button>)}</div>
-          <button className="onb-primary" disabled={busy} onClick={complete}>{busy ? 'Wird abgeschlossen …' : 'Abschließen'}</button>
+        {screen === 'review' && <section className="onb-card"><h1 ref={heading} tabIndex={-1}>{tr('So klingt Ihr Unternehmen.')}</h1><p>{answered} {tr('Antworten gespeichert')} · {data.questions.length-answered} {tr('Fragen noch offen.')}</p>
+          <button className="onb-skip" disabled={busy} onClick={()=>setScreen('prefill')}>{tr('Unternehmensangaben')}</button>
+          <div className="onb-review">{data.questions.map((q,i)=><button disabled={busy} key={q.key} onClick={()=>openQuestion(i)}><strong>{en ? q.text_en || q.text : q.text}</strong><span>{data.answers[q.key]?.mode === 'audio' ? tr('Audio gespeichert') : data.answers[q.key]?.value || tr('Noch offen — später beantworten')}</span><small>{tr('Bearbeiten ↗')}</small></button>)}</div>
+          <button className="onb-primary" disabled={busy} onClick={complete}>{busy ? tr('Wird abgeschlossen …') : tr('Abschließen')}</button>
         </section>}
-        {screen === 'done' && <section className="onb-card onb-welcome"><span className="onb-eyebrow">DER ANFANG IST GEMACHT</span><h1 ref={heading} tabIndex={-1}>Danke für<br/><em>Ihre Einblicke.</em></h1><p>{demoApi ? `Demo abgeschlossen. ${answered} Antworten lokal gespeichert.` : `Ihre ${answered} Antworten sind gespeichert.`}</p><p className="onb-note">{demoApi ? "Sie können Ihre Antworten jederzeit bearbeiten." : "Über diesen Link können Sie Ihre Antworten weiter bearbeiten."}</p><button className="onb-primary" onClick={()=>setScreen('review')}>Antworten ansehen</button></section>}
+        {screen === 'done' && <section className="onb-card onb-welcome"><span className="onb-eyebrow">{tr('DER ANFANG IST GEMACHT')}</span><h1 ref={heading} tabIndex={-1}>{tr('Danke für')}<br/><em>{tr('Ihre Einblicke.')}</em></h1><p>{demoApi ? `${tr('Demo abgeschlossen.')} ${answered} ${tr('Antworten lokal gespeichert.')}` : `${tr('Ihre')} ${answered} ${tr('Antworten sind gespeichert.')}`}</p><p className="onb-note">{demoApi ? tr('Sie können Ihre Antworten jederzeit bearbeiten.') : tr('Über diesen Link können Sie Ihre Antworten weiter bearbeiten.')}</p><button className="onb-primary" onClick={()=>setScreen('review')}>{tr('Antworten ansehen')}</button></section>}
         {error && <p className="onb-error" role="alert">{error}</p>}
       </>}
     </main>

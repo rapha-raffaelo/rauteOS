@@ -5,7 +5,7 @@ import {OnboardingPage} from './OnboardingPage.jsx';
 const questions=[{key:'A01.01',text:'Wie heißen Sie?',help:'Offizieller Name',section:'Unternehmen',choices:[]},{key:'B03.01',text:'Wohin geht es?',help:'Ihre Ziele',section:'Zukunft',choices:['Premium','Challenger']}];
 const data={customer:'Testfirma',questions,answers:{},completed:false,prefill:[],prefill_confirmed:true};
 const ok=d=>Promise.resolve({ok:true,json:async()=>d});
-afterEach(()=>{cleanup();vi.restoreAllMocks();delete window.SpeechRecognition;});
+afterEach(()=>{cleanup();vi.restoreAllMocks();delete window.SpeechRecognition;localStorage.clear();});
 it('retains failed answers and advances only after the database confirms saving',async()=>{
   global.fetch=vi.fn().mockImplementationOnce(()=>ok(data)).mockResolvedValueOnce({ok:false,json:async()=>({detail:'Offline. Bitte erneut versuchen.'})}).mockImplementationOnce(()=>ok({value:'Firma',skipped:false}));
   render(<OnboardingPage token="test"/>);
@@ -101,4 +101,23 @@ it('shows each question with its explanation and lets the customer finish with o
   expect(await screen.findByText(/0 Antworten gespeichert · 2 Fragen noch offen/)).toBeTruthy();
   fireEvent.click(screen.getByText('Abschließen'));
   expect(await screen.findByText(/Ihre 0 Antworten sind gespeichert/)).toBeTruthy();
+});
+it('switches questions, explanations, topic titles and labels to English and back',async()=>{
+  const bilingual={...data,prefill_confirmed:false,
+    questions:questions.map(q=>({...q,text_en:'EN '+q.text,help_en:'EN '+q.help})),
+    prefill:[{key:'R01.01',label:'Unternehmensidentität',label_en:'Company identity',value:'Testfirma GmbH'}]};
+  global.fetch=vi.fn().mockImplementationOnce(()=>ok(bilingual)).mockImplementationOnce(()=>ok({ok:true}));
+  render(<OnboardingPage token="test"/>);
+  fireEvent.click(await screen.findByRole('button',{name:'EN'}));
+  expect(screen.getByText('Let’s start')).toBeTruthy();
+  fireEvent.click(screen.getByText('Let’s start'));
+  expect(screen.getByText('Company identity')).toBeTruthy();
+  fireEvent.click(screen.getByText('Correct, continue'));
+  expect(await screen.findByText('EN Wie heißen Sie?')).toBeTruthy();
+  expect(screen.getByText('EN Offizieller Name')).toBeTruthy();
+  expect(screen.getByLabelText('Your answer')).toBeTruthy();
+  expect(screen.getByRole('button',{name:'Start recording'})).toBeTruthy();
+  fireEvent.click(screen.getByRole('button',{name:'DE'}));
+  expect(screen.getByText('Wie heißen Sie?')).toBeTruthy();
+  expect(screen.getByText('Später beantworten')).toBeTruthy();
 });
