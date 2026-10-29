@@ -79,7 +79,7 @@ def test_failed_batch_resumes_without_repeating_saved_work(setup):
     calls=[]
     def partial(client,fields,pages):
         calls.append(fields[0]['key'])
-        if fields[0]['key']=='R05.01':raise TimeoutError()
+        if fields[0]['key']=='R05.01':raise ValueError('Ungültige Recherche-Antwort')
         return researched(client,fields,pages)
     with factory() as s: claimed=flow.claim(s)
     flow.work(factory,*claimed,crawl=lambda site:[],research=partial)
@@ -118,6 +118,28 @@ def test_a_spent_search_quota_pauses_the_research_instead_of_failing_it(setup):
               research=lambda c,f,p:resumed.append(f[0]['key']) or researched(c,f,p))
     assert resumed==['R05.01']
     assert web.get('/client/1/onboarding-workflow').json()['status']=='ready'
+
+
+def test_a_slow_search_is_retried_and_a_topic_that_keeps_failing_is_skipped(setup):
+    from newspulse.analyzer import BackendError
+    web,factory=setup
+    create(web)
+    calls=[]
+    def slow(client,fields,pages):
+        calls.append(fields[0]['key'])
+        if fields[0]['key']=='R01.01':raise BackendError('Gemini timed out after 180.0s')
+        return researched(client,fields,pages)
+    for attempt in range(flow.TOPIC_TRIES):
+        with factory() as s:
+            job=s.get(CustomerOnboardingJob,1)
+            if attempt:
+                assert job.status=='queued' and job.stage=='Recherche wird gleich fortgesetzt'
+                job.lease_until=dt.datetime.now(dt.UTC)-dt.timedelta(seconds=1);s.commit()
+            claimed=flow.claim(s)
+        flow.work(factory,*claimed,crawl=lambda site:[],research=slow)
+    assert calls==['R01.01']*flow.TOPIC_TRIES+['R05.01']
+    status=web.get('/client/1/onboarding-workflow').json()
+    assert status['status']=='ready' and status['researched_fields']==1
 
 
 def test_expired_worker_is_fenced_after_restart(setup):

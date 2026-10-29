@@ -27,6 +27,21 @@ LEASE = dt.timedelta(minutes=8)
 # limit clears quickly; anything longer is usually the daily cap.
 PAUSE_MINUTE = dt.timedelta(seconds=90)
 PAUSE_LONG = dt.timedelta(hours=1)
+# A search that times out or hits a server error is tried again after a short
+# pause; a topic that keeps failing is skipped, since every topic is optional.
+TOPIC_TRIES = 3
+
+
+class Paused(Exception):
+    def __init__(self, delay):
+        super().__init__(delay)
+        self.delay = delay
+
+
+def transient(exc):
+    text = str(exc).lower()
+    return isinstance(exc, TimeoutError) or 'timed out' in text or 'unreachable' in text \
+        or bool(re.search(r'http (500|502|503|504)\b', text))
 
 
 class Superseded(Exception):
@@ -175,8 +190,20 @@ def work(factory, identity, token, *, crawl=None, research=None):
         for index in range(checkpoint.get('next_batch', 0), len(onboarding_crawler.BATCHES)):
             with factory() as session:
                 own(session, identity, token, stage=f'Öffentliche Recherche {index + 1}/{len(onboarding_crawler.BATCHES)}'); session.commit()
-            answers = research(context, onboarding_crawler.BATCHES[index], checkpoint['pages'])
-            checkpoint = {**checkpoint, 'next_batch': index + 1,
+            try:
+                answers = research(context, onboarding_crawler.BATCHES[index], checkpoint['pages'])
+            except Exception as exc:
+                if is_quota_error(exc) or not transient(exc): raise
+                tries = checkpoint.get('tries', 0) + 1
+                if tries < TOPIC_TRIES:
+                    checkpoint = {**checkpoint, 'tries': tries}
+                    with factory() as session:
+                        own(session, identity, token, checkpoint=checkpoint); session.commit()
+                    raise Paused(PAUSE_MINUTE) from exc
+                _log.warning('Onboarding topic %s skipped for client %s after %d tries: %s',
+                             onboarding_crawler.BATCHES[index][0]['key'], identity, tries, exc)
+                answers = []
+            checkpoint = {**checkpoint, 'next_batch': index + 1, 'tries': 0,
                 'answered_keys': sorted(set(checkpoint.get('answered_keys', [])) | {a['key'] for a in answers}),
                 'sources': sorted(set(checkpoint.get('sources', [])) | {a['source_url'] for a in answers})}
             with factory() as session:
@@ -199,15 +226,19 @@ def work(factory, identity, token, *, crawl=None, research=None):
     except Superseded:
         return
     except Exception as exc:
-        if is_quota_error(exc):
-            pause = PAUSE_MINUTE if 'per minute' in str(exc).lower() else PAUSE_LONG
-            _log.warning('Onboarding research for client %s paused %s: search quota spent', identity, pause)
+        if isinstance(exc, Paused) or is_quota_error(exc):
+            if isinstance(exc, Paused):
+                pause, stage = exc.delay, 'Recherche wird gleich fortgesetzt'
+                _log.warning('Onboarding research for client %s paused %s: %s', identity, pause, exc.__cause__)
+            else:
+                pause, stage = (PAUSE_MINUTE if 'per minute' in str(exc).lower() else PAUSE_LONG), 'Wartet auf Recherche-Kontingent'
+                _log.warning('Onboarding research for client %s paused %s: search quota spent', identity, pause)
             with factory() as session:
                 try:
                     own(session, identity, token)
                     session.execute(update(CustomerOnboardingJob).where(CustomerOnboardingJob.client_id == identity,
                         CustomerOnboardingJob.token == token).values(status='queued', token='',
-                        stage='Wartet auf Recherche-Kontingent', lease_until=dt.datetime.now(dt.UTC) + pause))
+                        stage=stage, lease_until=dt.datetime.now(dt.UTC) + pause))
                     session.commit()
                 except Superseded:
                     session.rollback()
