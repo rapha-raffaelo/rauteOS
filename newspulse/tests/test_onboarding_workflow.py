@@ -142,6 +142,29 @@ def test_a_slow_search_is_retried_and_a_topic_that_keeps_failing_is_skipped(setu
     assert status['status']=='ready' and status['researched_fields']==1
 
 
+def test_broken_json_from_the_search_is_retried_rather_than_failing_the_research(setup):
+    """Gemini once answered topic 16 for Zalando with a missing comma, and the
+    whole onboarding stopped as "Recherche unterbrochen"."""
+    import json
+    web,factory=setup
+    create(web)
+    calls=[]
+    def flaky(client,fields,pages):
+        calls.append(fields[0]['key'])
+        if len(calls)==1:json.loads('{"answers":[{"key":"R01.01" "value":"x"}]}')
+        return researched(client,fields,pages)
+    with factory() as s:claimed=flow.claim(s)
+    flow.work(factory,*claimed,crawl=lambda site:[],research=flaky)
+    with factory() as s:
+        job=s.get(CustomerOnboardingJob,1)
+        assert job.status=='queued' and job.stage=='Recherche wird gleich fortgesetzt'
+        job.lease_until=dt.datetime.now(dt.UTC)-dt.timedelta(seconds=1);s.commit()
+        claimed=flow.claim(s)
+    flow.work(factory,*claimed,crawl=lambda site:[],research=flaky)
+    assert calls==['R01.01','R01.01','R05.01']
+    assert web.get('/client/1/onboarding-workflow').json()['status']=='ready'
+
+
 def test_expired_worker_is_fenced_after_restart(setup):
     web,factory=setup
     create(web)

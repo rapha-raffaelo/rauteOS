@@ -6,6 +6,7 @@ import hmac
 import logging
 import os
 import secrets
+import json
 import re
 import unicodedata
 import threading
@@ -39,9 +40,13 @@ class Paused(Exception):
 
 
 def transient(exc):
+    # A JSONDecodeError is the model writing broken JSON (a missing comma at
+    # character 1856 for Zalando); the same question asked again usually comes
+    # back well formed, so it is retried like a timeout rather than failing all
+    # 21 topics.
     text = str(exc).lower()
-    return isinstance(exc, TimeoutError) or 'timed out' in text or 'unreachable' in text \
-        or bool(re.search(r'http (500|502|503|504)\b', text))
+    return isinstance(exc, (TimeoutError, json.JSONDecodeError)) or 'timed out' in text \
+        or 'unreachable' in text or bool(re.search(r'http (500|502|503|504)\b', text))
 
 
 class Superseded(Exception):
