@@ -118,7 +118,7 @@ of false matches.
   - Column mapping is explicit (source-column to client-field), not positional, so an arbitrary sheet layout imports without reordering; unmapped required fields (name) raise a clear validation error naming the row
   - `aliases`, `keywords`, and `alert_topics` parse from a delimited cell (comma or semicolon) into arrays; whitespace trimmed, blanks dropped
   - Re-importing the same sheet updates existing clients matched by name (case-insensitive, trimmed), never duplicates them
-  - CRUD service functions cover create, update, deactivate (soft, sets `active=false`), and list; deactivating a client keeps its articles and analyses (the archive is permanent)
+  - CRUD service functions cover create, update, deactivate (soft, sets `active=false`), and list; deactivating a client moves it to the archive with its articles and analyses for 90 days (`deactivated_at`, cleared on reactivation); the daily sweep then deletes the mandate and all its data (`clients.purge_archived`, competitors excepted)
   - Tests cover a clean import, a re-import (no duplicates), a bad sheet (missing name column), and array-field parsing, against a committed fixture sheet
 
 ### NP-03: RSS ingestion and feed registry

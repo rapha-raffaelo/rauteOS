@@ -58,7 +58,7 @@ from collections.abc import Callable
 
 from sqlalchemy import select
 
-from .. import config, crisis, digest, job
+from .. import clients, config, crisis, digest, job
 from ..db import get_session
 from ..models import Run, RunStatus
 from . import runlock
@@ -145,6 +145,12 @@ def _run_once() -> None:
                 # Unconfigured SMTP logs a warning and returns None; the digest is
                 # a convenience and must never fail the sweep that produced it.
                 digest.send_digest(session)
+            # Once a day is the archive's whole precision, and under the guard
+            # no sweep can be writing to a mandate while it is deleted.
+            try:
+                clients.purge_archived(session)
+            except Exception:  # noqa: BLE001 — never fails the sweep before it
+                _log.exception("purging archived mandates failed; retried tomorrow")
     finally:
         runlock.guard.release()
 

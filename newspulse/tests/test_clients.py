@@ -22,6 +22,7 @@ from newspulse.clients import (
     import_clients,
     list_clients,
     preview_import,
+    purge_archived,
     update_client,
 )
 from newspulse.db import make_engine
@@ -385,6 +386,56 @@ def test_deactivate_is_soft_and_keeps_articles_and_analyses(session):
     # The archive is permanent: article and analysis both survive deactivation.
     assert session.query(Article).count() == 1
     assert session.query(Analysis).filter_by(client_id=client.id).count() == 1
+
+
+def test_an_archived_mandate_is_deleted_with_its_data_after_ninety_days(session):
+    """Deactivation starts a 90-day archive; the purge then deletes the mandate
+    and everything that cascades from it, and leaves live ones and competitors."""
+    import datetime as dt
+
+    gone = create_client(session, name="Weg AG")
+    kept = create_client(session, name="Bleibt AG")
+    rival = create_client(session, name="Rivale AG")
+    rival.is_competitor = True
+    article = Article(
+        title="Weg AG meldet Rekordumsatz",
+        url="https://example.de/weg-1",
+        source="Handelsblatt",
+        published_at=_utc(),
+        fetched_at=_utc(),
+        summary_text="Kurzfassung.",
+        language="de",
+        title_hash="hash-weg",
+    )
+    session.add(article)
+    session.flush()
+    session.add(Analysis(is_relevant=True, article_id=article.id, client_id=gone.id,
+                         category=Category.FINANZEN, relevance_score=8, importance_score=7))
+    session.commit()
+    deactivate_client(session, gone.id)
+    deactivate_client(session, rival.id)
+    stamp = session.get(Client, gone.id).deactivated_at
+    assert stamp is not None
+    assert session.get(Client, gone.id).purge_on == (stamp + dt.timedelta(days=90)).date()
+    assert session.get(Client, rival.id).purge_on is None
+
+    # Deactivating again must not push the deletion back.
+    update_client(session, gone.id, active=False)
+    assert session.get(Client, gone.id).deactivated_at == stamp
+
+    assert purge_archived(session, now=stamp + dt.timedelta(days=89)) == []
+    assert purge_archived(session, now=stamp + dt.timedelta(days=91)) == ["Weg AG"]
+    assert {c.name for c in session.query(Client)} == {"Bleibt AG", "Rivale AG"}
+    assert session.query(Analysis).count() == 0
+    assert kept.active
+
+
+def test_reactivating_a_mandate_stops_its_archive_clock(session):
+    client = create_client(session, name="Zurück AG")
+    deactivate_client(session, client.id)
+    update_client(session, client.id, active=True)
+    assert session.get(Client, client.id).deactivated_at is None
+    assert purge_archived(session) == []
 
 
 def _utc():

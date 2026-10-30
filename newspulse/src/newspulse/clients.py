@@ -22,6 +22,8 @@ the archive the agent owns is permanent.
 
 from __future__ import annotations
 
+import datetime as dt
+import logging
 import re
 import unicodedata
 from dataclasses import dataclass, field
@@ -30,10 +32,12 @@ from zipfile import BadZipFile
 
 import pandas as pd
 from openpyxl.utils.exceptions import InvalidFileException
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from .models import DEFAULT_COUNTRY, Client
+from .models import ARCHIVE_DAYS, DEFAULT_COUNTRY, Client
+
+_log = logging.getLogger(__name__)
 
 # The client fields an import may populate. ``active`` and ``created_at`` are set
 # by the service/model, never by the sheet, so they are deliberately absent.
@@ -471,13 +475,38 @@ def update_client(session: Session, client_id: int, **fields) -> Client:
 
 def deactivate_client(session: Session, client_id: int) -> Client:
     """Soft-deactivate a client: flip ``active`` to ``False``. The client and all
-    of its articles and analyses stay — the archive is permanent."""
+    of its articles and analyses stay in the archive for ``ARCHIVE_DAYS``, then
+    :func:`purge_archived` deletes them."""
     client = session.get(Client, client_id)
     if client is None:
         raise LookupError(f"No client with id {client_id}")
     client.active = False
     session.commit()
     return client
+
+
+def purge_archived(session: Session, now: dt.datetime | None = None) -> list[str]:
+    """Delete every mandate archived longer than ``ARCHIVE_DAYS``, with its data.
+
+    A core DELETE rather than ``session.delete``: every table that holds a
+    mandate's data cascades on the database side, and the ORM would instead try
+    to null out the client_id of relationships it has no cascade for. Competitors
+    are never purged; they are shared yardsticks, not a customer's data.
+    """
+    cutoff = (now or dt.datetime.now(dt.UTC)) - dt.timedelta(days=ARCHIVE_DAYS)
+    expired = session.execute(
+        select(Client.id, Client.name).where(
+            Client.active.is_(False),
+            Client.is_competitor.is_(False),
+            Client.deactivated_at < cutoff,
+        )
+    ).all()
+    if expired:
+        session.execute(delete(Client).where(Client.id.in_([r.id for r in expired])))
+        session.commit()
+        session.expire_all()
+        _log.info("purged archived mandates: %s", ", ".join(r.name for r in expired))
+    return [r.name for r in expired]
 
 
 def list_clients(session: Session, *, include_inactive: bool = False) -> list[Client]:
@@ -501,5 +530,6 @@ __all__ = [
     "import_clients",
     "list_clients",
     "preview_import",
+    "purge_archived",
     "update_client",
 ]

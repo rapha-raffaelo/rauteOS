@@ -59,6 +59,13 @@ function Job({
     children
   );
 }
+// Live mandates, then competitors, then the archive: a deactivated mandate is
+// on its way out and should not sit between the ones Lucas works on.
+const clientGroups = [
+  ["Mandanten gesamt", (c) => !c.is_competitor && c.active],
+  ["Wettbewerber", (c) => c.is_competitor],
+  ["im Archiv", (c) => !c.is_competitor && !c.active],
+];
 function ClientSettings({ client: c, data: d }) {
   const base = `/settings/clients/${c.id}`,
     edit = Number(d.edit_id) === c.id;
@@ -72,6 +79,8 @@ function ClientSettings({ client: c, data: d }) {
           <p>
             {c.industry || "—"} · {c.country} ·{" "}
             {t(c.active ? "aktiv" : "inaktiv")}
+            {c.purge_on &&
+              ` · ${t("Löschung am")} ${date(c.purge_on)}`}
           </p>
           {d.onboarding[c.id] && <p role="status">{d.onboarding[c.id]}</p>}
           <p>
@@ -522,25 +531,24 @@ export function SettingsPage({ data: d, onData }) {
             <button type="submit" className="btn btn--go">{t("+ Mandant hinzufügen")}</button>
           </form>
         </details>
-        {[false, true]
-          .filter((flag) => d.clients.some((c) => c.is_competitor === flag))
-          .map((isCompetitor) => (
-            <section
-              className="platform-client-group"
-              key={String(isCompetitor)}
-            >
+        {clientGroups
+          .map(([label, belongs]) => [label, d.clients.filter(belongs)])
+          .filter(([, members]) => members.length)
+          .map(([label, members]) => (
+            <section className="platform-client-group" key={label}>
               <h3>
-                {
-                  d.clients.filter((c) => c.is_competitor === isCompetitor)
-                    .length
-                }{" "}
-                {t(isCompetitor ? "Wettbewerber" : "Mandanten gesamt")}
+                {members.length} {t(label)}
               </h3>
-              {d.clients
-                .filter((c) => c.is_competitor === isCompetitor)
-                .map((c) => (
-                  <ClientSettings key={c.id} client={c} data={d} />
-                ))}
+              {label === "im Archiv" && (
+                <p>
+                  {t(
+                    "Deaktivierte Mandanten bleiben 90 Tage im Archiv und werden danach mit allen Daten gelöscht.",
+                  )}
+                </p>
+              )}
+              {members.map((c) => (
+                <ClientSettings key={c.id} client={c} data={d} />
+              ))}
             </section>
           ))}
       </Panel>

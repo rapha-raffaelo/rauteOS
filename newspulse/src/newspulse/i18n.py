@@ -442,6 +442,8 @@ _EN: dict[str, str] = {
     "Andere Branche — selten sinnvoll": "Another industry \u2014 rarely useful",
     "Wettbewerber vorschlagen": "Suggest competitors",
     "Mandanten gesamt": "clients in total",
+    "Löschung am": "deleted on",
+    "Deaktivierte Mandanten bleiben 90 Tage im Archiv und werden danach mit allen Daten gelöscht.": "Deactivated clients stay in the archive for 90 days and are then deleted with all their data.",
     "Maßstab für": "Yardstick for",
     "Werden überwacht, damit Anteile vergleichbar sind — nie an sie berichtet, nie im Digest.":
         "Monitored so shares are comparable \u2014 never reported to, never in the digest.",

@@ -46,6 +46,7 @@ from sqlalchemy.orm import (
     Mapped,
     mapped_column,
     relationship,
+    validates,
 )
 from sqlalchemy.types import TypeDecorator
 
@@ -467,6 +468,13 @@ class Client(Base):
     active: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=True, server_default=text("1")
     )
+    #: When this mandate went into the archive. An archived mandate is deleted
+    #: with everything it holds ``ARCHIVE_DAYS`` later (see
+    #: ``clients.purge_archived``). Stamped by ``_stamp_deactivation`` on every
+    #: write to ``active``, so no deactivation path can forget it.
+    deactivated_at: Mapped[dt.datetime | None] = mapped_column(
+        UTCDateTime(), nullable=True
+    )
     # A competitor is monitored exactly like a mandate but never reported *to* —
     # it exists to answer "how much of the conversation did we own this month".
     # Modelled as a flag rather than a separate table because everything a
@@ -525,6 +533,31 @@ class Client(Base):
         fetched every morning for a page that hides it.
         """
         return str(getattr(kind, "value", kind)) in (self.muted_signal_kinds or [])
+
+    @validates("active")
+    def _stamp_deactivation(self, _key: str, value: bool) -> bool:
+        """Start the archive clock on deactivation, stop it on reactivation.
+
+        Deactivating an already inactive mandate keeps its first stamp, so
+        saving its settings again cannot push the deletion back.
+        """
+        if not value and self.active is not False:
+            self.deactivated_at = _utcnow()
+        elif value:
+            self.deactivated_at = None
+        return value
+
+    @property
+    def purge_on(self) -> dt.date | None:
+        """The day an archived mandate is deleted, ``None`` while it is live."""
+        if self.active or self.is_competitor or self.deactivated_at is None:
+            return None
+        return (self.deactivated_at + dt.timedelta(days=ARCHIVE_DAYS)).date()
+
+
+#: How long a deactivated mandate stays in the archive before it is deleted
+#: with everything it holds.
+ARCHIVE_DAYS = 90
 
 
 #: The confidence floor beneath :func:`visible_coverage`'s main question. It is

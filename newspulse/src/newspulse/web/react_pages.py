@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse
 _MODEL_FIELDS = {
     'GuideSource': 'id filename characters uploaded_at',
     'BrainOverride': 'key text version edited_at edited_by',
-    'Client': 'id name active is_competitor industry country aliases keywords alert_topics excluded_terms required_terms actions_per_quarter muted_categories website',
+    'Client': 'id name active is_competitor industry country aliases keywords alert_topics excluded_terms required_terms actions_per_quarter muted_categories website purge_on',
     'ClientFact': 'key value filled_by source_url source_title is_disputed superseded_value superseded_source_url superseded_source_title superseded_filled_by',
     'ProfileProposal': 'id key value source_url source_title',
     'OnboardingAnswer': 'key value skipped answered_at',
