@@ -36,7 +36,9 @@ services:
       RAUTEOS_HOSTS: ${RAUTEOS_HOSTS:-os.raute-kopf.com}
       WEBSITE_HOSTS: ${WEBSITE_HOSTS:-raute-kopf.com, www.raute-kopf.com}
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # The folder, not the file: git replaces a changed file with a new one,
+      # and a single-file mount keeps showing the container the old copy.
+      - ./caddy:/etc/caddy:ro
       - ../website/public:/srv/website:ro
       - caddy_data:/data
       - caddy_config:/config
