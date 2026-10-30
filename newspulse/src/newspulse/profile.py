@@ -30,7 +30,7 @@ from dataclasses import dataclass
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from . import config, gemini
+from . import config, gemini, websearch
 from .analyzer import ParseError, strip_code_fence
 from .models import Client, ClientFact
 
@@ -433,12 +433,7 @@ def research(client: Client, *, generate=None) -> list[Proposal]:
     and are stored beside each value.
     """
     if generate is None:
-        if not config.review_configured():
-            raise RuntimeError(
-                "Für die Recherche fehlt der Zugang: GEMINI_API_KEY in der .env "
-                "setzen, dann liest das Modell die Quellen selbst."
-            )
-        generate = gemini.search
+        generate = websearch.search
 
     raw, sources = generate(_prompt_for(client))
     try:

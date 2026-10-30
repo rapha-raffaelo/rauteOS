@@ -379,6 +379,78 @@ def invoke_claude_cli(prompt: str, *, timeout: float = _SUBPROCESS_TIMEOUT_SECON
     return _extract_cli_result(completed.stdout)
 
 
+#: A researched answer runs several searches and page reads before it writes,
+#: so it gets longer than one analysis batch. Still under the onboarding lease.
+_SEARCH_TIMEOUT_SECONDS = 300
+
+
+def invoke_claude_search(
+    prompt: str, *, timeout: float = _SEARCH_TIMEOUT_SECONDS
+) -> tuple[str, list[tuple[str, str]]]:
+    """One ``claude -p`` call with web search, shaped like ``gemini.search``.
+
+    Returns ``(text, [(url, title), ...])``. The pages are read from the CLI's
+    own event stream, the results of WebSearch and WebFetch, never from the
+    answer text, so a source the model names but never opened is not one. Only
+    those two tools exist in the session: the prompt carries page text from the
+    open web, and nothing in it may run a command.
+    """
+    argv = [
+        "claude", "-p", "--output-format", "stream-json", "--verbose",
+        "--tools", "WebSearch,WebFetch", "--allowedTools", "WebSearch,WebFetch",
+    ]
+    try:
+        completed = subprocess.run(  # noqa: S603 - fixed argv, no shell, prompt uses stdin
+            argv,
+            input=prompt,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            check=False,
+            shell=False,
+            env=claude_env(),
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise BackendError(f"claude -p timed out after {timeout}s") from exc
+    except FileNotFoundError as exc:
+        raise BackendError("claude CLI not found on PATH") from exc
+    pages: dict[str, str] = {}
+    result: dict | None = None
+    for line in (completed.stdout or "").splitlines():
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(event, dict):
+            continue
+        if event.get("type") == "result":
+            result = event
+        found = event.get("tool_use_result") if event.get("type") == "user" else None
+        if not isinstance(found, dict):
+            continue
+        # WebSearch: {"results": [{"content": [{"url", "title"}, ...]}, ...]}
+        for block in found.get("results") or []:
+            for hit in (block.get("content") if isinstance(block, dict) else None) or []:
+                if isinstance(hit, dict) and isinstance(hit.get("url"), str):
+                    pages.setdefault(hit["url"], str(hit.get("title") or ""))
+        # WebFetch: {"url": ..., "code": 200, ...}
+        if isinstance(found.get("url"), str) and found.get("code", 200) < 400:
+            pages.setdefault(found["url"], "")
+    if result is None or result.get("is_error") or completed.returncode != 0:
+        detail = str((result or {}).get("result") or "")[:500]
+        stderr = (completed.stderr or "").strip()[:500]
+        raise BackendError(
+            f"claude -p exited {completed.returncode}: {detail} {stderr}".strip()
+        )
+    text = str(result.get("result") or "")
+    # Asked for JSON, the model sometimes says a sentence first. The object is
+    # what the caller parses, so the prose around it is dropped here.
+    start, end = text.find("{"), text.rfind("}")
+    if 0 <= start < end:
+        text = text[start : end + 1]
+    return text, list(pages.items())
+
+
 class ClaudeCodeAnalyzer(_BaseClaudeAnalyzer):
     """Default backend: shell out to the subscription-authorized ``claude`` CLI.
 
