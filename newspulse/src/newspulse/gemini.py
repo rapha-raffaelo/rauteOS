@@ -273,6 +273,12 @@ _REDIRECT_HOST = "vertexaisearch.cloud.google.com"
 _RESOLVE_TIMEOUT = 5.0
 
 
+def is_redirect(url: str) -> bool:
+    """Whether ``url`` is one of Google's grounding redirects, which cost a
+    request each to resolve."""
+    return urllib.parse.urlsplit(url).hostname == _REDIRECT_HOST
+
+
 def resolve_source(url: str, *, timeout: float = _RESOLVE_TIMEOUT) -> str:
     """The durable page behind a grounding redirect, or ``url`` unchanged.
 
@@ -290,7 +296,7 @@ def resolve_source(url: str, *, timeout: float = _RESOLVE_TIMEOUT) -> str:
     # The host, parsed, and never a substring match: "in url" would also fire on
     # a link that merely mentions the host in a query string, and this function
     # then fetches whatever it was handed.
-    if urllib.parse.urlsplit(url).hostname != _REDIRECT_HOST:
+    if not is_redirect(url):
         return url
     try:
         request = urllib.request.Request(url, method="HEAD")  # noqa: S310 - host checked above

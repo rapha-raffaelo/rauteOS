@@ -104,6 +104,22 @@ def test_the_source_travels_with_the_value(session):
     assert found[0].source_title == "Qonto"
 
 
+def test_a_field_takes_the_page_that_backs_it_when_the_search_returned_it(session):
+    """Claude names a page per field. A named page the search never returned is
+    not a source, and that field keeps the first one."""
+    client = _client(session)
+    answer = json.dumps({
+        "felder": {"sitz": "Paris", "ceo": "Alexandre Prot"},
+        "quellen": {"sitz": "https://qonto.com/impressum/", "ceo": "https://invented.example"},
+    })
+    pages = [("https://qonto.com/ueber-uns", "Qonto"), ("https://qonto.com/impressum", "Impressum")]
+
+    found = {f.key: f for f in profiles.research(client, generate=lambda p: (answer, pages))}
+
+    assert (found["sitz"].source_url, found["sitz"].source_title) == ("https://qonto.com/impressum", "Impressum")
+    assert found["ceo"].source_url == "https://qonto.com/ueber-uns"
+
+
 def test_a_key_outside_the_field_list_is_dropped(session):
     """The model is asked for fourteen fields. An invented fifteenth is not a
     bonus, it is a value nothing renders and nobody audits."""

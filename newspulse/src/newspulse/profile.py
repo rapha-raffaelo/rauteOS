@@ -400,9 +400,10 @@ $fields
 
 Gib AUSSCHLIESSLICH ein JSON-Objekt zurück, ohne Markdown:
 
-{"felder": {"schluessel": "Wert", ...}}
+{"felder": {"schluessel": "Wert", ...}, "quellen": {"schluessel": "https://..."}}
 
-Nur Schlüssel aus der Liste, nur belegte Werte."""
+Nur Schlüssel aus der Liste, nur belegte Werte. Unter "quellen" je Feld die Seite,
+die den Wert belegt."""
 
 
 def _prompt_for(client: Client) -> str:
@@ -439,6 +440,9 @@ def research(client: Client, *, generate=None) -> list[Proposal]:
     try:
         payload = json.loads(strip_code_fence(raw))
         found = payload.get("felder") or {}
+        cited = payload.get("quellen") or {}
+        if not isinstance(cited, dict):
+            cited = {}
     except Exception as exc:  # noqa: BLE001 — json raises its own
         raise ParseError(f"profile research was not valid JSON: {exc}") from exc
 
@@ -454,6 +458,10 @@ def research(client: Client, *, generate=None) -> list[Proposal]:
     # injected ``generate`` never reaches the network.
     first = sources[0] if sources else ("", "")
     first = (gemini.resolve_source(first[0]), first[1]) if first[0] else first
+    # A per-field page counts only when the search returned it, the same rule
+    # the onboarding research applies. Claude names one; Gemini does not, and
+    # its fields keep the first grounding source.
+    titles = {url.rstrip("/"): (url, title) for url, title in sources}
     out: list[Proposal] = []
     for key, value in found.items():
         # ``researched`` again on the way back: the prompt does not list these
@@ -461,12 +469,14 @@ def research(client: Client, *, generate=None) -> list[Proposal]:
         # be the one that decides whether the answer lands on the profile.
         field = FIELDS_BY_KEY.get(key)
         if field is not None and field.researched and isinstance(value, str) and value.strip():
+            page = cited.get(key)
+            url, title = titles.get(page.rstrip("/"), first) if isinstance(page, str) else first
             out.append(
                 Proposal(
                     key=key,
                     value=value.strip(),
-                    source_url=first[0],
-                    source_title=first[1],
+                    source_url=url,
+                    source_title=title,
                 )
             )
     return out

@@ -217,6 +217,18 @@ def test_research_accepts_only_requested_topics_and_real_source_urls():
     assert 'Wann wurde das Unternehmen gegründet' in prompts[0]
 
 
+def test_a_source_beyond_the_thirtieth_search_hit_still_counts():
+    """Claude read 72 pages for Zalando's company size and cited one past the
+    thirtieth; the old cap on all citations threw the answer away."""
+    context=SimpleNamespace(name='Zalando',website='https://zalando.de',industry='',country='DE')
+    hits=[(f'https://site{i}.example/page',f'Hit {i}') for i in range(72)]
+    def search(prompt):
+        return json.dumps({'answers':[{'key':'R01.01','value':'Gegründet 2008.',
+            'source_url':'https://site60.example/page'}]}),hits
+    answers=crawler.research_batch(context,[crawler.PUBLIC_FIELDS[0]],[],search=search)
+    assert [a['source_url'] for a in answers]==['https://site60.example/page']
+
+
 def test_research_covers_the_21_topics_one_call_each():
     assert len(crawler.BATCHES)==21 and all(len(b)==1 for b in crawler.BATCHES)
     assert [b[0]['key'] for b in crawler.BATCHES]==[f'R{i:02d}.01' for i in range(1,22)]

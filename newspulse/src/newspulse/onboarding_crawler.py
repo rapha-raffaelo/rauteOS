@@ -138,7 +138,14 @@ Wichtig: Gib nur die unten genannten Themen-IDs aus. Nutze höchstens {ANSWER_LI
         company_pages=pages), ensure_ascii=False)
     raw, citations = search(prompt)
     sources = {p['url'].rstrip('/'): p['url'] for p in pages}
-    for url, title in citations[:30]:
+    # Only Google's redirects are capped: each costs a request to resolve. A
+    # Claude search returns plain links, often more than thirty, and the cap
+    # used to drop the very page an answer cited (Zalando, topic R03.01).
+    redirects = 0
+    for url, title in citations:
+        if gemini.is_redirect(url):
+            redirects += 1
+            if redirects > 30: continue
         resolved = gemini.resolve_source(url)
         if urlsplit(resolved).scheme in {'http', 'https'}:
             sources[url.rstrip('/')] = resolved
