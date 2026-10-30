@@ -3,7 +3,14 @@
 # DNS moves.
 {$RAUTEOS_HOSTS} {
 	encode zstd gzip
-	reverse_proxy app:8000
+	# A deploy restarts the app, and a form sent in those seconds got a bare
+	# 502 ("Mandant anlegen" was lost that way). Caddy now holds the request
+	# and retries the connection until the app is back. Only a refused
+	# connection is retried, so nothing the app received is sent twice.
+	reverse_proxy app:8000 {
+		lb_try_duration 60s
+		lb_try_interval 500ms
+	}
 }
 
 # The company website: static files, no app behind it.

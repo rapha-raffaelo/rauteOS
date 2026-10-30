@@ -29,6 +29,8 @@ jobs:
             cd /srv/rauteos/repo
             git fetch --quiet origin main && git reset --hard --quiet ${{ github.sha }}
             cd deploy && docker compose up -d --build --remove-orphans
+            # The Caddyfile is a bind mount, so a change to it restarts nothing.
+            docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile
             docker image prune -f >/dev/null
             for i in \$(seq 1 30); do
               docker compose exec -T app curl -fsS -o /dev/null http://localhost:8000/static/app.css && exit 0
