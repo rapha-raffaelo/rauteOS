@@ -394,6 +394,8 @@ def _fetch_paid(
         errors.append(f"news APIs: {exc}")
         return []
     errors.extend(found.errors)
+    for name in found.exhausted:
+        _log.info("%s: the plan's allowance is spent; asked again tomorrow", name)
     return found.items
 
 

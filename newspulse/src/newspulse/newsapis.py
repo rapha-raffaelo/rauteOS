@@ -49,7 +49,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from . import company_names, config
 from .ingest import FeedItem
@@ -147,6 +147,18 @@ def _rows(value: object) -> list[dict]:
 Get = Callable[..., dict]
 
 
+#: What a provider says when the plan's allowance for the period is used up, as
+#: opposed to a per-second rate limit (mediastack's 429), which clears by itself
+#: and must not pause anything for a month.
+_SPENT_SIGNALS = ("allowed requests is exceeded", "quota")
+
+
+def allowance_spent(exc: BaseException) -> bool:
+    """Whether a refusal means the plan is used up until it renews."""
+    text = str(exc).lower()
+    return any(signal in text for signal in _SPENT_SIGNALS)
+
+
 @dataclass(frozen=True, slots=True)
 class Harvest:
     """What one sweep's worth of paid queries returned, per provider.
@@ -159,6 +171,11 @@ class Harvest:
     items: list[FeedItem]
     by_provider: dict[str, int]
     errors: list[str]
+    #: Providers that refused because the plan's allowance is spent. Not an
+    #: error: nothing is broken and nothing here can fix it, and as one line in
+    #: every morning's run it read as a fault for weeks. Each is still asked
+    #: once per sweep, which is how the day the plan renews is noticed.
+    exhausted: list[str] = field(default_factory=list)
 
 
 def _request(
@@ -426,6 +443,7 @@ def harvest(
     items: list[FeedItem] = []
     counts: dict[str, int] = {}
     errors: list[str] = []
+    exhausted: list[str] = []
 
     # Mandates before competitors: both are worth searching, only one is worth
     # spending the last query of the allowance on.
@@ -448,7 +466,10 @@ def harvest(
                 # allowance least of all — carrying on would turn one wrong key
                 # into twelve identical error lines every morning.
                 _log.warning("%s failed on %r: %s; skipping it", name, term, exc)
-                errors.append(f"{name}: {exc}")
+                if allowance_spent(exc):
+                    exhausted.append(name)
+                else:
+                    errors.append(f"{name}: {exc}")
                 break
             items.extend(batch)
             found += len(batch)
@@ -469,4 +490,4 @@ def harvest(
             len(items),
             ", ".join(f"{name} {count}" for name, count in sorted(counts.items())),
         )
-    return Harvest(items=items, by_provider=counts, errors=errors)
+    return Harvest(items=items, by_provider=counts, errors=errors, exhausted=exhausted)

@@ -237,6 +237,29 @@ def test_one_refusal_ends_that_provider_for_the_sweep():
     assert any("Invalid API key" in e for e in found.errors)
 
 
+def test_a_spent_allowance_is_not_an_error_in_the_run():
+    """Perigon's plan ran out and the header said "1 Fehler im Nachrichtenlauf"
+    every morning for weeks, about something nothing in the tool can fix. It is
+    still asked once per sweep, so the day the plan renews is not missed."""
+    tries: list[str] = []
+
+    def _get(url, *, payload=None, **kwargs):
+        if "perigon" in url:
+            tries.append(url)
+            raise newsapis.ProviderError(
+                'HTTP 403: {"status":403,"message":"The number of allowed requests is exceeded"}'
+            )
+        return {"articles": {"results": []}} if payload else {"data": []}
+
+    found = newsapis.harvest(
+        [_mandate("Qonto"), _mandate("Zalando")], _SINCE, fetched_at=_NOW, get=_get
+    )
+
+    assert len(tries) == 1
+    assert found.errors == []
+    assert found.exhausted == ["Perigon"]
+
+
 def test_a_provider_without_a_key_is_silent_rather_than_failing(monkeypatch):
     """On a deployment that was never given one, that is the correct silence —
     not an error every morning."""
