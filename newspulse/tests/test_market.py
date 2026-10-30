@@ -47,7 +47,9 @@ from newspulse.models import (
 from newspulse.web.app import create_app, get_db
 from newspulse.web.routes import client as client_routes
 
-_NOW = dt.datetime(2026, 7, 30, 9, 0, tzinfo=dt.UTC)
+# Relative to the wall clock, not a fixed day: the market view reads the last 90
+# days from the real now, and a pinned date silently aged out of that window.
+_NOW = (dt.datetime.now(dt.UTC) - dt.timedelta(hours=1)).replace(second=0, microsecond=0)
 
 _TEMPLATES = Path(client_routes.__file__).resolve().parents[1] / "templates"
 

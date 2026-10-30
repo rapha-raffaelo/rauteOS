@@ -14,7 +14,7 @@
      hx-swap="outerHTML"
      {% endif %}>
   {# The viewed day on Today; the current day on every other page. #}
-  {{ (day if day is defined else header_date) | de_long_date }}<br>
+  {{ (day if day is defined else header_date) | de_long_date(request_language(request)) }}<br>
   {% if run_active() %}
     {# The one state the header could never show before: the runs row is written
        when a sweep finishes, so "in progress" had to come from the process lock. #}

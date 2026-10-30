@@ -90,12 +90,17 @@ _DE_MONTHS = (
 )
 
 
-def de_long_date(value: dt.date | dt.datetime) -> str:
-    """Format a date the way the header shows it: ``Mittwoch, 22. Juli 2026``."""
-    return (
-        f"{_DE_WEEKDAYS[value.weekday()]}, {value.day}. "
-        f"{_DE_MONTHS[value.month - 1]} {value.year}"
-    )
+def de_long_date(value: dt.date | dt.datetime, language: str = "de") -> str:
+    """Format a date the way the header shows it: ``Mittwoch, 22. Juli 2026``,
+    or ``Wednesday, 22 July 2026`` for an English reader."""
+    weekday = _DE_WEEKDAYS[value.weekday()]
+    month = _DE_MONTHS[value.month - 1]
+    if language == "en":
+        return (
+            f"{i18n.translate(weekday, language)}, {value.day} "
+            f"{i18n.translate(month, language)} {value.year}"
+        )
+    return f"{weekday}, {value.day}. {month} {value.year}"
 
 
 def _local(value: dt.datetime) -> dt.datetime:

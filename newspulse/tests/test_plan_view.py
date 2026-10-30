@@ -631,7 +631,7 @@ def test_a_discarded_hook_keeps_its_state_across_a_recompute(web, session, manda
     signal = _signal(session, mandate, effective_at=_NOW + dt.timedelta(days=30))
     hook = _hook(
         session, mandate, source_kind=HookSource.MARKTSIGNAL, source_id=signal.id,
-        month=plan.month_key(signal.effective_at),
+        month=_window()[1],
     )
     web.post(f"/client/{mandate.id}/plan/{hook.id}/verwerfen", follow_redirects=False)
 

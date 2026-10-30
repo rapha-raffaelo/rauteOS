@@ -26,7 +26,9 @@ from newspulse import config
 from newspulse.models import Analysis, Article, Base, Category, Client
 from newspulse.web.app import create_app, get_db
 
-_TEST_DAY = dt.date(2026, 7, 20)
+# Ten days back from today rather than a fixed date: coverage is read over a
+# window ending now, and a pinned day ages out of it.
+_TEST_DAY = dt.date.today() - dt.timedelta(days=10)
 
 
 def _noon(day: dt.date) -> dt.datetime:
