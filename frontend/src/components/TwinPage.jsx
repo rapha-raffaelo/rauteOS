@@ -58,14 +58,29 @@ export function TwinPage({clientId, embedded = false, initialLimit = 20}) {
   if (!data) return <div className="twin-page">{errors || <p role="status">Profil wird geladen…</p>}</div>;
   const statements = (key) => data.statements.filter(row => row.key === key);
   const active = (row) => !['Rejected', 'Archived'].includes(row.fact_status);
-  const visible = data.fields.filter(field => {
-    const rows = statements(field.key);
-    return (!section || field.section === section) &&
-      (!query || `${field.key} ${field.label} ${rows.map(r => r.value).join(' ')}`.toLowerCase().includes(query.toLowerCase())) &&
-      (filter === 'all' || filter === 'required' && field.requirement === 'Pflicht' ||
-       filter === 'missing' && data.progress.missing.includes(field.key) ||
-       filter === 'answered' && rows.some(active) || filter === 'review' && rows.some(r => active(r) && !r.verified_at));
-  });
+  const matches = field => (!section || field.section === section) &&
+    (!query || `${field.key} ${field.label} ${statements(field.key).map(r => r.value).join(' ')}`.toLowerCase().includes(query.toLowerCase()));
+  // What is known comes first, as a company profile; what is still open
+  // follows as the questions left for the customer and RAUTE. One long list of
+  // 399 fields buried the researched answers below two hundred empty ones.
+  const known = data.fields.filter(field => statements(field.key).some(active) && matches(field));
+  const open = data.fields.filter(field => !statements(field.key).some(active) && matches(field) &&
+    (filter !== 'required' || field.requirement === 'Pflicht'));
+  const field = (item, answered) => <section className={`twin-field twin-question ${answered ? 'twin-question--answered' : 'twin-question--empty'}`} key={item.key} id={`feld-${item.key}`}>
+    <div className="twin-field-head"><div><small className="twin-question-meta"><span>{item.key}</span> {item.requirement}</small><h3>{item.label}</h3></div>
+      <button className={answered ? 'btn btn--quiet' : 'btn'} disabled={busy || Boolean(editing)} onClick={() => setEditing({field: item})}>{answered ? 'Weitere Aussage' : 'Antwort ergänzen'}</button></div>
+    {editing?.field.key === item.key && <StatementEditor key={editing.row?.id ?? item.key} field={item} row={editing.row}
+      options={data.options} busy={busy} onCancel={() => setEditing(null)} onSave={payload => mutate(
+        editing.row ? `/statements/${editing.row.id}` : '/statements',
+        {...payload, ...(editing.row ? {revision: editing.row.revision} : {})}, editing.row ? 'PUT' : 'POST')} />}
+    {statements(item.key).map(row => <Statement key={row.id} row={row} clientId={clientId} busy={busy || Boolean(editing)}
+      onEdit={() => setEditing({field: item, row})} onAction={(action, note = '') => mutate(`/statements/${row.id}/${action}`, {revision: row.revision, note})} />)}
+  </section>;
+  const groups = items => items.reduce((out, item) => {
+    const last = out[out.length - 1];
+    if (last?.group === item.group) last.items.push(item); else out.push({group: item.group, items: [item]});
+    return out;
+  }, []);
   return <div className="twin-page">
     <header>{embedded ? <h2>Wissen & Aussagen</h2> : <><p className="twin-eyebrow">PROFIL · {data.client.name}</p><h1>Was wir wissen. Und woher.</h1></>}
       <p>Jede Aussage mit ihrer Quelle, ihrem Stand und ihrer Freigabe.</p>
@@ -86,25 +101,38 @@ export function TwinPage({clientId, embedded = false, initialLimit = 20}) {
       <label>Suche<input type="search" value={query} onChange={e => {setQuery(e.target.value); setLimit(initialLimit);}} placeholder="Feld oder Aussage suchen" /></label>
       <label>Bereich<select aria-label="Bereich" value={section} onChange={e => {setSection(e.target.value); setLimit(initialLimit);}}>
         <option value="">Alle Bereiche</option>{[...new Set(data.fields.map(f => f.section))].map(s => <option key={s}>{s}</option>)}</select></label>
-      <label>Anzeige<select aria-label="Anzeige" value={filter} onChange={e => {setFilter(e.target.value); setLimit(initialLimit);}}>
-        <option value="all">Alle Felder</option><option value="required">Pflichtfelder</option><option value="missing">Fehlende Pflichtfelder</option>
-        <option value="answered">Mit Aussagen</option><option value="review">Bestätigung offen</option></select></label>
     </fieldset>
-    <p className="twin-muted">{visible.length} Felder · mehrere Aussagen je Feld möglich</p>
-    {visible.slice(0, limit).map(field => <section className={`twin-field twin-question ${statements(field.key).length?'twin-question--answered':'twin-question--empty'}`} key={field.key}>
-      <div className="twin-field-head"><div><small className="twin-question-meta"><span>{field.key}</span> {field.group} · {field.requirement}</small><h2>{field.label}</h2></div>
-        <button className="btn" disabled={busy || Boolean(editing)} onClick={() => setEditing({field})}>Aussage ergänzen</button></div>
-      {editing?.field.key === field.key && <StatementEditor key={editing.row?.id ?? field.key} field={field} row={editing.row}
-        options={data.options} busy={busy} onCancel={() => setEditing(null)} onSave={payload => mutate(
-          editing.row ? `/statements/${editing.row.id}` : '/statements',
-          {...payload, ...(editing.row ? {revision: editing.row.revision} : {})}, editing.row ? 'PUT' : 'POST')} />}
-      {!statements(field.key).length && !editing && <p className="twin-muted">Noch offen</p>}
-      {statements(field.key).map(row => <Statement key={row.id} row={row} clientId={clientId} busy={busy || Boolean(editing)}
-        onEdit={() => setEditing({field, row})} onAction={(action, note = '') => mutate(`/statements/${row.id}/${action}`, {revision: row.revision, note})} />)}
-    </section>)}
-    {!visible.length && <p>Keine passenden Felder.</p>}
-    {limit < visible.length && <button className="btn" onClick={() => setLimit(limit + 20)}>Weitere Felder anzeigen</button>}
+
+    <section className="twin-brief" aria-labelledby={`twin-brief-${clientId}`}>
+      <h2 id={`twin-brief-${clientId}`}>Unternehmenssteckbrief</h2>
+      <p className="twin-muted">{known.length} {known.length === 1 ? 'Feld' : 'Felder'} mit Aussagen, aus Recherche, Fragebogen und eigener Erfassung. Recherchierte Angaben bleiben „Prüfung offen“, bis jemand sie bestätigt.</p>
+      {groups(known).map(({group, items}) => <div className="twin-group" key={group}><h3 className="twin-group-title">{group.replace(/^[A-Z]\d+\s+/, '')}</h3>{items.map(item => field(item, true))}</div>)}
+      {!known.length && <p>Noch keine Aussagen. Die Recherche oder der Kunden-Fragebogen füllt diesen Steckbrief.</p>}
+    </section>
+
+    <section className="twin-open" aria-labelledby={`twin-open-${clientId}`}>
+      <div className="twin-field-head"><div><h2 id={`twin-open-${clientId}`}>Offene Fragen</h2>
+        <p className="twin-muted">{open.length} {open.length === 1 ? 'Frage' : 'Fragen'} ohne Aussage. Die meisten beantwortet der Kunde im Fragebogen.</p></div>
+        <label>Anzeige<select aria-label="Anzeige" value={filter} disabled={Boolean(editing)} onChange={e => {setFilter(e.target.value); setLimit(initialLimit);}}>
+          <option value="all">Alle offenen</option><option value="required">Nur Pflichtfelder</option></select></label></div>
+      {groups(open.slice(0, limit)).map(({group, items}) => <div className="twin-group" key={group}><h3 className="twin-group-title">{group.replace(/^[A-Z]\d+\s+/, '')}</h3>{items.map(item => field(item, false))}</div>)}
+      {!open.length && <p>Keine offenen Fragen.</p>}
+      {limit < open.length && <button className="btn" onClick={() => setLimit(limit + 20)}>Weitere Fragen anzeigen</button>}
+    </section>
   </div>;
+}
+
+/** A source as its site's name, the way a reader recognises it. */
+export function SourceLink({url, title}) {
+  let host = '';
+  try {host = new URL(url).hostname.replace(/^www\./, '');} catch {return title || 'Nicht hinterlegt';}
+  return <a className="twin-source" href={url} target="_blank" rel="noreferrer" title={title ? `${title} · ${url}` : url}>{host}</a>;
+}
+
+// "Weitere Quellen: https://…, https://…" becomes a row of site names.
+function NoteText({text}) {
+  const parts = text.split(/(https?:\/\/[^\s,]+)/g);
+  return <p className="twin-note">{parts.map((part, i) => /^https?:\/\//.test(part) ? <SourceLink key={i} url={part} /> : part)}</p>;
 }
 
 function Statement({row, clientId, busy, onEdit, onAction}) {
@@ -120,13 +148,13 @@ function Statement({row, clientId, busy, onEdit, onAction}) {
       <span>{row.verified_at && !inactive ? 'Unabhängig bestätigt' : 'Nicht unabhängig bestätigt'}</span></div>
     <p className="twin-value">{row.value}</p>
     <dl className="twin-metadata">
-      <div><dt>Quelle</dt><dd>{/^https?:\/\//i.test(row.source_url) ? <a href={row.source_url} target="_blank" rel="noreferrer">{row.source_title || row.source_url}</a> : row.source_title || 'Nicht hinterlegt'}</dd></div>
+      <div><dt>Quelle</dt><dd>{/^https?:\/\//i.test(row.source_url) ? <SourceLink url={row.source_url} title={row.source_title} /> : row.source_title || 'Nicht hinterlegt'}</dd></div>
       <div><dt>Stand</dt><dd>{row.as_of?.slice(0, 10) || 'Unbekannt'}</dd></div>
       <div><dt>Sicherheit der Aussage</dt><dd>{readable(row.confidence) || 'Unbekannt'}</dd></div>
       <div><dt>Vertraulichkeit</dt><dd>{readable(row.confidentiality) || 'Unbekannt'}</dd></div>
       <div><dt>Externe Nutzung</dt><dd>{readable(row.external_use) || 'Freigabe erforderlich'}</dd></div>
     </dl>
-    {row.note && <p>{row.note}</p>}{row.verified_at && <p className="twin-muted">Geprüft von {row.verified_by}: {row.verification_note}</p>}
+    {row.note && <NoteText text={row.note} />}{row.verified_at && <p className="twin-muted">Geprüft von {row.verified_by}: {row.verification_note}</p>}
     <div className="twin-toolbar"><button className="btn" disabled={busy} onClick={onEdit}>Bearbeiten</button>
       <details className="quiet-actions"><summary>Weitere Aktionen</summary><div className="quiet-actions-body">{!inactive && <>{canConfirm&&<button className="btn" disabled={busy} onClick={() => setConfirming(!confirming)}>Bestätigen</button>}
         <button className="btn" disabled={busy} onClick={() => onAction('reject')}>Verwerfen</button>

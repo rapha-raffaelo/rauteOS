@@ -33,12 +33,25 @@ export function OnboardingLinks({clientId}) {
     }catch(e){setError(e.message);}finally{setBusy(false);}
   }
   const link=state?.path?window.location.origin+state.path:'';
+  async function copyLink(){
+    setError('');
+    try{await navigator.clipboard.writeText(link);setCopied(true);}
+    catch{setError('Kopieren nicht möglich. Bitte den Link im Feld markieren und kopieren.');}
+  }
   const running=['queued','running'].includes(state?.status);
   const contact=state?.contact||{};
   return <section id="kunden-onboarding" className="profile-section" aria-labelledby="onboarding-links-title">
     <h2 id="onboarding-links-title">Kunden-Onboarding</h2>
-    <div className="platform-actions"><button type="button" className="btn btn-primary" disabled={busy} onClick={ensureLink}>{busy?'Link wird vorbereitet …':copied?'Link kopiert':link?'Onboarding-Link kopieren':'Onboarding-Link erstellen'}</button></div>
-    {link&&<div><label className="platform-field" style={{marginTop:16}}><span>Kundenlink</span><input readOnly value={link} onFocus={e=>e.target.select()}/></label><a href={link} target="_blank" rel="noopener noreferrer">Fragebogen öffnen ↗</a><p><small>Gültig bis {new Date(state.expires_at).toLocaleDateString('de-DE')}.</small></p></div>}
+    {!link&&<div className="platform-actions"><button type="button" className="btn btn-primary" disabled={busy} onClick={ensureLink}>{busy?'Link wird vorbereitet …':'Onboarding-Link erstellen'}</button></div>}
+    {link&&<div className="onboarding-link">
+      <p className="onboarding-link-title">Persönlicher Fragebogen für {contact.contact_name||'den Kunden'}</p>
+      <label className="onboarding-link-field"><span>Kundenlink</span><input readOnly value={link} onFocus={e=>e.target.select()}/></label>
+      <div className="platform-actions">
+        <button type="button" className="btn btn-primary" disabled={busy} onClick={copyLink}>{copied?'Link kopiert':'Link kopieren'}</button>
+        <a className="btn" href={link} target="_blank" rel="noopener noreferrer">Fragebogen öffnen</a>
+      </div>
+      <p className="onboarding-link-meta">Gültig bis {new Date(state.expires_at).toLocaleDateString('de-DE',{day:'numeric',month:'long',year:'numeric'})}. Der Link ist persönlich, bitte nur an den Kunden weitergeben.</p>
+    </div>}
     {!state && !error && <p role="status">Status wird geladen …</p>}
     {running && <div role="status"><p><strong>{state.status==='queued'?(state.stage==='Wartet auf Recherche-Kontingent'?'Recherche pausiert, das Such-Kontingent ist aufgebraucht. Sie läuft automatisch weiter.':state.stage==='Recherche wird gleich fortgesetzt'?'Die Suche hat zu lange gedauert. Die Recherche läuft in Kürze automatisch weiter.':'Recherche wartet auf den Start'):state.stage}</strong></p><progress style={{width:'100%'}} aria-label="Recherchefortschritt" value={state.completed_batches||0} max={state.total_batches||1}/><p>{state.researched_fields||0} belegte Angaben · {state.sources||0} Quellen. Die Recherche läuft auch bei geschlossenem Browser weiter.</p></div>}
     {state?.status==='failed' && <div role="alert"><p>{state.note}</p><button disabled={busy} onClick={()=>act(base)}>Recherche fortsetzen</button></div>}

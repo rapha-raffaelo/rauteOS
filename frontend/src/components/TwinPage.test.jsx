@@ -96,3 +96,20 @@ it('automatically reveals a saved AI preview on returning to the profile',async(
  expect(screen.getByText('Saved answer')).toBeTruthy();
  expect(fetch).toHaveBeenCalledTimes(2);
 });
+it('opens with the company profile and lists only the unanswered questions below it',async()=>{
+ const researched={...row,id:7,key:'A01.01',value:'Zalando SE',source_url:'https://www.corporate.zalando.com/de/impressum',
+  source_title:'Öffentliche Onboarding-Recherche',note:'Weitere Quellen: https://handelsregister.de/x, https://de.wikipedia.org/wiki/Zalando'};
+ const fields=[{key:'A01.01',label:'Wie lautet der vollständige offizielle Unternehmensname?',section:'A. Client Facts',group:'A01 Unternehmen',requirement:'Pflicht'},
+  {key:'A01.03',label:'Wann wurde das Unternehmen gegründet?',section:'A. Client Facts',group:'A01 Unternehmen',requirement:'Empfohlen'}];
+ stubFetch(vi.fn().mockResolvedValue(response({...data,fields,statements:[researched]})));
+ render(<TwinPage clientId={1}/>);
+ const brief=(await screen.findByRole('heading',{name:'Unternehmenssteckbrief'})).closest('section');
+ const open=screen.getByRole('heading',{name:'Offene Fragen'}).closest('section');
+ expect(within(brief).getByText('Zalando SE')).toBeTruthy();
+ expect(within(brief).queryByText('Wann wurde das Unternehmen gegründet?')).toBeNull();
+ expect(within(open).getByText('Wann wurde das Unternehmen gegründet?')).toBeTruthy();
+ expect(within(open).queryByText('Wie lautet der vollständige offizielle Unternehmensname?')).toBeNull();
+ // Sources read as site names, not as long addresses.
+ expect(within(brief).getByRole('link',{name:'corporate.zalando.com'}).getAttribute('href')).toBe(researched.source_url);
+ expect(within(brief).getByRole('link',{name:'de.wikipedia.org'})).toBeTruthy();
+});

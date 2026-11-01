@@ -248,3 +248,29 @@
 .new-client-page .platform-actions button { min-height: 44px; white-space: normal; }
 .new-client-page ol { padding-left: 22px; }
 @media (max-width: 1000px) { .new-client-page .platform-columns { grid-template-columns: minmax(0, 1fr); gap: 0; } }
+/* The customer link: a card with the address shortened to one line, and the
+   two things one does with it as buttons beside it. */
+.onboarding-link {
+  margin-top: 16px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--tint);
+  border-radius: 12px;
+  background: var(--surface);
+  max-width: 720px;
+}
+.onboarding-link-title { margin: 0 0 12px; font-weight: 600; }
+.onboarding-link-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.onboarding-link-field span { font-size: 12px; color: var(--muted); }
+.onboarding-link-field input {
+  font: 13px ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--ink);
+  background: var(--fill-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  width: 100%;
+  min-width: 0;
+  text-overflow: ellipsis;
+}
+.onboarding-link-meta { margin: 12px 0 0; font-size: 13px; color: var(--muted); }
