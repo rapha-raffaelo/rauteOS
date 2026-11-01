@@ -1105,18 +1105,26 @@ def test_an_undated_hooks_date_block_is_translated_too(web, session, mandate):
     "no day" — the mixed page the language test exists to prevent, in the one
     place the string comes from a Python property rather than the template.
     """
+    # A month in today's window whose German abbreviation differs from the
+    # English one: "Nov" is both, and would prove nothing.
+    month = next(
+        m for m in _window()
+        if i18n.translate(plan_view._MONTHS_SHORT[int(m[5:]) - 1], "en")
+        != plan_view._MONTHS_SHORT[int(m[5:]) - 1]
+    )
+    german = plan_view._MONTHS_SHORT[int(month[5:]) - 1]
     signal = _signal(session, mandate, effective_at=_NOW + dt.timedelta(days=30))
     _hook(
         session, mandate, source_kind=HookSource.MARKTSIGNAL, source_id=signal.id,
-        month="2026-10", day=None,
+        month=month, day=None,
     )
     web.cookies.set(i18n.COOKIE_NAME, "en")
 
     words = _text(rendered(_at(web, mandate)))
 
-    assert "Oct" in words
+    assert i18n.translate(german, "en") in words
     assert "no day" in words
-    assert "Okt" not in words
+    assert german not in words
 
 
 # --- Stand-in for the one model call ------------------------------------------------

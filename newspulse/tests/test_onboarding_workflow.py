@@ -230,9 +230,21 @@ def test_a_source_beyond_the_thirtieth_search_hit_still_counts():
 
 
 def test_research_covers_the_21_topics_one_call_each():
-    assert len(crawler.BATCHES)==21 and all(len(b)==1 for b in crawler.BATCHES)
-    assert [b[0]['key'] for b in crawler.BATCHES]==[f'R{i:02d}.01' for i in range(1,22)]
-    assert all(b[0]['question'] for b in crawler.BATCHES)
+    topics=crawler.BATCHES[:21]
+    assert all(len(b)==1 for b in topics)
+    assert [b[0]['key'] for b in topics]==[f'R{i:02d}.01' for i in range(1,22)]
+    assert all(f['question'] for b in crawler.BATCHES for f in b)
+
+
+def test_research_also_fills_the_required_fields_the_catalogue_gives_it():
+    """A researched mandate read 0 % complete: the 30 required "External
+    Reality" fields belong to research, and nothing asked for them."""
+    from newspulse import twin
+    owed={f['key'] for f in twin.CATALOG if f['requirement']=='Pflicht' and f['input_owner']=='OS / Research'}
+    market=[{f['key'] for f in b} for b in crawler.BATCHES[21:]]
+    assert len(owed)==30 and set().union(*market)==owed
+    # One call per catalogue group: the fields of a group answer one question.
+    assert all(len({twin.CATALOG_BY_KEY[k]['group'] for k in keys})==1 for keys in market)
 
 
 def test_research_from_the_old_catalogue_restarts_on_the_topics(setup):
@@ -311,6 +323,27 @@ def test_backfill_queues_each_mandate_without_topic_research_once(setup):
         assert {j.client_id:j.status for j in s.scalars(select(CustomerOnboardingJob))}=={1:'queued',2:'queued',3:'ready',6:'queued'}
         assert s.get(CustomerOnboardingJob,6).checkpoint['next_batch']==1
         assert s.get(CustomerOnboardingJob,2).checkpoint=={'pages':[{'url':'https://old.example','text':'x'}]}
+        assert flow.backfill(s)==0
+
+
+def test_research_finished_before_the_market_fields_resumes_at_them_only(setup,monkeypatch):
+    """Existing mandates must not research all 21 topics again for the new
+    fields: the old layout is a prefix, so the job picks up at the first new one."""
+    web,factory=setup
+    monkeypatch.setattr(crawler,'EXTENDS',('themen-21',))
+    with factory() as s:
+        s.add(Client(name='Zalando',website='https://zalando.example'));s.commit()
+        s.add(CustomerOnboardingJob(client_id=1,status='ready',checkpoint={'version':'themen-21',
+            'pages':[],'next_batch':1,'answered_keys':['R01.01'],'sources':[]}));s.commit()
+        assert flow.backfill(s)==1
+        assert s.get(CustomerOnboardingJob,1).checkpoint['next_batch']==1
+        claimed=flow.claim(s)
+    asked=[]
+    flow.work(factory,*claimed,crawl=lambda _:[],research=lambda c,f,p:asked.append(f[0]['key']) or researched(c,f,p))
+    assert asked==['R05.01']
+    with factory() as s:
+        job=s.get(CustomerOnboardingJob,1)
+        assert job.status=='ready' and job.checkpoint['version']==crawler.VERSION
         assert flow.backfill(s)==0
 
 

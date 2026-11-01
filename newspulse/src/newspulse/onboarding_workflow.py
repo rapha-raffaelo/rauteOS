@@ -103,7 +103,8 @@ def enqueue(session, client, *, retry=False):
     if not row:
         row = CustomerOnboardingJob(client_id=client.id)
         session.add(row); session.flush()
-    elif retry and (row.status == 'failed' or row.status == 'ready' and outdated(row.checkpoint)):
+    elif retry and (row.status == 'failed' or row.status == 'ready'
+                    and (outdated(row.checkpoint) or extended(row.checkpoint))):
         row.status = 'queued'; row.note = ''; row.token = ''; row.lease_until = None
         if outdated(row.checkpoint):
             row.checkpoint = {k: v for k, v in row.checkpoint.items() if k == 'pages'}
@@ -114,7 +115,14 @@ def enqueue(session, client, *, retry=False):
 
 def outdated(checkpoint):
     """Research run under an earlier topic layout; its batch index means nothing now."""
-    return bool(checkpoint) and checkpoint.get('version') != onboarding_crawler.VERSION
+    return bool(checkpoint) and checkpoint.get('version') not in (
+        onboarding_crawler.VERSION, *onboarding_crawler.EXTENDS)
+
+
+def extended(checkpoint):
+    """Finished under a layout this one only appends to: the new batches are due."""
+    return bool(checkpoint) and not outdated(checkpoint) \
+        and checkpoint.get('next_batch', 0) < len(onboarding_crawler.BATCHES)
 
 
 def claim(session):
@@ -266,7 +274,7 @@ def status(session, client):
     checkpoint = job.checkpoint
     return dict(status=job.status, stage=job.stage, note=job.note, outdated=outdated(checkpoint),
         completed_batches=checkpoint.get('next_batch', 0), total_batches=len(onboarding_crawler.BATCHES),
-        researched_fields=len(checkpoint.get('answered_keys', [])), total_fields=len(onboarding_crawler.PUBLIC_FIELDS),
+        researched_fields=len(checkpoint.get('answered_keys', [])), total_fields=len(onboarding_crawler.RESEARCHED_FIELDS),
         sources=len(checkpoint.get('sources', [])), pages=len(checkpoint.get('pages', [])),
         path=invite_path(invite, client.name), invite_id=job.invite_id, expires_at=invite.expires_at.isoformat() if invite else None,
         answered=customer_onboarding.answered(invite.answers) if invite else 0,
@@ -284,7 +292,8 @@ def backfill(session):
     queued = 0
     for client in session.scalars(select(Client).where(Client.active.is_(True), Client.is_competitor.is_(False))):
         job = session.get(CustomerOnboardingJob, client.id)
-        if job is None or job.status == 'failed' or job.status == 'ready' and outdated(job.checkpoint):
+        if job is None or job.status == 'failed' or job.status == 'ready' \
+                and (outdated(job.checkpoint) or extended(job.checkpoint)):
             enqueue(session, client, retry=True)
             queued += 1
     session.commit()

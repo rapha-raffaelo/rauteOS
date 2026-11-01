@@ -43,10 +43,23 @@ TOPICS = {
     'R21.01': "Welche Unternehmen sind die wichtigsten direkten und indirekten Wettbewerber? Welche vergleichbaren Produkte, Dienstleistungen oder alternativen Lösungsansätze bieten diese an? In welchen Märkten und Kundensegmenten konkurrieren sie mit dem Unternehmen? Wie unterscheiden sich die Anbieter hinsichtlich Positionierung, Leistungsangebot, Zielgruppen und öffentlich kommunizierter Stärken?",
 }
 PUBLIC_FIELDS = [dict(twin.CATALOG_BY_KEY[key], question=question) for key, question in TOPICS.items()]
-BATCHES = [[field] for field in PUBLIC_FIELDS]
+# The required profile fields the catalogue gives to research rather than to the
+# customer ("D. External Reality": market, competitors, media picture, AI
+# perception). Without them a researched mandate still read 0 % complete. One
+# call per catalogue group, since its fields answer one question together.
+MARKET_FIELDS = [dict(f, question=f['label']) for f in twin.CATALOG
+                 if f['requirement'] == 'Pflicht' and f['input_owner'] == 'OS / Research']
+_GROUPS = {}
+for _field in MARKET_FIELDS:
+    _GROUPS.setdefault(_field['group'], []).append(_field)
+BATCHES = [[field] for field in PUBLIC_FIELDS] + list(_GROUPS.values())
+RESEARCHED_FIELDS = PUBLIC_FIELDS + MARKET_FIELDS
 # Stored in the job checkpoint, so research begun under an older batch layout
 # starts over instead of resuming at a batch index that now means another topic.
-VERSION = 'themen-21'
+VERSION = 'themen-21+markt'
+# Layouts whose batches are a prefix of this one: a job finished under them
+# resumes at the first new batch instead of researching every topic again.
+EXTENDS = ('themen-21',)
 ANSWER_LIMIT = 4000
 
 
