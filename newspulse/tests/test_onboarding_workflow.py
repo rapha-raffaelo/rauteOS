@@ -241,7 +241,7 @@ def test_research_also_fills_the_required_fields_the_catalogue_gives_it():
     Reality" fields belong to research, and nothing asked for them."""
     from newspulse import twin
     owed={f['key'] for f in twin.CATALOG if f['requirement']=='Pflicht' and f['input_owner']=='OS / Research'}
-    market=[{f['key'] for f in b} for b in crawler.BATCHES[21:]]
+    market=[{f['key'] for f in b} for b in crawler.BATCHES[21:29]]
     assert len(owed)==30 and set().union(*market)==owed
     # One call per catalogue group: the fields of a group answer one question.
     assert all(len({twin.CATALOG_BY_KEY[k]['group'] for k in keys})==1 for keys in market)
@@ -324,6 +324,16 @@ def test_backfill_queues_each_mandate_without_topic_research_once(setup):
         assert s.get(CustomerOnboardingJob,6).checkpoint['next_batch']==1
         assert s.get(CustomerOnboardingJob,2).checkpoint=={'pages':[{'url':'https://old.example','text':'x'}]}
         assert flow.backfill(s)==0
+
+
+def test_research_also_proposes_the_public_client_facts_but_not_the_private_ones():
+    """The profile opens with "A. Client Facts", and those stayed empty after
+    research although the public record answers many of them."""
+    facts={f['key'] for b in crawler.BATCHES[29:] for f in b}
+    assert {'A01.01','A02.01','A03.02','A11.01','A12.01'}<=facts
+    # A plan, a profitability figure or a speaking permission is the company's to give.
+    assert not facts&{'A02.06','A02.11','A11.13','A12.08'}
+    assert all(len(b)<=8 for b in crawler.BATCHES[29:])
 
 
 def test_research_finished_before_the_market_fields_resumes_at_them_only(setup,monkeypatch):

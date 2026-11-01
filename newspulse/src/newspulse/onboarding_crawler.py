@@ -52,14 +52,34 @@ MARKET_FIELDS = [dict(f, question=f['label']) for f in twin.CATALOG
 _GROUPS = {}
 for _field in MARKET_FIELDS:
     _GROUPS.setdefault(_field['group'], []).append(_field)
-BATCHES = [[field] for field in PUBLIC_FIELDS] + list(_GROUPS.values())
-RESEARCHED_FIELDS = PUBLIC_FIELDS + MARKET_FIELDS
+# The client facts the public record can answer (company, business model,
+# products, audiences, management, founding story). The catalogue gives them to
+# "Kunde / RAUTE", and they open the profile, so a researched mandate still
+# looked empty. Researched values arrive as "Needs Verification" for the
+# customer to confirm. Left out: what only the company itself knows.
+_FACT_GROUPS = ('A01', 'A02', 'A03', 'A04', 'A11', 'A12')
+_PRIVATE = {
+    'A02.06',  # what should earn most in future: a plan
+    'A02.09', 'A02.11',  # customer value, profitability
+    'A11.10', 'A11.12', 'A11.13', 'A11.18',  # personal topics, mandate, no-go, press ties
+    'A12.08',  # which parts of the story may be public: a permission
+}
+FACT_FIELDS = [dict(f, question=f['label']) for f in twin.CATALOG
+               if f['group'][:3] in _FACT_GROUPS and f['key'] not in _PRIVATE]
+_FACTS = {}
+for _field in FACT_FIELDS:
+    _FACTS.setdefault(_field['group'], []).append(_field)
+# At most eight fields a call: management alone has nineteen, and one answer
+# per field has to fit in the same reply.
+_FACT_BATCHES = [fields[i:i + 8] for fields in _FACTS.values() for i in range(0, len(fields), 8)]
+BATCHES = [[field] for field in PUBLIC_FIELDS] + list(_GROUPS.values()) + _FACT_BATCHES
+RESEARCHED_FIELDS = PUBLIC_FIELDS + MARKET_FIELDS + FACT_FIELDS
 # Stored in the job checkpoint, so research begun under an older batch layout
 # starts over instead of resuming at a batch index that now means another topic.
-VERSION = 'themen-21+markt'
+VERSION = 'themen-21+markt+fakten'
 # Layouts whose batches are a prefix of this one: a job finished under them
 # resumes at the first new batch instead of researching every topic again.
-EXTENDS = ('themen-21',)
+EXTENDS = ('themen-21', 'themen-21+markt')
 ANSWER_LIMIT = 4000
 
 
