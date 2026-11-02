@@ -162,11 +162,11 @@ def test_csv_can_map_custom_columns_and_preserves_zero(web):
 
 def test_required_completeness_does_not_count_optional_or_duplicate_answers(web):
     before = web.get(path()).json()['progress']
-    create(web,key='A01.05')
+    create(web)  # A catalogue field outside the questionnaire.
     assert web.get(path()).json()['progress']['required_filled'] == before['required_filled']
-    create(web); create(web,value='Another answer to the same required field')
+    create(web,key='Q01.02'); create(web,key='Q01.02',value='Another answer to the same question')
     progress = web.get(path()).json()['progress']
-    assert progress['required_total'] == 127
+    assert progress['required_total'] == 43  # 21 researched topics, 22 customer questions
     assert progress['required_filled'] == before['required_filled'] + 1
     assert progress['verified'] == 0
     desk = web.get('/api/v1/desk').json()

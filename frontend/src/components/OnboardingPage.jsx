@@ -104,7 +104,7 @@ export function OnboardingPage({ token = window.location.hash.slice(1).split('/'
     const text = p.customer_value || p.value || '';
     const open = openRows.includes(p.key), long = text.length > 320;
     return <article key={p.key} className={`onb-prefill-row${editing ? ' onb-prefill-row--editing' : ''}`}>
-      <div className="onb-prefill-head"><h2>{label}</h2>
+      <div className="onb-prefill-head"><h2><span className="onb-num" aria-hidden="true">{p.key.slice(1, 3)}</span>{label}</h2>
         {!editing && <button type="button" className="onb-link" disabled={busy} onClick={() => setRowEdits([...rowEdits, p.key])}>{tr('Korrigieren')}</button>}</div>
       {editing ? <textarea aria-label={label} maxLength={20000} value={prefillEdits[p.key] ?? text} disabled={busy} onChange={e=>setPrefillEdits({...prefillEdits,[p.key]:e.target.value})}/>
         : <><div className={`onb-prefill-text${long && !open ? ' onb-prefill-text--clipped' : ''}`}><RichText text={text} /></div>

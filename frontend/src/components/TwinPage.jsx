@@ -27,6 +27,7 @@ export function TwinPage({clientId, embedded = false, initialLimit = 20}) {
   const [filter, setFilter] = useState('all');
   const [limit, setLimit] = useState(initialLimit);
   const [editing, setEditing] = useState(null);
+  const [showCatalog, setShowCatalog] = useState(false);
   const importPanel = useRef(null), filePanel = useRef(null), chosenImport = useRef(null);
   const [aiImporting, setAIImporting] = useState(false);
   const [aiStatus, setAIStatus] = useState(null);
@@ -60,14 +61,20 @@ export function TwinPage({clientId, embedded = false, initialLimit = 20}) {
   const active = (row) => !['Rejected', 'Archived'].includes(row.fact_status);
   const matches = field => (!section || field.section === section) &&
     (!query || `${field.key} ${field.label} ${statements(field.key).map(r => r.value).join(' ')}`.toLowerCase().includes(query.toLowerCase()));
-  // What is known comes first, as a company profile; what is still open
-  // follows as the questions left for the customer and RAUTE. One long list of
-  // 399 fields buried the researched answers below two hundred empty ones.
-  const known = data.fields.filter(field => statements(field.key).some(active) && matches(field));
-  const open = data.fields.filter(field => !statements(field.key).some(active) && matches(field) &&
+  // The profile is the onboarding questionnaire, numbered as the customer sees
+  // it: 21 researched topics, then 22 questions. The wider catalogue (A to D,
+  // over three hundred fields) is reference and stays folded.
+  const brief = data.fields.filter(f => f.key.startsWith('R'));
+  const asked = data.fields.filter(f => f.key.startsWith('Q'));
+  const catalog = data.fields.filter(f => !/^[RQ]/.test(f.key));
+  const has = field => statements(field.key).some(active);
+  const known = catalog.filter(field => has(field) && matches(field));
+  const open = catalog.filter(field => !has(field) && matches(field) &&
     (filter !== 'required' || field.requirement === 'Pflicht'));
-  const field = (item, answered) => <section className={`twin-field twin-question ${answered ? 'twin-question--answered' : 'twin-question--empty'}`} key={item.key} id={`feld-${item.key}`}>
-    <div className="twin-field-head"><div><small className="twin-question-meta"><span>{item.key}</span> {item.requirement}</small><h3>{item.label}</h3></div>
+  const number = key => key.slice(1).split('.')[key.startsWith('Q') ? 1 : 0];
+  const field = (item, answered, numbered = false) => <section className={`twin-field twin-question ${answered ? 'twin-question--answered' : 'twin-question--empty'}`} key={item.key} id={`feld-${item.key}`}>
+    <div className="twin-field-head"><div>{numbered ? <span className="twin-number">{number(item.key)}</span> : <small className="twin-question-meta"><span>{item.key}</span> {item.requirement}</small>}<h3>{item.label}</h3>
+      {numbered && item.hint && <p className="twin-hint">{item.hint}</p>}</div>
       {!answered && <button className="btn" disabled={busy || Boolean(editing)} onClick={() => setEditing({field: item})}>Antwort ergänzen</button>}</div>
     {editing?.field.key === item.key && <StatementEditor key={editing.row?.id ?? item.key} field={item} row={editing.row}
       options={data.options} busy={busy} onCancel={() => setEditing(null)} onSave={payload => mutate(
@@ -75,6 +82,7 @@ export function TwinPage({clientId, embedded = false, initialLimit = 20}) {
         {...payload, ...(editing.row ? {revision: editing.row.revision} : {})}, editing.row ? 'PUT' : 'POST')} />}
     {statements(item.key).map(row => <Statement key={row.id} row={row} busy={busy || Boolean(editing)}
       onEdit={() => setEditing({field: item, row})} />)}
+    {numbered && !answered && <p className="twin-muted twin-empty">{item.key.startsWith('Q') ? 'Noch nicht beantwortet.' : 'Noch keine belegte Angabe.'}</p>}
   </section>;
   const groups = items => items.reduce((out, item) => {
     const last = out[out.length - 1];
@@ -90,34 +98,42 @@ export function TwinPage({clientId, embedded = false, initialLimit = 20}) {
     {<div hidden={!aiImporting} ref={importPanel} id={`twin-ai-${clientId}`}><TwinAIImport clientId={clientId} fields={data.fields} onStatus={setAIStatus} onRestore={v=>{if(chosenImport.current!=='file'&&(v.preview||v.job?.status==='running'||v.job?.status==='failed'))setAIImporting(true);}} onImported={async result=>{await load();setNotice(`${result.created} KI-Vorschläge übernommen; ${result.skipped} bereits beantwortet oder vorhanden.`);}}/></div>}
     <section className="twin-progress" aria-label="Vollständigkeit">
       <div className="twin-progress-main"><span className="twin-progress-label">Profilvollständigkeit</span><strong>{data.progress.percent} % vollständig</strong>
-        <progress max="100" value={data.progress.percent} aria-label="Beantwortete Pflichtfelder" /></div>
-      <dl className="twin-progress-facts"><div><dt>Pflichtfelder beantwortet</dt><dd>{data.progress.required_filled}<span> / {data.progress.required_total}</span></dd></div>
+        <progress max="100" value={data.progress.percent} aria-label="Beantwortete Fragen" /></div>
+      <dl className="twin-progress-facts"><div><dt>Fragen beantwortet</dt><dd>{data.progress.required_filled}<span> / {data.progress.required_total}</span></dd></div>
         <div><dt>Unabhängig bestätigt</dt><dd>{data.progress.verified}<span> {data.progress.verified===1?'Aussage':'Aussagen'}</span></dd></div></dl>
-      <small>Vollständigkeit misst beantwortete Pflichtfelder. Sie ist keine Bestätigung ihrer Richtigkeit.</small>
+      <small>Vollständigkeit misst die 21 Recherche-Themen und 22 Kundenfragen. Sie ist keine Bestätigung ihrer Richtigkeit.</small>
     </section>
     {errors}{notice && <p role="status">{notice}</p>}
 
-    <fieldset disabled={Boolean(editing)} className="twin-toolbar twin-filters">
-      <label>Suche<input type="search" value={query} onChange={e => {setQuery(e.target.value); setLimit(initialLimit);}} placeholder="Feld oder Aussage suchen" /></label>
-      <label>Bereich<select aria-label="Bereich" value={section} onChange={e => {setSection(e.target.value); setLimit(initialLimit);}}>
-        <option value="">Alle Bereiche</option>{[...new Set(data.fields.map(f => f.section))].map(s => <option key={s}>{s}</option>)}</select></label>
-    </fieldset>
-
     <section className="twin-brief" aria-labelledby={`twin-brief-${clientId}`}>
       <h2 id={`twin-brief-${clientId}`}>Unternehmenssteckbrief</h2>
-      <p className="twin-muted">{known.length} {known.length === 1 ? 'Feld' : 'Felder'} mit Aussagen, aus Recherche, Fragebogen und eigener Erfassung. Recherchierte Angaben bleiben „Prüfung offen“, bis jemand sie bestätigt.</p>
-      {groups(known).map(({group, items}) => <div className="twin-group" key={group}><h3 className="twin-group-title">{group.replace(/^[A-Z]\d+\s+/, '')}</h3>{items.map(item => field(item, true))}</div>)}
-      {!known.length && <p>Noch keine Aussagen. Die Recherche oder der Kunden-Fragebogen füllt diesen Steckbrief.</p>}
+      <p className="twin-muted">{brief.filter(has).length} von {brief.length} Themen recherchiert. Recherchierte Angaben bleiben „Prüfung offen“, bis jemand sie bestätigt.</p>
+      {brief.map(item => field(item, has(item), true))}
     </section>
 
-    <section className="twin-open" aria-labelledby={`twin-open-${clientId}`}>
-      <div className="twin-field-head"><div><h2 id={`twin-open-${clientId}`}>Offene Fragen</h2>
-        <p className="twin-muted">{open.length} {open.length === 1 ? 'Frage' : 'Fragen'} ohne Aussage. Die meisten beantwortet der Kunde im Fragebogen.</p></div>
-        <label>Anzeige<select aria-label="Anzeige" value={filter} disabled={Boolean(editing)} onChange={e => {setFilter(e.target.value); setLimit(initialLimit);}}>
-          <option value="all">Alle offenen</option><option value="required">Nur Pflichtfelder</option></select></label></div>
-      {groups(open.slice(0, limit)).map(({group, items}) => <div className="twin-group" key={group}><h3 className="twin-group-title">{group.replace(/^[A-Z]\d+\s+/, '')}</h3>{items.map(item => field(item, false))}</div>)}
-      {!open.length && <p>Keine offenen Fragen.</p>}
-      {limit < open.length && <button className="btn" onClick={() => setLimit(limit + 20)}>Weitere Fragen anzeigen</button>}
+    <section className="twin-open" aria-labelledby={`twin-asked-${clientId}`}>
+      <h2 id={`twin-asked-${clientId}`}>Fragebogen</h2>
+      <p className="twin-muted">{asked.filter(has).length} von {asked.length} Fragen beantwortet. Diese Fragen beantwortet der Kunde über seinen Onboarding-Link.</p>
+      {asked.map(item => field(item, has(item), true))}
+    </section>
+
+    <section className="twin-catalog" aria-labelledby={`twin-catalog-${clientId}`}>
+      <h2 id={`twin-catalog-${clientId}`} className="sr-only">Erweiterter Katalog</h2>
+      <button className="linkbtn" aria-expanded={showCatalog} onClick={() => setShowCatalog(!showCatalog)}>
+        {showCatalog ? 'Erweiterten Katalog ausblenden' : `Erweiterten Katalog anzeigen (${catalog.filter(has).length} von ${catalog.length} Feldern mit Aussagen)`}</button>
+      {showCatalog && <>
+        <fieldset disabled={Boolean(editing)} className="twin-toolbar twin-filters">
+          <label>Suche<input type="search" value={query} onChange={e => {setQuery(e.target.value); setLimit(initialLimit);}} placeholder="Feld oder Aussage suchen" /></label>
+          <label>Bereich<select aria-label="Bereich" value={section} onChange={e => {setSection(e.target.value); setLimit(initialLimit);}}>
+            <option value="">Alle Bereiche</option>{[...new Set(catalog.map(f => f.section))].map(s => <option key={s}>{s}</option>)}</select></label>
+          <label>Anzeige<select aria-label="Anzeige" value={filter} onChange={e => {setFilter(e.target.value); setLimit(initialLimit);}}>
+            <option value="all">Alle offenen</option><option value="required">Nur Pflichtfelder</option></select></label>
+        </fieldset>
+        {groups(known).map(({group, items}) => <div className="twin-group" key={group}><h3 className="twin-group-title">{group.replace(/^[A-Z]\d+\s+/, '')}</h3>{items.map(item => field(item, true))}</div>)}
+        <h3 className="twin-group-title">Ohne Aussage ({open.length})</h3>
+        {groups(open.slice(0, limit)).map(({group, items}) => <div className="twin-group" key={group}><h3 className="twin-group-title">{group.replace(/^[A-Z]\d+\s+/, '')}</h3>{items.map(item => field(item, false))}</div>)}
+        {limit < open.length && <button className="btn" onClick={() => setLimit(limit + 20)}>Weitere Felder anzeigen</button>}
+      </>}
     </section>
   </div>;
 }

@@ -13,7 +13,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.orm.exc import StaleDataError
 
-from ... import evidence, twin, twin_import, twin_ai
+from ... import customer_onboarding, evidence, onboarding_crawler, twin, twin_import, twin_ai
 from ...analyzer import AnalyzerError, ParseError
 from ...models import ClientFact, ClientFactHistory, TwinImportPreview
 from ..app import get_db
@@ -57,6 +57,8 @@ class FieldRead(BaseModel):
     requirement: str
     input_owner: str
     legacy_key: str | None
+    # The guiding question under a questionnaire item; empty for the catalogue.
+    hint: str = ''
 
 
 class ProgressRead(BaseModel):
@@ -115,12 +117,15 @@ def _commit(session):
         raise HTTPException(409, "Daten wurden inzwischen geändert. Bitte neu laden.") from None
 
 
+HINTS = {**onboarding_crawler.TOPICS, **customer_onboarding.HINTS}
+
+
 @router.get("", response_model=TwinRead)
 def read_twin(client_id: int, response: Response, session: Session = Depends(get_db)):
     client = mandate_or_404(session, client_id)
     response.headers['Cache-Control'] = 'no-store'
     rows = twin.all_statements(session, client_id)
-    return dict(client=dict(id=client.id, name=client.name), fields=twin.fields(), statements=rows,
+    return dict(client=dict(id=client.id, name=client.name), fields=[dict(f, hint=HINTS.get(f['key'], '')) for f in twin.fields()], statements=rows,
                 progress=twin.completeness(rows), options={
                     name: list(enum) for name, enum in {
                         'evidence_type': evidence.EvidenceType, 'source_type': evidence.SourceType,

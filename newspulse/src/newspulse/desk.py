@@ -309,7 +309,7 @@ def _twin(session: Session, client: Client) -> Twin:
         has_guide=has_guide,
         required_filled=progress["required_filled"],
         required_total=progress["required_total"],
-        required_missing=([f"{len(progress['missing'])} Pflichtfelder unbeantwortet"]
+        required_missing=([f"{len(progress['missing'])} Fragen unbeantwortet"]
                           if progress["missing"] else []),
     )
 

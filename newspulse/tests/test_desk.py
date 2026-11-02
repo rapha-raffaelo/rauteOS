@@ -323,8 +323,8 @@ def test_the_twin_names_which_part_is_thin_rather_than_only_a_percentage(session
     twin = desk.build(session, now=_NOW).rows[0].twin
 
     assert twin.percent == 0
-    assert any("Pflichtfelder unbeantwortet" in gap for gap in twin.gaps)
-    assert twin.required_total == 127
+    assert any("Fragen unbeantwortet" in gap for gap in twin.gaps)
+    assert twin.required_total == 43
 
 
 def test_a_guide_moves_the_twin_and_clears_its_own_gap(session):

@@ -154,3 +154,5 @@ h1:focus { outline: none; }
 .onb-sticky { position: sticky; bottom: 0; padding: 16px 0; background: linear-gradient(to top, #fff 75%, rgba(255,255,255,0)); }
 .onb-sticky .onb-primary { width: 100%; }
 @media (max-width: 520px) { .onb-prefill-row { padding: 16px; } }
+/* The topic number the agency's questionnaire uses, 01 to 21. */
+.onb-num{font-variant-numeric:tabular-nums;font-size:.8em;font-weight:600;color:var(--onb-accent,currentColor);opacity:.7;margin-right:.6em}

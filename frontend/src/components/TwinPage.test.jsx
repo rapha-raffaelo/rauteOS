@@ -5,11 +5,11 @@ import { TwinPage, ImportPanel } from './TwinPage.jsx';
 
 const options = {evidence_type:['Client Statement','Fact'],source_type:['Other','Public Database'],confidence:['Unknown','High'],
  confidentiality:['Client Confidential','Public'],external_use:['Approval Required','Allowed'],fact_status:['Needs Verification','Vollständig','Rejected'],input_owner:['RAUTE']};
-const row = {id:3,key:'A02.01',value:'400 % THG-Minderung',revision:4,source_title:'Company questionnaire',source_url:'',
+const row = {id:3,key:'R02.01',value:'400 % THG-Minderung',revision:4,source_title:'Company questionnaire',source_url:'',
  evidence_type:'Client Statement',source_type:'Other',confidence:'Unknown',confidentiality:'Client Confidential',external_use:'Approval Required',
  fact_status:'Needs Verification',input_owner:'RAUTE',as_of:null,note:'',verification_note:'',verified_at:null};
-const data = {client:{id:1,name:'Demo'},fields:[{key:'A02.01',label:'Was verkauft das Unternehmen?',section:'Client Facts',group:'A02 Angebot',requirement:'Pflicht'}],
- statements:[row],progress:{percent:1,required_filled:1,required_total:127,verified:0,missing:[]},options};
+const data = {client:{id:1,name:'Demo'},fields:[{key:'R02.01',label:'Rechtliche Unternehmensdaten',section:'R. Onboarding-Recherche',group:'R01 Öffentliches Unternehmensbild',requirement:'Optional',hint:'Welche Rechtsform hat das Unternehmen?'}],
+ statements:[row],progress:{percent:1,required_filled:1,required_total:43,verified:0,missing:[]},options};
 const response = (body, status=200) => ({ok:status<400,status,headers:new Headers({'content-type':'application/json'}),json:async()=>body});
 afterEach(()=>vi.unstubAllGlobals());
 const stubFetch=fetch=>vi.stubGlobal('fetch',(url,options)=>url.endsWith('/ai-import')?Promise.resolve(response({job:null,preview:null})):fetch(url,options));
@@ -84,14 +84,13 @@ it('edits in the field and keeps permission values when using the compact form',
  expect(form.closest('.twin-question')).toBeTruthy();
  expect(form.querySelector('details').open).toBe(false);
  expect(screen.getByText('Kundenaussage · Vertraulich · Freigabe nötig')).toBeTruthy();
- expect(screen.getByLabelText('Bereich').closest('fieldset').disabled).toBe(true);
  fireEvent.change(screen.getByLabelText('Aussage'),{target:{value:'Neue Formulierung'}});
  fireEvent.click(screen.getByRole('button',{name:'Aussage speichern'}));
  await waitFor(()=>expect(fetch).toHaveBeenCalledTimes(3));
  expect(JSON.parse(fetch.mock.calls[1][1].body)).toMatchObject({confidentiality:'Client Confidential',external_use:'Approval Required',evidence_type:'Client Statement'});
 });
 it('automatically reveals a saved AI preview on returning to the profile',async()=>{
- const saved={id:'saved',rows:[{index:0,data:{key:'A02.01',value:'Saved answer'},sources:[],message:'Source'}],unanswered:0};
+ const saved={id:'saved',rows:[{index:0,data:{key:'R02.01',value:'Saved answer'},sources:[],message:'Source'}],unanswered:0};
  const fetch=vi.fn().mockImplementation(url=>Promise.resolve(response(url.endsWith('/ai-import')?{job:{status:'complete',note:'Ready'},preview:saved}:data)));
  vi.stubGlobal('fetch',fetch);render(<TwinPage clientId={1}/>);
  await screen.findByText('Saved answer');
@@ -103,20 +102,29 @@ it('automatically reveals a saved AI preview on returning to the profile',async(
  expect(screen.getByText('Saved answer')).toBeTruthy();
  expect(fetch).toHaveBeenCalledTimes(2);
 });
-it('opens with the company profile and lists only the unanswered questions below it',async()=>{
- const researched={...row,id:7,key:'A01.01',value:'Zalando SE',source_url:'https://www.corporate.zalando.com/de/impressum',
+it('numbers the researched topics and the customer questions, and folds the catalogue',async()=>{
+ const researched={...row,id:7,key:'R01.01',value:'Zalando SE',source_url:'https://www.corporate.zalando.com/de/impressum',
   source_title:'Öffentliche Onboarding-Recherche',note:'Weitere Quellen: https://handelsregister.de/x, https://de.wikipedia.org/wiki/Zalando'};
- const fields=[{key:'A01.01',label:'Wie lautet der vollständige offizielle Unternehmensname?',section:'A. Client Facts',group:'A01 Unternehmen',requirement:'Pflicht'},
+ const fields=[{key:'R01.01',label:'Unternehmensidentität',section:'R',group:'R01 Öffentliches Unternehmensbild',requirement:'Optional',hint:'Wie lautet der offizielle Firmenname?'},
+  {key:'R02.01',label:'Rechtliche Unternehmensdaten',section:'R',group:'R01 Öffentliches Unternehmensbild',requirement:'Optional',hint:''},
+  {key:'Q01.14',label:'Von welchen externen Akteuren hängt Ihr Geschäft ab?',section:'Q',group:'Q01 Strategie',requirement:'Optional',hint:''},
   {key:'A01.03',label:'Wann wurde das Unternehmen gegründet?',section:'A. Client Facts',group:'A01 Unternehmen',requirement:'Empfohlen'}];
  stubFetch(vi.fn().mockResolvedValue(response({...data,fields,statements:[researched]})));
  render(<TwinPage clientId={1}/>);
  const brief=(await screen.findByRole('heading',{name:'Unternehmenssteckbrief'})).closest('section');
- const open=screen.getByRole('heading',{name:'Offene Fragen'}).closest('section');
+ const asked=screen.getByRole('heading',{name:'Fragebogen'}).closest('section');
  expect(within(brief).getByText('Zalando SE')).toBeTruthy();
- expect(within(brief).queryByText('Wann wurde das Unternehmen gegründet?')).toBeNull();
- expect(within(open).getByText('Wann wurde das Unternehmen gegründet?')).toBeTruthy();
- expect(within(open).queryByText('Wie lautet der vollständige offizielle Unternehmensname?')).toBeNull();
+ expect(within(brief).getByText('01')).toBeTruthy();
+ expect(within(brief).getByText('02')).toBeTruthy();
+ expect(within(brief).getByText('Noch keine belegte Angabe.')).toBeTruthy();
+ expect(within(brief).getByText('1 von 2 Themen recherchiert. Recherchierte Angaben bleiben „Prüfung offen“, bis jemand sie bestätigt.')).toBeTruthy();
+ // The question keeps its own number, not its position in the catalogue.
+ expect(within(asked).getByText('14')).toBeTruthy();
+ expect(within(asked).getByText('Noch nicht beantwortet.')).toBeTruthy();
  // Sources read as site names, not as long addresses.
  expect(within(brief).getByRole('link',{name:'corporate.zalando.com'}).getAttribute('href')).toBe(researched.source_url);
  expect(within(brief).getByText('+2 Quellen')).toBeTruthy();
+ expect(screen.queryByText('Wann wurde das Unternehmen gegründet?')).toBeNull();
+ fireEvent.click(screen.getByRole('button',{name:'Erweiterten Katalog anzeigen (0 von 1 Feldern mit Aussagen)'}));
+ expect(screen.getByText('Wann wurde das Unternehmen gegründet?')).toBeTruthy();
 });

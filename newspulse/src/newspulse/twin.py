@@ -113,13 +113,19 @@ def confirm(session: Session, row: ClientFact, person: str, note: str):
     session.flush()
 
 
+PROFILE_PARTS = ("R", "Q")
+
+
 def completeness(rows: list[ClientFact]) -> dict:
     answered = {row.key for row in rows if row.value.strip() and row.fact_status not in
                 INACTIVE | {FactStatus.OUTDATED, FactStatus.CONTRADICTORY}}
     # Only exact equivalent legacy fields count; never infer a questionnaire
     # answer from a broad neighbouring topic.
     answered |= {f["key"] for f in CATALOG if f["legacy_key"] and f["legacy_key"] in answered}
-    required = [f for f in CATALOG if f["requirement"] == "Pflicht"]
+    # The profile is the onboarding questionnaire: 21 researched topics and 22
+    # customer questions. The wider catalogue is reference, not a to-do list;
+    # counting its 127 required fields made a researched mandate read 23 %.
+    required = [f for f in CATALOG if f["key"][:1] in PROFILE_PARTS]
     filled = sum(f["key"] in answered for f in required)
     return dict(percent=round(100 * filled / len(required)), required_filled=filled,
                 required_total=len(required), answered_total=len(answered),
