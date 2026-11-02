@@ -68,13 +68,13 @@ export function TwinPage({clientId, embedded = false, initialLimit = 20}) {
     (filter !== 'required' || field.requirement === 'Pflicht'));
   const field = (item, answered) => <section className={`twin-field twin-question ${answered ? 'twin-question--answered' : 'twin-question--empty'}`} key={item.key} id={`feld-${item.key}`}>
     <div className="twin-field-head"><div><small className="twin-question-meta"><span>{item.key}</span> {item.requirement}</small><h3>{item.label}</h3></div>
-      <button className={answered ? 'btn btn--quiet' : 'btn'} disabled={busy || Boolean(editing)} onClick={() => setEditing({field: item})}>{answered ? 'Weitere Aussage' : 'Antwort ergänzen'}</button></div>
+      {!answered && <button className="btn" disabled={busy || Boolean(editing)} onClick={() => setEditing({field: item})}>Antwort ergänzen</button>}</div>
     {editing?.field.key === item.key && <StatementEditor key={editing.row?.id ?? item.key} field={item} row={editing.row}
       options={data.options} busy={busy} onCancel={() => setEditing(null)} onSave={payload => mutate(
         editing.row ? `/statements/${editing.row.id}` : '/statements',
         {...payload, ...(editing.row ? {revision: editing.row.revision} : {})}, editing.row ? 'PUT' : 'POST')} />}
-    {statements(item.key).map(row => <Statement key={row.id} row={row} clientId={clientId} busy={busy || Boolean(editing)}
-      onEdit={() => setEditing({field: item, row})} onAction={(action, note = '') => mutate(`/statements/${row.id}/${action}`, {revision: row.revision, note})} />)}
+    {statements(item.key).map(row => <Statement key={row.id} row={row} busy={busy || Boolean(editing)}
+      onEdit={() => setEditing({field: item, row})} />)}
   </section>;
   const groups = items => items.reduce((out, item) => {
     const last = out[out.length - 1];
@@ -129,53 +129,31 @@ export function SourceLink({url, title}) {
   return <a className="twin-source" href={url} target="_blank" rel="noreferrer" title={title ? `${title} · ${url}` : url}>{host}</a>;
 }
 
-// "Weitere Quellen: https://…, https://…" becomes a row of site names.
-function NoteText({text}) {
-  const parts = text.split(/(https?:\/\/[^\s,]+)/g);
-  return <p className="twin-note">{parts.map((part, i) => /^https?:\/\//.test(part) ? <SourceLink key={i} url={part} /> : part)}</p>;
-}
-
-function Statement({row, clientId, busy, onEdit, onAction}) {
-  const [confirming, setConfirming] = useState(false);
-  const [note, setNote] = useState('');
-  const [history, setHistory] = useState(null);
-  const [historyError, setHistoryError] = useState('');
-  useEffect(() => {setHistory(null);}, [row.revision]);
+// One statement as it reads in the brief: the answer, clipped to three lines
+// until asked for more, one line saying where it comes from and how far it is
+// checked, and the one action used daily. Origin, confidentiality and release
+// are set in the editor, not shown as a table under every answer.
+function Statement({row, busy, onEdit}) {
+  const [open, setOpen] = useState(false);
   const inactive = ['Rejected', 'Archived'].includes(row.fact_status);
-  const canConfirm = !row.verified_at && ['Media','External Research','Study','Public Database'].includes(row.source_type) && Boolean(row.source_url || row.source_title);
+  const more = [...new Set((row.note || '').match(/https?:\/\/[^\s,]+/g) || [])]
+    .filter(url => host(url) && host(url) !== host(row.source_url));
+  const long = (row.value || '').length > 280;
   return <article className={`twin-statement ${inactive ? 'twin-inactive' : ''}`}>
-    <div className="twin-badges"><span>{readable(row.evidence_type) || 'Herkunft unbekannt'}</span><span>{readable(row.fact_status) || 'Prüfung offen'}</span>
-      <span>{row.verified_at && !inactive ? 'Unabhängig bestätigt' : 'Nicht unabhängig bestätigt'}</span></div>
-    <p className="twin-value">{row.value}</p>
-    <dl className="twin-metadata">
-      <div><dt>Quelle</dt><dd>{/^https?:\/\//i.test(row.source_url) ? <SourceLink url={row.source_url} title={row.source_title} /> : row.source_title || 'Nicht hinterlegt'}</dd></div>
-      <div><dt>Stand</dt><dd>{row.as_of?.slice(0, 10) || 'Unbekannt'}</dd></div>
-      <div><dt>Sicherheit der Aussage</dt><dd>{readable(row.confidence) || 'Unbekannt'}</dd></div>
-      <div><dt>Vertraulichkeit</dt><dd>{readable(row.confidentiality) || 'Unbekannt'}</dd></div>
-      <div><dt>Externe Nutzung</dt><dd>{readable(row.external_use) || 'Freigabe erforderlich'}</dd></div>
-    </dl>
-    {row.note && <NoteText text={row.note} />}{row.verified_at && <p className="twin-muted">Geprüft von {row.verified_by}: {row.verification_note}</p>}
-    <div className="twin-toolbar"><button className="btn" disabled={busy} onClick={onEdit}>Bearbeiten</button>
-      <details className="quiet-actions"><summary>Weitere Aktionen</summary><div className="quiet-actions-body">{!inactive && <>{canConfirm&&<button className="btn" disabled={busy} onClick={() => setConfirming(!confirming)}>Bestätigen</button>}
-        <button className="btn" disabled={busy} onClick={() => onAction('reject')}>Verwerfen</button>
-        <button className="btn" disabled={busy} onClick={() => onAction('archive')}>Archivieren</button></>}
-      <button className="btn" onClick={async () => {
-        if (history) {setHistory(null); return;}
-        try {setHistory(await twinRequest(clientId, `/statements/${row.id}/history`)); setHistoryError('');}
-        catch (err) {setHistoryError(err.message);}
-      }}>Historie</button></div></details></div>
-    {confirming && <form className="twin-confirm" onSubmit={async e => {e.preventDefault(); if (await onAction('confirm', note)) setConfirming(false);}}>
-      <p>Als unabhängig belegten Fakt bestätigen. Eine Quelle vom Typ Media, External Research, Study oder Public Database muss hinterlegt sein. Die externe Freigabe bleibt separat.</p>
-      <label>Prüfvermerk<textarea aria-label="Prüfvermerk" required value={note} maxLength={5000} onChange={e => setNote(e.target.value)} /></label>
-      <button className="btn" disabled={busy}>Unabhängige Bestätigung speichern</button>
-    </form>}
-    {historyError && <p role="alert">{historyError}</p>}
-    {history && <div className="twin-history"><h3>Frühere Fassungen</h3>{history.length ? history.map((item, i) => <div key={i}>
-      <small>{item.changed_at} · {item.changed_by}</small><p>{item.snapshot.value}</p>
-      <p>{item.snapshot.evidence_type || 'Unbekannt'} · {item.snapshot.fact_status || 'Needs Verification'} · {item.snapshot.source_title || item.snapshot.source_url || 'Ohne Quelle'}</p>
-    </div>) : <p>Noch keine Änderungen.</p>}</div>}
+    <p className={`twin-value ${long && !open ? 'twin-value--clipped' : ''}`}>{row.value}</p>
+    {long && <button type="button" className="linkbtn twin-more" onClick={() => setOpen(!open)}>{open ? 'Weniger anzeigen' : 'Mehr anzeigen'}</button>}
+    <div className="twin-statement-foot">
+      <span className="twin-provenance">
+        {/^https?:\/\//i.test(row.source_url) ? <SourceLink url={row.source_url} title={row.source_title} /> : <span>{row.source_title || 'Ohne Quelle'}</span>}
+        {more.length > 0 && <span className="twin-more-sources" title={more.join('\n')}>+{more.length} {more.length === 1 ? 'Quelle' : 'Quellen'}</span>}
+        <span className={`twin-state ${row.verified_at && !inactive ? 'twin-state--ok' : ''}`}>{inactive ? readable(row.fact_status) : row.verified_at ? 'Bestätigt' : 'Prüfung offen'}</span>
+      </span>
+      <button className="btn btn--quiet" disabled={busy} onClick={onEdit}>Bearbeiten</button>
+    </div>
   </article>;
 }
+
+const host = url => {try {return new URL(url).hostname.replace(/^www\./, '');} catch {return '';}};
 
 function StatementEditor({field, row, options, busy, onCancel, onSave}) {
   const [values, setValues] = useState(() => ({key: field.key, value: row?.value || '', source_title: row?.source_title || '',

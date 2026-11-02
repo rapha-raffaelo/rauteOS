@@ -29,3 +29,11 @@
 .twin-question h3{font-size:16px;margin:4px 0 0}.twin-question--empty{padding:16px 24px}
 .twin-source{display:inline-block;padding:2px 8px;margin:0 4px 4px 0;border:1px solid var(--line);border-radius:999px;font-size:12px;color:var(--ink);text-decoration:none;background:var(--fill-2)}
 .twin-source:hover{border-color:var(--tint);color:var(--tint)}.twin-note{font-size:13px;color:var(--muted)}
+.twin-question--answered .twin-statement{padding:12px 0}.twin-question--answered .twin-statement+.twin-statement{border-top:1px dashed var(--line)}
+.twin-question--answered .twin-field-head{margin-bottom:4px}
+.twin-value{margin:0;line-height:1.6}.twin-value--clipped{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.twin-more{font-size:13px;color:var(--tint);margin-top:4px}
+.twin-statement-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:10px}
+.twin-provenance{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+.twin-provenance .twin-source{margin:0}
+.twin-state{padding:2px 8px;border-radius:999px;background:var(--fill-2)}.twin-state--ok{background:var(--good-wash);color:var(--good)}

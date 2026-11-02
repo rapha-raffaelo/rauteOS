@@ -18,7 +18,7 @@ it('edits a statement by id and revision without flattening its evidence', async
  const fetch=vi.fn().mockResolvedValueOnce(response(data)).mockResolvedValueOnce(response({...row,value:'Revised',revision:5})).mockResolvedValue(response({...data,statements:[{...row,value:'Revised',revision:5}]}));
  stubFetch(fetch); render(<TwinPage clientId={1}/>);
  await screen.findByText(row.value);
- expect(screen.getByText('Nicht unabhängig bestätigt')).toBeTruthy();
+ expect(screen.getByText('Prüfung offen')).toBeTruthy();
  fireEvent.click(screen.getByRole('button',{name:'Bearbeiten'}));
  fireEvent.change(screen.getByLabelText('Aussage'),{target:{value:'Revised'}});
  fireEvent.click(screen.getByRole('button',{name:'Aussage speichern'}));
@@ -36,12 +36,19 @@ it('keeps unsaved text visible after a conflict',async()=>{
  expect(screen.getByLabelText('Aussage').value).toBe('My unsaved correction');
 });
 
-it('rejects only the selected statement with its revision',async()=>{
- const fetch=vi.fn().mockResolvedValue(response(data));stubFetch(fetch);
- render(<TwinPage clientId={1}/>);fireEvent.click(await screen.findByRole('button',{name:'Verwerfen'}));
- await waitFor(()=>expect(fetch).toHaveBeenCalledTimes(3));
- expect(fetch.mock.calls[1][0]).toContain('/statements/3/reject');
- expect(JSON.parse(fetch.mock.calls[1][1].body)).toEqual({revision:4,note:''});
+it('shows an answer with its source and one edit button, and clips a long one',async()=>{
+ const long={...row,value:'Lang '.repeat(80),source_url:'https://zenchef.com/de/impressum',
+  note:'Weitere Quellen: https://zenchef.com/a, https://blog.zenchef.com/b, https://frenchweb.fr/c'};
+ stubFetch(vi.fn().mockResolvedValue(response({...data,statements:[long]})));
+ render(<TwinPage clientId={1}/>);
+ fireEvent.click(await screen.findByRole('button',{name:'Mehr anzeigen'}));
+ expect(screen.getByRole('button',{name:'Weniger anzeigen'})).toBeTruthy();
+ expect(screen.getByRole('link',{name:'zenchef.com'})).toBeTruthy();
+ // The same site twice is one source; the others are counted, not listed.
+ expect(screen.getByText('+2 Quellen')).toBeTruthy();
+ expect(screen.queryByText('Weitere Aktionen')).toBeNull();
+ expect(screen.queryByRole('button',{name:'Weitere Aussage'})).toBeNull();
+ expect(screen.getAllByRole('button',{name:'Bearbeiten'})).toHaveLength(1);
 });
 
 it('never imports on file selection or preview; sends only checked rows',async()=>{
@@ -111,5 +118,5 @@ it('opens with the company profile and lists only the unanswered questions below
  expect(within(open).queryByText('Wie lautet der vollständige offizielle Unternehmensname?')).toBeNull();
  // Sources read as site names, not as long addresses.
  expect(within(brief).getByRole('link',{name:'corporate.zalando.com'}).getAttribute('href')).toBe(researched.source_url);
- expect(within(brief).getByRole('link',{name:'de.wikipedia.org'})).toBeTruthy();
+ expect(within(brief).getByText('+2 Quellen')).toBeTruthy();
 });
