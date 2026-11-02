@@ -248,29 +248,76 @@
 .new-client-page .platform-actions button { min-height: 44px; white-space: normal; }
 .new-client-page ol { padding-left: 22px; }
 @media (max-width: 1000px) { .new-client-page .platform-columns { grid-template-columns: minmax(0, 1fr); gap: 0; } }
-/* The customer link: a card with the address shortened to one line, and the
-   two things one does with it as buttons beside it. */
-.onboarding-link {
-  margin-top: 16px;
-  padding: 20px;
+/* Kunden-Onboarding: one card. Status top right, three figures, the link
+   with its two actions on one line, and the rarer tasks as quiet text buttons. */
+.onb {
+  padding: 28px;
   border: 1px solid var(--line);
-  border-left: 3px solid var(--tint);
-  border-radius: 12px;
+  border-radius: 16px;
   background: var(--surface);
-  max-width: 720px;
+  max-width: 880px;
 }
-.onboarding-link-title { margin: 0 0 12px; font-weight: 600; }
-.onboarding-link-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
-.onboarding-link-field span { font-size: 12px; color: var(--muted); }
-.onboarding-link-field input {
-  font: 13px ui-monospace, SFMono-Regular, Menlo, monospace;
-  color: var(--ink);
+.onb-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+.onb-head h2 { margin: 0; }
+.onb-head p { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+.onb-status {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 999px;
   background: var(--fill-2);
+  color: var(--ink);
+}
+.onb-status--ready, .onb-status--done { background: var(--good-wash); color: var(--good); }
+.onb-status--running, .onb-status--active { background: color-mix(in srgb, var(--tint) 14%, transparent); color: var(--tint); }
+.onb-status--failed { background: color-mix(in srgb, var(--alert) 14%, transparent); color: var(--alert); }
+.onb-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  margin: 24px 0;
+  background: var(--line);
   border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 10px 12px;
-  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.onb-stats div { background: var(--surface); padding: 14px 16px; }
+.onb-stats dt { font-size: 12px; color: var(--muted); }
+.onb-stats dd { margin: 4px 0 0; font-size: 22px; font-weight: 600; }
+.onb-stats dd span { font-size: 13px; font-weight: 400; color: var(--muted); }
+.onb-link { display: flex; gap: 8px; align-items: center; }
+.onb-link input {
+  flex: 1;
   min-width: 0;
+  font: 13px ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--muted);
+  background: var(--fill-2);
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 11px 12px;
   text-overflow: ellipsis;
 }
-.onboarding-link-meta { margin: 12px 0 0; font-size: 13px; color: var(--muted); }
+.onb-link input:focus { color: var(--ink); border-color: var(--tint); outline: none; }
+.onb-link .btn { flex-shrink: 0; }
+.onb-link--empty { justify-content: space-between; padding: 12px 16px; background: var(--fill-2); border-radius: 10px; }
+.onb-link--empty p { margin: 0; color: var(--muted); }
+.onb-meta { margin: 8px 0 0; font-size: 12px; color: var(--muted); }
+.onb-running, .onb-alert, .onb-start { margin: 0 0 20px; }
+.onb-running progress { width: 100%; accent-color: var(--tint); }
+.onb-alert { padding: 12px 16px; border-left: 3px solid var(--alert); background: var(--fill-2); border-radius: 8px; }
+.onb-more { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); }
+.onb-more .linkbtn { font-size: 13px; color: var(--tint); }
+.onb-more .linkbtn[aria-expanded="true"] { color: var(--ink); font-weight: 600; }
+.onb-panel { margin: 16px 0 0; padding: 16px; background: var(--fill-2); border-radius: 10px; font-size: 14px; }
+.onb-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 12px; }
+.onb-links { list-style: none; }
+.onb-links li { display: flex; gap: 16px; align-items: center; padding: 6px 0; }
+.onb-muted { color: var(--muted); }
+@media (max-width: 640px) {
+  .onb { padding: 20px; }
+  .onb-stats { grid-template-columns: 1fr; }
+  .onb-link { flex-wrap: wrap; }
+  .onb-link input { flex-basis: 100%; }
+  .onb-grid { grid-template-columns: 1fr; }
+}

@@ -40,37 +40,48 @@ export function OnboardingLinks({clientId}) {
   }
   const running=['queued','running'].includes(state?.status);
   const contact=state?.contact||{};
-  return <section id="kunden-onboarding" className="profile-section" aria-labelledby="onboarding-links-title">
-    <h2 id="onboarding-links-title">Kunden-Onboarding</h2>
-    {!link&&<div className="platform-actions"><button type="button" className="btn btn-primary" disabled={busy} onClick={ensureLink}>{busy?'Link wird vorbereitet …':'Onboarding-Link erstellen'}</button></div>}
-    {link&&<div className="onboarding-link">
-      <p className="onboarding-link-title">Persönlicher Fragebogen für {contact.contact_name||'den Kunden'}</p>
-      <label className="onboarding-link-field"><span>Kundenlink</span><input readOnly value={link} onFocus={e=>e.target.select()}/></label>
-      <div className="platform-actions">
-        <button type="button" className="btn btn-primary" disabled={busy} onClick={copyLink}>{copied?'Link kopiert':'Link kopieren'}</button>
-        <a className="btn" href={link} target="_blank" rel="noopener noreferrer">Fragebogen öffnen</a>
-      </div>
-      <p className="onboarding-link-meta">Gültig bis {new Date(state.expires_at).toLocaleDateString('de-DE',{day:'numeric',month:'long',year:'numeric'})}. Der Link ist persönlich, bitte nur an den Kunden weitergeben.</p>
-    </div>}
+  const [panel,setPanel]=useState('');
+  const toggle=name=>setPanel(panel===name?'':name);
+  const ready=state?.status==='ready';
+  const status=!state?null:running?['running','Recherche läuft']:state.status==='failed'?['failed','Recherche unterbrochen']
+    :state.status==='not_started'?['idle','Noch nicht gestartet']:state.completed?['done','Vom Kunden abgeschlossen']
+    :state.answered?['active','Kunde füllt aus']:['ready','Bereit für den Kunden'];
+  const waiting=state?.status==='queued'?(state.stage==='Wartet auf Recherche-Kontingent'?'Recherche pausiert, das Such-Kontingent ist aufgebraucht. Sie läuft automatisch weiter.'
+    :state.stage==='Recherche wird gleich fortgesetzt'?'Die Suche hat zu lange gedauert. Die Recherche läuft in Kürze automatisch weiter.':'Recherche wartet auf den Start'):state?.stage;
+  return <section id="kunden-onboarding" className="profile-section onb" aria-labelledby="onboarding-links-title">
+    <header className="onb-head">
+      <div><h2 id="onboarding-links-title">Kunden-Onboarding</h2>
+        <p>{contact.contact_name?`Fragebogen für ${contact.contact_name}${contact.contact_role?`, ${contact.contact_role}`:''}`:'Noch kein Ansprechpartner hinterlegt'}</p></div>
+      {status&&<span className={`onb-status onb-status--${status[0]}`}>{status[1]}</span>}
+    </header>
     {!state && !error && <p role="status">Status wird geladen …</p>}
-    {running && <div role="status"><p><strong>{state.status==='queued'?(state.stage==='Wartet auf Recherche-Kontingent'?'Recherche pausiert, das Such-Kontingent ist aufgebraucht. Sie läuft automatisch weiter.':state.stage==='Recherche wird gleich fortgesetzt'?'Die Suche hat zu lange gedauert. Die Recherche läuft in Kürze automatisch weiter.':'Recherche wartet auf den Start'):state.stage}</strong></p><progress style={{width:'100%'}} aria-label="Recherchefortschritt" value={state.completed_batches||0} max={state.total_batches||1}/><p>{state.researched_fields||0} belegte Angaben · {state.sources||0} Quellen. Die Recherche läuft auch bei geschlossenem Browser weiter.</p></div>}
-    {state?.status==='failed' && <div role="alert"><p>{state.note}</p><button disabled={busy} onClick={()=>act(base)}>Recherche fortsetzen</button></div>}
-    {state?.status==='not_started' && <><p>Website und öffentliche Quellen recherchieren, Profil befüllen und den persönlichen Kundenlink vorbereiten.</p><button disabled={busy} onClick={()=>act(base)}>Recherche & Onboarding starten</button></>}
-    {state?.status==='ready' && <>
-      <p><strong>{state.completed?'Vom Kunden abgeschlossen':state.answered?'Kunde beantwortet den Fragebogen':'Bereit für den Kunden'}</strong></p>
-      <p>{state.researched_fields}/{state.total_fields} Themen belegt · {state.sources} Quellen · {state.answered}/{state.total_questions} Antworten im Fragebogen</p>
-      {state.outdated && <><p>Diese Recherche stammt noch aus dem alten Feldkatalog. Der Kunde sieht erst nach einer neuen Recherche die 21 Themen.</p><button disabled={busy} onClick={()=>act(base)}>Recherche auf 21 Themen aktualisieren</button></>}
-
-      <details><summary>Rechercheumfang</summary><p>{state.pages} Unternehmensseiten gelesen. {state.researched_fields} von {state.total_fields} Recherchethemen konnten belegt werden. Nicht öffentlich belegbare Themen bleiben offen. Die Quellen stehen bei den Aussagen im Profil.</p></details>
-    </>}
-    {state && <details><summary>Ansprechpartner{contact.contact_name?` · ${contact.contact_name}`:''}</summary>
-      <form onSubmit={e=>{e.preventDefault();act(`/client/${clientId}/onboarding-contact`,'PUT',Object.fromEntries(new FormData(e.currentTarget)));}}>
-        {[['contact_name','Name',255,'text'],['contact_role','Funktion',255,'text'],['contact_email','E-Mail',320,'email'],['contact_phone','Telefon',80,'tel']].map(([key,label,max,type])=><label className="platform-field" key={key}><span>{label}</span><input name={key} type={type} maxLength={max} defaultValue={contact[key]||''}/></label>)}
-        <button disabled={busy} type="submit">Ansprechpartner speichern</button>
-      </form>
-    </details>}
-    <OnboardingAudioList clientId={clientId}/>
+    {(ready||running)&&<dl className="onb-stats">
+      <div><dt>Recherchiert</dt><dd>{state.researched_fields||0}<span> von {state.total_fields} Angaben</span></dd></div>
+      <div><dt>Quellen</dt><dd>{state.sources||0}</dd></div>
+      <div><dt>Kundenantworten</dt><dd>{state.answered||0}<span> von {state.total_questions||'–'}</span></dd></div>
+    </dl>}
+    {running && <div role="status" className="onb-running"><p>{waiting}</p><progress aria-label="Recherchefortschritt" value={state.completed_batches||0} max={state.total_batches||1}/><small>Läuft auch bei geschlossenem Browser weiter.</small></div>}
+    {state?.status==='failed' && <div role="alert" className="onb-alert"><p>{state.note}</p><button className="btn" disabled={busy} onClick={()=>act(base)}>Recherche fortsetzen</button></div>}
+    {state?.status==='not_started' && <div className="onb-start"><p>Website und öffentliche Quellen recherchieren, Profil befüllen und den persönlichen Kundenlink vorbereiten.</p><button className="btn btn--go" disabled={busy} onClick={()=>act(base)}>Recherche & Onboarding starten</button></div>}
+    {ready && state.outdated && <div className="onb-alert"><p>Diese Recherche stammt noch aus dem alten Feldkatalog.</p><button className="btn" disabled={busy} onClick={()=>act(base)}>Recherche aktualisieren</button></div>}
+    {link ? <div className="onb-link">
+      <input readOnly aria-label="Kundenlink" value={link} onFocus={e=>e.target.select()}/>
+      <button type="button" className="btn btn--go" disabled={busy} onClick={copyLink}>{copied?'Link kopiert':'Link kopieren'}</button>
+      <a className="btn" href={link} target="_blank" rel="noopener noreferrer">Fragebogen öffnen</a>
+    </div> : state && <div className="onb-link onb-link--empty"><p>Noch kein Kundenlink.</p><button type="button" className="btn btn--go" disabled={busy} onClick={ensureLink}>{busy?'Link wird vorbereitet …':'Onboarding-Link erstellen'}</button></div>}
+    {link&&<p className="onb-meta">Gültig bis {new Date(state.expires_at).toLocaleDateString('de-DE',{day:'numeric',month:'long',year:'numeric'})} · persönlicher Link, nur an den Kunden weitergeben</p>}
+    {state&&<nav className="onb-more" aria-label="Onboarding verwalten">
+      <button type="button" className="linkbtn" aria-expanded={panel==='contact'} onClick={()=>toggle('contact')}>Ansprechpartner bearbeiten</button>
+      {ready&&<button type="button" className="linkbtn" aria-expanded={panel==='scope'} onClick={()=>toggle('scope')}>Recherche-Details</button>}
+      {items.length>0&&<button type="button" className="linkbtn" aria-expanded={panel==='links'} onClick={()=>toggle('links')}>Links verwalten ({items.length})</button>}
+    </nav>}
+    {panel==='contact'&&<form className="onb-panel" onSubmit={e=>{e.preventDefault();act(`/client/${clientId}/onboarding-contact`,'PUT',Object.fromEntries(new FormData(e.currentTarget)));}}>
+      <div className="onb-grid">{[['contact_name','Name',255,'text'],['contact_role','Funktion',255,'text'],['contact_email','E-Mail',320,'email'],['contact_phone','Telefon',80,'tel']].map(([key,label,max,type])=><label className="platform-field" key={key}><span>{label}</span><input name={key} type={type} maxLength={max} defaultValue={contact[key]||''}/></label>)}</div>
+      <button className="btn" disabled={busy} type="submit">Ansprechpartner speichern</button>
+    </form>}
+    {panel==='scope'&&<p className="onb-panel">{state.pages} Unternehmensseiten gelesen, {state.researched_fields} von {state.total_fields} Angaben öffentlich belegt. Was sich nicht öffentlich belegen lässt, bleibt offen für den Kunden. Die Quellen stehen bei jeder Aussage im Profil.</p>}
+    {panel==='links'&&<ul className="onb-panel onb-links">{items.map(i=><li key={i.id}><span>Link {i.id}</span><span>{i.answered}/{i.total} Antworten</span><span className="onb-muted">{i.revoked?'Deaktiviert':i.completed?'Abgeschlossen':new Date(i.expires_at)<new Date()?'Abgelaufen':'Offen'}</span>{!i.revoked && <button className="linkbtn" disabled={busy} onClick={()=>act(`/client/${clientId}/onboarding-invites/${i.id}/revoke`)}>Deaktivieren</button>}</li>)}</ul>}
     {error && <p role="alert">{error}</p>}
-    {items.length>0 && <details><summary>Kundenlinks verwalten</summary><ul>{items.map(i=><li key={i.id}>Link {i.id} · {i.answered}/{i.total} Antworten · {i.revoked?'Deaktiviert':i.completed?'Abgeschlossen':new Date(i.expires_at)<new Date()?'Abgelaufen':'Offen'} {!i.revoked && <button disabled={busy} onClick={()=>act(`/client/${clientId}/onboarding-invites/${i.id}/revoke`)}>Deaktivieren</button>}</li>)}</ul></details>}
+    <OnboardingAudioList clientId={clientId}/>
   </section>;
 }
