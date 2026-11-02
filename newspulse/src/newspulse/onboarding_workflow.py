@@ -164,6 +164,24 @@ def store_facts(session, client_id, answers):
         row.filled_by = 'recherche'
 
 
+def condense_stored(session, *, ask=None):
+    """Shorten researched profile answers stored before the length rule.
+
+    Only untouched research rows: a sentence someone edited stays theirs."""
+    rows = [row for row in session.scalars(select(ClientFact).where(ClientFact.filled_by == 'recherche'))
+            if onboarding_crawler.short_key(row.key) and len(row.value) > onboarding_crawler.SHORT_LIMIT]
+    changed = 0
+    for start in range(0, len(rows), 8):
+        chunk = rows[start:start + 8]
+        short = onboarding_crawler.condense([dict(key=r.key, value=r.value) for r in chunk], ask=ask)
+        for row, answer in zip(chunk, short):
+            if answer['value'] != row.value:
+                row.value = answer['value']
+                changed += 1
+        session.commit()
+    return changed
+
+
 def work(factory, identity, token, *, crawl=None, research=None):
     crawl = crawl or onboarding_crawler.crawl
     research = research or onboarding_crawler.research_batch

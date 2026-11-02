@@ -376,3 +376,34 @@ def test_a_new_mandate_gets_its_logo_first_and_a_missing_one_never_blocks(setup,
     assert web.get('/client/2/onboarding-workflow').json()['status']=='ready'
     with factory() as s:
         assert s.get(Client,2).logo_url is None
+
+
+def test_a_long_profile_answer_is_condensed_and_a_topic_text_is_not():
+    long='Der offizielle Name lautet Zenchef SAS. '+'Weitere Registerangaben folgen hier. '*12
+    seen={}
+    def ask(prompt):
+        seen['prompt']=prompt
+        return json.dumps({'answers':[{'key':'A01.01','value':'Zenchef SAS, Sitz in Paris.'}]})
+    out=crawler.condense([dict(key='A01.01',value=long,source_url='u'),dict(key='R01.01',value=long,source_url='u')],ask=ask)
+    assert out[0]=={'key':'A01.01','value':'Zenchef SAS, Sitz in Paris.','source_url':'u'}
+    assert out[1]['value']==long
+    assert 'R01.01' not in seen['prompt']
+
+
+def test_a_failed_condensing_call_keeps_the_researched_answer():
+    long='x'*400
+    def broken(prompt): raise RuntimeError('limit')
+    assert crawler.condense([dict(key='D01.01',value=long)],ask=broken)==[dict(key='D01.01',value=long)]
+
+
+def test_stored_research_is_condensed_but_an_edited_answer_is_left_alone(setup):
+    _,factory=setup
+    with factory() as s:
+        s.add(Client(id=1,name='Zenchef',website='zenchef.com',country='FR'))
+        s.add(ClientFact(client_id=1,key='A01.01',value='y'*400,filled_by='recherche'))
+        s.add(ClientFact(client_id=1,key='A01.02',value='z'*400,filled_by='mensch'))
+        s.commit()
+        ask=lambda p: json.dumps({'answers':[{'key':'A01.01','value':'Kurz.'}]})
+        assert flow.condense_stored(s,ask=ask)==1
+        assert s.scalar(select(ClientFact.value).where(ClientFact.key=='A01.01'))=='Kurz.'
+        assert s.scalar(select(ClientFact.value).where(ClientFact.key=='A01.02'))=='z'*400
