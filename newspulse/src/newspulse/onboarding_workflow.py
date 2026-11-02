@@ -170,16 +170,25 @@ def condense_stored(session, *, ask=None):
 
     Only untouched research rows: a sentence someone edited stays theirs."""
     rows = [row for row in session.scalars(select(ClientFact).where(ClientFact.filled_by == 'recherche'))
-            if onboarding_crawler.short_key(row.key) and len(row.value) > onboarding_crawler.SHORT_LIMIT]
+            if onboarding_crawler.limit(row.key) and len(row.value) > onboarding_crawler.limit(row.key)]
     changed = 0
-    for start in range(0, len(rows), 8):
-        chunk = rows[start:start + 8]
+    # Topics are long; four of them already fill a reply.
+    rows.sort(key=lambda r: r.key[:1] == 'R')
+    for start in range(0, len(rows), 4):
+        chunk = rows[start:start + 4]
         short = onboarding_crawler.condense([dict(key=r.key, value=r.value) for r in chunk], ask=ask)
         for row, answer in zip(chunk, short):
             if answer['value'] != row.value:
                 row.value = answer['value']
                 changed += 1
         session.commit()
+    # A customer link holds its own copy of the topics; one not yet confirmed
+    # shows the shortened texts too.
+    for job in session.scalars(select(CustomerOnboardingJob).where(CustomerOnboardingJob.invite_id.is_not(None))):
+        invite = session.get(CustomerOnboardingInvite, job.invite_id)
+        if invite and not invite.prefill_confirmed:
+            invite.prefill = customer_onboarding.prepare(session, session.get(Client, job.client_id), allow_empty=True)[0]
+    session.commit()
     return changed
 
 

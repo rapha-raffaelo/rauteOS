@@ -419,3 +419,23 @@ def test_a_reply_with_trailing_text_or_raw_line_breaks_still_parses():
 def test_an_empty_gemini_reply_is_retried_rather_than_failing_the_onboarding():
     from newspulse.analyzer import BackendError
     assert flow.transient(BackendError('Gemini returned no text (finish: None)'))
+
+
+def test_a_topic_essay_is_condensed_to_a_short_summary():
+    essay='Zenchef ist eine Plattform. '*60
+    ask=lambda p: json.dumps({'answers':[{'key':'R01.01','value':'Zenchef SAS aus Paris, gegründet 2010.'}]})
+    assert crawler.condense([dict(key='R01.01',value=essay)],ask=ask)==[dict(key='R01.01',value='Zenchef SAS aus Paris, gegründet 2010.')]
+
+
+def test_an_unconfirmed_customer_link_shows_the_shortened_topic(setup):
+    from newspulse.evidence import Confidentiality, SourceType
+    _,factory=setup
+    with factory() as s:
+        s.add(Client(id=1,name='Zenchef',website='zenchef.com',country='FR'))
+        s.add(ClientFact(client_id=1,key='R01.01',value='lang '*300,filled_by='recherche',source_url='https://zenchef.com',
+            source_type=SourceType.EXTERNAL_RESEARCH,confidentiality=Confidentiality.PUBLIC))
+        s.flush()
+        invite=flow.issue_invite(s,1,[dict(key='R01.01',value='lang '*300)])
+        s.add(CustomerOnboardingJob(client_id=1,invite_id=invite.id,status='ready')); s.commit()
+        flow.condense_stored(s,ask=lambda p: json.dumps({'answers':[{'key':'R01.01','value':'Kurz.'}]}))
+        assert [p['value'] for p in s.get(CustomerOnboardingInvite,invite.id).prefill]==['Kurz.']
