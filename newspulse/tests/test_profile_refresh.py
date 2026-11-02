@@ -1185,11 +1185,20 @@ def test_the_profile_page_says_a_profile_was_never_checked(web_factory, web):
     assert "Noch nie geprüft" in body
 
 
+def _days_ago(days):
+    """Noon in the display zone, ``days`` calendar days back. A plain
+    ``now - 84 days`` lands on the previous calendar day between 23:00 and
+    midnight in winter, since the stamp falls in summer time."""
+    zone = config.local_zone()
+    day = dt.datetime.now(zone).date() - dt.timedelta(days=days)
+    return dt.datetime.combine(day, dt.time(12), tzinfo=zone)
+
+
 def test_the_profile_page_prints_an_old_check_as_an_age(web_factory, web):
     """"12.05.2026" is a number nobody subtracts today's date from."""
     with web_factory() as session:
         client_id = _client(
-            session, checked=dt.datetime.now(dt.UTC) - dt.timedelta(days=84)
+            session, checked=_days_ago(84)
         ).id
 
     body = rendered(web.get(f"/client/{client_id}/profil"))
@@ -1201,7 +1210,7 @@ def test_the_client_list_carries_the_check_age_too(web_factory, web):
     """The consultant picks the mandate to work on from this screen, so this is
     where a stale profile has to be visible."""
     with web_factory() as session:
-        _client(session, name="Alt", checked=dt.datetime.now(dt.UTC) - dt.timedelta(days=84))
+        _client(session, name="Alt", checked=_days_ago(84))
         _client(session, name="Nie", checked=None)
 
     body = rendered(web.get("/clients?view=classic"))

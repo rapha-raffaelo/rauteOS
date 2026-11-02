@@ -3,6 +3,8 @@ import React from 'react';
 const statusNames={draft:'Entwurf',active:'Aktiviert',closed:'Abgeschlossen'};
 const eventNames={idea_developed:'Idee entwickelt',activated:'Opportunity aktiviert',choices_saved:'Auswahl gespeichert',text_created:'Text erstellt',text_checked:'Aussagen geprüft',text_edited:'Text bearbeitet'};
 const formatNames={kundenmail:'Kundenmail',pitch:'Pitch',statement:'Statement',pressemitteilung:'Pressemitteilung',linkedin:'LinkedIn',qa:'Q&A'};
+// An opportunity can be months old, so its date names the year when it is not this one.
+const longDate=value=>{const d=new Date(value);return d.toLocaleDateString('de-DE',{day:'numeric',month:'long',...(d.getFullYear()===new Date().getFullYear()?{}:{year:'numeric'})});};
 const date=value=>value?new Date(value).toLocaleDateString('de-DE',{day:'2-digit',month:'short'}):'';
 
 export function ClientOverview({data,clientId}){
@@ -22,7 +24,7 @@ export function ClientOverview({data,clientId}){
   <div className="co-metrics">{metrics.map(([label,value,note])=><div className="co-metric" key={label}><span>{label}</span><strong>{value}</strong><small>{note}</small></div>)}</div>
   <div className="co-layout"><div className="co-main">
    <section className="co-panel"><header className="co-panel-head"><div><p className="co-eyebrow">CHANCEN ERKENNEN UND ENTWICKELN</p><h2>Opportunities <span className="co-count">{opportunities.length}</span></h2></div>{opportunities.length>6&&<a href={`${base}/opportunities`}>Alle öffnen →</a>}</header>
-    <div className="co-opportunities">{opportunities.length?opportunities.slice(0,6).map(o=><a className="co-opportunity" key={`${o.context_kind}-${o.context_id}`} href={`${base}/opportunities?kind=${o.context_kind}&context=${o.context_id}`}><div className="co-card-meta"><span>{o.context_kind==='detected'?'Erkannte Chance':'Entwickelte Chance'}</span><span className={`co-status co-status--${o.status}`}>{statusNames[o.status]||o.status}</span></div><h3>{o.title}</h3></a>):<div className="co-empty"><span className="co-empty-icon" aria-hidden="true">↗</span><h3>Raum für die nächste gute Idee</h3><p>Entwickle eine Kommunikationschance aus dem Profil und aktueller Recherche.</p></div>}</div>
+    <div className="co-opportunities">{opportunities.length?opportunities.slice(0,6).map(o=><a className="co-opportunity" key={`${o.context_kind}-${o.context_id}`} href={`${base}/opportunities?kind=${o.context_kind}&context=${o.context_id}`}><div className="co-card-meta"><span>{o.context_kind==='detected'?'Erkannte Chance':'Entwickelte Chance'}{o.created_at&&<> · <time dateTime={o.created_at}>{longDate(o.created_at)}</time></>}</span><span className={`co-status co-status--${o.status}`}>{statusNames[o.status]||o.status}</span></div><h3>{o.title}</h3></a>):<div className="co-empty"><span className="co-empty-icon" aria-hidden="true">↗</span><h3>Raum für die nächste gute Idee</h3><p>Entwickle eine Kommunikationschance aus dem Profil und aktueller Recherche.</p></div>}</div>
 
    </section>
    <section className="co-panel"><header className="co-panel-head"><div><p className="co-eyebrow">VON DER IDEE ZUM ENTWURF</p><h2>Aktuelle Texte</h2></div></header>
