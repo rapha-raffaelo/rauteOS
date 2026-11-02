@@ -407,3 +407,15 @@ def test_stored_research_is_condensed_but_an_edited_answer_is_left_alone(setup):
         assert flow.condense_stored(s,ask=ask)==1
         assert s.scalar(select(ClientFact.value).where(ClientFact.key=='A01.01'))=='Kurz.'
         assert s.scalar(select(ClientFact.value).where(ClientFact.key=='A01.02'))=='z'*400
+
+
+def test_a_reply_with_trailing_text_or_raw_line_breaks_still_parses():
+    assert crawler.first_json('{"answers": []}\n{"answers": [1]}') == {'answers': []}
+    assert crawler.first_json('Hier:\n```json\n{"answers": [{"value": "Zeile\neins"}]}\n```') == {'answers': [{'value': 'Zeile\neins'}]}
+    with pytest.raises(json.JSONDecodeError):
+        crawler.first_json('{"answers": [ {"key": "R01.01" "value": "x"}]}')
+
+
+def test_an_empty_gemini_reply_is_retried_rather_than_failing_the_onboarding():
+    from newspulse.analyzer import BackendError
+    assert flow.transient(BackendError('Gemini returned no text (finish: None)'))

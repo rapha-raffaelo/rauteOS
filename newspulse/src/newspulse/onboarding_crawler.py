@@ -89,6 +89,19 @@ ANSWER_LIMIT = 4000
 SHORT_LIMIT = 300
 
 
+def first_json(text):
+    """The first JSON object in a model reply.
+
+    Tolerates what the search models add around it: a second object or a
+    closing remark after it ("Extra data") and raw line breaks inside a
+    string ("Invalid control character"). Broken JSON still raises."""
+    text = strip_code_fence(text)
+    start = text.find('{')
+    if start < 0:
+        return json.loads(text)
+    return json.JSONDecoder(strict=False).raw_decode(text, start)[0]
+
+
 def short_key(key):
     return key[:1] in {'A', 'D'}
 
@@ -109,7 +122,7 @@ Antworte nur als JSON: {{"answers":[{{"key":"A01.01","value":"kurzer Text"}}]}}
 '''
     prompt += json.dumps([{'key': k, 'value': v} for k, v in long.items()], ensure_ascii=False)
     try:
-        payload = json.loads(strip_code_fence(ask(prompt)))
+        payload = first_json(ask(prompt))
         short = {a['key']: a['value'].strip() for a in payload['answers']
                  if isinstance(a, dict) and a.get('key') in long and isinstance(a.get('value'), str)}
     except Exception as exc:
@@ -221,7 +234,7 @@ Wichtig: Gib nur die unten genannten Themen-IDs aus. Nutze höchstens {ANSWER_LI
         if urlsplit(resolved).scheme in {'http', 'https'}:
             sources[url.rstrip('/')] = resolved
             sources[resolved.rstrip('/')] = resolved
-    payload = json.loads(strip_code_fence(raw))
+    payload = first_json(raw)
     if not isinstance(payload, dict) or not isinstance(payload.get('answers'), list):
         raise ValueError('Ungültige Recherche-Antwort')
     allowed = {f['key'] for f in fields}
