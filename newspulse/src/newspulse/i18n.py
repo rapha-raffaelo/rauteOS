@@ -443,6 +443,10 @@ _EN: dict[str, str] = {
     "Wettbewerber vorschlagen": "Suggest competitors",
     "Mandanten gesamt": "clients in total",
     "Löschung am": "deleted on",
+    "Gestern": "Yesterday",
+    "Ohne Datum": "Undated",
+    "Filter zurücksetzen": "Reset filters",
+    "Schlagzeile oder Zusammenfassung durchsuchen …": "Search headlines or summaries …",
     "Deaktivierte Mandanten bleiben 90 Tage im Archiv und werden danach mit allen Daten gelöscht.": "Deactivated clients stay in the archive for 90 days and are then deleted with all their data.",
     "Maßstab für": "Yardstick for",
     "Werden überwacht, damit Anteile vergleichbar sind — nie an sie berichtet, nie im Digest.":
