@@ -133,3 +133,24 @@ h1:focus { outline: none; }
 .onb-language { display: inline-flex; padding: 3px; border: 1px solid #ccc; border-radius: 6px; gap: 3px; flex: none; }
 .onb-language button { border: 0; padding: 6px 12px; min-height: 36px; font-size: 12px; font-weight: 600; letter-spacing: .04em; background: transparent; }
 .onb-language button[aria-pressed=true] { background: #111; color: white; }
+
+/* "Das wissen wir schon": one card per topic, clipped to a few lines, with its
+   own correction button, and the confirm button kept in reach while reading. */
+.onb-lead { font-size: 15px; line-height: 1.6; color: #444; max-width: 60ch; }
+.onb-prefill-tools { display: flex; justify-content: space-between; align-items: center; margin: 24px 0 0; font-size: 12px; color: #666; letter-spacing: .04em; text-transform: uppercase; }
+.onb-prefill-tools .onb-link { text-transform: none; letter-spacing: 0; }
+.onb-prefill { display: grid; gap: 12px; margin: 12px 0 24px; border-top: 0; }
+.onb-prefill-row { padding: 20px 22px; border: 1px solid #e3e3e3; border-radius: 10px; background: #fff; }
+.onb-prefill-row--editing { border-color: #111; }
+.onb-prefill-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.onb-prefill-head h2 { font-size: 15px; font-weight: 700; letter-spacing: -.01em; margin: 0; }
+.onb-prefill-text { font-size: 14px; line-height: 1.65; color: #333; margin-top: 8px; }
+.onb-prefill-text p { font-size: 14px; color: #333; white-space: normal; margin: 0 0 10px; }
+.onb-prefill-text p:last-child { margin-bottom: 0; }
+.onb-prefill-text--clipped { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+.onb-link { background: none; border: 0; padding: 4px 0; min-height: 32px; font-size: 13px; font-weight: 600; color: #111; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.onb-link:disabled { opacity: .5; }
+.onb-prefill-row textarea { width: 100%; min-height: 160px; margin-top: 10px; font-size: 14px; line-height: 1.6; }
+.onb-sticky { position: sticky; bottom: 0; padding: 16px 0; background: linear-gradient(to top, #fff 75%, rgba(255,255,255,0)); }
+.onb-sticky .onb-primary { width: 100%; }
+@media (max-width: 520px) { .onb-prefill-row { padding: 16px; } }

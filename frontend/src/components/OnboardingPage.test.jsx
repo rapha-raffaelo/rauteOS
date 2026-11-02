@@ -121,3 +121,18 @@ it('switches questions, explanations, topic titles and labels to English and bac
   expect(screen.getByText('Wie heißen Sie?')).toBeTruthy();
   expect(screen.getByText('Später beantworten')).toBeTruthy();
 });
+it('corrects one topic in place and shows research bold text without asterisks',async()=>{
+  const prefill=[{key:'R05.01',label:'Unternehmensbeschreibung',value:'Ein **Reservierungsmanagement** für Restaurants.'},
+    {key:'R06.01',label:'Produkte',value:'Reserve, Pay und Promote.'}];
+  global.fetch=vi.fn().mockImplementationOnce(()=>ok({...data,prefill,prefill_confirmed:false})).mockImplementationOnce(()=>ok({ok:true}));
+  render(<OnboardingPage token="test"/>);
+  fireEvent.click(await screen.findByText('Los geht’s'));
+  expect(screen.getByText('Reservierungsmanagement').tagName).toBe('STRONG');
+  expect(screen.queryByText(/\*\*/)).toBeNull();
+  fireEvent.click(screen.getAllByRole('button',{name:'Korrigieren'})[1]);
+  expect(screen.queryByLabelText('Unternehmensbeschreibung')).toBeNull();
+  fireEvent.change(screen.getByLabelText('Produkte'),{target:{value:'Reserve und Pay.'}});
+  fireEvent.click(screen.getByText('Speichern & weiter'));
+  expect(await screen.findByText('Wie heißen Sie?')).toBeTruthy();
+  expect(JSON.parse(fetch.mock.calls[1][1].body)).toEqual({corrections:{'R06.01':'Reserve und Pay.'}});
+});

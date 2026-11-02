@@ -7,6 +7,7 @@ export function OnboardingPage({ token = window.location.hash.slice(1).split('/'
   const [screen, setScreen] = useState('welcome'), [index, setIndex] = useState(0);
   const [draft, setDraft] = useState(''), [busy, setBusy] = useState(false);
   const [prefillEdits, setPrefillEdits] = useState({}), [editingPrefill, setEditingPrefill] = useState(false);
+  const [rowEdits, setRowEdits] = useState([]), [openRows, setOpenRows] = useState([]);
   const [listening, setListening] = useState(false), [audioDrafts, setAudioDrafts] = useState({});
   const [language, setLanguage] = useState(initialLanguage);
   const tr = text => say(language, text);
@@ -61,7 +62,7 @@ export function OnboardingPage({ token = window.location.hash.slice(1).split('/'
     try {
       await api('/prefill', 'POST', {corrections: prefillEdits});
       setData({...data, prefill_confirmed: true, prefill: data.prefill.map(p => ({...p, ...(prefillEdits[p.key] ? {customer_value: prefillEdits[p.key]} : {})}))});
-      setPrefillEdits({}); setEditingPrefill(false);
+      setPrefillEdits({}); setEditingPrefill(false); setRowEdits([]);
       if (prefillReturn.current !== null) {const target = prefillReturn.current; prefillReturn.current = null; openQuestion(target);} else resume();
     } catch(e) {setError(e.message);}
     finally {lock.current = false; setBusy(false);}
@@ -94,11 +95,21 @@ export function OnboardingPage({ token = window.location.hash.slice(1).split('/'
     catch (e) {setError(e.message);}
     finally {lock.current = false; setBusy(false);}
   }
+  // One card per topic: the title, the first lines of what research found and
+  // "Mehr lesen" for the rest, with a correction button on each card rather
+  // than one switch that turns every topic into a text box at once.
   function renderPrefill(p) {
     const label = en ? p.label_en || p.label : p.label;
-    return <div key={p.key} className="onb-prefill-row"><strong>{label}</strong>
-              {editingPrefill ? <textarea aria-label={label} maxLength={20000} value={prefillEdits[p.key] ?? p.customer_value ?? p.value} disabled={busy} onChange={e=>setPrefillEdits({...prefillEdits,[p.key]:e.target.value})}/> : <p>{p.customer_value || p.value}</p>}
-            </div>;
+    const editing = editingPrefill || rowEdits.includes(p.key);
+    const text = p.customer_value || p.value || '';
+    const open = openRows.includes(p.key), long = text.length > 320;
+    return <article key={p.key} className={`onb-prefill-row${editing ? ' onb-prefill-row--editing' : ''}`}>
+      <div className="onb-prefill-head"><h2>{label}</h2>
+        {!editing && <button type="button" className="onb-link" disabled={busy} onClick={() => setRowEdits([...rowEdits, p.key])}>{tr('Korrigieren')}</button>}</div>
+      {editing ? <textarea aria-label={label} maxLength={20000} value={prefillEdits[p.key] ?? text} disabled={busy} onChange={e=>setPrefillEdits({...prefillEdits,[p.key]:e.target.value})}/>
+        : <><div className={`onb-prefill-text${long && !open ? ' onb-prefill-text--clipped' : ''}`}><RichText text={text} /></div>
+          {long && <button type="button" className="onb-link" onClick={() => setOpenRows(open ? openRows.filter(k => k !== p.key) : [...openRows, p.key])}>{open ? tr('Weniger anzeigen') : tr('Mehr lesen')}</button>}</>}
+    </article>;
   }
   const settled = data ? Object.keys(data.answers).length : 0;
   const answered = data ? Object.values(data.answers).filter(a => a.value || a.audio_id).length : 0;
@@ -120,12 +131,13 @@ export function OnboardingPage({ token = window.location.hash.slice(1).split('/'
         {screen === 'prefill' && <section className="onb-card">
 
           <h1 ref={heading} tabIndex={-1}>{tr('Das wissen wir schon.')}</h1>
-          <p>{tr('Stimmt das so?')}</p>
-          <button className="onb-edit" disabled={busy} onClick={() => {setEditingPrefill(!editingPrefill); setPrefillEdits({});}}>{editingPrefill ? tr('Bearbeitung abbrechen') : tr('Angaben bearbeiten')}</button>
+          <p className="onb-lead">{tr('Aus öffentlichen Quellen zusammengetragen. Stimmt etwas nicht, korrigieren Sie es direkt an der Stelle.')}</p>
+          <div className="onb-prefill-tools"><span>{data.prefill.length} {tr('Themen')}</span>
+            <button className="onb-link" disabled={busy} onClick={() => {setEditingPrefill(!editingPrefill); setPrefillEdits({}); setRowEdits([]);}}>{editingPrefill ? tr('Bearbeitung abbrechen') : tr('Angaben bearbeiten')}</button></div>
           <div className="onb-prefill">
             {data.prefill.map(renderPrefill)}
           </div>
-          <button className="onb-primary" disabled={busy} onClick={confirmPrefill}>{busy ? tr('Wird gespeichert …') : editingPrefill ? tr('Speichern & weiter') : tr('Stimmt, weiter')}</button>
+          <div className="onb-sticky"><button className="onb-primary" disabled={busy} onClick={confirmPrefill}>{busy ? tr('Wird gespeichert …') : editingPrefill || rowEdits.length ? tr('Speichern & weiter') : tr('Stimmt, weiter')}</button></div>
         </section>}
         {screen === 'question' && <>
           <div className="onb-progress-label"><span>{index + 1} / {data.questions.length}</span></div>
@@ -160,4 +172,11 @@ export function OnboardingPage({ token = window.location.hash.slice(1).split('/'
       </>}
     </main>
   </div>;
+}
+
+// Research text can carry **bold** and blank-line paragraphs; shown as such
+// instead of as literal asterisks.
+function RichText({text}) {
+  return text.split(/\n{2,}/).map((para, i) => <p key={i}>{para.split(/(\*\*[^*]+\*\*)/g).map((part, j) =>
+    /^\*\*[^*]+\*\*$/.test(part) ? <strong key={j}>{part.slice(2, -2)}</strong> : part)}</p>);
 }
