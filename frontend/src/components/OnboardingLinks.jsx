@@ -29,14 +29,16 @@ export function OnboardingLinks({clientId}) {
       const next=await request(base+'/link/ensure','POST');setState(next);
       setItems(await request(`/client/${clientId}/onboarding-invites`));
       try{await navigator.clipboard.writeText(window.location.origin+next.path);setCopied(true);}
-      catch{setError('Link erstellt. Bitte im Textfeld kopieren.');}
+      catch{setManual(true);setError('Link erstellt. Bitte im Textfeld kopieren.');}
     }catch(e){setError(e.message);}finally{setBusy(false);}
   }
   const link=state?.path?window.location.origin+state.path:'';
+  // The link is a secret token; it shows only when the clipboard refuses it.
+  const [manual,setManual]=useState(false);
   async function copyLink(){
     setError('');
     try{await navigator.clipboard.writeText(link);setCopied(true);}
-    catch{setError('Kopieren nicht möglich. Bitte den Link im Feld markieren und kopieren.');}
+    catch{setManual(true);setError('Kopieren nicht möglich. Bitte den Link im Feld markieren und kopieren.');}
   }
   const running=['queued','running'].includes(state?.status);
   const contact=state?.contact||{};
@@ -65,11 +67,11 @@ export function OnboardingLinks({clientId}) {
     {state?.status==='not_started' && <div className="onb-start"><p>Website und öffentliche Quellen recherchieren, Profil befüllen und den persönlichen Kundenlink vorbereiten.</p><button className="btn btn--go" disabled={busy} onClick={()=>act(base)}>Recherche & Onboarding starten</button></div>}
     {ready && state.outdated && <div className="onb-alert"><p>Diese Recherche stammt noch aus dem alten Feldkatalog.</p><button className="btn" disabled={busy} onClick={()=>act(base)}>Recherche aktualisieren</button></div>}
     {link ? <div className="onb-link">
-      <input readOnly aria-label="Kundenlink" value={link} onFocus={e=>e.target.select()}/>
-      <button type="button" className="btn btn--go" disabled={busy} onClick={copyLink}>{copied?'Link kopiert':'Link kopieren'}</button>
+      <button type="button" className="btn btn--go" disabled={busy} onClick={copyLink}>{copied?'Link kopiert':'Kundenlink kopieren'}</button>
       <a className="btn" href={link} target="_blank" rel="noopener noreferrer">Fragebogen öffnen</a>
+      <p className="onb-meta">Persönlicher Link · gültig bis {new Date(state.expires_at).toLocaleDateString('de-DE',{day:'numeric',month:'long',year:'numeric'})}</p>
+      {manual&&<input readOnly aria-label="Kundenlink" value={link} onFocus={e=>e.target.select()}/>}
     </div> : state && <div className="onb-link onb-link--empty"><p>Noch kein Kundenlink.</p><button type="button" className="btn btn--go" disabled={busy} onClick={ensureLink}>{busy?'Link wird vorbereitet …':'Onboarding-Link erstellen'}</button></div>}
-    {link&&<p className="onb-meta">Gültig bis {new Date(state.expires_at).toLocaleDateString('de-DE',{day:'numeric',month:'long',year:'numeric'})} · persönlicher Link, nur an den Kunden weitergeben</p>}
     {state&&<nav className="onb-more" aria-label="Onboarding verwalten">
       <button type="button" className="linkbtn" aria-expanded={panel==='contact'} onClick={()=>toggle('contact')}>Ansprechpartner bearbeiten</button>
       {ready&&<button type="button" className="linkbtn" aria-expanded={panel==='scope'} onClick={()=>toggle('scope')}>Recherche-Details</button>}

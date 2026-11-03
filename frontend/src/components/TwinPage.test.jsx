@@ -81,7 +81,7 @@ it('edits in the field and keeps permission values when using the compact form',
  stubFetch(fetch);render(<TwinPage clientId={1}/>);
  fireEvent.click(await screen.findByRole('button',{name:'Bearbeiten'}));
  const form=screen.getByRole('form',{name:'Aussage bearbeiten'});
- expect(form.closest('.twin-question')).toBeTruthy();
+ expect(form.closest('.twin-topic--editing')).toBeTruthy();
  expect(form.querySelector('details').open).toBe(false);
  expect(screen.getByText('Kundenaussage · Vertraulich · Freigabe nötig')).toBeTruthy();
  fireEvent.change(screen.getByLabelText('Aussage'),{target:{value:'Neue Formulierung'}});
@@ -102,29 +102,37 @@ it('automatically reveals a saved AI preview on returning to the profile',async(
  expect(screen.getByText('Saved answer')).toBeTruthy();
  expect(fetch).toHaveBeenCalledTimes(2);
 });
-it('numbers the researched topics and the customer questions, and folds the catalogue',async()=>{
+it('shows the brief as numbered cards and the customer questionnaire as its own panel',async()=>{
  const researched={...row,id:7,key:'R01.01',value:'Zalando SE',source_url:'https://www.corporate.zalando.com/de/impressum',
   source_title:'Öffentliche Onboarding-Recherche',note:'Weitere Quellen: https://handelsregister.de/x, https://de.wikipedia.org/wiki/Zalando'};
+ const founded={...row,id:8,key:'A01.03',value:'2008 in Berlin.'};
  const fields=[{key:'R01.01',label:'Unternehmensidentität',section:'R',group:'R01 Öffentliches Unternehmensbild',requirement:'Optional',hint:'Wie lautet der offizielle Firmenname?'},
   {key:'R02.01',label:'Rechtliche Unternehmensdaten',section:'R',group:'R01 Öffentliches Unternehmensbild',requirement:'Optional',hint:''},
-  {key:'Q01.14',label:'Von welchen externen Akteuren hängt Ihr Geschäft ab?',section:'Q',group:'Q01 Strategie',requirement:'Optional',hint:''},
-  {key:'A01.03',label:'Wann wurde das Unternehmen gegründet?',section:'A. Client Facts',group:'A01 Unternehmen',requirement:'Empfohlen'}];
- stubFetch(vi.fn().mockResolvedValue(response({...data,fields,statements:[researched]})));
+  {key:'Q01.14',label:'Von welchen externen Akteuren hängt Ihr Geschäft ab?',section:'Q',group:'Q01 Strategie',requirement:'Optional',hint:'Bitte nennen Sie Partner.'},
+  {key:'A01.03',label:'Wann wurde das Unternehmen gegründet?',section:'A. Client Facts',group:'A01 Unternehmen',requirement:'Empfohlen'},
+  {key:'A01.04',label:'Wo befindet sich der Hauptsitz?',section:'A. Client Facts',group:'A01 Unternehmen',requirement:'Pflicht'}];
+ stubFetch(vi.fn().mockResolvedValue(response({...data,fields,statements:[researched,founded]})));
  render(<TwinPage clientId={1}/>);
  const brief=(await screen.findByRole('heading',{name:'Unternehmenssteckbrief'})).closest('section');
- const asked=screen.getByRole('heading',{name:'Fragebogen'}).closest('section');
+ const asked=screen.getByRole('heading',{name:'Kundenfragebogen'}).closest('section');
  expect(within(brief).getByText('Zalando SE')).toBeTruthy();
  expect(within(brief).getByText('01')).toBeTruthy();
- expect(within(brief).getByText('02')).toBeTruthy();
  expect(within(brief).getByText('Noch keine belegte Angabe.')).toBeTruthy();
- expect(within(brief).getByText('1 von 2 Themen recherchiert. Recherchierte Angaben bleiben „Prüfung offen“, bis jemand sie bestätigt.')).toBeTruthy();
- // The question keeps its own number, not its position in the catalogue.
+ expect(within(brief).getByText('1 von 2 Themen recherchiert · Prüfung offen, bis jemand bestätigt')).toBeTruthy();
+ // The guiding question is the card title's tooltip, not a paragraph.
+ expect(within(brief).getByRole('heading',{name:'Unternehmensidentität'}).getAttribute('title')).toBe('Wie lautet der offizielle Firmenname?');
+ // The question keeps its own number; its guiding text opens on demand.
  expect(within(asked).getByText('14')).toBeTruthy();
- expect(within(asked).getByText('Noch nicht beantwortet.')).toBeTruthy();
- // Sources read as site names, not as long addresses.
+ expect(within(asked).getByText('Offen')).toBeTruthy();
+ expect(within(asked).queryByText('Bitte nennen Sie Partner.')).toBeNull();
+ fireEvent.click(within(asked).getByRole('button',{name:'Leitfragen'}));
+ expect(within(asked).getByText('Bitte nennen Sie Partner.')).toBeTruthy();
+ // A researched company fact appears at a glance; the catalogue stays folded.
+ expect(within(screen.getByLabelText('Auf einen Blick')).getByText('2008 in Berlin.')).toBeTruthy();
+ expect(screen.getByRole('progressbar',{name:'Profilvollständigkeit'})).toBeTruthy();
  expect(within(brief).getByRole('link',{name:'corporate.zalando.com'}).getAttribute('href')).toBe(researched.source_url);
  expect(within(brief).getByText('+2 Quellen')).toBeTruthy();
- expect(screen.queryByText('Wann wurde das Unternehmen gegründet?')).toBeNull();
- fireEvent.click(screen.getByRole('button',{name:'Erweiterten Katalog anzeigen (0 von 1 Feldern mit Aussagen)'}));
- expect(screen.getByText('Wann wurde das Unternehmen gegründet?')).toBeTruthy();
+ expect(screen.queryByText('Wo befindet sich der Hauptsitz?')).toBeNull();
+ fireEvent.click(screen.getByRole('button',{name:'Erweiterten Katalog anzeigen (1 von 2 Feldern mit Aussagen)'}));
+ expect(screen.getByText('Wo befindet sich der Hauptsitz?')).toBeTruthy();
 });

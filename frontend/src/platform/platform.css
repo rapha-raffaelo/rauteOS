@@ -286,7 +286,9 @@
 .onb-stats dt { font-size: 12px; color: var(--muted); }
 .onb-stats dd { margin: 4px 0 0; font-size: 22px; font-weight: 600; }
 .onb-stats dd span { font-size: 13px; font-weight: 400; color: var(--muted); }
-.onb-link { display: flex; gap: 8px; align-items: center; }
+.onb-link { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.onb-link .onb-meta { margin: 0 0 0 8px; }
+.onb-link input { flex-basis: 100%; }
 .onb-link input {
   flex: 1;
   min-width: 0;

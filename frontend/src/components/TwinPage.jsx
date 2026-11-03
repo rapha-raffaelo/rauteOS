@@ -17,6 +17,18 @@ const readable = value => ({'Client Statement':'Kundenaussage','Fact':'Fakt','Ma
  'Client Interview':'Kundengespräch','Management Interview':'Managementgespräch','Employee Interview':'Mitarbeitergespräch','Customer Interview':'Gespräch mit Endkunden',
  'Sales Data':'Vertriebsdaten','Internal Document':'Internes Dokument','RAUTE Analysis':'RAUTE-Analyse','AI Research':'KI-Recherche','OS / Research':'OS / Recherche'}[value] || value);
 
+// The company facts the glance row shows when research has them.
+const GLANCE = [['A01.03', 'Gegründet', 'calendar'], ['A01.04', 'Hauptsitz', 'pin'], ['A01.07', 'Mitarbeitende', 'people'],
+  ['A01.06', 'Märkte', 'globe'], ['A01.09', 'Eigentümer', 'building']];
+const ICONS = {
+  calendar: 'M7 3v3M17 3v3M4 9h16M5 6h14a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z',
+  pin: 'M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21zM12 12a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z',
+  people: 'M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 6.5M18.5 14.5A6.5 6.5 0 0 1 21.5 20',
+  globe: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3z',
+  building: 'M4 21V5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v16M15 9h4a1 1 0 0 1 1 1v11M3 21h18M8 8h3M8 12h3M8 16h3',
+};
+const Icon = ({name}) => <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={ICONS[name]}/></svg>;
+
 export function TwinPage({clientId, embedded = false, initialLimit = 20}) {
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
@@ -28,6 +40,7 @@ export function TwinPage({clientId, embedded = false, initialLimit = 20}) {
   const [limit, setLimit] = useState(initialLimit);
   const [editing, setEditing] = useState(null);
   const [showCatalog, setShowCatalog] = useState(false);
+  const [hints, setHints] = useState([]);
   const importPanel = useRef(null), filePanel = useRef(null), chosenImport = useRef(null);
   const [aiImporting, setAIImporting] = useState(false);
   const [aiStatus, setAIStatus] = useState(null);
@@ -72,18 +85,40 @@ export function TwinPage({clientId, embedded = false, initialLimit = 20}) {
   const open = catalog.filter(field => !has(field) && matches(field) &&
     (filter !== 'required' || field.requirement === 'Pflicht'));
   const number = key => key.slice(1).split('.')[key.startsWith('Q') ? 1 : 0];
-  const field = (item, answered, numbered = false) => <section className={`twin-field twin-question ${answered ? 'twin-question--answered' : 'twin-question--empty'}`} key={item.key} id={`feld-${item.key}`}>
-    <div className="twin-field-head"><div>{numbered ? <span className="twin-number">{number(item.key)}</span> : <small className="twin-question-meta"><span>{item.key}</span> {item.requirement}</small>}<h3>{item.label}</h3>
-      {numbered && item.hint && <p className="twin-hint">{item.hint}</p>}</div>
-      {!answered && <button className="btn" disabled={busy || Boolean(editing)} onClick={() => setEditing({field: item})}>Antwort ergänzen</button>}</div>
-    {editing?.field.key === item.key && <StatementEditor key={editing.row?.id ?? item.key} field={item} row={editing.row}
+  const editor = item => editing?.field.key === item.key && <StatementEditor key={editing.row?.id ?? item.key} field={item} row={editing.row}
       options={data.options} busy={busy} onCancel={() => setEditing(null)} onSave={payload => mutate(
         editing.row ? `/statements/${editing.row.id}` : '/statements',
-        {...payload, ...(editing.row ? {revision: editing.row.revision} : {})}, editing.row ? 'PUT' : 'POST')} />}
-    {statements(item.key).map(row => <Statement key={row.id} row={row} busy={busy || Boolean(editing)}
-      onEdit={() => setEditing({field: item, row})} />)}
-    {numbered && !answered && <p className="twin-muted twin-empty">{item.key.startsWith('Q') ? 'Noch nicht beantwortet.' : 'Noch keine belegte Angabe.'}</p>}
+        {...payload, ...(editing.row ? {revision: editing.row.revision} : {})}, editing.row ? 'PUT' : 'POST')} />;
+  const answers = item => statements(item.key).map(row => <Statement key={row.id} row={row} busy={busy || Boolean(editing)}
+      onEdit={() => setEditing({field: item, row})} />);
+  const add = (item, label = 'Antwort ergänzen') => <button className="btn btn--quiet" disabled={busy || Boolean(editing)} onClick={() => setEditing({field: item})}>{label}</button>;
+  const field = item => <section className={`twin-field twin-question ${has(item) ? 'twin-question--answered' : 'twin-question--empty'}`} key={item.key} id={`feld-${item.key}`}>
+    <div className="twin-field-head"><div><small className="twin-question-meta"><span>{item.key}</span> {item.requirement}</small><h3>{item.label}</h3></div>
+      {!has(item) && add(item)}</div>
+    {editor(item)}{answers(item)}
   </section>;
+  // A topic of the brief as a card: number, title, the short text, its source.
+  // The guiding question is the title's tooltip, not a paragraph on every card.
+  const topic = item => <article className={`twin-topic${has(item) ? '' : ' twin-topic--empty'}${editing?.field.key === item.key ? ' twin-topic--editing' : ''}`} key={item.key} id={`feld-${item.key}`}>
+    <header><span className="twin-number">{number(item.key)}</span><h3 title={item.hint || undefined}>{item.label}</h3>
+      {!has(item) && add(item, 'Ergänzen')}</header>
+    {editor(item)}{answers(item)}
+    {!has(item) && editing?.field.key !== item.key && <p className="twin-empty">Noch keine belegte Angabe.</p>}
+  </article>;
+  // A customer question as one row; its guiding text opens on demand.
+  const question = item => <li className={`twin-ask${has(item) ? ' twin-ask--done' : ''}`} key={item.key} id={`feld-${item.key}`}>
+    <div className="twin-ask-row"><span className="twin-number">{number(item.key)}</span>
+      <div className="twin-ask-text"><h3>{item.label}</h3>
+        {item.hint && <button type="button" className="linkbtn twin-more" aria-expanded={hints.includes(item.key)} onClick={() => setHints(hints.includes(item.key) ? hints.filter(k => k !== item.key) : [...hints, item.key])}>{hints.includes(item.key) ? 'Leitfragen ausblenden' : 'Leitfragen'}</button>}
+        {hints.includes(item.key) && <p className="twin-hint">{item.hint}</p>}</div>
+      <span className={`twin-state${has(item) ? ' twin-state--ok' : ''}`}>{has(item) ? 'Beantwortet' : 'Offen'}</span>
+      {!has(item) && add(item, 'Ergänzen')}</div>
+    {editor(item)}{answers(item)}
+  </li>;
+  // Short facts for the glance row; each is a one-sentence research answer.
+  const glance = GLANCE.map(([key, label, icon]) => [label, icon, statements(key).find(active)?.value]).filter(([, , value]) => value);
+  const part = (label, done, total, note) => <div className="twin-part"><div><span>{label}</span><strong>{done}<small> / {total} {note}</small></strong></div>
+    <div className="twin-bar"><span style={{width: `${total ? Math.round(100 * done / total) : 0}%`}}/></div></div>;
   const groups = items => items.reduce((out, item) => {
     const last = out[out.length - 1];
     if (last?.group === item.group) last.items.push(item); else out.push({group: item.group, items: [item]});
@@ -96,25 +131,31 @@ export function TwinPage({clientId, embedded = false, initialLimit = 20}) {
     </header>
     <div hidden={!importing} ref={filePanel} id={`twin-file-${clientId}`}><ImportPanel clientId={clientId} onImported={async result=>{await load();setNotice(`${result.created} Aussagen importiert; ${result.skipped} bereits vorhanden.`);}}/></div>
     {<div hidden={!aiImporting} ref={importPanel} id={`twin-ai-${clientId}`}><TwinAIImport clientId={clientId} fields={data.fields} onStatus={setAIStatus} onRestore={v=>{if(chosenImport.current!=='file'&&(v.preview||v.job?.status==='running'||v.job?.status==='failed'))setAIImporting(true);}} onImported={async result=>{await load();setNotice(`${result.created} KI-Vorschläge übernommen; ${result.skipped} bereits beantwortet oder vorhanden.`);}}/></div>}
-    <section className="twin-progress" aria-label="Vollständigkeit">
-      <div className="twin-progress-main"><span className="twin-progress-label">Profilvollständigkeit</span><strong>{data.progress.percent} % vollständig</strong>
-        <progress max="100" value={data.progress.percent} aria-label="Beantwortete Fragen" /></div>
-      <dl className="twin-progress-facts"><div><dt>Fragen beantwortet</dt><dd>{data.progress.required_filled}<span> / {data.progress.required_total}</span></dd></div>
-        <div><dt>Unabhängig bestätigt</dt><dd>{data.progress.verified}<span> {data.progress.verified===1?'Aussage':'Aussagen'}</span></dd></div></dl>
-      <small>Vollständigkeit misst die 21 Recherche-Themen und 22 Kundenfragen. Sie ist keine Bestätigung ihrer Richtigkeit.</small>
+    <section className="twin-overview" aria-label="Vollständigkeit">
+      <div className="twin-ring" style={{'--p': data.progress.percent}} role="progressbar" aria-label="Profilvollständigkeit"
+        aria-valuenow={data.progress.percent} aria-valuemin={0} aria-valuemax={100}><strong>{data.progress.percent} %</strong><span>vollständig</span></div>
+      <div className="twin-parts">
+        {part('Unternehmenssteckbrief', brief.filter(has).length, brief.length, 'recherchiert')}
+        {part('Kundenfragebogen', asked.filter(has).length, asked.length, 'beantwortet')}
+        <p className="twin-muted">{data.progress.verified} {data.progress.verified === 1 ? 'Aussage' : 'Aussagen'} unabhängig bestätigt. Vollständigkeit misst die 21 Recherche-Themen und 22 Kundenfragen, nicht ihre Richtigkeit.</p>
+      </div>
     </section>
     {errors}{notice && <p role="status">{notice}</p>}
 
+    {glance.length > 0 && <section className="twin-glance" aria-label="Auf einen Blick">
+      {glance.map(([label, icon, value]) => <div key={label}><span className="twin-glance-icon"><Icon name={icon}/></span><div><small>{label}</small><p>{value}</p></div></div>)}
+    </section>}
+
     <section className="twin-brief" aria-labelledby={`twin-brief-${clientId}`}>
-      <h2 id={`twin-brief-${clientId}`}>Unternehmenssteckbrief</h2>
-      <p className="twin-muted">{brief.filter(has).length} von {brief.length} Themen recherchiert. Recherchierte Angaben bleiben „Prüfung offen“, bis jemand sie bestätigt.</p>
-      {brief.map(item => field(item, has(item), true))}
+      <header className="twin-section-head"><div><p className="twin-eyebrow">AUS DER RECHERCHE</p><h2 id={`twin-brief-${clientId}`}>Unternehmenssteckbrief</h2></div>
+        <p className="twin-muted">{brief.filter(has).length} von {brief.length} Themen recherchiert · Prüfung offen, bis jemand bestätigt</p></header>
+      <div className="twin-topics">{brief.map(topic)}</div>
     </section>
 
-    <section className="twin-open" aria-labelledby={`twin-asked-${clientId}`}>
-      <h2 id={`twin-asked-${clientId}`}>Fragebogen</h2>
-      <p className="twin-muted">{asked.filter(has).length} von {asked.length} Fragen beantwortet. Diese Fragen beantwortet der Kunde über seinen Onboarding-Link.</p>
-      {asked.map(item => field(item, has(item), true))}
+    <section className="twin-questionnaire" aria-labelledby={`twin-asked-${clientId}`}>
+      <header className="twin-section-head"><div><p className="twin-eyebrow">VOM KUNDEN · ÜBER DEN ONBOARDING-LINK</p><h2 id={`twin-asked-${clientId}`}>Kundenfragebogen</h2></div>
+        <p className="twin-muted">{asked.filter(has).length} von {asked.length} Fragen beantwortet</p></header>
+      <ol className="twin-asks">{asked.map(question)}</ol>
     </section>
 
     <section className="twin-catalog" aria-labelledby={`twin-catalog-${clientId}`}>
@@ -129,9 +170,9 @@ export function TwinPage({clientId, embedded = false, initialLimit = 20}) {
           <label>Anzeige<select aria-label="Anzeige" value={filter} onChange={e => {setFilter(e.target.value); setLimit(initialLimit);}}>
             <option value="all">Alle offenen</option><option value="required">Nur Pflichtfelder</option></select></label>
         </fieldset>
-        {groups(known).map(({group, items}) => <div className="twin-group" key={group}><h3 className="twin-group-title">{group.replace(/^[A-Z]\d+\s+/, '')}</h3>{items.map(item => field(item, true))}</div>)}
+        {groups(known).map(({group, items}) => <div className="twin-group" key={group}><h3 className="twin-group-title">{group.replace(/^[A-Z]\d+\s+/, '')}</h3>{items.map(field)}</div>)}
         <h3 className="twin-group-title">Ohne Aussage ({open.length})</h3>
-        {groups(open.slice(0, limit)).map(({group, items}) => <div className="twin-group" key={group}><h3 className="twin-group-title">{group.replace(/^[A-Z]\d+\s+/, '')}</h3>{items.map(item => field(item, false))}</div>)}
+        {groups(open.slice(0, limit)).map(({group, items}) => <div className="twin-group" key={group}><h3 className="twin-group-title">{group.replace(/^[A-Z]\d+\s+/, '')}</h3>{items.map(field)}</div>)}
         {limit < open.length && <button className="btn" onClick={() => setLimit(limit + 20)}>Weitere Felder anzeigen</button>}
       </>}
     </section>
