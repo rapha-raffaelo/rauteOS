@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { OnboardingLinks } from "../components/OnboardingLinks.jsx";
 import { TwinPage } from "../components/TwinPage.jsx";
 import { PageHeading } from "../components/PageHeading.jsx";
+import { ClientTitle } from "../components/ClientLogo.jsx";
 import {
   Action,
   Field,
@@ -345,66 +346,24 @@ function Guide({ data: d, base }) {
     </Panel>
   );
 }
-function Company({ data: d, base }) {
+// The four lines only the kick-off knows. Everything else the old company
+// form held (business, founding, seat, products, competitors) is now a topic of
+// the brief or a glance fact above, filled by the onboarding research.
+const CONTACTS = ["pressekontakt", "sprecher", "zielmedien", "krisenkontakt"];
+function Company({ data, base }) {
+  const shown = (p) => CONTACTS.includes(p.key);
+  const d = {...data, fields: data.fields.filter(shown), proposals: data.proposals.filter(shown),
+    contradictions: data.contradictions.filter(shown)};
+  const filled = d.fields.filter((f) => d.facts[f.key]?.value).length;
   return (
     <>
-      <Panel title="Unternehmen & Kommunikation" id="profilebody">
-        <dl className="profile-fact-sheet">{d.fields.filter(f => d.facts[f.key]?.value).slice(0, 4).map(f =>
+      <Panel title="Kontakte & Sprecher" id="profilebody">
+        <dl className="profile-fact-sheet">{d.fields.filter(f => d.facts[f.key]?.value).map(f =>
           <div key={f.key}><dt>{t(f.label)}</dt><dd>{d.facts[f.key].value}</dd></div>)}</dl>
-        {!d.filled && <p>Ergänze Unternehmen, Produkte und Sprecher als Grundlage für deine Texte.</p>}
-        <details className="profile-edit" open={Boolean(d.proposals.length || d.contradictions.length || d.research_error || d.stale_click || d.researching)}>
-        <summary>Unternehmensangaben bearbeiten <span>{d.filled}/{d.fillable} ausgefüllt</span></summary>
-        <p>
-          {d.filled}/{d.fillable} Felder gefüllt · {d.kickoff.settled}/
-          {d.kickoff.total}{" "}
-          {t("Fragen aus dem Kickoff beantwortet oder übergangen")}.
-        </p>
-        {!d.kickoff.started && (
-          <p>
-            {t(
-              "Kein Fragebogen beantwortet — für dieses Mandat gibt es noch kein Fundament.",
-            )}
-          </p>
-        )}
-        <div className="platform-actions">
-          <a
-            className="btn btn--ghost"
-            href={`${base}/twin?fragebogen=1#fragebogen`}
-          >
-            {t("Fragebogen öffnen")}
-          </a>
-          <Action
-            action={base + "/profil/fill"}
-            disabled={d.researching}
-            label="Mit KI ausfüllen"
-          />
-        </div>
-        <p className="panel-hint">
-          Recherche schlägt Werte vor. Gespeichert wird erst nach deiner
-          Prüfung.
-        </p>
-        <p>
-          {d.checked.never
-            ? t("Noch nie geprüft")
-            : d.checked.days === 0
-              ? t("Heute geprüft")
-              : d.checked.as_age
-                ? `Zuletzt geprüft vor ${d.checked.days} Tagen`
-                : `Zuletzt geprüft: ${date(d.checked.at)}`}
-        </p>
-        {d.researching && (
-          <Notice>
-            Recherche läuft. Bitte nach Abschluss aktualisieren, um neue
-            Vorschläge zu sehen.
-          </Notice>
-        )}
+        {!filled && <p>Wer zitiert werden darf, wer abends erreichbar ist und welche Titel zählen, weiß nur der Kunde.</p>}
+        <details className="profile-edit" open={Boolean(d.proposals.length || d.contradictions.length)}>
+        <summary>Kontakte bearbeiten <span>{filled}/{d.fields.length} ausgefüllt</span></summary>
         <Notice>{d.research_error}</Notice>
-        {d.stale_click && (
-          <Notice>
-            Diese Vorschläge wurden inzwischen ersetzt. Nichts wurde geändert;
-            unten steht der aktuelle Stand.
-          </Notice>
-        )}
         {!!d.proposals.length && (
           <>
             <p>
@@ -549,15 +508,11 @@ function Company({ data: d, base }) {
           ))}
         </details>
       </Panel>
-      <details className="profile-fold" open={Boolean(d.proposal || d.guide_error || d.coach_error || d.saved)}>
-        <summary><span>Kommunikations-Guide<small>Positionierung, Tonalität, No-Gos und Unterlagen</small></span><span>{d.guide_text ? 'Hinterlegt' : 'Noch offen'}</span></summary>
-        <Guide data={d} base={base} />
-      </details>
     </>
   );
 }
 function Rivals({ data: d, base }) {
-  const redirect_to = base + "/twin#wettbewerb";
+  const redirect_to = base + "/wettbewerb#wettbewerb";
   return (
     <Panel title="Wettbewerbsanalyse">
       <p>Vergleich aus den letzten {d.window_days} Tagen.</p>
@@ -574,7 +529,7 @@ function Rivals({ data: d, base }) {
           <tbody>
             {d.voice.map((v) => (
               <tr key={v.client_id}>
-                <td>{v.name}</td>
+                <td>{companyName(v.name)}</td>
                 <td>{v.mentions}</td>
                 <td>{v.alerts}</td>
                 <td>{(v.share * 100).toFixed(1)} %</td>
@@ -590,7 +545,7 @@ function Rivals({ data: d, base }) {
       )}
       {d.rivals.map((r) => (
         <article className="feed-item" key={r.client.id}>
-          <h3>{r.client.name}</h3>
+          <h3>{companyName(r.client.name)}</h3>
           <p>
             {r.mentions} Meldungen · {r.client.industry}
           </p>
@@ -627,59 +582,42 @@ function Rivals({ data: d, base }) {
     </Panel>
   );
 }
+// A competitor entered as its web address reads as the site's name.
+const companyName = (name) => name.replace(/^https?:\/\/(www\.)?/i, "").replace(/\/$/, "");
 function RivalManagement({data: d, base}) {
-  const redirect_to = base + "/twin#wettbewerber";
-  return <Panel title="Wettbewerber">
-
-      <p>
-        Verknüpfte Wettbewerber zählen nur hier, nicht bei den anderen
-        Mandanten.
-      </p>
-      {!d.client.competitors.length && <p>Noch keine Wettbewerber hinterlegt.</p>}
-      {d.client.competitors.map((r) => (
-        <Action
-          key={r.id}
-          action={`${base}/competitors/${r.id}/remove`}
-          label="Verknüpfung lösen"
-          values={{ redirect_to }}
-        >
-          <span>{r.name}</span>
-        </Action>
-      ))}
-      {!!d.named.length && <h4>{t("Im Kickoff genannt")}</h4>}
-      {d.named.map((r) => (
-        <Action
-          key={r.name}
-          action={base + "/competitors/accept"}
-          label="In die Vergleichsgruppe"
-          values={{ name: r.name, redirect_to }}
-        >
-          <span>
-            {r.name} · {r.reason}
-          </span>
-        </Action>
-      ))}
-      <Action
-        action={base + "/competitors/accept"}
-        label="Hinzufügen"
-        values={{ redirect_to }}
-      >
-        <Field name="name" label="Wettbewerber hinzufügen" required />
+  const redirect_to = base + "/wettbewerb#wettbewerber";
+  return <Panel title="Vergleichsgruppe">
+    <p className="panel-hint">Gegen diese Unternehmen misst RauteOS Berichterstattung und Pitch-Lücken. Verknüpfte Wettbewerber zählen nur für diesen Mandanten.</p>
+    <ul className="rival-chips">
+      {d.client.competitors.map((r) => <li key={r.id} className="rival-chip">
+        <span>{companyName(r.name)}</span>
+        <form method="post" action={`${base}/competitors/${r.id}/remove`}>
+          <input type="hidden" name="redirect_to" value={redirect_to} />
+          <button type="submit" aria-label={`${companyName(r.name)}: Verknüpfung lösen`} title="Verknüpfung lösen">×</button>
+        </form>
+      </li>)}
+      {!d.client.competitors.length && <li className="rival-chip rival-chip--empty">Noch keine Wettbewerber hinterlegt.</li>}
+    </ul>
+    {!!d.named.length && <>
+      <h3 className="rival-subhead">{t("Im Kickoff genannt")}</h3>
+      <ul className="rival-chips">{d.named.map((r) => <li key={r.name} className="rival-chip rival-chip--offer" title={r.reason}>
+        <form method="post" action={base + "/competitors/accept"}>
+          <input type="hidden" name="name" value={r.name} /><input type="hidden" name="redirect_to" value={redirect_to} />
+          <button type="submit" aria-label={`${r.name} in die Vergleichsgruppe`}>＋ {r.name}</button>
+        </form>
+      </li>)}</ul>
+    </>}
+    <div className="rival-add">
+      <Action action={base + "/competitors/accept"} label="Hinzufügen" values={{ redirect_to }}>
+        <Field name="name" label="Wettbewerber hinzufügen" placeholder="Name oder Website" required />
       </Action>
       {!!d.candidates.length && (
-        <Action
-          action={base + "/competitors"}
-          label="Hinzufügen"
-          values={{ redirect_to }}
-        >
-          <Field
-            id="competitor_id"
-            name="competitor_id"
-            label="Aus dem Bestand wählen"
-            options={d.candidates.map((c) => [c.id, c.name])}
-          />
+        <Action action={base + "/competitors"} label="Hinzufügen" values={{ redirect_to }}>
+          <Field id="competitor_id" name="competitor_id" label="Aus dem Bestand wählen"
+            options={d.candidates.map((c) => [c.id, c.name])} />
         </Action>
       )}
+    </div>
   </Panel>;
 }
 const kinds = {
@@ -864,7 +802,7 @@ export function ProfilePage({ data: d, onData }) {
   const [ready, setReady] = useState(false);
   const [refreshError, setRefreshError] = useState("");
   useEffect(() => {
-    if (!d.company.researching || ready || !onData) return;
+    if (!d.company?.researching || ready || !onData) return;
     const controller = new AbortController();
     const timer = setInterval(async () => {
       try {
@@ -876,7 +814,7 @@ export function ProfilePage({ data: d, onData }) {
           throw new Error("Recherche-Status konnte nicht aktualisiert werden.");
         const next = await response.json();
         setRefreshError("");
-        if (!next.company.researching) {
+        if (!next.company?.researching) {
           if (dirty) setReady(true);
           else onData(next);
         }
@@ -888,64 +826,57 @@ export function ProfilePage({ data: d, onData }) {
       clearInterval(timer);
       controller.abort();
     };
-  }, [d.company.researching, d.client.id, dirty, ready, onData]);
+  }, [d.company?.researching, d.client.id, dirty, ready, onData]);
   useEffect(() => {
     function reveal() {
       const target = document.getElementById(decodeURIComponent(window.location.hash.slice(1)));
       if (!target) return;
       for (let node = target; node; node = node.parentElement) if (node.tagName === 'DETAILS') node.open = true;
       if (['unternehmen', 'profilebody'].includes(target.id)) target.querySelector('details')?.setAttribute('open', '');
-      if (['wettbewerb', 'marktumfeld'].includes(target.id)) target.querySelector('details')?.setAttribute('open', '');
       target.scrollIntoView?.({block:'start'});
     }
     reveal(); window.addEventListener('hashchange', reveal);
     return () => window.removeEventListener('hashchange', reveal);
   }, [d.client.id]);
   const base = `/client/${d.client.id}`;
+  const view = d.view || "profile";
+  // The mandate's file, split in three tabs: who the company is, whom it is
+  // measured against and in what market, and how it speaks.
+  const heading = {
+    profile: ["Profil", "Wissen, Unternehmensangaben und Kontakte an einem Ort."],
+    rivals: ["Wettbewerb", "Vergleichsgruppe, Berichterstattung und Marktumfeld."],
+    guide: ["Kommunikations-Guide", "Positionierung, Tonalität, No-Gos und Unterlagen für alle erzeugten Texte."],
+  }[view];
   return (
     <div className="profile-page">
       <PageHeading
-        eyebrow={t("Profil")}
-        title={<span className="profile-title">
-          {d.brand?.logo
-            ? <img className="profile-logo" src={d.brand.logo} alt="" />
-            : <span className="profile-logo profile-logo--mono" style={{background: d.brand?.colour}} aria-hidden="true">{d.brand?.monogram}</span>}
-          <span>{d.client.name}</span>
-        </span>}
-        description={t(
-          "Wissen, Unternehmensangaben, Wettbewerb und Marktumfeld an einem Ort.",
-        )}
+        eyebrow={t(heading[0])}
+        title={<ClientTitle client={d.client} />}
+        description={t(heading[1])}
       />
-      <OnboardingLinks key={d.client.id} clientId={d.client.id} />
-      <section id="wettbewerber" className="profile-section"><RivalManagement data={d.rivals} base={base}/></section>
-      <section
-        id="wissen"
-        className="profile-knowledge"
-        aria-label={t("Wissen & Aussagen")}
-      >
-        <TwinPage clientId={d.client.id} embedded initialLimit={5} />
-      </section>
-      <section
-        id="unternehmen"
-        className="profile-section"
-        onChangeCapture={() => setDirty(true)}
-      >
-        <Notice>{refreshError}</Notice>
-        {ready && (
-          <Notice>
-            Recherche abgeschlossen. Bitte ungespeicherte Eingaben sichern und
-            die Seite neu laden, um die Vorschläge zu sehen.
-          </Notice>
-        )}
-        <Company data={d.company} base={base} />
-      </section>
-      <section id="wettbewerb" className="profile-section">
-        <details className="profile-fold"><summary><span>Wettbewerbsanalyse<small>Vergleichsgruppe, Berichterstattung und offene Themen</small></span><span>{d.rivals.rivals.length} Unternehmen</span></summary><Rivals data={d.rivals} base={base} /></details>
-      </section>
-      <section id="marktumfeld" className="profile-section">
-        <details className="profile-fold"><summary><span>Marktumfeld<small>Aktuelle Entwicklungen, Studien und Termine</small></span><span>{d.market.items.length} Meldungen</span></summary><Market data={d.market} base={base} /></details>
-      </section>
-      {d.company.kickoff_open && (
+      {view === "profile" && <>
+        <OnboardingLinks key={d.client.id} clientId={d.client.id} />
+        <section id="wissen" className="profile-knowledge" aria-label={t("Wissen & Aussagen")}>
+          <TwinPage clientId={d.client.id} embedded />
+        </section>
+        <section id="unternehmen" className="profile-section" onChangeCapture={() => setDirty(true)}>
+          <Notice>{refreshError}</Notice>
+          {ready && (
+            <Notice>
+              Recherche abgeschlossen. Bitte ungespeicherte Eingaben sichern und
+              die Seite neu laden, um die Vorschläge zu sehen.
+            </Notice>
+          )}
+          <Company data={d.company} base={base} />
+        </section>
+      </>}
+      {view === "rivals" && <>
+        <section id="wettbewerber" className="profile-section"><RivalManagement data={d.rivals} base={base}/></section>
+        <section id="wettbewerb" className="profile-section"><Rivals data={d.rivals} base={base} /></section>
+        <section id="marktumfeld" className="profile-section"><Market data={d.market} base={base} /></section>
+      </>}
+      {view === "guide" && <section id="guide" className="profile-section"><Guide data={d.company} base={base} /></section>}
+      {view === "profile" && d.company.kickoff_open && (
         <Kickoff clientId={d.client.id} data={d.company} />
       )}
     </div>

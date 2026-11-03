@@ -30,7 +30,8 @@ def test_profile_sources_and_disagreements_remain_scoped(web,db):
     assert data['company']['facts']['ceo']['source_title']=='Register'
     assert data['company']['facts']['ceo']['filled_by']=='research'
     assert 'Other mandate' not in json.dumps(data)
-    assert set(data)=={'client','brand','company','rivals','market'}
+    assert set(data)=={'client','view','company'}
+    assert set(web.get('/client/1/wettbewerb',headers=JSON).json())=={'client','view','rivals','market'}
     assert web.get('/client/3/twin',headers=JSON).status_code==404
 
 
@@ -106,8 +107,16 @@ def test_the_profile_heading_is_the_mandate_with_its_mark(web,db):
     client=db.get(Client,1)
     page=rendered(web.get('/client/1/twin'))
     heading=re.search(r'<h1>(.*?)</h1>',page,re.S).group(1)
-    assert client.name in heading and 'profile-logo--mono' in heading
+    assert client.name in heading and 'src="/client/1/logo"' in heading
+
+
+def test_the_logo_address_serves_the_mark_or_the_monogram(web,db):
+    client=db.get(Client,1)
+    plain=web.get('/client/1/logo')
+    assert plain.headers['content-type'].startswith('image/svg+xml') and '<svg' in plain.text
     client.logo_url='data:image/png;base64,iVBORw0KGgo=';db.commit()
-    data=web.get('/client/1/twin',headers=JSON).json()
-    assert data['brand']['logo']=='data:image/png;base64,iVBORw0KGgo='
-    assert '<img class="profile-logo" src="data:image/png;base64,iVBORw0KGgo="' in rendered(web.get('/client/1/twin'))
+    mark=web.get('/client/1/logo')
+    assert mark.headers['content-type']=='image/png' and mark.content==b'\x89PNG\r\n\x1a\n'
+    client.logo_url='javascript:alert(1)';db.commit()
+    assert web.get('/client/1/logo').headers['content-type'].startswith('image/svg+xml')
+    assert web.get('/client/3/logo').status_code==404

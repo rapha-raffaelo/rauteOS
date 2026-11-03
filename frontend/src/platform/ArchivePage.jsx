@@ -101,7 +101,7 @@ export function ArchivePage({ data: d }) {
           {d.radar_count} Beiträge aus dem Themen-Radar der letzten{" "}
           {d.radar_days} Tage: Marktmaterial, das den Mandanten nicht nennt und
           deshalb keine Berichterstattung ist.{" "}
-          <a href={`${base}/twin#marktumfeld`}>{t("Im Marktumfeld ansehen")}</a>
+          <a href={`${base}/wettbewerb#marktumfeld`}>{t("Im Marktumfeld ansehen")}</a>
         </p>
       )}
       <section id="archive-list" aria-label={t("Artikel")}>
@@ -182,7 +182,7 @@ export function ArchivePage({ data: d }) {
               <>
                 {" "}
                 ·{" "}
-                <a href={`${base}/twin#wettbewerb`}>{t("Vergleichsgruppe")}</a>
+                <a href={`${base}/wettbewerb`}>{t("Vergleichsgruppe")}</a>
               </>
             )}
           </p>

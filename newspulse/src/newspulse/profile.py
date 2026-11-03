@@ -216,6 +216,14 @@ def checked(at: dt.datetime | None, *, now: dt.datetime) -> Checked:
     return Checked(at=at, days=max(days, 0))
 
 
+#: Old profile line -> the brief topic that now answers it.
+TOPIC_FALLBACK = {
+    "geschaeftsfeld": "R05.01", "ceo": "R04.01", "eigentuemer": "R10.01", "zielgruppe": "R07.01",
+    "produkte": "R06.01", "positionierung": "R16.01", "wettbewerber": "R21.01", "themen": "R15.01",
+    "risiken": "R20.01",
+}
+
+
 class FactCollection(dict):
     """Canonical fields for old editors, plus every statement for prompt readers."""
     def __init__(self, rows):
@@ -228,6 +236,12 @@ class FactCollection(dict):
         for field in CATALOG:
             if field["legacy_key"] and field["key"] in self:
                 self.setdefault(field["legacy_key"], self[field["key"]])
+        # The company form these keys came from is gone from the page; its
+        # readers (competitor search, coach, scenarios) take the matching
+        # topic of the brief when nobody filled the old line.
+        for legacy, topic in TOPIC_FALLBACK.items():
+            if topic in self:
+                self.setdefault(legacy, self[topic])
 
 
 def stored(session: Session, client_id: int) -> dict[str, ClientFact]:

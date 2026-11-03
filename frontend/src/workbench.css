@@ -47,3 +47,13 @@
 .raute-ui .client-card-actions .client-action-icon {display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;min-height:36px;padding:0;border-radius:8px;}
 .client-action-icon:focus-visible {outline:2px solid var(--tint);outline-offset:2px;}
 @media(pointer:coarse){.raute-ui .client-card-actions .client-action-icon{width:44px;height:44px;min-height:44px;}}
+
+/* The overview's profile card reads like the profile itself: a ring and the two parts. */
+.co-twin h2{margin-bottom:18px}
+.co-twin-body{display:grid;justify-items:center;gap:18px;margin-bottom:16px}
+.co-ring{--p:0;flex:none;display:grid;place-content:center;text-align:center;width:112px;height:112px;border-radius:50%;background:radial-gradient(closest-side,var(--card,#fff) 80%,transparent 81%),conic-gradient(var(--tint) calc(var(--p)*1%),var(--fill-2) 0)}
+.co-ring strong{font-size:20px;letter-spacing:-.03em;font-variant-numeric:tabular-nums;line-height:1.1}.co-ring span{font-size:10px;color:var(--muted)}
+.co-parts{width:100%;min-width:0;display:grid;gap:14px}
+.co-part>div:first-child{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:12px;color:var(--muted)}
+.co-part strong{color:var(--ink);font-variant-numeric:tabular-nums;font-size:14px}.co-part small{font-weight:400;color:var(--muted);font-size:11px}
+.co-bar{height:5px;border-radius:5px;background:var(--fill-2);margin-top:6px;overflow:hidden}.co-bar>span{display:block;height:100%;background:var(--tint);border-radius:5px}

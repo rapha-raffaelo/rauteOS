@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import { createPortal } from "react-dom";
 import { t, Action } from "./platform/shared.jsx";
+import { ClientLogo } from "./components/ClientLogo.jsx";
 export function ClientTabs({ data, path = window.location.pathname }) {
   const { client, active, crisis } = data;
   const base = `/client/${client.id}`;
@@ -22,25 +23,21 @@ export function ClientTabs({ data, path = window.location.pathname }) {
     "krise",
   ].includes(active)
     ? "opportunities"
-    : [
-          "twin",
-          "profile",
-          "rivals",
-          "market",
-          "kickoff",
-          "guide",
-          "map",
-        ].includes(active)
+    : ["twin", "profile", "kickoff"].includes(active)
       ? "profile"
-      : active === "overview"
+      : ["rivals", "market", "map"].includes(active)
+        ? "rivals"
+        : active === "overview"
         ? "archive"
         : active;
   const tabs = [
     ["client_overview", "/overview", "Overview"],
     ["opportunities", "/opportunities", "Opportunities"],
     ["profile", "/twin", "Profil"],
-    ["archive", "", "Archiv"],
+    ["rivals", "/wettbewerb", "Wettbewerb"],
+    ["guide", "/guide", "Guide"],
     ["visibility", "/ki", "KI-Sichtbarkeit"],
+    ["archive", "", "Archiv"],
   ];
   const views = [
     ["opportunities", "/opportunities", "Chancen"],
@@ -192,7 +189,7 @@ export function Shell({ data, portals = true }) {
               className={`side__row side__cl${selected ? " is-on" : ""}`}
               aria-current={selected ? "page" : undefined}
             >
-              <span className="side__dot" style={{ background: c.colour }} />
+              <ClientLogo id={c.id} />
               <span className="side__nm">{c.name}</span>
               {c.alerts > 0 && <span className="side__badge">{c.alerts}</span>}
             </a>
@@ -227,6 +224,7 @@ export function Shell({ data, portals = true }) {
               /
             </span>
             <a className="crumbs__here" href={crumbs.mandate_href}>
+              {crumbs.mandate_id && <ClientLogo id={crumbs.mandate_id} />}
               {crumbs.mandate}
             </a>
           </>

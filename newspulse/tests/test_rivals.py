@@ -342,7 +342,7 @@ def test_a_competitor_from_another_industry_is_not_offered_at_all(factory, clien
         session.commit()
         broker_id = broker.id
 
-    body = rendered(client.get(f"/client/{broker_id}/twin"))
+    body = rendered(client.get(f"/client/{broker_id}/wettbewerb"))
     offered = body.split('id="competitor_id"', 1)[1].split("</select>", 1)[0]
 
     # The picker itself offers the peer and nothing else. Grouping the fashion
@@ -366,7 +366,7 @@ def test_without_an_industry_nothing_is_offered_but_the_field_stays_open(factory
         session.commit()
         subject_id = subject.id
 
-    body = rendered(client.get(f"/client/{subject_id}/twin"))
+    body = rendered(client.get(f"/client/{subject_id}/wettbewerb"))
 
     assert 'id="competitor_id"' not in body
     assert 'name="name"' in body  # the manual field

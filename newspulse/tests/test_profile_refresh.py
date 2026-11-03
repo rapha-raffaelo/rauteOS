@@ -707,12 +707,12 @@ def test_a_proposal_shows_the_old_value_the_new_one_and_its_source(web_factory, 
     with web_factory() as session:
         client = _client(session)
         client_id = client.id
-        profiles.save(session, client, "sitz", "Berlin", filled_by="gemini-2.5-flash")
+        profiles.save(session, client, "pressekontakt", "Berlin", filled_by="gemini-2.5-flash")
         profile_refresh.refresh(
-            session, client, now=_NOW, generate=_answer(sitz="Paris")
+            session, client, now=_NOW, generate=_answer(pressekontakt="Paris")
         )
 
-    row = _field_row(rendered(web.get(f"/client/{client_id}/profil")), "sitz")
+    row = _field_row(rendered(web.get(f"/client/{client_id}/profil")), "pressekontakt")
 
     assert "Berlin" in row, "the value it argues against"
     assert "Paris" in row, "the value it proposes"
@@ -726,14 +726,14 @@ def test_a_row_argues_against_the_value_the_profile_holds_now(web_factory, web):
     with web_factory() as session:
         client = _client(session)
         client_id = client.id
-        profiles.save(session, client, "sitz", "Berlin", filled_by="gemini-2.5-flash")
+        profiles.save(session, client, "pressekontakt", "Berlin", filled_by="gemini-2.5-flash")
         profile_refresh.refresh(
-            session, client, now=_NOW, generate=_answer(sitz="Paris")
+            session, client, now=_NOW, generate=_answer(pressekontakt="Paris")
         )
 
     # The consultant clears the field through the form, then reviews the pile.
-    web.post(f"/client/{client_id}/profil", data={"sitz": ""}, follow_redirects=False)
-    row = _field_row(rendered(web.get(f"/client/{client_id}/profil")), "sitz")
+    web.post(f"/client/{client_id}/profil", data={"pressekontakt": ""}, follow_redirects=False)
+    row = _field_row(rendered(web.get(f"/client/{client_id}/profil")), "pressekontakt")
 
     assert "Berlin" not in row, "there is nothing on file to argue against"
     assert "props__was" not in row, "and so nothing to strike through"
@@ -766,10 +766,10 @@ def test_an_empty_field_is_not_struck_through(web_factory, web):
         client = _client(session)
         client_id = client.id
         profile_refresh.refresh(
-            session, client, now=_NOW, generate=_answer(sitz="Paris")
+            session, client, now=_NOW, generate=_answer(pressekontakt="Paris")
         )
 
-    row = _field_row(rendered(web.get(f"/client/{client_id}/profil")), "sitz")
+    row = _field_row(rendered(web.get(f"/client/{client_id}/profil")), "pressekontakt")
 
     assert "Paris" in row, "the offer is in the field"
     assert "props__was" not in row, "with nothing struck through above it"
@@ -847,7 +847,7 @@ def test_accepting_writes_the_value_under_the_humans_name(web_factory, web):
         client = _client(session)
         client_id = client.id
         profile_refresh.refresh(
-            session, client, now=_NOW, generate=_answer(ceo="Alexandre Prot")
+            session, client, now=_NOW, generate=_answer(pressekontakt="Alexandre Prot")
         )
 
     body = rendered(web.get(f"/client/{client_id}/profil"))
@@ -855,7 +855,7 @@ def test_accepting_writes_the_value_under_the_humans_name(web_factory, web):
              follow_redirects=False)
 
     with web_factory() as session:
-        fact = profiles.stored(session, client_id)["ceo"]
+        fact = profiles.stored(session, client_id)["pressekontakt"]
     assert fact.value == "Alexandre Prot"
     assert fact.filled_by == profiles.BY_HAND
     assert fact.source_url == "https://qonto.com/ueber-uns", "the source travels"
@@ -868,7 +868,7 @@ def test_an_accepted_value_is_not_proposed_over_by_the_next_refresh(web_factory,
         client = _client(session)
         client_id = client.id
         profile_refresh.refresh(
-            session, client, now=_NOW, generate=_answer(ceo="Alexandre Prot")
+            session, client, now=_NOW, generate=_answer(pressekontakt="Alexandre Prot")
         )
 
     body = rendered(web.get(f"/client/{client_id}/profil"))
@@ -879,11 +879,11 @@ def test_an_accepted_value_is_not_proposed_over_by_the_next_refresh(web_factory,
         client = session.get(Client, client_id)
         profile_refresh.refresh(
             session, client, now=_NOW + dt.timedelta(days=61),
-            generate=_answer(ceo="Jemand ganz anderes"),
+            generate=_answer(pressekontakt="Jemand ganz anderes"),
         )
         facts = profiles.stored(session, client_id)
-    assert facts["ceo"].value == "Alexandre Prot", "his answer stands"
-    assert not profile_refresh.may_replace(facts, "ceo")
+    assert facts["pressekontakt"].value == "Alexandre Prot", "his answer stands"
+    assert not profile_refresh.may_replace(facts, "pressekontakt")
     # And the disagreement is on the page as a contradiction, under the rule.
     body = rendered(web.get(f"/client/{client_id}/profil"))
     assert "Jemand ganz anderes" in body
@@ -896,9 +896,9 @@ def test_the_page_states_the_rule_that_protects_a_hand_filled_field(web_factory,
     with web_factory() as session:
         client = _client(session)
         client_id = client.id
-        profiles.save(session, client, "ceo", "Weiß ich vom Kick-off")
+        profiles.save(session, client, "pressekontakt", "Weiß ich vom Kick-off")
         profile_refresh.refresh(
-            session, client, now=_NOW, generate=_answer(ceo="Jemand anderes")
+            session, client, now=_NOW, generate=_answer(pressekontakt="Jemand anderes")
         )
 
     body = rendered(web.get(f"/client/{client_id}/profil"))
@@ -915,9 +915,9 @@ def test_the_contradiction_block_says_what_discarding_it_costs(web_factory, web)
     with web_factory() as session:
         client = _client(session)
         client_id = client.id
-        profiles.save(session, client, "ceo", "Weiß ich vom Kick-off")
+        profiles.save(session, client, "pressekontakt", "Weiß ich vom Kick-off")
         profile_refresh.refresh(
-            session, client, now=_NOW, generate=_answer(ceo="Jemand anderes")
+            session, client, now=_NOW, generate=_answer(pressekontakt="Jemand anderes")
         )
 
     body = rendered(web.get(f"/client/{client_id}/profil"))
@@ -931,7 +931,7 @@ def test_the_contradiction_block_says_what_discarding_it_costs(web_factory, web)
         client = session.get(Client, client_id)
         profile_refresh.refresh(
             session, client, now=_NOW + dt.timedelta(days=61),
-            generate=_answer(ceo="Jemand anderes"),
+            generate=_answer(pressekontakt="Jemand anderes"),
         )
         assert profile_refresh.outstanding(session, client_id) == []
 
@@ -944,7 +944,7 @@ def test_accept_all_takes_only_the_rows_that_were_on_the_page(web_factory, web):
         client = _client(session)
         client_id = client.id
         profile_refresh.refresh(
-            session, client, now=_NOW, generate=_answer(ceo="Alexandre Prot")
+            session, client, now=_NOW, generate=_answer(pressekontakt="Alexandre Prot")
         )
 
     drawn = _pids(rendered(web.get(f"/client/{client_id}/profil")))
@@ -957,7 +957,7 @@ def test_accept_all_takes_only_the_rows_that_were_on_the_page(web_factory, web):
     with web_factory() as session:
         facts = profiles.stored(session, client_id)
         left = profile_refresh.outstanding(session, client_id)
-    assert set(facts) == {"ceo"}, "only what was on the page was written"
+    assert set(facts) == {"pressekontakt"}, "only what was on the page was written"
     assert [p.key for p in left] == ["umsatz"], "the newcomer is still waiting"
 
 
@@ -968,7 +968,7 @@ def test_discard_all_leaves_a_proposal_that_arrived_after_the_page(web_factory, 
         client = _client(session)
         client_id = client.id
         profile_refresh.refresh(
-            session, client, now=_NOW, generate=_answer(ceo="Alexandre Prot")
+            session, client, now=_NOW, generate=_answer(pressekontakt="Alexandre Prot")
         )
 
     drawn = _pids(rendered(web.get(f"/client/{client_id}/profil")))
@@ -1174,17 +1174,6 @@ def test_a_stamp_from_the_future_is_not_a_negative_age():
     assert profiles.checked(_NOW + dt.timedelta(days=3), now=_NOW).days == 0
 
 
-def test_the_profile_page_says_a_profile_was_never_checked(web_factory, web):
-    """A blank reads as "fine", and a profile nobody has ever re-read is the
-    opposite of fine."""
-    with web_factory() as session:
-        client_id = _client(session, checked=None).id
-
-    body = rendered(web.get(f"/client/{client_id}/profil"))
-
-    assert "Noch nie geprüft" in body
-
-
 def _days_ago(days):
     """Noon in the display zone, ``days`` calendar days back. A plain
     ``now - 84 days`` lands on the previous calendar day between 23:00 and
@@ -1192,18 +1181,6 @@ def _days_ago(days):
     zone = config.local_zone()
     day = dt.datetime.now(zone).date() - dt.timedelta(days=days)
     return dt.datetime.combine(day, dt.time(12), tzinfo=zone)
-
-
-def test_the_profile_page_prints_an_old_check_as_an_age(web_factory, web):
-    """"12.05.2026" is a number nobody subtracts today's date from."""
-    with web_factory() as session:
-        client_id = _client(
-            session, checked=_days_ago(84)
-        ).id
-
-    body = rendered(web.get(f"/client/{client_id}/profil"))
-
-    assert "Zuletzt geprüft vor 84 Tagen" in body
 
 
 def test_the_client_list_carries_the_check_age_too(web_factory, web):

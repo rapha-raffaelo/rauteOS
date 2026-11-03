@@ -68,6 +68,7 @@ class ProgressRead(BaseModel):
     answered_total: int
     missing: list[str]
     verified: int
+    parts: dict[str, dict[str, int]] = {}
 
 
 class TwinRead(BaseModel):

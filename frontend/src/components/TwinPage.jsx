@@ -29,17 +29,12 @@ const ICONS = {
 };
 const Icon = ({name}) => <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={ICONS[name]}/></svg>;
 
-export function TwinPage({clientId, embedded = false, initialLimit = 20}) {
+export function TwinPage({clientId, embedded = false}) {
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
-  const [query, setQuery] = useState('');
-  const [section, setSection] = useState('');
-  const [filter, setFilter] = useState('all');
-  const [limit, setLimit] = useState(initialLimit);
   const [editing, setEditing] = useState(null);
-  const [showCatalog, setShowCatalog] = useState(false);
   const [hints, setHints] = useState([]);
   const importPanel = useRef(null), filePanel = useRef(null), chosenImport = useRef(null);
   const [aiImporting, setAIImporting] = useState(false);
@@ -72,18 +67,12 @@ export function TwinPage({clientId, embedded = false, initialLimit = 20}) {
   if (!data) return <div className="twin-page">{errors || <p role="status">Profil wird geladen…</p>}</div>;
   const statements = (key) => data.statements.filter(row => row.key === key);
   const active = (row) => !['Rejected', 'Archived'].includes(row.fact_status);
-  const matches = field => (!section || field.section === section) &&
-    (!query || `${field.key} ${field.label} ${statements(field.key).map(r => r.value).join(' ')}`.toLowerCase().includes(query.toLowerCase()));
   // The profile is the onboarding questionnaire, numbered as the customer sees
-  // it: 21 researched topics, then 22 questions. The wider catalogue (A to D,
-  // over three hundred fields) is reference and stays folded.
+  // it: 21 researched topics, then 22 questions. The wider catalogue (A to D)
+  // is not shown: research still fills it for the prompts and the glance row.
   const brief = data.fields.filter(f => f.key.startsWith('R'));
   const asked = data.fields.filter(f => f.key.startsWith('Q'));
-  const catalog = data.fields.filter(f => !/^[RQ]/.test(f.key));
   const has = field => statements(field.key).some(active);
-  const known = catalog.filter(field => has(field) && matches(field));
-  const open = catalog.filter(field => !has(field) && matches(field) &&
-    (filter !== 'required' || field.requirement === 'Pflicht'));
   const number = key => key.slice(1).split('.')[key.startsWith('Q') ? 1 : 0];
   const editor = item => editing?.field.key === item.key && <StatementEditor key={editing.row?.id ?? item.key} field={item} row={editing.row}
       options={data.options} busy={busy} onCancel={() => setEditing(null)} onSave={payload => mutate(
@@ -92,11 +81,6 @@ export function TwinPage({clientId, embedded = false, initialLimit = 20}) {
   const answers = item => statements(item.key).map(row => <Statement key={row.id} row={row} busy={busy || Boolean(editing)}
       onEdit={() => setEditing({field: item, row})} />);
   const add = (item, label = 'Antwort ergänzen') => <button className="btn btn--quiet" disabled={busy || Boolean(editing)} onClick={() => setEditing({field: item})}>{label}</button>;
-  const field = item => <section className={`twin-field twin-question ${has(item) ? 'twin-question--answered' : 'twin-question--empty'}`} key={item.key} id={`feld-${item.key}`}>
-    <div className="twin-field-head"><div><small className="twin-question-meta"><span>{item.key}</span> {item.requirement}</small><h3>{item.label}</h3></div>
-      {!has(item) && add(item)}</div>
-    {editor(item)}{answers(item)}
-  </section>;
   // A topic of the brief as a card: number, title, the short text, its source.
   // The guiding question is the title's tooltip, not a paragraph on every card.
   const topic = item => <article className={`twin-topic${has(item) ? '' : ' twin-topic--empty'}${editing?.field.key === item.key ? ' twin-topic--editing' : ''}`} key={item.key} id={`feld-${item.key}`}>
@@ -119,11 +103,6 @@ export function TwinPage({clientId, embedded = false, initialLimit = 20}) {
   const glance = GLANCE.map(([key, label, icon]) => [label, icon, statements(key).find(active)?.value]).filter(([, , value]) => value);
   const part = (label, done, total, note) => <div className="twin-part"><div><span>{label}</span><strong>{done}<small> / {total} {note}</small></strong></div>
     <div className="twin-bar"><span style={{width: `${total ? Math.round(100 * done / total) : 0}%`}}/></div></div>;
-  const groups = items => items.reduce((out, item) => {
-    const last = out[out.length - 1];
-    if (last?.group === item.group) last.items.push(item); else out.push({group: item.group, items: [item]});
-    return out;
-  }, []);
   return <div className="twin-page">
     <header>{embedded ? <h2>Wissen & Aussagen</h2> : <><p className="twin-eyebrow">PROFIL · {data.client.name}</p><h1>Was wir wissen. Und woher.</h1></>}
       <p>Jede Aussage mit ihrer Quelle, ihrem Stand und ihrer Freigabe.</p>
@@ -143,7 +122,7 @@ export function TwinPage({clientId, embedded = false, initialLimit = 20}) {
     {errors}{notice && <p role="status">{notice}</p>}
 
     {glance.length > 0 && <section className="twin-glance" aria-label="Auf einen Blick">
-      {glance.map(([label, icon, value]) => <div key={label}><span className="twin-glance-icon"><Icon name={icon}/></span><div><small>{label}</small><p>{value}</p></div></div>)}
+      {glance.map(([label, icon, value]) => <div key={label}><span className="twin-glance-icon"><Icon name={icon}/></span><div><small>{label}</small><p title={value}>{value}</p></div></div>)}
     </section>}
 
     <section className="twin-brief" aria-labelledby={`twin-brief-${clientId}`}>
@@ -158,24 +137,6 @@ export function TwinPage({clientId, embedded = false, initialLimit = 20}) {
       <ol className="twin-asks">{asked.map(question)}</ol>
     </section>
 
-    <section className="twin-catalog" aria-labelledby={`twin-catalog-${clientId}`}>
-      <h2 id={`twin-catalog-${clientId}`} className="sr-only">Erweiterter Katalog</h2>
-      <button className="linkbtn" aria-expanded={showCatalog} onClick={() => setShowCatalog(!showCatalog)}>
-        {showCatalog ? 'Erweiterten Katalog ausblenden' : `Erweiterten Katalog anzeigen (${catalog.filter(has).length} von ${catalog.length} Feldern mit Aussagen)`}</button>
-      {showCatalog && <>
-        <fieldset disabled={Boolean(editing)} className="twin-toolbar twin-filters">
-          <label>Suche<input type="search" value={query} onChange={e => {setQuery(e.target.value); setLimit(initialLimit);}} placeholder="Feld oder Aussage suchen" /></label>
-          <label>Bereich<select aria-label="Bereich" value={section} onChange={e => {setSection(e.target.value); setLimit(initialLimit);}}>
-            <option value="">Alle Bereiche</option>{[...new Set(catalog.map(f => f.section))].map(s => <option key={s}>{s}</option>)}</select></label>
-          <label>Anzeige<select aria-label="Anzeige" value={filter} onChange={e => {setFilter(e.target.value); setLimit(initialLimit);}}>
-            <option value="all">Alle offenen</option><option value="required">Nur Pflichtfelder</option></select></label>
-        </fieldset>
-        {groups(known).map(({group, items}) => <div className="twin-group" key={group}><h3 className="twin-group-title">{group.replace(/^[A-Z]\d+\s+/, '')}</h3>{items.map(field)}</div>)}
-        <h3 className="twin-group-title">Ohne Aussage ({open.length})</h3>
-        {groups(open.slice(0, limit)).map(({group, items}) => <div className="twin-group" key={group}><h3 className="twin-group-title">{group.replace(/^[A-Z]\d+\s+/, '')}</h3>{items.map(field)}</div>)}
-        {limit < open.length && <button className="btn" onClick={() => setLimit(limit + 20)}>Weitere Felder anzeigen</button>}
-      </>}
-    </section>
   </div>;
 }
 

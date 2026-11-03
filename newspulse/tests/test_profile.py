@@ -216,12 +216,14 @@ def test_an_unknown_field_is_refused(session):
 
 
 # --- The page ---------------------------------------------------------------
+# The page keeps the four lines only the kick-off knows (press and crisis
+# contact, speakers, target media); the rest of the old form became the brief.
 
 
 def test_the_page_shows_the_source_of_a_machine_filled_line(factory, web):
     with factory() as session:
         client = _client(session)
-        profiles.save(session, client, "ceo", "Alexandre Prot",
+        profiles.save(session, client, "pressekontakt", "Alexandre Prot",
                       source_url="https://qonto.com/ueber-uns", source_title="Qonto",
                       filled_by="gemini-2.5-flash")
         client_id = client.id
@@ -236,7 +238,7 @@ def test_the_page_shows_the_source_of_a_machine_filled_line(factory, web):
 def test_unified_profile_escapes_fact_text(factory, web):
     with factory() as session:
         client = _client(session)
-        profiles.save(session, client, "ceo", '<script>alert("fact")</script>')
+        profiles.save(session, client, "pressekontakt", '<script>alert("fact")</script>')
         client_id = client.id
 
     body = rendered(web.get(f"/client/{client_id}/twin"))
@@ -250,7 +252,7 @@ def test_a_hand_typed_line_carries_no_citation(factory, web):
     link; printing "Von mensch" beside it would be noise."""
     with factory() as session:
         client = _client(session)
-        profiles.save(session, client, "ceo", "Weiß ich vom Kick-off")
+        profiles.save(session, client, "pressekontakt", "Weiß ich vom Kick-off")
         client_id = client.id
 
     body = rendered(web.get(f"/client/{client_id}/profil"))
@@ -358,12 +360,12 @@ def test_a_field_the_consultant_filled_is_not_proposed_over(factory, web):
     """
     with factory() as session:
         client = _client(session)
-        profiles.save(session, client, "ceo", "Weiß ich besser")
+        profiles.save(session, client, "pressekontakt", "Weiß ich besser")
         client_id = client.id
         ids = _propose(
             session, client_id,
-            ceo=("Jemand anderes", "https://irgendwo.de", "Irgendwo"),
-            sitz=("Paris", "https://qonto.com", "Qonto"),
+            pressekontakt=("Jemand anderes", "https://irgendwo.de", "Irgendwo"),
+            krisenkontakt=("Paris", "https://qonto.com", "Qonto"),
         )
 
     body = rendered(web.get(f"/client/{client_id}/profil"))
@@ -372,11 +374,11 @@ def test_a_field_the_consultant_filled_is_not_proposed_over(factory, web):
     # The offers are rendered into the fields they are offers for, so the field
     # itself is the assertion: an ordinary offer sits in its box, and the one
     # arguing with a hand-filled answer does not sit in his.
-    assert "Jemand anderes" not in _field_row(body, "ceo"), (
+    assert "Jemand anderes" not in _field_row(body, "pressekontakt"), (
         "nothing on the page puts the machine's version in the field he filled"
     )
-    assert "Weiß ich besser" in _field_row(body, "ceo")
-    assert "Paris" in _field_row(body, "sitz"), "an ordinary offer does stand in its field"
+    assert "Weiß ich besser" in _field_row(body, "pressekontakt")
+    assert "Paris" in _field_row(body, "krisenkontakt"), "an ordinary offer does stand in its field"
     assert ids  # the rows were filed; what is drawn from them is the point above
 
 
@@ -416,17 +418,17 @@ def test_only_contradictions_left_still_offers_a_way_to_clear_them(factory, web)
     the filter had just emptied."""
     with factory() as session:
         client = _client(session)
-        profiles.save(session, client, "ceo", "Weiß ich besser")
+        profiles.save(session, client, "pressekontakt", "Weiß ich besser")
         client_id = client.id
         ids = _propose(
-            session, client_id, ceo=("Jemand anderes", "https://irgendwo.de", "Irgendwo")
+            session, client_id, pressekontakt=("Jemand anderes", "https://irgendwo.de", "Irgendwo")
         )
 
     body = rendered(web.get(f"/client/{client_id}/profil"))
     assert "Verwerfen" in body, "the rows are reachable"
-    assert f'name="pid" value="{ids["ceo"]}"' in body, "and the button names them"
+    assert f'name="pid" value="{ids["pressekontakt"]}"' in body, "and the button names them"
 
-    web.post(f"/client/{client_id}/profil/discard", data={"pid": ids["ceo"]},
+    web.post(f"/client/{client_id}/profil/discard", data={"pid": ids["pressekontakt"]},
              follow_redirects=False)
 
     with factory() as session:
@@ -440,12 +442,12 @@ def test_a_contradiction_is_visible_beside_an_ordinary_proposal(factory, web):
     invisible, until the next refresh."""
     with factory() as session:
         client = _client(session)
-        profiles.save(session, client, "ceo", "Weiß ich besser")
+        profiles.save(session, client, "pressekontakt", "Weiß ich besser")
         client_id = client.id
         _propose(
             session, client_id,
-            ceo=("Jemand anderes", "https://irgendwo.de", "Irgendwo"),
-            sitz=("Paris", "https://qonto.com", "Qonto"),
+            pressekontakt=("Jemand anderes", "https://irgendwo.de", "Irgendwo"),
+            krisenkontakt=("Paris", "https://qonto.com", "Qonto"),
         )
 
     body = rendered(web.get(f"/client/{client_id}/profil"))
@@ -754,3 +756,18 @@ def test_the_fill_all_pass_skips_complete_profiles_and_reads_the_rest(
     assert adopted.count(gappy.id) == 2
     assert route._researching.acquire(blocking=False), "the lock never came back"
     route._researching.release()
+
+
+def test_a_reader_of_an_old_line_gets_the_brief_topic_when_nobody_filled_it(factory):
+    """The company form is gone from the page; the competitor search still asks
+    for "wettbewerber" and now finds the researched topic. A line somebody
+    filled stays first."""
+    from newspulse import twin
+    with factory() as session:
+        client = _client(session)
+        for key, value in (("R21.01", "Revolut, N26 und Holvi."), ("R04.01", "Alexandre Prot, CEO.")):
+            twin.apply(session, client.id, twin.StatementInput(key=key, value=value), "test")
+        profiles.save(session, client, "ceo", "Steve Anavi")
+        facts = profiles.stored(session, client.id)
+    assert facts["wettbewerber"].value == "Revolut, N26 und Holvi."
+    assert facts["ceo"].value == "Steve Anavi"

@@ -53,6 +53,7 @@ def _render(
         request,
         session,
         client,
+        view="guide",
         # Only set when the draft came from the questionnaire: the page then
         # names the sections nobody answered, rather than leaving a reader to
         # wonder why a guide is thin.
@@ -73,15 +74,10 @@ def _client_or_404(session: Session, client_id: int) -> Client:
 
 
 @router.get("/client/{client_id}/guide")
-def guide_view(client_id: int, session: Session = Depends(get_db)) -> Response:
-    """The guide's old address, kept as a way in to where it lives now.
-
-    A page of its own until the profile absorbed it. Every link in the tool that
-    pointed here — from a thin impulse, from the crisis page, from a bookmark —
-    still arrives at the guide, one anchor down the mandate's file.
-    """
-    _client_or_404(session, client_id)
-    return RedirectResponse(f"/client/{client_id}/profil#guide", status_code=_SEE_OTHER)
+def guide_view(request: Request, client_id: int, session: Session = Depends(get_db)) -> Response:
+    """The guide's own tab in the mandate's file."""
+    return _render(request, session, _client_or_404(session, client_id),
+                   saved=request.query_params.get("saved") == "1")
 
 
 @router.post("/client/{client_id}/guide")
@@ -97,7 +93,7 @@ def save_guide(
     client = _client_or_404(session, client_id)
     guide.save(session, client, comms_guide)
     return RedirectResponse(
-        f"/client/{client_id}/profil?saved=1#guide", status_code=_SEE_OTHER
+        f"/client/{client_id}/guide?saved=1", status_code=_SEE_OTHER
     )
 
 
@@ -123,7 +119,7 @@ async def upload_source(
         return _render(request, session, client, error=str(exc))
     guide.store_source(session, client, filename, text)
     return RedirectResponse(
-        f"/client/{client_id}/profil#guide", status_code=_SEE_OTHER
+        f"/client/{client_id}/guide", status_code=_SEE_OTHER
     )
 
 
@@ -198,7 +194,7 @@ def remove_source(
     _client_or_404(session, client_id)
     guide.delete_source(session, client_id, source_id)
     return RedirectResponse(
-        f"/client/{client_id}/profil#guide", status_code=_SEE_OTHER
+        f"/client/{client_id}/guide", status_code=_SEE_OTHER
     )
 
 

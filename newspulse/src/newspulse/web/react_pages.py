@@ -100,7 +100,9 @@ def render(request, page, context):
         raise RuntimeError('Build the React frontend before serving RauteOS')
     return templates.TemplateResponse(request, 'react_page.html', {
         'frontend': assets, 'page': page, 'data': data,
-        'page_title': {'archive': 'Archiv', 'settings': 'Einstellungen', 'profile': 'Profil', 'new_client': 'Neuer Mandant'}[page],
+        'page_title': ({'rivals': 'Wettbewerb', 'guide': 'Kommunikations-Guide'}.get(data.get('view'), 'Profil') if page == 'profile' else
+                       {'archive': 'Archiv', 'settings': 'Einstellungen', 'new_client': 'Neuer Mandant'}[page]),
         'client': context.get('client'),
-        'active': 'twin' if page == 'profile' else 'overview',
+        'active': ({'rivals': 'rivals', 'guide': 'guide'}.get(data.get('view'), 'twin')
+                   if page == 'profile' else 'overview'),
     }, headers={'Cache-Control': 'no-store', 'Vary': 'Accept'})

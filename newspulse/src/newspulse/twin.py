@@ -127,8 +127,10 @@ def completeness(rows: list[ClientFact]) -> dict:
     # counting its 127 required fields made a researched mandate read 23 %.
     required = [f for f in CATALOG if f["key"][:1] in PROFILE_PARTS]
     filled = sum(f["key"] in answered for f in required)
+    parts = {part: [f["key"] in answered for f in required if f["key"][:1] == part] for part in PROFILE_PARTS}
     return dict(percent=round(100 * filled / len(required)), required_filled=filled,
                 required_total=len(required), answered_total=len(answered),
+                parts={part: dict(filled=sum(done), total=len(done)) for part, done in parts.items()},
                 missing=[f["key"] for f in required if f["key"] not in answered],
                 verified=sum(bool(r.verified_at) and r.fact_status not in INACTIVE for r in rows))
 

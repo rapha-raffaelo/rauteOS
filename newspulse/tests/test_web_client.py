@@ -601,7 +601,7 @@ def test_the_deep_dive_is_where_the_competitors_and_the_workspace_live(factory, 
     assert f"/client/{a_id}/export.xlsx" in body
     # The Coverage Map moved into the Wettbewerb tab, where the question it
     # answers is actually asked; the workspace strip carries that instead.
-    assert f"/client/{a_id}/twin#wettbewerb" in body
+    assert f"/client/{a_id}/wettbewerb" in body
     assert f"/client/{a_id}/twin" in body
 
 
@@ -626,7 +626,7 @@ def test_only_companies_marked_as_competitors_can_be_added(factory, client):
         session.commit()
         subject_id = subject.id
 
-    body = rendered(client.get(f"/client/{subject_id}/twin"))
+    body = rendered(client.get(f"/client/{subject_id}/wettbewerb"))
 
     # Nowhere in the page's own content, not merely absent from one control:
     # the mandate is never a yardstick, whichever picker it would appear in.
@@ -647,11 +647,11 @@ def test_with_no_competitor_anywhere_the_page_offers_the_manual_field(factory, c
         session.commit()
         subject_id = subject.id
 
-    body = rendered(client.get(f"/client/{subject_id}/twin"))
+    body = rendered(client.get(f"/client/{subject_id}/wettbewerb"))
 
     assert "Wettbewerber hinzufügen" in body
     assert f'action="/client/{subject_id}/competitors/accept"' in body
-    assert "nur hier, nicht bei den anderen" in body
+    assert "nur für diesen Mandanten" in body
 
 
 
@@ -891,7 +891,7 @@ def test_the_archive_names_the_radar_material_it_does_not_list(factory, client):
     body = rendered(client.get(f"/client/{cid}"))
 
     assert "3 Beiträge aus dem Themen-Radar" in body
-    assert f"/client/{cid}/twin#marktumfeld" in body
+    assert f"/client/{cid}/wettbewerb#marktumfeld" in body
     # And it stays an archive of coverage: the radar pieces are not listed here.
     assert "Etwas über das Themenfeld 0" not in body
 

@@ -109,6 +109,8 @@ class NavPath:
     area_href: str
     mandate: str | None = None
     mandate_href: str | None = None
+    #: For the mandate's logo beside its name (``/client/{id}/logo``).
+    mandate_id: int | None = None
 
 
 #: Path prefix -> the sidebar's own label for it. Deliberately the same strings
@@ -222,4 +224,5 @@ def nav_crumbs(request) -> NavPath:
         area_href=area_href,
         mandate=client.name,
         mandate_href=f"/client/{mandate_id}",
+        mandate_id=mandate_id,
     )

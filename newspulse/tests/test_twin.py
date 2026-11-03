@@ -167,6 +167,8 @@ def test_required_completeness_does_not_count_optional_or_duplicate_answers(web)
     create(web,key='Q01.02'); create(web,key='Q01.02',value='Another answer to the same question')
     progress = web.get(path()).json()['progress']
     assert progress['required_total'] == 43  # 21 researched topics, 22 customer questions
+    assert progress['parts']['R']['total'] == 21 and progress['parts']['Q']['total'] == 22
+    assert progress['parts']['Q']['filled'] == before['parts']['Q']['filled'] + 1
     assert progress['required_filled'] == before['required_filled'] + 1
     assert progress['verified'] == 0
     desk = web.get('/api/v1/desk').json()

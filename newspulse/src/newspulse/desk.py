@@ -103,6 +103,9 @@ class Twin:
     required_filled: int | None = None
     required_total: int | None = None
     required_missing: list[str] = field(default_factory=list)
+    #: The researched brief (R) and the customer questionnaire (Q), each as
+    #: ``{"filled": n, "total": n}``.
+    parts: dict = field(default_factory=dict)
 
     @property
     def gaps(self) -> list[str]:
@@ -311,6 +314,7 @@ def _twin(session: Session, client: Client) -> Twin:
         required_total=progress["required_total"],
         required_missing=([f"{len(progress['missing'])} Fragen unbeantwortet"]
                           if progress["missing"] else []),
+        parts=progress["parts"],
     )
 
 

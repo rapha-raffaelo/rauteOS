@@ -1,4 +1,5 @@
 import React from 'react';
+import {ClientTitle} from './ClientLogo.jsx';
 
 const statusNames={draft:'Entwurf',active:'Aktiviert',closed:'Abgeschlossen'};
 const eventNames={idea_developed:'Idee entwickelt',activated:'Opportunity aktiviert',choices_saved:'Auswahl gespeichert',text_created:'Text erstellt',text_checked:'Aussagen geprüft',text_edited:'Text bearbeitet'};
@@ -13,6 +14,10 @@ export function ClientOverview({data,clientId}){
  const twin=summary?.twin;
  const opportunities=data.opportunities;
  const texts=data.texts.slice(0,4);
+ const parts=twin?.parts||{};
+ const part=(label,p,note)=>p&&<div className="co-part"><div><span>{label}</span><strong>{p.filled}<small> / {p.total} {note}</small></strong></div><div className="co-bar"><span style={{width:`${p.total?Math.round(100*p.filled/p.total):0}%`}}/></div></div>;
+ const open=[parts.R&&parts.R.total-parts.R.filled&&`${parts.R.total-parts.R.filled} Recherche-Themen ohne Angabe`,
+  parts.Q&&parts.Q.total-parts.Q.filled&&`${parts.Q.total-parts.Q.filled} Kundenfragen offen`].filter(Boolean);
  const metrics=[
   ['Profil',twin?`${twin.percent} %`:'–','Vollständigkeit des Profils'],
   ['Geliefert im Quartal',summary?.actions_quarter.total??'–','Freigegebene und erfasste Leistungen'],
@@ -20,7 +25,7 @@ export function ClientOverview({data,clientId}){
   ['Offene Opportunities',summary?.opportunities??'–','Erkannte und entwickelte Chancen'],
  ];
  return <section className="client-overview">
-  <header className="co-header"><div><p className="co-eyebrow">MANDANTENÜBERSICHT</p><h1>{data.client.name}</h1><p className="co-subtitle">Chancen, Wissen und Ergebnisse für dieses Mandat.</p></div><a className="btn btn--go" href={`${base}/opportunities?develop=1`}>+ Opportunity entwickeln</a></header>
+  <header className="co-header"><div><p className="co-eyebrow">MANDANTENÜBERSICHT</p><h1><ClientTitle client={data.client}/></h1><p className="co-subtitle">Chancen, Wissen und Ergebnisse für dieses Mandat.</p></div><a className="btn btn--go" href={`${base}/opportunities?develop=1`}>+ Opportunity entwickeln</a></header>
   <div className="co-metrics">{metrics.map(([label,value,note])=><div className="co-metric" key={label}><span>{label}</span><strong>{value}</strong><small>{note}</small></div>)}</div>
   <div className="co-layout"><div className="co-main">
    <section className="co-panel"><header className="co-panel-head"><div><p className="co-eyebrow">CHANCEN ERKENNEN UND ENTWICKELN</p><h2>Opportunities <span className="co-count">{opportunities.length}</span></h2></div>{opportunities.length>6&&<a href={`${base}/opportunities`}>Alle öffnen →</a>}</header>
@@ -31,7 +36,11 @@ export function ClientOverview({data,clientId}){
     {texts.length?<div className="co-texts">{texts.map(t=><a className="co-text" key={`${t.type}-${t.id}`} href={t.href}><span className="co-document" aria-hidden="true">≡</span><div><small>{formatNames[t.format]||t.format} · {date(t.generated_at)}</small><h3>{t.title||'Ohne Titel'}</h3></div><span className="co-status">{t.released_at?'Freigegeben':'Entwurf'}</span><span aria-hidden="true">↗</span></a>)}</div>:<div className="co-empty co-empty--text"><span className="co-empty-icon" aria-hidden="true">≡</span><div><h3>Noch keine Texte erstellt</h3><p>Öffne eine Opportunity und beginne mit einem Vorschlag für den Kunden. Deine Entwürfe erscheinen anschließend hier.</p></div></div>}
    </section>
   </div><aside className="co-aside">
-   <section className="co-panel co-twin"><p className="co-eyebrow">WISSENSBASIS</p><div className="co-twin-heading"><h2>Profil</h2><strong>{twin?`${twin.percent} %`:'–'}</strong></div>{twin&&<div className="co-progress" role="progressbar" aria-label="Vollständigkeit des Profils" aria-valuenow={twin.percent} aria-valuemin={0} aria-valuemax={100}><span style={{width:`${twin.percent}%`}}/></div>}<p>Ein gepflegtes Profil liefert den Kontext für fundierte Vorschläge.</p><div className="co-gap"><h3>{twin?.gaps.length?'Profil vervollständigen':'Profil prüfen'}</h3>{twin?.gaps.length?<ul>{twin.gaps.slice(0,4).map(g=><li key={g}>{g}</li>)}</ul>:<p>{twin?'Keine offenen Pflichtfelder. Einzelne Aussagen und Quellen bleiben im Profil prüfbar.':'Für dieses Mandat liegt noch keine Zusammenfassung vor.'}</p>}</div><a className="btn" href={`${base}/twin`}>Profil bearbeiten <span aria-hidden="true">→</span></a></section>
+   <section className="co-panel co-twin"><p className="co-eyebrow">WISSENSBASIS</p><h2>Profil</h2>
+    {twin?<div className="co-twin-body"><div className="co-ring" style={{'--p':twin.percent}} role="progressbar" aria-label="Vollständigkeit des Profils" aria-valuenow={twin.percent} aria-valuemin={0} aria-valuemax={100}><strong>{twin.percent} %</strong><span>vollständig</span></div>
+     <div className="co-parts">{part('Steckbrief',parts.R,'recherchiert')}{part('Fragebogen',parts.Q,'beantwortet')}</div></div>:<p>Für dieses Mandat liegt noch keine Zusammenfassung vor.</p>}
+    {open.length>0&&<div className="co-gap"><h3>Profil vervollständigen</h3><ul>{open.map(g=><li key={g}>{g}</li>)}</ul></div>}
+    <a className="btn" href={`${base}/twin`}>Profil bearbeiten <span aria-hidden="true">→</span></a></section>
    <section className="co-panel co-activity"><header className="co-panel-head"><h2>Letzte Aktivität</h2>{data.activity?.length>4&&<a href={`${base}/actions`}>Alle →</a>}</header>{data.activity?.length?<ol>{data.activity.slice(0,4).map(e=><li key={e.id}><span className="co-activity-dot" aria-hidden="true"/><div><a href={e.href}>{eventNames[e.kind]||e.kind}</a><small>{date(e.happened_at)}{e.actor&&` · ${e.actor}`}</small></div></li>)}</ol>:<p className="co-quiet">Noch keine Arbeitsschritte erfasst. Entwicklung und Textarbeit werden hier sichtbar.</p>}</section>
   </aside></div>
  </section>;

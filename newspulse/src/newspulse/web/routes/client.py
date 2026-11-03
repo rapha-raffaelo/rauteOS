@@ -1410,7 +1410,7 @@ def market_view(
     if client is None:
         raise HTTPException(status_code=404, detail="Client not found")
     if not client.is_competitor:
-        return RedirectResponse(f"/client/{client_id}/twin#marktumfeld", status_code=303)
+        return RedirectResponse(f"/client/{client_id}/wettbewerb#marktumfeld", status_code=303)
     return templates.TemplateResponse(request, "client_market.html", market_context(session, client))
 
 

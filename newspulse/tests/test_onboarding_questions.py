@@ -640,14 +640,13 @@ def test_a_list_question_shows_its_entries_as_chips(web, session):
 def test_the_questionnaire_is_reachable_from_the_page_that_shows_what_it_answers(
     web, session
 ):
-    """It was a tab and is a window now, so what has to hold is the control that
-    opens it — on the profile page, which is where the twenty unanswered
-    questions are felt."""
+    """The profile itself carries the customer questionnaire now; the kick-off
+    window stays reachable from the links that name it (crisis page, bookmarks)."""
     client = _client(session)
 
-    body = rendered(web.get(f"/client/{client.id}/profil"))
+    body = rendered(web.get(f"/client/{client.id}/kickoff"))
 
-    assert f'href="/client/{client.id}/twin?fragebogen=1#fragebogen"' in body
+    assert 'class="platform-dialog"' in body
     assert "Kickoff" in body
 
 
@@ -1325,7 +1324,7 @@ def test_a_hand_edit_ends_the_disagreement_it_settles(session):
 def test_the_profile_offers_the_kickoff_answer_and_names_its_source(factory, web):
     with factory() as session:
         client = _client(session)
-        _answer(session, client, "satz", "Wir bauen Roboterarme für OP-Säle.")
+        _answer(session, client, "ansprechpartner", "Wir bauen Roboterarme für OP-Säle.")
         client_id = client.id
 
     body = rendered(web.get(f"/client/{client_id}/profil"))
@@ -1344,8 +1343,8 @@ def test_a_kickoff_answer_is_offered_even_where_the_consultant_filled_the_field(
     case this page exists to surface."""
     with factory() as session:
         client = _client(session)
-        profiles.save(session, client, "geschaeftsfeld", "Medizintechnik")
-        _answer(session, client, "satz", "Wir bauen Roboterarme für OP-Säle.")
+        profiles.save(session, client, "pressekontakt", "Medizintechnik")
+        _answer(session, client, "ansprechpartner", "Wir bauen Roboterarme für OP-Säle.")
         client_id = client.id
 
     body = rendered(web.get(f"/client/{client_id}/profil"))
@@ -1370,18 +1369,18 @@ def test_accepting_through_the_page_shows_both_values_with_their_provenance(
 ):
     with factory() as session:
         client = _client(session)
-        profiles.save(session, client, "geschaeftsfeld", "Medizintechnik-Zulieferer",
+        profiles.save(session, client, "pressekontakt", "Medizintechnik-Zulieferer",
                       source_url="https://beispiel.de/ueber-uns",
                       source_title="Website", filled_by="gemini-2.5-flash")
-        _answer(session, client, "satz", "Wir bauen Roboterarme für OP-Säle.")
+        _answer(session, client, "ansprechpartner", "Wir bauen Roboterarme für OP-Säle.")
         client_id = client.id
 
-    web.post(f"/client/{client_id}/profil/accept", data={"key": "geschaeftsfeld"},
+    web.post(f"/client/{client_id}/profil/accept", data={"key": "pressekontakt"},
              follow_redirects=False)
     body = rendered(web.get(f"/client/{client_id}/profil"))
 
     with factory() as session:
-        fact = profiles.stored(session, client_id)["geschaeftsfeld"]
+        fact = profiles.stored(session, client_id)["pressekontakt"]
     assert fact.value == "Wir bauen Roboterarme für OP-Säle."
     assert fact.superseded_value == "Medizintechnik-Zulieferer"
     # Both values on the page, each with where it came from.
@@ -1402,27 +1401,6 @@ def test_the_page_drops_the_old_value_when_asked(factory, web):
 
     with factory() as session:
         assert profiles.stored(session, client_id)["sitz"].is_disputed is False
-
-
-def test_the_profile_states_how_much_of_the_kickoff_is_answered(factory, web):
-    with factory() as session:
-        client = _client(session)
-        _kickoff(session, client)
-        client_id = client.id
-
-    body = rendered(web.get(f"/client/{client_id}/profil"))
-
-    assert f"5/{onboarding.TOTAL}" in body
-    assert "Fragen aus dem Kickoff beantwortet oder übergangen" in body
-
-
-def test_a_mandate_with_no_questionnaire_says_so_on_its_profile(factory, web):
-    with factory() as session:
-        client_id = _client(session).id
-
-    body = rendered(web.get(f"/client/{client_id}/profil"))
-
-    assert "Kein Fragebogen beantwortet" in body
 
 
 def test_the_client_list_carries_the_completeness_line(factory, web):
@@ -1576,10 +1554,10 @@ def test_the_answer_displaces_a_researched_proposal_for_the_same_field(factory, 
     one that should win either way."""
     with factory() as session:
         client = _client(session)
-        _answer(session, client, "satz", "Wir bauen Roboterarme für OP-Säle.")
+        _answer(session, client, "ansprechpartner", "Wir bauen Roboterarme für OP-Säle.")
         client_id = client.id
         session.add(ProfileProposal(
-            client_id=client_id, key="geschaeftsfeld",
+            client_id=client_id, key="pressekontakt",
             value="Laut Website: Zulieferer.",
             source_url="https://beispiel.de", source_title="Beispiel",
             previous_value="", proposed_at=dt.datetime.now(dt.UTC),
@@ -1644,11 +1622,11 @@ def test_a_sourceless_research_proposal_is_not_called_the_clients_statement(fact
 
 
 def test_the_profile_page_carries_the_guide(web, session):
-    """The guide is on the page, not behind a link to a page of its own."""
+    """The guide has its own tab in the mandate's file again."""
     client = _client(session)
     guide.save(session, client, "Nie ohne Zahl. Nie im Konjunktiv.")
 
-    body = rendered(web.get(f"/client/{client.id}/profil"))
+    body = rendered(web.get(f"/client/{client.id}/guide"))
 
     assert "Nie ohne Zahl. Nie im Konjunktiv." in body
     assert f'action="/client/{client.id}/guide"' in body, "the guide is editable here"
@@ -1690,7 +1668,7 @@ def test_the_old_addresses_still_lead_to_what_they_named(web, session):
     assert kickoff.headers["location"] == (
         f"/client/{client.id}/profil?fragebogen=1#fragebogen"
     )
-    assert guide_page.headers["location"] == f"/client/{client.id}/profil#guide"
+    assert guide_page.status_code == 200, "the guide is a tab of its own again"
 
 
 def test_the_strip_carries_one_tab_for_the_three(web, session):
@@ -1701,7 +1679,7 @@ def test_the_strip_carries_one_tab_for_the_three(web, session):
 
     assert f'href="/client/{client.id}/twin"' in strip
     assert f'href="/client/{client.id}/kickoff"' not in strip
-    assert f'href="/client/{client.id}/guide"' not in strip
+    assert f'href="/client/{client.id}/guide"' in strip
 
 
 def test_an_answer_saved_without_htmx_comes_back_into_the_open_window(web, session):

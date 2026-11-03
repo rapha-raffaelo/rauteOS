@@ -381,9 +381,9 @@ def _strip(html: str) -> str:
 def test_the_primary_tabs_are_consolidated(web, mandate):
     strip = _strip(rendered(web.get(f"/client/{mandate.id}/heute")))
     assert re.findall(r'<a [^>]+>([^<]+)</a>', strip) == [
-        "Overview", "Opportunities", "Profil", "Archiv", "KI-Sichtbarkeit"]
+        "Overview", "Opportunities", "Profil", "Wettbewerb", "Guide", "KI-Sichtbarkeit", "Archiv"]
     assert "subtabs-legacy" not in strip
-    for suffix in ("/overview", "/opportunities", "/twin", "", "/ki"):
+    for suffix in ("/overview", "/opportunities", "/twin", "/wettbewerb", "/guide", "/ki", ""):
         assert f'href="/client/{mandate.id}{suffix}"' in strip
 
 
@@ -391,8 +391,8 @@ def test_the_primary_tabs_are_consolidated(web, mandate):
     ("/heute", "/opportunities"), ("/advice", "/opportunities"),
     ("/issues", "/opportunities"), ("/plan", "/opportunities"),
     ("/opportunities", "/opportunities"), ("/twin", "/twin"),
-    ("/profil", "/twin"), ("/wettbewerb", "/twin"), ("/market", "/twin"),
-    ("/map", "/twin"), ("", ""), ("/ki", "/ki"),
+    ("/profil", "/twin"), ("/wettbewerb", "/wettbewerb"), ("/market", "/wettbewerb"),
+    ("/map", "/wettbewerb"), ("/guide", "/guide"), ("", ""), ("/ki", "/ki"),
 ])
 def test_specialist_views_select_their_primary_workspace(web, mandate, suffix, parent):
     strip = _strip(rendered(web.get(f"/client/{mandate.id}{suffix}")))
@@ -413,17 +413,26 @@ def test_each_workspace_keeps_its_tools_reachable(web, mandate, suffix, options)
 
 
 @pytest.mark.parametrize("suffix", ["/twin", "/profil"])
-def test_profile_keeps_forms_and_market_context_on_one_page(web, mandate, suffix):
+def test_profile_keeps_its_forms_and_hands_competition_and_guide_to_their_tabs(web, mandate, suffix):
     body = rendered(web.get(f"/client/{mandate.id}{suffix}"))
     assert 'id="workspace-view"' not in body
-    for section in ("wissen", "unternehmen", "wettbewerb", "marktumfeld"):
+    for section in ("wissen", "unternehmen"):
         assert f'id="{section}"' in body
     assert body.count('id="react-twin"') <= 1
     assert body.count('<html') == 1
     assert f'action="/client/{mandate.id}/profil"' in body
-    assert f'action="/client/{mandate.id}/competitors/accept"' in body
-    assert 'id="guide"' in body
-    assert 'Fragebogen öffnen' in body
+    for section in ("wettbewerb", "marktumfeld", "guide"):
+        assert f'id="{section}"' not in body
+
+
+def test_competition_carries_the_market_and_the_guide_its_own_tab(web, mandate):
+    rivals = rendered(web.get(f"/client/{mandate.id}/wettbewerb"))
+    for section in ("wettbewerber", "wettbewerb", "marktumfeld"):
+        assert f'id="{section}"' in rivals
+    assert f'action="/client/{mandate.id}/competitors/accept"' in rivals
+    assert 'id="wissen"' not in rivals
+    guide = rendered(web.get(f"/client/{mandate.id}/guide"))
+    assert 'id="guide"' in guide and 'id="wissen"' not in guide
 
 
 def test_a_tab_with_no_page_behind_it_is_not_in_the_strip(web, mandate):

@@ -390,6 +390,19 @@ def test_a_long_profile_answer_is_condensed_and_a_topic_text_is_not():
     assert 'R01.01' not in seen['prompt']
 
 
+def test_a_glance_fact_is_cut_to_its_bare_value():
+    """The glance row shows one value per fact: "2008", not the founding story."""
+    story='Robert Gentz und David Schneider gründeten Zalando im Herbst 2008 in Berlin.'
+    seen={}
+    def ask(prompt):
+        seen['prompt']=prompt
+        return json.dumps({'answers':[{'key':'A01.03','value':'2008'}]})
+    out=crawler.condense([dict(key='A01.03',value=story),dict(key='A01.08',value=story)],ask=ask)
+    assert out[0]['value']=='2008'
+    assert out[1]['value']==story  # revenue is no glance fact and fits its limit
+    assert 'A01.03' in seen['prompt'] and 'A01.08' not in seen['prompt'].split('[',1)[1]
+
+
 def test_a_failed_condensing_call_keeps_the_researched_answer():
     long='x'*400
     def broken(prompt): raise RuntimeError('limit')

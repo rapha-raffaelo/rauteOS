@@ -3020,8 +3020,34 @@ summary:focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; }
   display: inline-flex; align-items: center; justify-content: center; padding: 0; border: 0;
   color: #fff; font-size: 20px; font-weight: 700; letter-spacing: 0;
 }
+/* The same mark wherever the mandate's name stands: sidebar, breadcrumb,
+   client cards and page headings. /client/{id}/logo answers with the monogram
+   when no logo is stored. */
+.client-logo { flex: none; object-fit: contain; background: var(--card); border: 1px solid var(--line); }
+.client-logo--sm { width: 18px; height: 18px; border-radius: 5px; padding: 1px; }
+.client-logo--md { width: 42px; height: 42px; border-radius: 11px; padding: 4px; }
+.client-logo--lg { width: 56px; height: 56px; border-radius: var(--radius); padding: 6px; }
+.crumbs__here { display: inline-flex; align-items: center; gap: 6px; }
+.client-overview .profile-title { font-size: inherit; gap: var(--s3); }
+.client-overview .client-logo--lg { width: 44px; height: 44px; }
 @media (max-width: 600px) {
   .profile-title { font-size: 32px; gap: var(--s3); }
+  .client-logo--lg { width: 44px; height: 44px; }
   .profile-logo { width: 44px; height: 44px; }
   .profile-logo--mono { font-size: 16px; }
 }
+
+/* --- The comparison group as chips (2026-11-03) ----------------------------
+   One line per company was a form per row; the group reads at a glance as
+   chips, each with its own remove button, and the add field sits below. */
+.platform-panel .rival-chips { list-style: none; display: flex; flex-wrap: wrap; gap: var(--s2); margin: var(--s3) 0 var(--s4); padding: 0; }
+.rival-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 6px 6px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--card); font-size: 14px; font-weight: 500; min-width: 0; }
+.rival-chip > span { overflow-wrap: anywhere; }
+.rival-chip form { display: contents; }
+.raute-ui .platform-panel .rival-chip form > button { border: 0; box-shadow: none; min-height: 0; padding: 0; background: none; color: var(--muted); font: inherit; font-size: 16px; line-height: 1; width: 26px; height: 26px; border-radius: 50%; cursor: pointer; }
+.raute-ui .platform-panel .rival-chip form > button:hover:not(:disabled) { background: var(--fill); color: var(--ink); }
+.rival-chip--empty { color: var(--muted); padding-right: 12px; border-style: dashed; }
+.rival-chip--offer { padding: 0; border-style: dashed; }
+.raute-ui .platform-panel .rival-chip--offer form > button { width: auto; height: auto; padding: 6px 12px; border-radius: 999px; font-size: 14px; color: var(--tint); }
+.rival-subhead { font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: var(--s4) 0 0; }
+.rival-add { display: grid; gap: var(--s2); max-width: 640px; }

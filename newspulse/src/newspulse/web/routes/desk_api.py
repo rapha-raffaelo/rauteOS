@@ -40,6 +40,7 @@ class TwinSummary(ReadModel):
     required_filled: int | None
     required_total: int | None
     gaps: list[str]
+    parts: dict[str, dict[str, int]] = {}
 
 
 class MandateSummary(ReadModel):

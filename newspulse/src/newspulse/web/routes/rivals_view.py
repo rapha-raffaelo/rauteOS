@@ -59,7 +59,8 @@ def rivals_view(
         raise HTTPException(status_code=404, detail="Client not found")
 
     if not client.is_competitor:
-        return RedirectResponse(f"/client/{client_id}/twin#wettbewerb", status_code=303)
+        from .twin_view import render_profile
+        return render_profile(request, session, client, view='rivals')
     return templates.TemplateResponse(request, "client_rivals.html", rivals_context(session, client))
 
 

@@ -252,8 +252,8 @@ def test_market_is_reachable_through_the_unified_profile(factory, client):
         subject_id = subject.id
 
     for path in (f"/client/{subject_id}", f"/client/{subject_id}/map"):
-        assert f"/client/{subject_id}/twin" in rendered(client.get(path)), path
-    assert 'id="marktumfeld"' in rendered(client.get(f"/client/{subject_id}/twin"))
+        assert f"/client/{subject_id}/wettbewerb" in rendered(client.get(path)), path
+    assert 'id="marktumfeld"' in rendered(client.get(f"/client/{subject_id}/wettbewerb"))
 
 
 def test_an_unknown_client_is_a_404(client):
