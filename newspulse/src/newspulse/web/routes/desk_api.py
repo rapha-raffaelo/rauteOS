@@ -34,8 +34,6 @@ class TwinSummary(ReadModel):
     percent: int
     profile_filled: int
     profile_total: int
-    kickoff_settled: int
-    kickoff_total: int
     has_guide: bool
     required_filled: int | None
     required_total: int | None

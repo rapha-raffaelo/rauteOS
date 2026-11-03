@@ -16,8 +16,8 @@ page shows it rather than making somebody compute it. The Zeitleiste sits one
 click away and becomes the after-action record when the crisis closes.
 
 What is missing is shown as missing. A profile without a crisis contact is the
-most important line on this page, not an empty one, and it links to the kickoff
-where it gets filled.
+most important line on this page, not an empty one, and it links to the
+profile's contacts, where it gets filled.
 
 The action endpoints are POST-and-redirect for the same reason the triage
 buttons are: they are one-click actions inside a list that may have been open in

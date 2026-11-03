@@ -15,16 +15,11 @@ _MODEL_FIELDS = {
     'Client': 'id name active is_competitor industry country aliases keywords alert_topics excluded_terms required_terms actions_per_quarter muted_categories website purge_on',
     'ClientFact': 'key value filled_by source_url source_title is_disputed superseded_value superseded_source_url superseded_source_title superseded_filled_by',
     'ProfileProposal': 'id key value source_url source_title',
-    'OnboardingAnswer': 'key value skipped answered_at',
     'Article': 'id title url source published_at',
 }
 _PROPERTIES = {
     'newspulse.profile.Proposal': 'from_person',
     'newspulse.profile.Checked': 'never as_age',
-    'newspulse.onboarding.Question': 'is_list is_prose verb',
-    'newspulse.onboarding.Completeness': 'settled remaining percent started',
-    'newspulse.onboarding.SectionProgress': 'settled state',
-    'newspulse.onboarding.GuideDraft': 'has_gaps',
     'newspulse.gmail_link.Link': 'is_connected may_send scope_words',
     'newspulse.themes.ThemeProbe': 'usable',
     'newspulse.industry.Candidate': 'usable',
@@ -48,9 +43,6 @@ def view_data(value):
     name = type(value).__name__
     if name in _MODEL_FIELDS:
         result = {key: view_data(getattr(value, key, None)) for key in _MODEL_FIELDS[name].split()}
-        if name == 'OnboardingAnswer':
-            from ..onboarding import entries
-            result['entries'] = entries(value.value)
         if name == 'Client':
             for relation in ('competitors', 'benchmark_for'):
                 result[relation] = [{'id': c.id, 'name': c.name} for c in getattr(value, relation)]

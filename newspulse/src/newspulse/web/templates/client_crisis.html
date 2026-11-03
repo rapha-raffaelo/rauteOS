@@ -165,7 +165,7 @@
         {% endif %}
         {% if gaps.missing_contact %}
           <b>{{ t("Im Profil fehlt der Krisenkontakt.") }}</b>
-          <a href="/client/{{ client.id }}/kickoff">{{ t("Im Kickoff nachtragen") }} →</a>
+          <a href="/client/{{ client.id }}/twin#profilebody">{{ t("Im Profil nachtragen") }} →</a>
         {% endif %}
       </div>
     {% endif %}
@@ -218,7 +218,7 @@
                field is filled. For the crisis contact this is the most
                important information on the page. #}
             <span class="kesc__miss">{{ t("Nicht im Profil hinterlegt.") }}
-              <a href="/client/{{ client.id }}/kickoff">{{ t("Im Kickoff nachtragen") }} →</a></span>
+              <a href="/client/{{ client.id }}/twin#profilebody">{{ t("Im Profil nachtragen") }} →</a></span>
           {% else %}
             <span>{{ row.value }}</span>
           {% endif %}

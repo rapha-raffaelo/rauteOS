@@ -1663,11 +1663,8 @@ class TwinImportPreview(Base):
     payload: Mapped[dict] = mapped_column(JSON)
 
 
-#: Who a hand-typed kick-off answer is attributed to. DEC-1 option A: the
-#: consultant sits in the call and transcribes. A name rather than a boolean,
-#: because option B (the client answers directly) puts a different name here —
-#: which is exactly when a second copy of this literal would drift, so the column
-#: default and :mod:`newspulse.onboarding` both read it from here.
+#: Who a hand-typed kick-off answer was attributed to: the consultant, who sat
+#: in the call and transcribed. Kept as the column default of the retired table.
 ANSWERED_BY_DEFAULT = "Berater"
 
 
@@ -1699,8 +1696,9 @@ class OnboardingAnswer(Base):
     client_id: Mapped[int] = mapped_column(
         ForeignKey("clients.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    #: A key from :data:`newspulse.onboarding.QUESTIONS`. Free-form in the schema
-    #: so rewording the question set is a code change, not a migration.
+    #: A key from the retired 20-question kick-off. Nothing writes this table any
+    #: more; it is kept so answers given before the customer questionnaire
+    #: replaced it are not destroyed.
     key: Mapped[str] = mapped_column(String(64), nullable=False)
     value: Mapped[str] = mapped_column(Text, nullable=False, default="")
     answered_at: Mapped[dt.datetime] = mapped_column(

@@ -6,8 +6,8 @@ import { DeskPage } from './DeskPage.jsx';
 const empty = {rows: [], decisions: [], in_flight: [], clients_active: 0, actions_month: 0,
   opportunities: 0, decisions_open: 0, twins_with_gaps: 0, twin_average: 0, timezone: 'Europe/Zurich'};
 const row = {client: {id: 7, name: '<script>alert(1)</script>', industry: 'Energy'},
-  twin: {percent: 20, profile_filled: 0, profile_total: 17, kickoff_settled: 0,
-    kickoff_total: 20, gaps: ['Kickoff unvollständig']}, actions_month: {released: 1, logged: 2, total: 3},
+  twin: {percent: 20, profile_filled: 0, profile_total: 17,
+    gaps: ['Profil unvollständig']}, actions_month: {released: 1, logged: 2, total: 3},
   actions_quarter: {total: 3}, promised_quarter: null, on_track: null, status: 'krise', opportunities: 2};
 const reply = (body, status = 200) => ({ok: status === 200, status,
   headers: new Headers({'content-type': 'application/json'}), json: async () => body});

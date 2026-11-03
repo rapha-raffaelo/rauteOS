@@ -114,6 +114,12 @@ FILLABLE = len(FIELDS)
 #: the web and may never be overwritten by it.
 BY_HAND = "mensch"
 
+#: The author of values taken over from the retired kick-off questionnaire. No
+#: new value is written under it, but the ones that were keep the same standing
+#: as :data:`BY_HAND`: the client said it, so the web may contradict it and never
+#: overwrite it.
+KICKOFF = "Kickoff-Fragebogen"
+
 
 #: How old a check may be before the page prints its age instead of its date.
 #: Under two weeks a date still means something to the reader — he remembers the
@@ -350,7 +356,7 @@ def save(
     if existing is not None and changed:
         twin.remember(session, existing, filled_by)
     if changed:
-        row.evidence_type = (EvidenceType.CLIENT_STATEMENT if filled_by in (BY_HAND, "Kickoff-Fragebogen")
+        row.evidence_type = (EvidenceType.CLIENT_STATEMENT if filled_by in (BY_HAND, KICKOFF)
                              else EvidenceType.EXTERNAL_OBSERVATION)
         row.source_type = SourceType.OTHER if filled_by == BY_HAND else SourceType.AI_RESEARCH
         row.confidence = Confidence.UNKNOWN

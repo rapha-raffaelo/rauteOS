@@ -12,7 +12,7 @@ Five of these tests protect a promise rather than a layout:
 * Verwerfen silences the same story for this mandate and only this mandate,
   without creating a crisis row;
 * a text nobody has checked renders as ungeprüft, never as clean;
-* a missing crisis contact is a named gap linking into the kickoff, not an
+* a missing crisis contact is a named gap linking into the profile, not an
   empty line;
 * a closed crisis stays readable, with its reason and its full chronology.
 """
@@ -493,14 +493,14 @@ def test_the_deadline_is_read_as_the_journalist_wrote_it(body, expected):
 # --- The named gaps ---------------------------------------------------------------
 
 
-def test_a_missing_crisis_contact_is_a_named_gap_linking_into_the_kickoff(
+def test_a_missing_crisis_contact_is_a_named_gap_linking_into_the_profile(
     web, session, mandate
 ):
     _declared(session, mandate)
     page = web.get(f"/client/{mandate.id}/krise")
     assert "Im Profil fehlt der Krisenkontakt." in rendered(page)
     assert "Nicht im Profil hinterlegt." in rendered(page)
-    assert f"/client/{mandate.id}/kickoff" in rendered(page)
+    assert f"/client/{mandate.id}/twin#profilebody" in rendered(page)
 
 
 def test_a_filled_crisis_contact_is_shown_and_not_flagged(web, session, mandate):

@@ -11,12 +11,11 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from sqlalchemy.orm import Session
 
 from ... import coach, config, guide
-from ... import onboarding
 from ... import profile as profiles
 from ... import profile_refresh, stakeholders
 from ...clients import list_clients
 from ...db import get_session
-from ...models import Client, ClientFact, OnboardingAnswer, ProfileProposal
+from ...models import Client, ClientFact, ProfileProposal
 from .. import spawn
 from ..mandates import mandate_or_404
 from ..app import get_db, templates
@@ -36,11 +35,6 @@ _SEE_OTHER = 303
 # clicking it again. A flag in the query string rather than a session: it
 # describes the redirect it rode in on and must not survive the next reload.
 _STALE_FLAG = "veraltet"
-
-#: Opens the kick-off window. In the address rather than in a session, so the
-#: window survives a reload, can be linked to, and cannot be closed by an htmx
-#: swap inside it.
-_SHEET_FLAG = "fragebogen"
 
 
 def _back(client_id: int, *, acted: bool) -> RedirectResponse:
@@ -155,37 +149,15 @@ def _pending(
     client_id: int,
     *,
     facts: dict[str, ClientFact] | None = None,
-    stored: dict[str, OnboardingAnswer] | None = None,
 ) -> list[profiles.Proposal]:
-    """Everything on offer for this profile: the web research, and the kick-off.
+    """What the web research has on offer for this profile.
 
-    Two sources, one list, one accept button — the consultant is answering the
-    same question about every line ("does this belong on the profile?") and
-    splitting it across two panels would only ask him to notice which machine
-    produced it.
-
-    They are filtered differently, and that difference is the whole of DEC-2. A
-    researched value is dropped where a person has already filled the field: the
-    machine may fill a blank and correct itself, never overrule the consultant.
-    A kick-off answer is not dropped, because the client contradicting the web is
-    the case worth surfacing — it is only dropped when it says what the field
-    already says, which is not a contradiction but a duplicate.
-
-    ``facts`` and ``stored`` are the two tables this reads, passed in by a caller
-    that already holds them: rendering the page needs the facts for the form and
-    the answers for the completeness line anyway, and fetching each of them twice
-    per render is two round trips for rows already in hand.
+    A researched value is dropped where a person has already filled the field:
+    the machine may fill a blank and correct itself, never overrule the
+    consultant. That is DEC-2.
     """
     facts = profiles.stored(session, client_id) if facts is None else facts
-    from_kickoff = [
-        p for p in onboarding.to_proposals(session, client_id, stored=stored)
-        if p.key not in facts or facts[p.key].value.strip() != p.value.strip()
-    ]
-    # One proposal per field. Where both have something to say about the same
-    # line, the answer displaces the guess before either is shown: two checkboxes
-    # writing the same field would make "accept both" mean whichever ran last.
-    answered = {p.key for p in from_kickoff}
-    researched = [
+    return [
         profiles.Proposal(
             key=row.key,
             value=row.value,
@@ -194,16 +166,14 @@ def _pending(
             row_id=row.id,
         )
         for row in profile_refresh.outstanding(session, client_id)
-        if row.key not in answered
         # The same three rules the branch applies before drawing a row: no
         # source is a machine asserting what it cannot back up, a row the
         # profile has caught up with is a contradiction between Paris and
         # Paris, and a hand-filled field is never overruled, only contradicted.
-        and row.source_url
+        if row.source_url
         and profile_refresh.contradicts(facts, row)
         and profile_refresh.may_replace(facts, row.key)
     ]
-    return from_kickoff + researched
 
 
 @router.get("/client/{client_id}/profil", response_class=HTMLResponse)
@@ -246,9 +216,7 @@ def profile_context(request: Request, session: Session, client: Client, **extra)
         for p in profile_refresh.outstanding(session, client_id)
         if p.source_url and profile_refresh.contradicts(facts, p)
     ]
-    stored = onboarding.answers(session, client_id)
-    kickoff = onboarding.completeness(session, client_id, stored=stored)
-    pending = _pending(session, client_id, facts=facts, stored=stored)
+    pending = _pending(session, client_id, facts=facts)
     return {
         "client": client,
         "fields": profiles.FIELDS,
@@ -256,11 +224,6 @@ def profile_context(request: Request, session: Session, client: Client, **extra)
         "filled": sum(f.key in facts for f in profiles.FIELDS),
         "fillable": profiles.FILLABLE,
         "proposals": pending,
-        # How much of this mandate's own foundation exists. On the profile
-        # because this is the page that reads as the mandate's file: a thin
-        # profile beside a full questionnaire is a different problem from a
-        # thin profile beside twenty unasked questions.
-        "kickoff": kickoff,
         # Held back from the list above, and still on file. Handed over as
         # rows rather than a count so the page can name them in its own
         # discard form: a row nobody can see and nobody can clear sits there
@@ -308,15 +271,6 @@ def profile_context(request: Request, session: Session, client: Client, **extra)
         "findings": None,
         "coverage": {},
         "coach_error": None,
-        "draft": None,
-        # --- The questionnaire, as the window over it ---------------------
-        "groups": onboarding.by_section(),
-        "answers": stored,
-        "progress": kickoff,
-        # Opened by a control on this page or by a link that used to point
-        # at the kick-off tab; closed by the button on its bar, which is a
-        # link back here without the flag.
-        "kickoff_open": bool(request.query_params.get(_SHEET_FLAG)),
     } | extra
 
 
@@ -334,13 +288,13 @@ async def save_profile(
     client = mandate_or_404(session, client_id)
     form = await request.form()
     facts = profiles.stored(session, client_id)
-    # The research and kick-off offers, which the page now renders *into* the
+    # The research offers, which the page now renders *into* the
     # fields they are offers for rather than as a separate list above the form.
     # Not filtered again here: ``_pending`` has already applied DEC-2 — a
     # researched value against a field a person filled never becomes an offer,
     # it becomes a contradiction — so what is left may stand in the box, over an
     # empty field or over the machine's own earlier answer.
-    offers = {p.key: p for p in _pending(session, client_id)}
+    offers = {p.key: p for p in _pending(session, client_id, facts=facts)}
     accepted: list[profiles.Proposal] = []
     for field in profiles.FIELDS:
         if field.key not in form:
@@ -381,8 +335,7 @@ async def save_profile(
             supersede=bool(offer.supersedes) if took_offer and offer else False,
         )
     # The researched rows that were taken are answered and must stop being
-    # offered. The kick-off half has no row to clear: it is derived from the
-    # questionnaire on every render and an accepted one simply stops matching.
+    # offered.
     profile_refresh.clear(
         session, client_id, [o.row_id for o in accepted if o.row_id is not None]
     )
@@ -458,20 +411,16 @@ async def accept_proposals(
     request: Request,
     client_id: int,
     pid: list[int] = Form(default_factory=list),
-    key: list[str] = Form(default_factory=list),
     session: Session = Depends(get_db),
 ) -> Response:
     """Take what the consultant ticked, sources and all, as his own answer.
 
-    Two kinds of proposal arrive here and they are named differently, for the
-    reason each was built. A researched row is named by ``pid``: the 06:10 sweep
-    can replace it between the page being drawn and the button being pressed, and
-    a field name would then accept a value nobody read. A kick-off answer is
-    named by ``key``, because it is derived from the stored answer on every
-    render and only a person editing the questionnaire can change what it says.
+    A row is named by ``pid``: the 06:10 sweep can replace it between the page
+    being drawn and the button being pressed, and a field name would then accept
+    a value nobody read.
 
-    Both are stamped :data:`newspulse.profile.BY_HAND`. The model proposed and
-    the client answered; in each case a person decided, and it is the decision
+    It is stamped :data:`newspulse.profile.BY_HAND`. The model proposed and a
+    person decided, and it is the decision
     that is worth recording — a fact somebody vouched for must not be proposed
     over by the next refresh, which is exactly what the human stamp buys. The
     source travels with it, so the page still shows where the value came from.
@@ -484,12 +433,6 @@ async def accept_proposals(
     is not the page: a tab left open while the field was typed into elsewhere
     posts a row the consultant never chose. That is DEC-2, enforced at the write
     boundary.
-
-    A kick-off answer landing on a field the web already answered supersedes it
-    rather than erasing it (DEC-2 option A): the answer wins, and what the web
-    said stays underneath with its own citation until somebody drops it. That is
-    not a conflict with the rule above — it displaces a researched value, never
-    one a person typed.
     """
     client = mandate_or_404(session, client_id)
     form = await request.form()
@@ -530,30 +473,7 @@ async def accept_proposals(
         )
     profile_refresh.clear(session, client_id, [p.id for p in written])
 
-    # The kick-off half. No bookkeeping to do afterwards: these are derived from
-    # the answers on every render, and an accepted one stops matching.
-    wanted = set(key)
-    kickoff_taken = [
-        p for p in _pending(session, client_id) if p.key in wanted and p.from_person
-    ]
-    kickoff_written = []
-    for proposal in kickoff_taken:
-        value = _edited(proposal, f"k{proposal.key}")
-        if not value:
-            continue
-        kickoff_written.append(proposal)
-        profiles.save(
-            session, client, proposal.key, value,
-            source_url=proposal.source_url,
-            source_title=proposal.source_title,
-            # Its own author, not BY_HAND: "Kickoff-Fragebogen" says the client
-            # answered this, which is a stronger claim than "the consultant
-            # accepted it" and the one the page is built to print. Protected
-            # from the sweep by profile_refresh.may_replace all the same.
-            filled_by=proposal.filled_by or profiles.BY_HAND,
-            supersede=proposal.supersedes,
-        )
-    return _back(client_id, acted=bool(written or kickoff_written) or not (pid or key))
+    return _back(client_id, acted=bool(written) or not pid)
 
 
 @router.post("/client/{client_id}/profil/{key}/forget")

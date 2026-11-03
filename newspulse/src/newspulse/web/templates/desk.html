@@ -154,7 +154,7 @@
               {% if row.client.industry %}<div class="board__sec">{{ row.client.industry[:44] }}</div>{% endif %}
             </td>
             <td>
-              <div class="twin" title="{{ t('Profil') }} {{ row.twin.profile_filled }}/{{ row.twin.profile_total }} · {{ t('Kickoff') }} {{ row.twin.kickoff_settled }}/{{ row.twin.kickoff_total }}">
+              <div class="twin" title="{{ t('Profil') }} {{ row.twin.profile_filled }}/{{ row.twin.profile_total }}">
                 <span class="twin__n">{{ row.twin.percent }} %</span>
                 <span class="twin__bar"><span class="twin__fill" style="width: {{ row.twin.percent }}%"></span></span>
               </div>

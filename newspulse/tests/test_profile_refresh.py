@@ -1205,7 +1205,7 @@ def test_every_german_string_on_the_review_pages_is_translated():
     templates = Path(profiles.__file__).parent / "web" / "templates"
     missing = [
         text
-        for name in ("client_profile.html", "clients.html", "partials/profile_checked.html")
+        for name in ("clients.html", "client_crisis.html", "partials/profile_checked.html")
         for text in re.findall(r't\("([^"]+)"\)', (templates / name).read_text())
         if text not in i18n._EN
     ]

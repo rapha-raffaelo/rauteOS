@@ -42,7 +42,7 @@ from dataclasses import dataclass, field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from . import onboarding, profile as profiles
+from . import profile as profiles
 from .models import (
     Analysis,
     Angle,
@@ -68,16 +68,6 @@ _log = logging.getLogger(__name__)
 #: between things.
 ACTIVE_WINDOW_DAYS = 7
 
-#: What the Twin is made of, and what each part is worth.
-#:
-#: Not equal thirds. The profile is the biggest part by count and the smallest by
-#: cost — a research run fills most of it unattended. The kick-off is twenty
-#: questions only the client can answer, and the guide is the one document that
-#: says how this mandate is allowed to speak. Weighted by what is lost when the
-#: part is missing, not by how many fields it has.
-TWIN_WEIGHTS = {"profil": 0.4, "kickoff": 0.4, "guide": 0.2}
-
-
 @dataclass(frozen=True, slots=True)
 class Actions:
     """Delivered work for one mandate over one span, and where it came from."""
@@ -97,8 +87,6 @@ class Twin:
     percent: int
     profile_filled: int
     profile_total: int
-    kickoff_settled: int
-    kickoff_total: int
     has_guide: bool
     required_filled: int | None = None
     required_total: int | None = None
@@ -111,7 +99,7 @@ class Twin:
     def gaps(self) -> list[str]:
         """The parts worth naming on a Desk row, thinnest first.
 
-        Named rather than numbered: "Kickoff unvollständig" tells a consultant
+        Named rather than numbered: "Profil unvollständig" tells a consultant
         what to do next, and "72 %" does not.
         """
         if self.required_total is not None:
@@ -121,10 +109,6 @@ class Twin:
             share = self.profile_filled / self.profile_total
             if share < 1:
                 missing.append((share, "Profil unvollständig"))
-        if self.kickoff_total:
-            share = self.kickoff_settled / self.kickoff_total
-            if share < 1:
-                missing.append((share, "Kickoff unvollständig"))
         if not self.has_guide:
             missing.append((0.0, "Kein Kommunikationsguide"))
         return [name for _, name in sorted(missing)]
@@ -299,7 +283,6 @@ def _actions(
 def _twin(session: Session, client: Client) -> Twin:
     """The mandate's record of itself, as one figure and its parts."""
     facts = profiles.stored(session, client.id)
-    kickoff = onboarding.completeness(session, client.id)
     has_guide = bool((client.comms_guide or "").strip())
     from . import twin
     progress = twin.completeness(facts.statements)
@@ -307,8 +290,6 @@ def _twin(session: Session, client: Client) -> Twin:
         percent=progress["percent"],
         profile_filled=sum(f.key in facts for f in profiles.FIELDS),
         profile_total=profiles.FILLABLE,
-        kickoff_settled=kickoff.settled,
-        kickoff_total=kickoff.total,
         has_guide=has_guide,
         required_filled=progress["required_filled"],
         required_total=progress["required_total"],

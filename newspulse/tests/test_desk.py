@@ -316,7 +316,7 @@ def test_a_mandate_with_nothing_this_week_reads_as_quiet(session):
 
 
 def test_the_twin_names_which_part_is_thin_rather_than_only_a_percentage(session):
-    """"Kickoff unvollständig" tells a consultant what to do next; "72 %" does
+    """"12 Fragen unbeantwortet" tells a consultant what to do next; "72 %" does
     not."""
     client = _mandate(session)
 

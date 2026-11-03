@@ -189,7 +189,6 @@ _EN: dict[str, str] = {
     "Eine Anfrage ist offen": "One request is open",
     "Anfragen sind offen": "requests are open",
     "Im Profil fehlt der Krisenkontakt.": "The profile has no crisis contact.",
-    "Im Kickoff nachtragen": "Add it in the kickoff",
     "Ungeprüft": "Unchecked",
     "Anfrage": "Request",
     "keine Frist genannt": "no deadline stated",

@@ -2,7 +2,6 @@ import React from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { ClientTabs, Shell } from "../shell.jsx";
-import { Kickoff } from "./ProfilePage.jsx";
 import { safeUrl } from "./shared.jsx";
 const response = (body) => ({ ok: true, json: async () => body });
 beforeEach(() => {
@@ -83,65 +82,6 @@ it("uses client path boundaries and exposes exactly one assistant and Contacts l
       .getByRole("button", { name: "Menü öffnen" })
       .getAttribute("aria-expanded"),
   ).toBe("false");
-});
-const kickoff = {
-  answers: {},
-  progress: { settled: 0, total: 2, remaining: 2 },
-  groups: [
-    [
-      { key: "company", title: "Company", intro: "" },
-      ["first", "second"].map((key) => ({
-        key,
-        text: key,
-        help: "",
-        is_list: false,
-        is_prose: true,
-        feeds: [],
-        verb: "",
-        note: "",
-      })),
-    ],
-  ],
-};
-it("saves one kickoff answer without losing another unsaved answer", async () => {
-  const fetch = vi.fn().mockResolvedValue(
-    response({
-      answer: { value: "Saved", answered_at: "2026-09-18" },
-      progress: { settled: 1, total: 2, remaining: 1 },
-    }),
-  );
-  vi.stubGlobal("fetch", fetch);
-  render(<Kickoff clientId={1} data={kickoff} />);
-  const first = document.getElementById("q-first"),
-    second = document.getElementById("q-second");
-  fireEvent.change(within(first).getByLabelText("Antwort"), {
-    target: { value: "Saved" },
-  });
-  fireEvent.change(within(second).getByLabelText("Antwort"), {
-    target: { value: "Unsaved notes" },
-  });
-  fireEvent.submit(
-    within(first).getByRole("button", { name: "Speichern" }).form,
-  );
-  await vi.waitFor(() =>
-    expect(screen.getByText(/1\/2 beantwortet/)).toBeTruthy(),
-  );
-  expect(within(second).getByLabelText("Antwort").value).toBe("Unsaved notes");
-  expect(fetch.mock.calls[0][0]).toMatch(/\/client\/1\/kickoff\/first$/);
-  expect(fetch.mock.calls[0][1].body.get("value")).toBe("Saved");
-});
-it("retains a kickoff draft and reports a failed save", async () => {
-  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false }));
-  render(<Kickoff clientId={1} data={kickoff} />);
-  const first = document.getElementById("q-first");
-  fireEvent.change(within(first).getByLabelText("Antwort"), {
-    target: { value: "Keep this" },
-  });
-  fireEvent.submit(
-    within(first).getByRole("button", { name: "Speichern" }).form,
-  );
-  await screen.findByText(/Die Antwort konnte nicht gespeichert werden/);
-  expect(within(first).getByLabelText("Antwort").value).toBe("Keep this");
 });
 it("blocks executable source URLs including embedded controls", () => {
   expect(safeUrl("java\tscript:alert(1)")).toBe("");

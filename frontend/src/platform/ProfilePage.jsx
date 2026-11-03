@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { OnboardingLinks } from "../components/OnboardingLinks.jsx";
 import { TwinPage } from "../components/TwinPage.jsx";
 import { PageHeading } from "../components/PageHeading.jsx";
@@ -6,177 +6,12 @@ import { ClientTitle } from "../components/ClientLogo.jsx";
 import {
   Action,
   Field,
-  Hidden,
   Notice,
   Panel,
   Source,
   date,
   t,
 } from "./shared.jsx";
-export function Kickoff({ clientId, data: d }) {
-  const dialog = useRef();
-  const [answers, setAnswers] = useState(d.answers),
-    [progress, setProgress] = useState(d.progress),
-    [pending, setPending] = useState(""),
-    [error, setError] = useState("");
-  useEffect(() => {
-    dialog.current?.showModal();
-    const target = window.location.hash;
-    if (target.startsWith("#q-"))
-      setTimeout(
-        () => document.getElementById(target.slice(1))?.scrollIntoView(),
-        0,
-      );
-  }, []);
-  async function save(event) {
-    event.preventDefault();
-    const form = event.currentTarget;
-    const key = form.dataset.key;
-    setPending(key);
-    setError("");
-    try {
-      const res = await fetch(form.action, {
-        method: "POST",
-        headers: { Accept: "application/json" },
-        body: new FormData(form),
-      });
-      if (!res.ok)
-        throw Error(
-          "Die Antwort konnte nicht gespeichert werden. Deine Eingabe bleibt erhalten.",
-        );
-      const next = await res.json();
-      setAnswers((prev) => ({ ...prev, [key]: next.answer }));
-      setProgress(next.progress);
-      if (form.dataset.list === "true") form.reset();
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setPending("");
-    }
-  }
-  const close = () =>
-    window.location.assign(`/client/${clientId}/twin#unternehmen`);
-  const action = (key, suffix, label, values) => (
-    <form
-      method="post"
-      action={`/client/${clientId}/kickoff/${key}${suffix}`}
-      data-key={key}
-      onSubmit={save}
-    >
-      <Hidden values={values} />
-      <button disabled={!!pending}>{t(label)}</button>
-    </form>
-  );
-  return (
-    <dialog
-      ref={dialog}
-      className="platform-dialog"
-      role="dialog"
-      aria-modal="true"
-      id="fragebogen"
-      aria-labelledby="kickoff-title"
-      onCancel={(e) => {
-        e.preventDefault();
-        close();
-      }}
-    >
-      <header>
-        <h2 id="kickoff-title">{t("Kickoff-Fragebogen")}</h2>
-        <button
-          type="button"
-          onClick={close}
-          aria-label={t("Fragebogen schließen")}
-        >
-          ×
-        </button>
-      </header>
-      <p role="status">
-        {progress.settled}/{progress.total} beantwortet oder übergangen ·{" "}
-        {progress.remaining}{" "}
-        {t(
-          progress.remaining === 1
-            ? "Frage ist noch offen"
-            : "Fragen sind noch offen",
-        )}
-      </p>
-      <Notice>{error}</Notice>
-      {d.groups.map(([section, questions]) => (
-        <section key={section.key} id={`s-${section.key}`}>
-          <h3>{t(section.title)}</h3>
-          <p>{t(section.intro)}</p>
-          {questions.map((q) => {
-            const a = answers[q.key],
-              answered = a && !a.skipped && a.value,
-              base = `/client/${clientId}/kickoff/${q.key}`;
-            return (
-              <article
-                className={`platform-question${a?.skipped ? " q--skipped" : answered ? " q--done" : ""}`}
-                key={q.key}
-                id={`q-${q.key}`}
-              >
-                <h4>{t(q.text)}</h4>
-                <p>{t(q.help)}</p>
-                {a?.skipped && <Notice>übergangen</Notice>}
-                {answered && <small>Gespeichert · {date(a.answered_at)}</small>}
-                {q.is_list && answered && (
-                  <ul>
-                    {a.entries.map((entry, index) => (
-                      <li className="chipx" key={index}>
-                        {entry}
-                        {action(q.key, "/remove", "Eintrag entfernen", {
-                          index,
-                        })}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                <form
-                  method="post"
-                  action={base}
-                  data-key={q.key}
-                  data-list={q.is_list}
-                  onSubmit={save}
-                >
-                  <Field
-                    key={`${a?.value || ""}:${a?.skipped || false}`}
-                    name="value"
-                    label={q.is_list ? "Eintrag ergänzen" : "Antwort"}
-                    type={q.is_prose ? "textarea" : "text"}
-                    value={q.is_list ? "" : answered ? a.value : ""}
-                    placeholder={t(q.placeholder)}
-                  />
-                  <button disabled={!!pending}>
-                    {t(q.is_list ? "Hinzufügen" : "Speichern")}
-                  </button>
-                </form>
-                <p className="q__feeds">
-                  {t(q.verb)}{" "}
-                  {q.feeds.map((f, i) => (
-                    <React.Fragment key={i}>
-                      <b>
-                        {t(f.target)}
-                        {f.slot ? " · " + t(f.slot) : ""}
-                      </b>
-                      {i < q.feeds.length - 1 ? " · " : ""}
-                    </React.Fragment>
-                  ))}{" "}
-                  {t(q.note)}
-                </p>
-                <div className="platform-actions">
-                  {answered
-                    ? action(q.key, "/clear", "Antwort löschen")
-                    : a?.skipped
-                      ? action(q.key, "/clear", "Doch beantworten")
-                      : action(q.key, "/skip", "Übergehen")}
-                </div>
-              </article>
-            );
-          })}
-        </section>
-      ))}
-    </dialog>
-  );
-}
 function Guide({ data: d, base }) {
   const [guide, setGuide] = useState(d.guide_text);
   return (
@@ -188,23 +23,7 @@ function Guide({ data: d, base }) {
       <Notice>{d.saved ? "Guide gespeichert." : d.guide_error}</Notice>
       {d.proposal && (
         <section className="platform-proposal">
-          <h3>
-            {d.draft
-              ? "Entwurf aus dem Kickoff — noch nicht gespeichert"
-              : "Vorschlag aus den Unterlagen — noch nicht gespeichert"}
-          </h3>
-          {d.draft?.has_gaps && (
-            <p>
-              Ohne Antwort im Kickoff, deshalb nicht im Entwurf:{" "}
-              {d.draft.missing.map((s) => t(s.title)).join(", ")}
-            </p>
-          )}
-          {!!d.draft?.dropped?.length && (
-            <p>
-              Zu lang für den Guide, deshalb nicht im Entwurf:{" "}
-              {d.draft.dropped.join(" · ")}
-            </p>
-          )}
+          <h3>Vorschlag aus den Unterlagen — noch nicht gespeichert</h3>
           <Action action={base + "/guide"} label="Übernehmen">
             <Field
               name="comms_guide"
@@ -263,32 +82,15 @@ function Guide({ data: d, base }) {
               Gespeichert wird der extrahierte Text, nicht die Datei.
             </p>
           </form>
-          {d.kickoff.started ? (
-            <Action
-              action={base + "/guide/kickoff"}
-              label="Entwurf aus dem Kickoff"
-            >
-              <p>
-                {d.kickoff.answered} Antworten. No-Gos bleiben wörtlich;
-                unbeantwortete Abschnitte bleiben leer.
-              </p>
-            </Action>
-          ) : (
-            <>
-              <p>
-                {t(
-                  "Der Kickoff-Fragebogen ist noch unbeantwortet — daraus lässt sich kein Entwurf machen.",
-                )}
-              </p>
-              <a href={`${base}/twin?fragebogen=1#fragebogen`}>
-                {t("Fragebogen öffnen")}
-              </a>
-            </>
-          )}
           <Action
             action={base + "/guide/vorschlag"}
             label="Entwurf aus Profil und Berichterstattung"
-          />
+          >
+            <p>
+              Liest die Recherche-Themen, die Antworten aus dem Kundenfragebogen
+              und die Berichterstattung.
+            </p>
+          </Action>
         </div>
         <form method="post" action={base + "/guide"}>
           <label className="platform-field">
@@ -598,15 +400,6 @@ function RivalManagement({data: d, base}) {
       </li>)}
       {!d.client.competitors.length && <li className="rival-chip rival-chip--empty">Noch keine Wettbewerber hinterlegt.</li>}
     </ul>
-    {!!d.named.length && <>
-      <h3 className="rival-subhead">{t("Im Kickoff genannt")}</h3>
-      <ul className="rival-chips">{d.named.map((r) => <li key={r.name} className="rival-chip rival-chip--offer" title={r.reason}>
-        <form method="post" action={base + "/competitors/accept"}>
-          <input type="hidden" name="name" value={r.name} /><input type="hidden" name="redirect_to" value={redirect_to} />
-          <button type="submit" aria-label={`${r.name} in die Vergleichsgruppe`}>＋ {r.name}</button>
-        </form>
-      </li>)}</ul>
-    </>}
     <div className="rival-add">
       <Action action={base + "/competitors/accept"} label="Hinzufügen" values={{ redirect_to }}>
         <Field name="name" label="Wettbewerber hinzufügen" placeholder="Name oder Website" required />
@@ -876,9 +669,6 @@ export function ProfilePage({ data: d, onData }) {
         <section id="marktumfeld" className="profile-section"><Market data={d.market} base={base} /></section>
       </>}
       {view === "guide" && <section id="guide" className="profile-section"><Guide data={d.company} base={base} /></section>}
-      {view === "profile" && d.company.kickoff_open && (
-        <Kickoff clientId={d.client.id} data={d.company} />
-      )}
     </div>
   );
 }

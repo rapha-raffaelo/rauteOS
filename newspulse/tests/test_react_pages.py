@@ -67,19 +67,6 @@ def test_settings_import_preview_never_commits_and_reports_validation(web,db):
     assert refused.status_code==200 and refused.json()['threshold_error']
 
 
-def test_kickoff_json_save_returns_only_current_answer_and_progress(web):
-    from newspulse import onboarding
-    q=next(q for q in onboarding.QUESTIONS if not q.is_list)
-    path=f'/client/1/kickoff/{q.key}'
-    response=web.post(path,data={'value':'A verified client answer'},headers=JSON)
-    assert response.status_code==200,response.text
-    assert response.json()['answer']['value']=='A verified client answer'
-    assert response.json()['progress']['answered']==1
-    removed=web.post(path+'/clear',headers=JSON)
-    assert removed.json()['answer'] is None
-    assert removed.json()['progress']['answered']==0
-
-
 def test_brain_version_arrival_and_coach_findings_are_serializable(web,db):
     from newspulse import brain
     from newspulse.schemas import CoachFinding

@@ -21,7 +21,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
-from .. import branding, config, gnews, i18n, onboarding
+from .. import branding, config, gnews, i18n
 from ..db import get_session
 from . import google_auth, navigation, origin, runlock
 from .auth import BasicAuthMiddleware, is_loopback, require_auth_for_public_bind
@@ -324,10 +324,6 @@ def asset_version(name: str) -> str:
 
 
 templates.env.globals["asset_version"] = asset_version
-# A list answer in the questionnaire is one text column, one entry per line. The
-# split lives in ``onboarding`` rather than in the template so the chip a reader
-# deletes and the entry the route removes are indexed by the same rule.
-templates.env.filters["kickoff_entries"] = onboarding.entries
 
 
 def get_db() -> Iterator[Session]:
@@ -369,7 +365,7 @@ def create_app() -> FastAPI:
     from .routes import (
         advisory, archive, assets_view, custom_drafts, assistant, client, contacts, workbench,
         crisis_view, desk_api, desk_view, twin_api, twin_view, journalists_api, journalists_view, opportunities_api, opportunities_view, activation_api, guide_routes, issues_view,
-        language, login, onboarding as onboarding_routes,
+        language, login,
         opportunity_view,
         plan_view, profile as profile_routes, report as report_routes,
         rivals_view, runstatus, settings, today, triage, visibility_view,
@@ -421,7 +417,6 @@ def create_app() -> FastAPI:
     app.include_router(profile_routes.router)
     app.include_router(rivals_view.router)
     app.include_router(report_routes.router)
-    app.include_router(onboarding_routes.router)
     from .routes import customer_onboarding
     app.include_router(customer_onboarding.router)
     from .routes import customer_audio

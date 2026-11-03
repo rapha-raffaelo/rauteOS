@@ -23,7 +23,7 @@ export function ClientTabs({ data, path = window.location.pathname }) {
     "krise",
   ].includes(active)
     ? "opportunities"
-    : ["twin", "profile", "kickoff"].includes(active)
+    : ["twin", "profile"].includes(active)
       ? "profile"
       : ["rivals", "market", "map"].includes(active)
         ? "rivals"

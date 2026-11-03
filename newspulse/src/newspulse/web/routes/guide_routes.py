@@ -15,7 +15,7 @@ from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from sqlalchemy.orm import Session
 
-from ... import coach, guide, onboarding
+from ... import coach, guide
 from ...analyzer import AnalyzerError
 from ...models import Client
 from ..mandates import mandate_or_404
@@ -38,15 +38,14 @@ def _render(
     findings: list | None = None,
     coverage: list | None = None,
     coach_error: str | None = None,
-    draft: onboarding.GuideDraft | None = None,
 ) -> HTMLResponse:
     """The guide's answer, on the page the guide now lives on.
 
     "der kundenspezifische kommunikationsguide sollte auch in das Profil
     wandern." The routes below are unchanged and still post to /guide/*; what
     changed is where their answers are rendered. Everything this function used
-    to assemble that the profile page also needs — the sources, the budget, the
-    kick-off count — is built there once; only what is particular to *this*
+    to assemble that the profile page also needs — the sources and the budget —
+    is built there once; only what is particular to *this*
     click is passed on.
     """
     return profile.render(
@@ -54,10 +53,6 @@ def _render(
         session,
         client,
         view="guide",
-        # Only set when the draft came from the questionnaire: the page then
-        # names the sections nobody answered, rather than leaving a reader to
-        # wonder why a guide is thin.
-        draft=draft,
         proposal=proposal,
         guide_error=error,
         saved=saved,
@@ -146,9 +141,10 @@ def draft_from_record(
 ) -> Response:
     """Draft a guide from the profile and the coverage — shown, not stored.
 
-    The way in for a mandate that has neither a brand book nor an answered
-    kick-off, which is most of them on the day they are created. Same preview
-    step as the other two, for the same reason: the guide is what every later
+    The profile it reads holds the researched topics and the client's own
+    answers to the questionnaire, so this is the draft from what the client
+    said as well as from what the press wrote. Same preview step as the
+    uploaded documents get, for the same reason: the guide is what every later
     text is checked against, and a rule nobody read before it was saved is a
     rule nobody agreed to.
     """
@@ -162,28 +158,6 @@ def draft_from_record(
             request, session, client, error=f"Der Vorschlag ist fehlgeschlagen: {exc}"
         )
     return _render(request, session, client, proposal=proposal)
-
-
-@router.post("/client/{client_id}/guide/kickoff")
-def draft_from_kickoff(
-    request: Request, client_id: int, session: Session = Depends(get_db)
-) -> Response:
-    """Draft a guide from the kick-off answers — shown, not stored.
-
-    The same preview step an uploaded brand book gets, deliberately: the guide is
-    what every later text is checked against, and a rule nobody read before it was
-    saved is a rule nobody agreed to.
-    """
-    client = _client_or_404(session, client_id)
-    try:
-        draft = onboarding.to_guide_draft(session, client)
-    except guide.ExtractionError as exc:
-        return _render(request, session, client, error=str(exc))
-    except AnalyzerError as exc:
-        return _render(
-            request, session, client, error=f"Der Vorschlag ist fehlgeschlagen: {exc}"
-        )
-    return _render(request, session, client, proposal=draft.text, draft=draft)
 
 
 @router.post("/client/{client_id}/guide/sources/{source_id}/remove")

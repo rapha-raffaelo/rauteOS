@@ -18,7 +18,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from ... import coverage_map, onboarding, reporting
+from ... import coverage_map, reporting
 from ...models import Analysis, Article, Client, visible_coverage
 from .. import themework
 from ..app import get_db, templates
@@ -102,10 +102,6 @@ def rivals_context(session: Session, client: Client) -> dict:
         "voice": voice,
         "rivals": rivals,
         "candidates": candidates,
-        # Who the client itself named in the kick-off, offered rather than
-        # linked: a wrong competitor lands in the share-of-voice arithmetic
-        # and quietly changes a number the agency reports.
-        "named": onboarding.to_rivals(session, client),
         "gaps": grid.gaps[:8],
         "gap_total": len(grid.gaps),
         "window_days": WINDOW_DAYS,

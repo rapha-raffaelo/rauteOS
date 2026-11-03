@@ -34,6 +34,14 @@ def twin_page(client_id: int, request: Request, session: Session = Depends(get_d
     return render_profile(request, session, mandate_or_404(session, client_id))
 
 
+@router.get('/client/{client_id}/kickoff')
+def retired_kickoff(client_id: int, session: Session = Depends(get_db)):
+    # The 20-question kick-off is gone; the 22 customer questions on the
+    # profile replace it. Old bookmarks land there instead of on a 404.
+    mandate_or_404(session, client_id)
+    return RedirectResponse(f'/client/{client_id}/twin', status_code=303)
+
+
 @router.get('/client/{client_id}/logo')
 def client_logo(client_id: int, session: Session = Depends(get_db)) -> Response:
     """The mandate's logo as an image every page can point at.
