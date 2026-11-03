@@ -34,4 +34,6 @@ mkdir -p /srv/rauteos/data
 cat > /etc/cron.d/rauteos-backup <<'EOF'
 30 3 * * * root mkdir -p /srv/rauteos/backups && sqlite3 /srv/rauteos/data/newspulse.db ".backup /srv/rauteos/backups/newspulse-$(date +\%u).db"
 EOF
+# Off-site copy to Google Drive, encrypted: needs a Drive login, so it is its own
+# interactive step: ssh -t root@SERVER 'sh /srv/rauteos/repo/deploy/setup-drive-backup.sh'
 echo "ready"
