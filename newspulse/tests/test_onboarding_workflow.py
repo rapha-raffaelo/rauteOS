@@ -39,6 +39,96 @@ def researched(client,fields,pages):
     return [dict(key=fields[0]['key'],value='Public '+fields[0]['key'],source_url='https://example.org/about')]
 
 
+@pytest.mark.parametrize('reply,expected', [
+    ('{"legal_name":"Zenchef SAS"}', 'Zenchef SAS'),
+    ('{"legal_name":"Invented GmbH"}', ''),
+    ('{"legal_name":""}', ''),
+    ('{"legal_name":42}', ''),
+    ('[]', ''),
+    ('not json', ''),
+])
+def test_legal_name_extraction_requires_a_name_from_the_fact(reply, expected):
+    assert crawler.extract_legal_name('Die Firma heißt Zenchef SAS, Sitz in Paris.',
+        ask=lambda _: reply) == expected
+
+
+def test_legal_name_extraction_failure_is_optional():
+    def unavailable(_): raise RuntimeError('offline')
+    assert crawler.extract_legal_name('Zenchef SAS', ask=unavailable) == ''
+
+
+def test_research_fills_missing_legal_name(setup, monkeypatch):
+    web, factory = setup
+    create(web)
+    monkeypatch.setattr(crawler, 'BATCHES', [[{'key': 'R01.01'}], [{'key': 'A01.01'}]])
+    monkeypatch.setattr(crawler.analyzer, 'invoke_with_fallback',
+        lambda _: '{"legal_name":"Zenchef SAS"}')
+    def research(context, fields, pages):
+        assert context.legal_name == ''
+        if fields[0]['key'] != 'A01.01': return researched(context, fields, pages)
+        return [dict(key='A01.01', value='Die Firma heißt Zenchef SAS, Sitz in Paris.',
+                     source_url='https://example.org/legal')]
+    with factory() as s: claimed = flow.claim(s)
+    flow.work(factory, *claimed, crawl=lambda _: [], research=research)
+    with factory() as s:
+        assert s.get(Client, 1).legal_name == 'Zenchef SAS'
+        assert s.get(CustomerOnboardingJob, 1).status == 'ready'
+
+
+def test_research_passes_and_preserves_manual_legal_name(setup, monkeypatch):
+    web, factory = setup
+    create(web)
+    monkeypatch.setattr(crawler.analyzer, 'invoke_with_fallback',
+        lambda _: pytest.fail('Manual name must not need extraction'))
+    with factory() as s:
+        s.get(Client, 1).legal_name = 'Manual GmbH'
+        s.commit()
+        claimed = flow.claim(s)
+    def research(context, fields, pages):
+        assert context.legal_name == 'Manual GmbH'
+        return researched(context, fields, pages)
+    flow.work(factory, *claimed, crawl=lambda _: [], research=research)
+    with factory() as s: assert s.get(Client, 1).legal_name == 'Manual GmbH'
+
+
+def test_legal_name_backfill_preview_apply_and_repeat(setup):
+    _, factory = setup
+    with factory() as s:
+        s.add_all([Client(name='Zenchef'), Client(name='Manual', legal_name='Manual GmbH'),
+                   Client(name='No source'), Client(name='No fact')])
+        s.flush()
+        for identity in (1, 2, 3):
+            s.add(ClientFact(client_id=identity, key='A01.01', value='Zenchef SAS, Sitz Paris.',
+                filled_by='recherche', source_url='https://example.org' if identity != 3 else ''))
+        s.commit()
+        ask = lambda _: '{"legal_name":"Zenchef SAS"}'
+        expected = [dict(client_id=1, brand='Zenchef', legal_name='Zenchef SAS')]
+        assert flow.backfill_legal_names(s, ask=ask) == expected
+        assert s.get(Client, 1).legal_name == ''
+        assert flow.backfill_legal_names(s, ask=ask, dry_run=False) == expected
+        assert s.get(Client, 1).legal_name == 'Zenchef SAS'
+        assert s.get(Client, 2).legal_name == 'Manual GmbH'
+        assert flow.backfill_legal_names(s, ask=ask, dry_run=False) == []
+
+
+def test_legal_name_preserves_edit_during_extraction(setup):
+    _, factory = setup
+    with factory() as s:
+        client = Client(name='Zenchef')
+        s.add(client); s.flush()
+        s.add(ClientFact(client_id=client.id, key='A01.01', value='Zenchef SAS',
+                        filled_by='recherche', source_url='https://example.org'))
+        s.commit()
+        def ask(_):
+            from sqlalchemy import update
+            s.execute(update(Client).where(Client.id == client.id)
+                      .values(legal_name='Manual GmbH'))
+            return '{"legal_name":"Zenchef SAS"}'
+        assert flow.fill_legal_name(s, client, ask=ask) == ''
+        s.commit()
+        assert s.get(Client, client.id).legal_name == 'Manual GmbH'
+
+
 def test_create_research_link_customer_answer_end_to_end(setup):
     web,factory=setup
     create(web)

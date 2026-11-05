@@ -165,6 +165,38 @@ def store_facts(session, client_id, answers):
         row.filled_by = 'recherche'
 
 
+def fill_legal_name(session, client, *, ask=None, dry_run=False):
+    """Use the canonical, sourced research fact; never replace an entered name.
+
+    The guarded UPDATE also protects edits made while extraction is running.
+    The caller owns the transaction.
+    """
+    previous = client.legal_name
+    if previous and previous.strip(): return ''
+    fact = session.scalar(select(ClientFact).where(
+        ClientFact.client_id == client.id, ClientFact.key == 'A01.01',
+        ClientFact.is_primary.is_(True), ClientFact.filled_by == 'recherche'))
+    if not fact or not fact.source_url or not fact.value.strip() or fact.is_disputed:
+        return ''
+    name = onboarding_crawler.extract_legal_name(fact.value, ask=ask)
+    if not name or dry_run: return name
+    changed = session.execute(update(Client).where(
+        Client.id == client.id, Client.legal_name == previous).values(legal_name=name)).rowcount
+    return name if changed else ''
+
+
+def backfill_legal_names(session, *, ask=None, dry_run=True):
+    """Preview by default; dry_run=False applies and commits missing legal names."""
+    result = []
+    for client in session.scalars(select(Client).where(
+            Client.active.is_(True), Client.is_competitor.is_(False)).order_by(Client.id)):
+        name = fill_legal_name(session, client, ask=ask, dry_run=dry_run)
+        if name:
+            result.append(dict(client_id=client.id, brand=client.name, legal_name=name))
+    if not dry_run: session.commit()
+    return result
+
+
 def condense_stored(session, *, ask=None):
     """Shorten researched profile answers stored before the length rule.
 
@@ -201,7 +233,7 @@ def work(factory, identity, token, *, crawl=None, research=None):
             client = session.get(Client, identity)
             if not client or not client.active or client.is_competitor:
                 raise ValueError('Mandat ist nicht aktiv.')
-            context = SimpleNamespace(name=client.name, website=client.website,
+            context = SimpleNamespace(name=client.name, legal_name=client.legal_name, website=client.website,
                                       country=client.country, industry=client.industry,
                                       has_logo=bool(client.logo_url))
             checkpoint = dict(job.checkpoint)
@@ -255,6 +287,7 @@ def work(factory, identity, token, *, crawl=None, research=None):
             job = own(session, identity, token, stage='Persönlicher Link wird vorbereitet')
             client = session.get(Client, identity)
             if not client.active or client.is_competitor: raise ValueError('Mandat ist nicht aktiv.')
+            fill_legal_name(session, client)
             prefill, _ = customer_onboarding.prepare(session, client)
             invite = session.get(CustomerOnboardingInvite, job.invite_id) if job.invite_id else None
             if not invite_path(invite):

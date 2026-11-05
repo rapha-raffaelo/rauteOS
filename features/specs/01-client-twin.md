@@ -75,3 +75,32 @@ Profil und Überblick unter der Marke genannt, in Einstellungen und auf der
 Mandantenkarte änderbar. Die Recherche bekommt Marke und Unternehmen getrennt
 und ermittelt das Unternehmen, wenn es leer ist. Zwei Marken desselben
 Unternehmens sind zwei Mandanten mit demselben `legal_name`.
+
+Nach Abschluss der Onboarding-Recherche wird ein leeres `legal_name` aus dem
+primären, mit einer Quelle belegten Recherchefakt `A01.01` ergänzt. Das Modell
+extrahiert ausschließlich den enthaltenen offiziellen Namen mit Rechtsform.
+Fehlende, unklare oder widersprüchliche Angaben lassen das Feld leer; ein
+Modellfehler verhindert nicht den Abschluss des Onboardings. Bereits gesetzte
+Namen, auch während der Verarbeitung manuell eingetragene, bleiben erhalten.
+
+Bestehende aktive Mandanten lassen sich nachpflegen. Die Funktion überspringt
+Wettbewerber und verändert keine Recherchefakten. Vorschau im App-Container:
+
+```sh
+docker compose -f repo/deploy/compose.yml exec -T app uv run python -c \
+  'from newspulse import db, onboarding_workflow as f; s=db.session_factory()(); print(f.backfill_legal_names(s))'
+```
+
+Zur Anwendung zuerst auf dem Server in `/srv/rauteos` sichern:
+
+```sh
+sqlite3 data/newspulse.db ".backup backups/before-legal-name-$(date +%Y%m%d-%H%M%S).db"
+```
+
+Nur nach erfolgreicher Sicherung denselben Python-Aufruf mit
+`f.backfill_legal_names(s, dry_run=False)` ausführen. Dieser Aufruf speichert
+die Ergänzungen und liefert die betroffenen IDs, Marken und Unternehmensnamen.
+Die Extraktion läuft dabei erneut; die Vorschau ist keine eingefrorene Freigabeliste.
+Wiederholungen überschreiben keine bereits gefüllten Namen. Die Nachpflege
+benötigt den Modellzugang, führt aber keine neue Webrecherche aus. Ohne einen
+geeigneten gespeicherten Fakt bleibt der Name zur manuellen Ergänzung leer.
