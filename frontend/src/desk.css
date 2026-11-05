@@ -92,3 +92,48 @@
 
 .desk-workspace{min-width:0}.desk-workspace>div{min-width:0}.desk-workspace .panes{grid-template-columns:repeat(3,minmax(0,1fr))}
 @media(max-width:1000px){.desk-workspace .panes{grid-template-columns:1fr}}
+
+/* --- Spec 09, step 3: the Desk as in the rauteOS prototype ------------------ */
+.desk__h{display:flex;justify-content:space-between;align-items:flex-start;gap:var(--s4);margin-bottom:var(--s6)}
+.desk__eyebrow{text-transform:uppercase;letter-spacing:.16em;font-size:10px;font-weight:800;color:var(--faint);margin-bottom:10px}
+.desk__t{font-size:34px;font-weight:760;letter-spacing:-.045em;margin:0 0 8px}
+.desk__acts{display:flex;gap:var(--s2);flex:none}
+.brief{display:flex;justify-content:space-between;align-items:center;gap:var(--s5);background:var(--banner-bg);color:var(--banner-ink);border-radius:var(--radius);padding:24px 26px;margin-bottom:var(--s5);box-shadow:var(--shadow)}
+.brief__l{display:flex;align-items:center;gap:8px;color:var(--banner-accent);font-weight:800;font-size:11px;margin-bottom:9px}
+.brief__l .ico{width:15px;height:15px}
+.brief__t{font-size:15px;line-height:1.65;max-width:860px}
+.brief__go{flex:none;color:var(--banner-ink);background:var(--banner-btn);border:1px solid var(--banner-line);border-radius:9px;padding:10px 14px;font-size:12px;font-weight:700;white-space:nowrap}
+.brief__go:hover{filter:brightness(1.15);text-decoration:none}
+.stat-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:var(--s5)}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:17px 19px;box-shadow:var(--shadow)}
+.stat small{display:block;font-size:11px;color:var(--muted);margin-bottom:10px}
+.stat strong{display:block;font-size:27px;letter-spacing:-.03em;line-height:1.1}
+.stat__hint{display:block;font-size:10px;color:var(--faint);margin-top:6px}
+.stat__hint--bad{color:var(--warn)}
+.desk-grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(300px,1fr);gap:var(--s4);margin-bottom:var(--s5);align-items:start}
+.desk-col{display:flex;flex-direction:column;gap:var(--s4);min-width:0}
+.dcard{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+.dcard__h{display:flex;justify-content:space-between;align-items:baseline;gap:var(--s3);padding:20px 22px 12px}
+.dcard__h h2{font-size:15px;font-weight:750;letter-spacing:-.01em}
+.dcard__b{padding:0 22px 10px}
+.inline-link{color:var(--tint);font-size:11px;font-weight:760;white-space:nowrap}
+.task,.chance,.info-row,.mini-tile{display:flex;align-items:center;gap:12px;padding:14px 0;border-top:1px solid var(--line);color:inherit}
+.task:hover,.chance:hover,.info-row:hover,a.mini-tile:hover{text-decoration:none}
+.task:hover .task__t,.chance:hover .task__t,.info-row:hover .task__t,a.mini-tile:hover .task__t{color:var(--tint)}
+.task__box{width:17px;height:17px;border:1.5px solid var(--line-strong);border-radius:5px;flex:none}
+.task__b{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1}
+.task__t{font-size:13px;font-weight:650;overflow:hidden;text-overflow:ellipsis}
+.task__m{font-size:11px;color:var(--faint)}
+.badge{flex:none;border-radius:6px;padding:5px 7px;font-size:10px;font-weight:780;line-height:1;background:var(--fill-2);color:var(--muted);white-space:nowrap}
+.badge--kunde{background:var(--warn-wash);color:var(--warn)}
+.badge--agentur{background:var(--tint-wash);color:var(--tint)}
+.badge--impuls,.badge--profil{background:var(--fill-2);color:var(--muted)}
+.chance__ico,.info-row__ico{display:grid;place-items:center;width:34px;height:34px;border-radius:9px;background:var(--fill-2);color:var(--tint);flex:none}
+.chance__ico .ico,.info-row__ico .ico{width:16px;height:16px}
+.chance__go{color:var(--faint);font-size:20px;flex:none}
+.info-row__age{font-size:10px;color:var(--faint);flex:none}
+.mini-tile{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px 18px}
+.desk-col>.mini-tile{border-top:1px solid var(--line)}
+@media(max-width:1100px){.desk-grid{grid-template-columns:1fr}.stat-row{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.desk__h{flex-direction:column}.stat-row{grid-template-columns:1fr}.brief{flex-direction:column;align-items:flex-start}}
+.dcard .pane__empty{padding:14px 0;border-top:1px solid var(--line)}

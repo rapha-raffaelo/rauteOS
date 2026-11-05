@@ -65,6 +65,15 @@
   --side-chip-on-ink: #ffffff;
   --mark: var(--tint);
   --mobile-on: var(--tint);
+  --ghost-bg: var(--tint-wash-soft);
+  --ghost-ink: var(--tint);
+  --ghost-line: var(--tint-line);
+  /* The briefing banner on the Desk: the one dark plane in the content. */
+  --banner-bg: #20232d;
+  --banner-ink: #ffffff;
+  --banner-accent: #b9a8ff;
+  --banner-btn: rgb(255 255 255 / .10);
+  --banner-line: rgb(255 255 255 / .18);
   --brand-ink: var(--ink);
   /* The primary button and the assistant button. */
   --action: var(--tint);
@@ -193,6 +202,13 @@
   --side-chip-on-ink: #2a361c;
   --mark: var(--lime);
   --mobile-on: var(--lime);
+  --ghost-bg: var(--card);
+  --ghost-ink: var(--ink);
+  --ghost-line: var(--line);
+  --banner-bg: #262b25;
+  --banner-accent: var(--lime);
+  --banner-btn: #353b33;
+  --banner-line: #454f42;
   --brand-ink: #ffffff;
   --action: #1a1d1b;
   --on-action: #ffffff;

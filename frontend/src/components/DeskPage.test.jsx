@@ -1,7 +1,7 @@
 import React from 'react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { DeskPage } from './DeskPage.jsx';
+import { DeskPage, briefing, firstName } from './DeskPage.jsx';
 
 const empty = {rows: [], decisions: [], in_flight: [], clients_active: 0, actions_month: 0,
   opportunities: 0, decisions_open: 0, twins_with_gaps: 0, twin_average: 0, timezone: 'Europe/Zurich'};
@@ -30,7 +30,7 @@ describe('Desk', () => {
     const {container} = render(<DeskPage />);
     await screen.findByText('nicht hinterlegt');
     expect(screen.getByText('Krise offen')).toBeTruthy();
-    expect(screen.getAllByText(row.client.name)).toHaveLength(3);
+    expect(screen.getAllByText(row.client.name)).toHaveLength(2);
     expect(container.querySelector('script')).toBeNull();
     expect(container.querySelector('td[title]').textContent).toBe('3');
     const form = container.querySelector('form');
@@ -75,5 +75,34 @@ describe('Desk', () => {
     expect(screen.getByRole('link', {name: 'Klassischen Desk öffnen'}).getAttribute('href')).toBe('/desk?view=classic');
     unmount();
     await waitFor(() => expect(fetch.mock.calls[0][1].signal.aborted).toBe(true));
+  });
+
+  it('lists open chances across mandates and links each to its workspace', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(reply({...empty, rows: [row], opportunities: 1,
+      chances: [{client: row.client, kind: 'detected', title: 'EZB verschärft Kreditbedingungen', status: 'draft',
+        since: '2026-11-04T08:00:00Z', href: '/client/7/opportunities?kind=detected&context=3'}]})));
+    render(<DeskPage />);
+    const link = await screen.findByRole('link', {name: /EZB verschärft Kreditbedingungen/});
+    expect(link.getAttribute('href')).toBe('/client/7/opportunities?kind=detected&context=3');
+    expect(screen.getByRole('link', {name: /Intelligence öffnen/}).getAttribute('href')).toBe('/today');
+  });
+});
+
+describe('Briefing', () => {
+  const t = (text) => text;
+  it('names the open decisions, a crisis and the open chances from the figures', () => {
+    const decision = (id, name, kind) => ({client: {id, name}, kind, title: 'x', detail: '', since: null, href: '#'});
+    const text = briefing({...empty, decisions_open: 3, opportunities: 2,
+      rows: [{...row, client: {id: 9, name: 'Qonto'}, status: 'krise'}],
+      decisions: [decision(1, 'Zenchef', 'kundenfreigabe'), decision(1, 'Zenchef', 'freigabe'), decision(2, 'Qonto', 'impuls')]}, t);
+    expect(text.lead).toBe('3 offene Entscheidungen');
+    expect(text.rest).toBe('Krise offen bei Qonto. Zenchef wartet auf eine Kundenfreigabe. Qonto hat einen neuen Impuls. 2 Chancen sind offen.');
+    expect(text.rest).not.toMatch(/\u2014/);
+  });
+  it('takes a first name only from an address that starts with one', () => {
+    expect(firstName('lucas@raute-kopf.com')).toBe('Lucas');
+    expect(firstName('lucas.neurauter@raute-kopf.com')).toBe('Lucas');
+    expect(firstName('r.mankopf@raute-kopf.com')).toBe('');
+    expect(firstName(null)).toBe('');
   });
 });

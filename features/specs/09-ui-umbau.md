@@ -75,7 +75,7 @@ und ausgerollt. Ein Schritt ist erst fertig, wenn er live ist.
   - Nutzerbereich unten mit Archiv und Einstellungen.
   - Kopfzeile: Pfad, Suche (⌘K), Ask RAUTE, Licht-Button, Sprache.
   - Handy: Leiste unten (Desk, Kunden, Intel, Stories, Aufgaben).
-- [ ] **3. Desk wie im Prototyp**
+- [x] **3. Desk wie im Prototyp**
   - Kopf „Guten Morgen, …“, Briefing-Kasten, vier Kennzahlen.
   - „Heute priorisiert“, „Relevante Chancen“, „Das braucht Deine Aufmerksamkeit“, Rückmeldungs-Kacheln.
 - [ ] **4. Client Workspace mit sechs Reitern**
@@ -103,3 +103,12 @@ unten. Pfadzeile und Seitentitel tragen die neuen Namen. Suche mit ⌘K. Am
 Handy eine Leiste unten (Desk, Kunden, Intel, Stories, Medien); „Aufgaben“
 kommt mit Schritt 6. Intelligence ist vorerst die bisherige News-Heute-Seite;
 die Zusammenführung mit den Opportunities aller Mandanten folgt in Schritt 3.
+
+**Schritt 3, 5. November 2026.** Desk mit Gruß nach Tageszeit (Vorname nur,
+wenn die Login-Adresse mit einem beginnt), Datum, Briefing-Kasten aus den
+eigenen Zahlen (offene Entscheidungen, Krisen, die ersten zwei wartenden
+Mandanten, offene Chancen; „Briefing vertiefen“ öffnet Ask RAUTE), vier
+Kennzahlen, „Heute priorisiert“ (Entscheidungen), „Relevante Chancen“ (neu:
+offene Opportunities aller Mandanten über `workspaces.listings`), „Das braucht
+Deine Aufmerksamkeit“ (In Arbeit) und drei Kacheln. Der Mandantenüberblick aus
+Spec 02 bleibt darunter. Ein KI-Briefing ist noch offen (Festlegung 8).

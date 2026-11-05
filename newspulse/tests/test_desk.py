@@ -32,6 +32,7 @@ from newspulse.models import (
     Client,
     ClientAction,
     Crisis,
+    OpportunityWorkspace,
     Outreach,
     OutreachState,
     Report,
@@ -553,3 +554,34 @@ def test_unbuilt_checkout_keeps_a_working_desk(web, tmp_path, monkeypatch):
     from newspulse.web import frontend
     monkeypatch.setattr(frontend, 'BUILD_DIR', tmp_path)
     assert 'Noch kein Mandant angelegt.' in rendered(web.get('/desk'))
+
+
+# --- Relevante Chancen (spec 09) ------------------------------------------------
+
+
+def test_the_desk_lists_open_chances_across_mandates_newest_first(session):
+    """The prototype's "Relevante Chancen": the same rows each mandate's own
+    opportunity list shows, gathered across the portfolio."""
+    qonto, zenchef = _mandate(session, "Qonto"), _mandate(session, "Zenchef")
+    older = Angle(client_id=qonto.id, generated_at=_NOW - dt.timedelta(days=2),
+                  subject="Kreditbedingungen", message="m", context="k")
+    newer = Angle(client_id=zenchef.id, generated_at=_NOW - dt.timedelta(hours=1),
+                  subject="Reservierungen", message="m", context="k")
+    session.add_all([older, newer])
+    session.commit()
+
+    chances = desk.build(session, now=_NOW).chances
+
+    assert [c.title for c in chances] == ["Reservierungen", "Kreditbedingungen"]
+    assert chances[0].client.name == "Zenchef"
+    assert chances[0].href == f"/client/{zenchef.id}/opportunities?kind=developed&context={newer.id}"
+
+
+def test_a_closed_chance_is_not_listed(session):
+    client = _mandate(session)
+    angle = _angle(session, client)
+    session.add(OpportunityWorkspace(client_id=client.id, context_kind="developed",
+                                     context_id=angle.id, status="closed"))
+    session.commit()
+
+    assert desk.build(session, now=_NOW).chances == []

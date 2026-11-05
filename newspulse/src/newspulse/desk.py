@@ -179,12 +179,25 @@ class InFlight:
 
 
 @dataclass(frozen=True, slots=True)
+class Chance:
+    """One open opportunity, for the Desk's "Relevante Chancen" list."""
+
+    client: Client
+    kind: str
+    title: str
+    status: str
+    since: dt.datetime | None
+    href: str
+
+
+@dataclass(frozen=True, slots=True)
 class Desk:
     """Everything the morning page states, assembled once."""
 
     rows: list[MandateRow] = field(default_factory=list)
     decisions: list[Decision] = field(default_factory=list)
     in_flight: list[InFlight] = field(default_factory=list)
+    chances: list[Chance] = field(default_factory=list)
     generated_at: dt.datetime | None = None
 
     @property
@@ -525,5 +538,43 @@ def build(session: Session, *, now: dt.datetime | None = None) -> Desk:
         rows=rows,
         decisions=_decisions(session, by_id),
         in_flight=_in_flight(session, by_id),
+        chances=_chances(session, by_id),
         generated_at=moment,
     )
+
+
+#: How many open opportunities the Desk lists. The count beside it is the
+#: whole number; the list is where to start.
+CHANCES_SHOWN = 6
+
+
+def _chances(session: Session, clients: dict[int, Client]) -> list[Chance]:
+    """The newest open opportunities across every mandate.
+
+    The same rows each mandate's own opportunity list shows
+    (:func:`workspaces.listings`), so the Desk cannot name a chance the
+    mandate's page does not have. Closed ones are left out.
+    """
+    from . import workspaces
+
+    found = [
+        Chance(
+            client=client,
+            kind=row["context_kind"],
+            title=row["title"],
+            status=row["status"],
+            since=row["created_at"],
+            href=(f"/client/{client.id}/opportunities?kind={row['context_kind']}"
+                  f"&context={row['context_id']}"),
+        )
+        for client in clients.values()
+        for row in workspaces.listings(session, client.id)
+        if row["status"] != "closed"
+    ]
+    epoch = dt.datetime.min.replace(tzinfo=dt.UTC)
+    found.sort(key=lambda c: _aware(c.since) if c.since else epoch, reverse=True)
+    return found[:CHANCES_SHOWN]
+
+
+def _aware(moment: dt.datetime) -> dt.datetime:
+    return moment if moment.tzinfo else moment.replace(tzinfo=dt.UTC)
