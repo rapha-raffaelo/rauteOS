@@ -140,7 +140,7 @@ it("retains settings input after server validation rejects an edit", async () =>
   }
   render(<Harness />);
   const editor = document.querySelector(".platform-edit");
-  fireEvent.change(within(editor).getByLabelText("Name"), {
+  fireEvent.change(within(editor).getByLabelText("Marke"), {
     target: { value: "Unsaved name" },
   });
   fireEvent.change(within(editor).getByLabelText("Land"), {
@@ -150,7 +150,7 @@ it("retains settings input after server validation rejects an edit", async () =>
     within(editor).getByRole("button", { name: "Speichern", exact: true }).form,
   );
   await screen.findByText("Land unbekannt.");
-  expect(within(editor).getByLabelText("Name").value).toBe("Unsaved name");
+  expect(within(editor).getByLabelText("Marke").value).toBe("Unsaved name");
   expect(within(editor).getByLabelText("Land").value).toBe("invalid");
   expect(fetch.mock.calls[0][1].body.get("name")).toBe("Unsaved name");
 });
@@ -162,14 +162,14 @@ it("reports a settings network error without resetting the form", async () => {
   );
   render(<SettingsPage data={settingsData} onData={vi.fn()} />);
   const editor = document.querySelector(".platform-edit");
-  fireEvent.change(within(editor).getByLabelText("Name"), {
+  fireEvent.change(within(editor).getByLabelText("Marke"), {
     target: { value: "Keep this client name" },
   });
   fireEvent.submit(
     within(editor).getByRole("button", { name: "Speichern", exact: true }).form,
   );
   await screen.findByText("Verbindung unterbrochen");
-  expect(within(editor).getByLabelText("Name").value).toBe(
+  expect(within(editor).getByLabelText("Marke").value).toBe(
     "Keep this client name",
   );
 });

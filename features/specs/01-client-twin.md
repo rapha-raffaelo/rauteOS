@@ -57,3 +57,21 @@
 
 Der Fragebogen liegt in einem geschützten Google-Drive-Dokument. Ohne die
 Feldliste lässt sich weder die Pflicht-/Optional-Trennung noch der Import bauen.
+
+## Marke zuerst, Unternehmen dahinter (5. November 2026)
+
+> im aktuellen kunden profil fragen wir unternehmen ab und dann auch die
+> möglichkeit verschiedene marken unter dem kunden hinzuzufügen. also quasi
+> welche marke wir beraten. idealerweise ist das Logo / und das gesamte Profil
+> auf basis der Marke anlegen und dann die unternehmensform dahinter.
+> […] bitte frage auch die Unternehmen dahinter ab (aber als Optional) erst
+> die marke und dann das unternehmen
+
+Festgelegt: **Je beratene Marke ein Mandant.** Name, Logo, Website, Profil,
+Recherche und Monitoring richten sich nach der Marke. Das Unternehmen dahinter
+(Rechtsträger mit Rechtsform, z. B. „Zenchef SAS“) ist das Feld `legal_name`
+(Migration 0068): beim Anlegen nach Marke und Website gefragt, optional, in
+Profil und Überblick unter der Marke genannt, in Einstellungen und auf der
+Mandantenkarte änderbar. Die Recherche bekommt Marke und Unternehmen getrennt
+und ermittelt das Unternehmen, wenn es leer ist. Zwei Marken desselben
+Unternehmens sind zwei Mandanten mit demselben `legal_name`.

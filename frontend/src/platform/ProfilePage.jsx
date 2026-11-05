@@ -645,7 +645,7 @@ export function ProfilePage({ data: d, onData }) {
       <PageHeading
         eyebrow={t(heading[0])}
         title={<ClientTitle client={d.client} />}
-        description={t(heading[1])}
+        description={d.client.legal_name ? `${t("Unternehmen dahinter")}: ${d.client.legal_name} · ${t(heading[1])}` : t(heading[1])}
       />
       {view === "profile" && <>
         <OnboardingLinks key={d.client.id} clientId={d.client.id} />

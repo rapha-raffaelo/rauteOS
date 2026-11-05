@@ -1,6 +1,6 @@
 import React,{useEffect,useId,useRef,useState} from 'react';
 import {journalistRequest as request} from '../journalists-api.js';
-const fields={name:'Name',industry:'Branche',country:'Ländercode',actions_per_quarter:'Zugesagte Leistungen pro Quartal'};
+const fields={name:'Marke',legal_name:'Unternehmen dahinter (optional)',industry:'Branche',country:'Ländercode',actions_per_quarter:'Zugesagte Leistungen pro Quartal'};
 const monitoring={aliases:'Weitere Unternehmensnamen',keywords:'Suchbegriffe',alert_topics:'Alarm-Themen',excluded_terms:'Ausgeschlossene Begriffe',required_terms:'Erforderliche Begriffe'};
 
 export function ClientActions({client,onChanged=()=>window.location.assign('/clients')}){
@@ -18,7 +18,7 @@ export function ClientActions({client,onChanged=()=>window.location.assign('/cli
    onChanged();
   }catch(e){setError(e.message);}finally{setBusy(false);}
  }
- function input(key,label){return <label key={key}>{label}<input required={key==='name'} type={key==='actions_per_quarter'?'number':'text'} min={key==='actions_per_quarter'?0:undefined} step={key==='actions_per_quarter'?1:undefined}
+ function input(key,label){return <label key={key}>{label}<input required={key==='name'} maxLength={key==='legal_name'?255:undefined} type={key==='actions_per_quarter'?'number':'text'} min={key==='actions_per_quarter'?0:undefined} step={key==='actions_per_quarter'?1:undefined}
   value={settings.values[key]} onChange={e=>setSettings({...settings,values:{...settings.values,[key]:e.target.value}})}/></label>;}
  return <><div className="client-card-actions" role="group" aria-label={`${client.name} verwalten`}>
  <button type="button" className="btn client-action-icon" title="Bearbeiten" aria-label={`${client.name} bearbeiten`} onClick={()=>open('edit')}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m16 3 5 5M3 21l5-1L21 7a2.1 2.1 0 0 0-5-5L3 16z"/></svg></button>

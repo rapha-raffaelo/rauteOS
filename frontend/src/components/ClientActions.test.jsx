@@ -9,7 +9,7 @@ beforeEach(()=>{HTMLDialogElement.prototype.showModal=function(){this.setAttribu
 afterEach(()=>vi.unstubAllGlobals());
 it('saves the selected client and refreshes only after success',async()=>{
  const fetch=vi.fn().mockResolvedValueOnce(response(settings)).mockResolvedValueOnce(response({id:7,name:'Updated'}));vi.stubGlobal('fetch',fetch);const changed=vi.fn();render(<ClientActions client={client} onChanged={changed}/>);
- fireEvent.click(screen.getByRole('button',{name:'Alpha bearbeiten'}));fireEvent.change(await screen.findByLabelText('Name'),{target:{value:'Updated'}});
+ fireEvent.click(screen.getByRole('button',{name:'Alpha bearbeiten'}));fireEvent.change(await screen.findByLabelText('Marke'),{target:{value:'Updated'}});
  fireEvent.click(screen.getByRole('button',{name:'Änderungen speichern'}));await vi.waitFor(()=>expect(changed).toHaveBeenCalledOnce());
  expect(fetch.mock.calls[1][0]).toBe('/api/v1/workbench/clients/7/settings');expect(fetch.mock.calls[1][1].method).toBe('PUT');expect(JSON.parse(fetch.mock.calls[1][1].body)).toMatchObject({name:'Updated',aliases:'A',revision:'current'});
 });
@@ -21,5 +21,5 @@ it('does not delete on opening or cancelling and confirms the selected name',asy
 });
 it('keeps edits and the dialog when saving fails',async()=>{
  const fetch=vi.fn().mockResolvedValueOnce(response(settings)).mockResolvedValueOnce(response({detail:'Name bereits vorhanden.'},422));vi.stubGlobal('fetch',fetch);const changed=vi.fn();render(<ClientActions client={client} onChanged={changed}/>);
- fireEvent.click(screen.getByRole('button',{name:'Alpha bearbeiten'}));fireEvent.change(await screen.findByLabelText('Name'),{target:{value:'Beta'}});fireEvent.click(screen.getByRole('button',{name:'Änderungen speichern'}));await screen.findByRole('alert');expect(screen.getByLabelText('Name').value).toBe('Beta');expect(changed).not.toHaveBeenCalled();
+ fireEvent.click(screen.getByRole('button',{name:'Alpha bearbeiten'}));fireEvent.change(await screen.findByLabelText('Marke'),{target:{value:'Beta'}});fireEvent.click(screen.getByRole('button',{name:'Änderungen speichern'}));await screen.findByRole('alert');expect(screen.getByLabelText('Marke').value).toBe('Beta');expect(changed).not.toHaveBeenCalled();
 });

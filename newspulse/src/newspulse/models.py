@@ -330,6 +330,10 @@ class Client(Base):
     # The company's own site, used to fetch its logo once at creation and as the
     # obvious place to click through from a card.
     website: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    #: The company behind the brand this mandate is (``name``), with its legal
+    #: form: "Zenchef SAS" behind "Zenchef". Optional; the brand is what the
+    #: press writes and what RauteOS researches and monitors.
+    legal_name: Mapped[str] = mapped_column(String(255), default='', server_default='', nullable=False)
     contact_name: Mapped[str] = mapped_column(String(255), default='', server_default='', nullable=False)
     contact_email: Mapped[str] = mapped_column(String(320), default='', server_default='', nullable=False)
     contact_role: Mapped[str] = mapped_column(String(255), default='', server_default='', nullable=False)

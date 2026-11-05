@@ -1617,14 +1617,27 @@ def remove_competitor_route(
     return RedirectResponse(back, status_code=_SEE_OTHER)
 
 
+def _set_legal_name(session: Session, client_id: int, value: str) -> None:
+    """The company behind the brand. Its own write: the CRUD service predates it."""
+    legal = " ".join((value or "").split())
+    if len(legal) > 255:
+        raise ValueError("Der Name des Unternehmens ist zu lang.")
+    client = session.get(Client, client_id)
+    if client is not None:
+        client.legal_name = legal
+        session.commit()
+
+
 def _mask_context(
-    *, name: str = "", website: str = "", country: str = "DE", error: str = "", **contact
+    *, name: str = "", website: str = "", country: str = "DE", error: str = "",
+    legal_name: str = "", **contact
 ) -> dict:
     """The creation mask's context, plus the one thing the shell asks of every
     page: ``header_date``, which the toolbar's run meta prints."""
     return {
         "prefill_name": name,
         "prefill_website": website,
+        "prefill_legal_name": legal_name,
         "prefill_country": country,
         "contact": contact,
         "error": error,
@@ -1656,6 +1669,7 @@ def create_client_from_mask(
     request: Request,
     name: str = Form(...),
     website: str = Form(""),
+    legal_name: str = Form(""),
     country: str = Form(""),
     contact_name: str = Form(""),
     contact_email: str = Form(""),
@@ -1678,6 +1692,9 @@ def create_client_from_mask(
         contact = ContactInput(**raw_contact)
         if len(website) > 512:
             raise ValueError('Die Website ist zu lang.')
+        legal = " ".join(legal_name.split())
+        if len(legal) > 255:
+            raise ValueError('Der Name des Unternehmens ist zu lang.')
         site = normalize_website(website)
         if website.strip() and not site:
             raise ValueError('Bitte eine gültige Website eingeben.')
@@ -1692,6 +1709,7 @@ def create_client_from_mask(
         )
         created = create_client(session, **fields, commit=False)
         created.website = site
+        created.legal_name = legal
         for key, value in contact.model_dump().items():
             setattr(created, key, value)
         onboarding_workflow.enqueue(session, created)
@@ -1701,7 +1719,7 @@ def create_client_from_mask(
         return render_react(
             request,
             "new_client",
-            _mask_context(name=name, website=website, country=country,
+            _mask_context(name=name, website=website, country=country, legal_name=legal_name,
                           error='Bitte Ansprechpartner und E-Mail prüfen.' if isinstance(exc, ValidationError) else str(exc), **raw_contact),
         )
     _start_onboarding(created.id, created.name)
@@ -1718,6 +1736,7 @@ def add_client_route(
     keywords: str = Form(""),
     alert_topics: str = Form(""),
     website: str = Form(""),
+    legal_name: str = Form(""),
     session: Session = Depends(get_db),
 ) -> Response:
     """Add a client through the NP-02 CRUD service, with its logo if reachable."""
@@ -1731,6 +1750,7 @@ def add_client_route(
             alert_topics=alert_topics,
         )
         created = create_client(session, **fields)
+        _set_legal_name(session, created.id, legal_name)
         site = normalize_website(website)
         if site:
             created.website = site
@@ -1760,6 +1780,7 @@ def edit_client_route(
     excluded_terms: str = Form(""),
     required_terms: str = Form(""),
     actions_per_quarter: str = Form(""),
+    legal_name: str = Form(""),
     muted_categories: list[str] = Form(default=[]),
     session: Session = Depends(get_db),
 ) -> Response:
@@ -1782,6 +1803,7 @@ def edit_client_route(
             value for value in muted_categories if value in _CATEGORY_VALUES
         ]
         update_client(session, client_id, **fields)
+        _set_legal_name(session, client_id, legal_name)
     except (ValueError, LookupError) as exc:
         # Keep this row open so the rejected edit is still on screen to correct,
         # rather than collapsing back to the read-only row and losing it.

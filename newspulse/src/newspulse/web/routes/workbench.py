@@ -137,12 +137,13 @@ def company(session: Session, client: Client) -> dict:
     facts = profiles.stored(session, client.id)
     value = lambda key: facts[key].value if key in facts else ''
     tags = [t for t in [client.industry, *(client.keywords or [])[:3]] if t]
-    return dict(description=_clip(value(DESCRIPTION_KEY)), goal=_clip(value(GOAL_KEY), 200), tags=tags[:4])
+    return dict(description=_clip(value(DESCRIPTION_KEY)), goal=_clip(value(GOAL_KEY), 200), tags=tags[:4],
+                legal_name=client.legal_name)
 
 
 # Client management uses the same validation and soft deletion as Settings.
 def client_settings(client):
-    keys = ('name', 'industry', 'country', 'aliases', 'keywords', 'alert_topics',
+    keys = ('name', 'legal_name', 'industry', 'country', 'aliases', 'keywords', 'alert_topics',
             'excluded_terms', 'required_terms', 'actions_per_quarter')
     values = {}
     for key in keys:
@@ -163,6 +164,7 @@ class ClientSettingsInput(BaseModel):
     excluded_terms: str
     required_terms: str
     actions_per_quarter: str
+    legal_name: str = ''
     revision: str
 
 
@@ -180,11 +182,13 @@ def save_client_settings(client_id: int, body: ClientSettingsInput, session: Ses
     if not client.active or body.revision != client_settings(client)['revision']:
         raise HTTPException(409, 'Der Mandant wurde inzwischen geändert. Bitte schließen und erneut öffnen.')
     try:
-        fields = _parse_client_form(**body.model_dump(exclude={'revision'}))
+        fields = _parse_client_form(**body.model_dump(exclude={'revision', 'legal_name'}))
         count = fields['actions_per_quarter']
         if body.actions_per_quarter.strip() and (count is None or count > 2147483647):
             raise ValueError('Bitte eine gültige ganze Zahl ab 0 für die Quartalszusage eingeben.')
         update_client(session, client_id, **fields)
+        from .settings import _set_legal_name
+        _set_legal_name(session, client_id, body.legal_name)
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
     return dict(id=client.id, name=client.name)

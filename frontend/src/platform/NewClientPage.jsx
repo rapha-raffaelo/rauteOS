@@ -7,25 +7,25 @@ export function NewClientPage({ data: d }) {
       <PageHeading eyebrow="Clients" title={t("Neuer Mandant")} />
       <Notice>{d.error}</Notice>
       <div className="platform-columns">
-        <Panel title="Unternehmensangaben">
+        <Panel title="Marke und Unternehmen">
           <form method="post" action="/mandant/neu">
             <Field
               name="name"
-              label="Name des Unternehmens"
+              label="Marke"
               value={d.prefill_name}
               required
               autoComplete="off"
-              placeholder={t("Wie die Presse es nennt")}
+              placeholder={t("Wie die Presse sie nennt")}
             >
               <small>
                 {t(
-                  "So, wie er in einer Schlagzeile stünde. Danach wird gesucht.",
+                  "Die Marke, die wir beraten, so wie sie in einer Schlagzeile stünde. Logo, Profil und Monitoring richten sich danach.",
                 )}
               </small>
             </Field>
             <Field
               name="website"
-              label="Website"
+              label="Website der Marke"
               value={d.prefill_website}
               autoComplete="off"
               placeholder="beispiel.de"
@@ -33,6 +33,20 @@ export function NewClientPage({ data: d }) {
               <small>
                 {t(
                   "Woraus das Profil gelesen wird: Geschäftsfeld, Führung, Zahlen. Ohne sie bleibt das Profil leer, bis jemand es tippt.",
+                )}
+              </small>
+            </Field>
+            <Field
+              name="legal_name"
+              label="Unternehmen dahinter (optional)"
+              value={d.prefill_legal_name}
+              maxLength={255}
+              autoComplete="off"
+              placeholder={t("z. B. Zenchef SAS")}
+            >
+              <small>
+                {t(
+                  "Der Rechtsträger mit Rechtsform. Bleibt das Feld leer, ermittelt ihn die Recherche.",
                 )}
               </small>
             </Field>

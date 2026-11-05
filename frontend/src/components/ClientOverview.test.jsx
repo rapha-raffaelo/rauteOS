@@ -12,3 +12,10 @@ it('dates each opportunity card, with the year only when it is not this one', ()
  expect(screen.getByText('2. November').getAttribute('datetime')).toBe(`${year}-11-02T09:00:00Z`);
  expect(screen.getByText('5. März 2024')).toBeTruthy();
 });
+
+it('names the company behind the brand under its title', () => {
+ const data = {client:{id:9,name:'ZenchefOS'},summary:null,texts:[],activity:[],opportunities:[],
+  company:{description:'',goal:'',tags:['Gastronomie'],legal_name:'Zenchef SAS'}};
+ render(<ClientOverview data={data} clientId={9}/>);
+ expect(screen.getByText(/Unternehmen dahinter: Zenchef SAS/)).toBeTruthy();
+});

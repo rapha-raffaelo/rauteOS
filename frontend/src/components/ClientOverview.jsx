@@ -27,7 +27,7 @@ export function ClientOverview({data,clientId}){
  const impact=[['Veröffentlichungen',data.released_texts?.length??0],['Berichte',data.released_reports?.length??0],['Offene Chancen',summary?.opportunities??0],['Profil',twin?`${twin.percent} %`:'–']];
  const stepNames={kundenfreigabe:'Kundenfreigabe',freigabe:'Freigabe',impuls:'Impuls',profil:'Profil'};
  return <section className="client-overview">
-  <header className="co-header"><div><p className="co-eyebrow">CLIENT WORKSPACE</p><h1><ClientTitle client={data.client}/></h1><p className="co-subtitle">{company.tags?.length?company.tags.join(' · '):'Chancen, Wissen und Ergebnisse für dieses Mandat.'}</p></div>
+  <header className="co-header"><div><p className="co-eyebrow">CLIENT WORKSPACE</p><h1><ClientTitle client={data.client}/></h1><p className="co-subtitle">{company.legal_name&&<>Unternehmen dahinter: {company.legal_name}{company.tags?.length?' · ':''}</>}{company.tags?.length?company.tags.join(' · '):company.legal_name?'':'Chancen, Wissen und Ergebnisse für dieses Mandat.'}</p></div>
    <div className="co-actions"><a className="btn btn--ghost" href={`/ask?client_id=${clientId}`}>Zu {data.client.name} fragen</a><a className="btn btn--go" href={`${base}/opportunities?develop=1`}>+ Opportunity entwickeln</a></div></header>
   <div className="co-layout"><div className="co-main">
    <section className="co-panel co-company"><header className="co-panel-head"><h2>Das Unternehmen</h2><span className="badge">Client Intelligence</span></header>

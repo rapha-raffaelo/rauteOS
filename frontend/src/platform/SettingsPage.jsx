@@ -12,7 +12,8 @@ import {
   t,
 } from "./shared.jsx";
 const clientFields = [
-  ["name", "Name"],
+  ["name", "Marke"],
+  ["legal_name", "Unternehmen dahinter (optional)"],
   ["industry", "Branche"],
   ["country", "Land"],
   ["aliases", "Aliasse"],

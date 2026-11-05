@@ -127,3 +127,35 @@ def test_a_refused_name_comes_back_with_what_was_typed(web, factory, monkeypatch
     assert 'value="Neu AG"' in rendered(answer)
     assert 'value="neu-ag.de"' in rendered(answer)
     assert 'value="AT"' in rendered(answer)
+
+
+def test_the_brand_comes_first_and_the_company_behind_it_is_optional(web, factory, monkeypatch):
+    """A mandate is the brand we advise; the legal entity is asked for after
+    it, optionally, and the research finds it when left empty."""
+    from newspulse.models import Client
+    from newspulse.web.routes import settings as settings_routes
+
+    monkeypatch.setattr(settings_routes, "_start_onboarding", lambda cid, name: None)
+    body = rendered(web.get("/mandant/neu"))
+    assert body.index('name="name"') < body.index('name="website"') < body.index('name="legal_name"')
+    assert 'name="legal_name" required' not in body
+
+    web.post("/mandant/neu", data={"name": "ZenchefOS", "legal_name": "  Zenchef   SAS "}, follow_redirects=False)
+    web.post("/mandant/neu", data={"name": "Qonto"}, follow_redirects=False)
+    with factory() as session:
+        by_name = {c.name: c.legal_name for c in session.query(Client)}
+    assert by_name["ZenchefOS"] == "Zenchef SAS"
+    assert by_name["Qonto"] == ""
+
+
+def test_the_research_is_told_the_brand_and_its_company():
+    from types import SimpleNamespace
+    from newspulse import onboarding_crawler
+
+    seen = []
+    client = SimpleNamespace(name="ZenchefOS", legal_name="Zenchef SAS", website="https://zenchef.com",
+                             country="FR", industry="Gastronomie")
+    onboarding_crawler.research_batch(client, [{"key": "R01.01", "label": "Unternehmensidentität"}], [],
+                                      search=lambda prompt: (seen.append(prompt), ('{"answers": []}', []))[1])
+    assert '"legal_entity": "Zenchef SAS"' in seen[0]
+    assert "die Marke, die wir beraten" in seen[0]
