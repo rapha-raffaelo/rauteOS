@@ -2,7 +2,7 @@
 
 Lucas' Spezifikationen 01–08, wörtlich, plus die Mockups dazu. Sie sind die
 Vorlage für den Umbau auf React und stehen hier, damit sie durchsuchbar,
-versioniert und für Remy lesbar sind — nicht nur in einem Chatverlauf.
+versioniert und lesbar sind — nicht nur in einem Chatverlauf.
 
 ## Der Kernworkflow
 
@@ -38,6 +38,7 @@ Client anlegen
 | 06 | Generate Asset / Activation | [06-asset-activation.md](06-asset-activation.md) |
 | 07 | Media & Journalist Intelligence | [07-journalist-intelligence.md](07-journalist-intelligence.md) |
 | 08 | Quality / Evidence Light | [08-quality-evidence.md](08-quality-evidence.md) |
+| 09 | UI-Umbau nach dem rauteOS-Prototyp (Hell / Dunkel) | [09-ui-umbau.md](09-ui-umbau.md) |
 
 ## Navigation für Version 1
 

@@ -187,9 +187,12 @@ def test_the_bar_holds_no_control_without_a_destination(web, mandate):
     test is that none of them arrived without something behind it.
     """
     bar = _topbar(rendered(web.get("/today")))
-    buttons = [b for b in re.findall(r"<button[^>]*>", bar) if "seg__b" not in b]
+    buttons = [b for b in re.findall(r"<button[^>]*>", bar)
+               if "seg__b" not in b and "theme-switch" not in b]
     assert len(buttons) == 1, f"one submit, and it belongs to the search: {buttons}"
     assert 'type="submit"' in buttons[0]
+    # The light switch acts on the page itself (spec 09): a toggle, not a link.
+    assert 'class="theme-switch"' in bar and 'aria-pressed="false"' in bar
 
 
 def test_the_language_switch_sits_in_the_top_bar(web, mandate):
@@ -485,15 +488,13 @@ def test_the_accent_is_one_line_and_no_module_repeats_it():
     not about the colour.
     """
     css = _rules_only(_CSS.read_text(encoding="utf-8"))
-    assert css.count("--accent-rgb:") == 1, "the accent is declared more than once"
+    # Once per theme (spec 09): Hell and Dunkel each name their accent once.
+    assert css.count("--accent-rgb:") == 2, "the accent is declared more than once per theme"
 
-    triple = re.search(r"--accent-rgb:\s*([0-9]+ [0-9]+ [0-9]+);", css)
-    assert triple, "the accent is no longer an rgb triple"
-    channels = triple.group(1)
-    assert css.count(channels) == 1, "a rule spells the accent out beside the token"
-
-    as_hex = "#" + "".join(f"{int(channel):02x}" for channel in channels.split())
-    assert as_hex not in css.lower(), f"{as_hex} is written out somewhere as well"
+    for channels in re.findall(r"--accent-rgb:\s*([0-9]+ [0-9]+ [0-9]+);", css):
+        assert css.count(channels) == 1, "a rule spells the accent out beside the token"
+        as_hex = "#" + "".join(f"{int(channel):02x}" for channel in channels.split())
+        assert as_hex not in css.lower(), f"{as_hex} is written out somewhere as well"
 
 
 #: What the accent was before DEC-4, in the three spellings the stylesheet and

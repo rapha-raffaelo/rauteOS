@@ -50,7 +50,7 @@
 
   .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; }
   .st { display: inline-flex; align-items: center; gap: 6px; font-size: var(--t-caption); white-space: nowrap; }
-  .st--aktiv .dot { background: var(--ok, #16a34a); }
+  .st--aktiv .dot { background: var(--ok, var(--good)); }
   .st--ruhig .dot { background: var(--fill-strong); }
   .st--krise .dot { background: var(--alert); }
 
@@ -73,7 +73,7 @@
 
   .tag { font-size: var(--t-caption2); font-weight: 700; text-transform: uppercase;
          letter-spacing: 0.03em; border-radius: var(--radius-s); padding: 1px 7px; }
-  .tag--kunde { color: var(--warn); background: rgba(178, 80, 0, 0.10); }
+  .tag--kunde { color: var(--warn); background: rgb(var(--warn-rgb) / 0.1); }
   .tag--agentur { color: var(--tint); background: var(--fill-2); }
   .tag--impuls { color: var(--muted); background: var(--fill-2); }
   .tag--profil { color: var(--muted); background: var(--fill-2); }

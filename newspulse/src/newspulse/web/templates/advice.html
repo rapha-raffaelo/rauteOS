@@ -169,11 +169,11 @@
   .mailbar__dot { width: 8px; height: 8px; border-radius: 50%; background: var(--alert); flex: none; }
   .mailbar b { color: var(--ink-2); font-weight: 600; }
   .mailbar__r { margin-left: auto; display: flex; gap: 10px; align-items: center; }
-  .btn--send { background: var(--alert); color: #fff; }
-  .btn--send:hover:not(:disabled) { background: #b91c1c; }
+  .btn--send { background: var(--alert); color: var(--on-fill); }
+  .btn--send:hover:not(:disabled) { background: var(--alert); }
   /* "This letter left because a button here was pressed." Distinct from the blue
      "verschickt" badge, which means a person sent it from their own client. */
-  .state__badge--gesendet { color: #8a0010; background: rgba(215, 0, 21, .08); border-color: rgba(215, 0, 21, .28); }
+  .state__badge--gesendet { color: var(--alert-ink); background: rgb(var(--alert-rgb) / 0.08); border-color: rgb(var(--alert-rgb) / 0.28); }
   /* Two clicks, and no script behind them: the second click is the send, and an
      action that cannot be undone must not depend on JavaScript having loaded. */
   .gsend { margin-left: auto; }
@@ -210,10 +210,10 @@
      the agency wrote. Page-local like the rest of this block — the contact's
      file draws its own version inside the timeline (.tl__reply), where the
      surrounding markup is a list row rather than a card. */
-  .reply { margin-top: 10px; border: 1px solid rgba(36, 138, 61, .30);
-           background: rgba(36, 138, 61, .06); border-radius: var(--radius); padding: 10px 12px; }
+  .reply { margin-top: 10px; border: 1px solid rgb(var(--good-rgb) / 0.3);
+           background: rgb(var(--good-rgb) / 0.06); border-radius: var(--radius); padding: 10px 12px; }
   .reply__head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
-  .reply__from { font-size: var(--t-caption); font-weight: 600; color: #14532d; }
+  .reply__from { font-size: var(--t-caption); font-weight: 600; color: var(--good-ink); }
   .reply__src { font-size: var(--t-caption2); font-weight: 700; text-transform: uppercase;
                 letter-spacing: .04em; color: var(--muted); border: 1px solid var(--line);
                 border-radius: var(--radius); padding: 1px 7px; background: var(--card); }

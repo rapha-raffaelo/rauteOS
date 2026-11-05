@@ -315,7 +315,7 @@
     z-index: 1;
   }
   table.data--clients td { vertical-align: middle; }
-  .client-tr:hover > td { background: #f9fafb; }
+  .client-tr:hover > td { background: var(--card-2); }
   .client-tr--inactive > td { color: var(--muted); }
   /* Capped, because these cells hold whatever the operator typed: one mandate
      carries five aliases and thirty search terms, and on a nowrap table that one
@@ -324,8 +324,8 @@
      the cell's title attribute. */
   /* Pinned to the right edge as well, so the actions stay reachable even when the
      table does overflow — a wide screen should not be the price of editing. */
-  .client-tr:hover > .col-actions { background: #f9fafb; }
-  .tag--inactive { background: #f3f4f6; color: var(--muted); margin-left: 0.35rem; }
+  .client-tr:hover > .col-actions { background: var(--card-2); }
+  .tag--inactive { background: var(--fill-2); color: var(--muted); margin-left: 0.35rem; }
   /* Setup status on the client's own row. Normal weight and small: it is a
      transient fact about one mandate, not a second name for it. */
   .setup {
@@ -333,10 +333,10 @@
     font-weight: 400; color: var(--muted); white-space: nowrap;
   }
   .setup--busy { color: var(--accent); }
-  .setup--done { color: #047857; }
+  .setup--done { color: var(--good-ink); }
   .setup--bad { color: var(--alert); font-weight: 600; }
-  .tag--topic { background: var(--alert-bg); color: #b91c1c; margin-right: 0.25rem; text-transform: none; }
-  .client-edit-tr > td { background: #f9fafb; white-space: normal; padding: 0.85rem 0.5rem; }
+  .tag--topic { background: var(--alert-bg); color: var(--alert); margin-right: 0.25rem; text-transform: none; }
+  .client-edit-tr > td { background: var(--card-2); white-space: normal; padding: 0.85rem 0.5rem; }
   .mutebox { margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px dashed var(--border); }
   .mutebox__label { font-size: var(--t-caption); font-weight: 700; text-transform: uppercase;
                     letter-spacing: 0.04em; color: var(--muted); margin-right: 0.75rem; }
@@ -384,11 +384,11 @@
      is declared once in app.css, and a page-local rule whose subject is a shared
      class is how two definitions start drifting (see tests/test_styles.py). */
   .brainblock__edit { margin-left: auto; }
-  .tag--shipped { background: #eef0f3; color: var(--muted); text-transform: none; }
-  .tag--override { background: #e0f2fe; color: #0369a1; text-transform: none; }
+  .tag--shipped { background: var(--fill-2); color: var(--muted); text-transform: none; }
+  .tag--override { background: var(--fill-2); color: var(--info-ink); text-transform: none; }
   /* An orphan is not an error, but it is the one state where a live edit is
      invisible, so it reads louder than the other two. */
-  .tag--orphan { background: var(--alert-bg); color: #b91c1c; text-transform: none; }
+  .tag--orphan { background: var(--alert-bg); color: var(--alert); text-transform: none; }
   /* Capped and scrollable: eight blocks at full height is a page nobody scrolls
      to the bottom of, and the whole text stays reachable inside its own box. */
   .brainblock__text {

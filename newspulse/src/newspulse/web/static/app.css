@@ -26,38 +26,59 @@
 */
 
 :root {
-  /* --- The accent, and the only line that carries it ----------------------
-     DEC-4 repaints the whole tool violet, and the point of doing it in tokens
-     is that the next repaint is not another week: the hue is written once,
-     here, and every violet on every page is derived from it — the flat colour,
-     the two washes, the two hairlines, the sidebar's selected row, the tab
-     underline. Changing the accent is changing the next line and nothing else.
+  /* --- Two themes, one layout -------------------------------------------------
+     Light is RauteOS as it was: violet accent, light sidebar. Dark is the look
+     of the rauteOS prototype (Nov 2026): black sidebar, lime selection, ink
+     buttons. The switch in the top bar sets data-theme on <html>; base.html
+     does it before the first paint. Both blocks define the same names, and no
+     rule below names a colour of its own (test_theme.py holds that), so a rule
+     never has to know which theme it is drawn in.
 
-     An unbracketed rgb triple rather than a hex, because the alphas have to be
-     derived from it: rgb() with a slash accepts a custom property, and there is
-     no arithmetic over a hex that every browser this runs in supports. The
-     triple below is #6d4aff. */
+     The accent as an unbracketed rgb triple, because the alphas are derived
+     from it: rgb() with a slash accepts a custom property. #6d4aff. */
   --accent-rgb: 109 74 255;
-
   --tint: rgb(var(--accent-rgb));
   --tint-wash: rgb(var(--accent-rgb) / .10);
   --tint-wash-soft: rgb(var(--accent-rgb) / .05);
   --tint-line: rgb(var(--accent-rgb) / .20);
   --tint-line-strong: rgb(var(--accent-rgb) / .30);
+  --tint-ink: #312e81;
   --accent: var(--tint);
+  --lime: #d5f563;
+  --on-lime: #192018;
 
-  /* Greys. The sidebar is the darkest plane, content sits lighter on top of
-     it, and cards are white — the macOS stacking, so depth comes from value
-     first and the hairline plus a whisper of shadow second. They carry a trace
-     of the accent's hue, so the ground sits *under* a violet interface rather
-     than beside it. */
+  /* The shell's own roles, so the sidebar can be light in one theme and black
+     in the other without a rule per theme. */
   --side-bg: #f0f2f5;
+  --side-ink: var(--ink-2);
+  --side-ink-strong: var(--ink);
+  --side-sect: var(--muted);
+  --side-hover: rgb(255 255 255 / .7);
+  --side-line: var(--line);
+  --side-on-bg: var(--card);
+  --side-on-ink: var(--ink);
+  --side-on-icon: var(--tint);
+  --side-on-shadow: 0 1px 3px rgb(32 35 45 / .04);
+  --side-chip: var(--alert);
+  --side-chip-ink: #ffffff;
+  --side-chip-on: var(--alert);
+  --side-chip-on-ink: #ffffff;
+  --mark: var(--tint);
+  --brand-ink: var(--ink);
+  /* The primary button and the assistant button. */
+  --action: var(--tint);
+  --on-action: #ffffff;
+  --assist: var(--tint);
+  --on-assist: #ffffff;
+
+  /* Greys, with a trace of the accent's hue. */
+  --ink-rgb: 32 35 45;
   --ground: #f8f9fb;
   --card: #ffffff;
+  --card-2: #f9fafb;
   --fill: rgba(78, 74, 110, 0.10);
   --fill-2: rgba(78, 74, 110, 0.06);
   --fill-strong: rgba(78, 74, 110, 0.18);
-
   --ink: #20232d;
   --ink-2: rgba(27, 26, 38, 0.82);
   --muted: #656b78;
@@ -65,15 +86,42 @@
   --line: #e2e5eb;
   --line-strong: #cbd0d9;
 
-  --alert: #d70015;
-  --good: #248a3d;
-  --warn: #b25000;
-  /* The bar a company that is neither the mandate nor an alert is drawn in.
-     Named because the KI-Sichtbarkeit ranking draws every other firm in it. */
+  /* Status families: colour, wash, hairline, and a deep ink for text on the
+     wash. Each as a triple so alphas derive from it. */
+  --good-rgb: 36 138 61;
+  --warn-rgb: 178 80 0;
+  --alert-rgb: 215 0 21;
+  --info-rgb: 0 113 164;
+  --purple-rgb: 137 68 171;
+  --good: rgb(var(--good-rgb));
+  --warn: rgb(var(--warn-rgb));
+  --alert: rgb(var(--alert-rgb));
+  --info: rgb(var(--info-rgb));
+  --purple: rgb(var(--purple-rgb));
+  --good-ink: #14532d;
+  --warn-ink: #92400e;
+  --alert-ink: #7f1d1d;
+  --info-ink: #0b4a68;
+  --purple-ink: #4a1d63;
+  --good-wash: rgb(var(--good-rgb) / .10);
+  --warn-wash: rgb(var(--warn-rgb) / .10);
+  --alert-wash: rgb(var(--alert-rgb) / .09);
+  --info-wash: rgb(var(--info-rgb) / .10);
+  --purple-wash: rgb(var(--purple-rgb) / .10);
+  --good-line: rgb(var(--good-rgb) / .30);
+  --warn-line: rgb(var(--warn-rgb) / .25);
+  --alert-line: rgb(var(--alert-rgb) / .28);
+  --info-line: rgb(var(--info-rgb) / .28);
+  --purple-line: rgb(var(--purple-rgb) / .28);
+  --alertbg: var(--alert-wash);
+  --alert-bg: var(--alert-wash);
+  /* The bar a company that is neither the mandate nor an alert is drawn in. */
   --neutral: #a1a1aa;
-  --purple: #8944ab;
   --pink: #d30f45;
-  --teal: #0071a4;
+  --teal: var(--info);
+  /* Text on a saturated fill: alert badge, status chip, monogram. */
+  --on-fill: #ffffff;
+  --scrim: rgba(15, 23, 42, 0.44);
 
   /* The macOS type scale, one point up. Nothing outside this list. */
   --t-caption2: 10px;
@@ -90,28 +138,18 @@
   --s1: 4px;  --s2: 8px;  --s3: 12px; --s4: 16px;
   --s5: 20px; --s6: 24px; --s7: 32px; --s8: 48px;
 
-  /* Softer corners than the macOS 10px, and a shadow that exists at all. The
-     hairline still does the separating; the shadow only says a card sits one
-     step above the ground, which at this strength reads as depth and not as
-     glow. */
   --radius: 12px;
   --radius-s: 8px;
   --radius-pill: 980px;
   --shadow: 0 1px 2px rgba(30, 28, 48, .05), 0 1px 3px rgba(30, 28, 48, .04);
-  --side-w: 232px;
+  --shadow-lift: 0 4px 12px rgba(28, 31, 55, .10), 0 1px 3px rgba(28, 31, 55, .06);
+  --side-w: 250px;
   --col: 1360px;
-  /* The ground, translucent: what the two sticky bars are drawn on so the page
-     blurs through them. Same colour as --ground, and a token because two rules
-     need it and two literals drift. */
+  /* The ground, translucent: what the two sticky bars are drawn on. */
   --veil: rgba(255, 255, 255, .96);
-  /* Fixed, not derived: the toolbar sticks *below* the top bar, and "below"
-     needs a number. Two sticky bars both pinned to 0 land on each other. */
-  --topbar-h: 64px;
-
-  /* How much darker a filled accent control goes when pressed or hovered. A
-     brightness filter rather than a second stored colour: a stored one is a
-     second place the accent lives, and it would drift the first time the line
-     above changes. */
+  /* Fixed: the toolbar sticks *below* the top bar, and "below" needs a number. */
+  --topbar-h: 72px;
+  /* How much darker a filled control goes when pressed or hovered. */
   --press: 0.90;
 
   --paper: var(--card);
@@ -120,25 +158,77 @@
   --surface: var(--card);
   --border: var(--line);
   --text: var(--ink);
-  --alertbg: rgba(215, 0, 21, .09);
-  --alert-bg: var(--alertbg);
-  --alert-wash: var(--alertbg);
-  --good-wash: rgba(36, 138, 61, .10);
-  --warn-wash: rgba(178, 80, 0, .10);
-  /* The hairline that goes with the warn wash. A wash needs a border of its
-     own or the tinted box floats: --line is a grey and reads as a seam on a
-     coloured plane. */
-  --warn-line: rgba(178, 80, 0, .25);
 
-  /* The plan's hook classes: the four source classes its mock names, plus the
-     fifth (a theme with measured resonance) that is a hook class in the engine
-     and needs a swatch of its own rather than being folded into one of the
-     four. Same reason as above for living here and not beside the plan rules. */
+  /* The plan's hook classes. */
   --hook-study: #5856d6;
   --hook-reg: var(--warn);
   --hook-event: var(--tint);
-  --hook-thema: var(--teal);
+  --hook-thema: var(--info);
   --hook-archiv: var(--good);
+}
+
+/* --- Dunkel: the rauteOS prototype -----------------------------------------
+   Lime is a surface (selection, assistant), never text: on a light ground it
+   cannot be read. The accent as ink is olive. */
+:root[data-theme="dark"] {
+  --accent-rgb: 90 111 69;            /* olive #5a6f45 */
+  --tint-line: rgb(var(--accent-rgb) / .22);
+  --tint-line-strong: rgb(var(--accent-rgb) / .34);
+  --tint-ink: #3b4a2c;
+
+  --side-bg: #181a19;
+  --side-ink: #aeb6ad;
+  --side-ink-strong: #ffffff;
+  --side-sect: #6e786d;
+  --side-hover: #292d29;
+  --side-line: #343834;
+  --side-on-bg: var(--lime);
+  --side-on-ink: var(--on-lime);
+  --side-on-icon: var(--on-lime);
+  --side-on-shadow: none;
+  --side-chip: #384039;
+  --side-chip-ink: #d3d9d0;
+  --side-chip-on: #b6db42;
+  --side-chip-on-ink: #2a361c;
+  --mark: var(--lime);
+  --brand-ink: #ffffff;
+  --action: #1a1d1b;
+  --on-action: #ffffff;
+  --assist: var(--lime);
+  --on-assist: var(--on-lime);
+
+  --ink-rgb: 26 29 27;
+  --ground: #f5f6f4;
+  --card: #ffffff;
+  --card-2: #f9faf7;
+  --fill: rgb(var(--ink-rgb) / .08);
+  --fill-2: rgb(var(--ink-rgb) / .045);
+  --fill-strong: rgb(var(--ink-rgb) / .15);
+  --ink: #1a1d1b;
+  --ink-2: rgb(var(--ink-rgb) / .82);
+  --muted: #6b726c;
+  --faint: #7e857f;
+  --line: #e6e9e4;
+  --line-strong: #cfd5cb;
+
+  --good-rgb: 45 124 81;
+  --warn-rgb: 170 105 49;
+  --alert-rgb: 166 74 72;
+  --purple-rgb: 101 82 165;
+  --good-ink: #1f5a3a;
+  --warn-ink: #6e3f17;
+  --alert-ink: #6e2a29;
+  --purple-ink: #3f3176;
+  --neutral: #a1a6a0;
+  --pink: #b8456a;
+  --scrim: rgb(20 24 20 / .44);
+  --hook-study: var(--purple);
+
+  --radius: 16px;
+  --radius-s: 9px;
+  --shadow: 0 7px 24px rgb(24 31 22 / .045);
+  --shadow-lift: 0 12px 36px rgb(24 31 22 / .10);
+  --press: 0.92;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -175,7 +265,7 @@ body {
 .side__mark {
   display: inline-flex; align-items: center; justify-content: center;
   width: 24px; height: 24px; border-radius: var(--radius-s);
-  background: var(--tint); color: #fff;
+  background: var(--tint); color: var(--on-fill);
   font-size: var(--t-subhead); font-weight: 700; line-height: 1;
 }
 .side__nav { display: flex; flex-direction: column; gap: 1px; }
@@ -197,12 +287,12 @@ body {
   font-size: var(--t-subhead); font-weight: 400; color: var(--ink);
   white-space: nowrap;
 }
-.side__row:hover { background: rgba(255, 255, 255, .7); text-decoration: none; }
+.side__row:hover { background: var(--side-hover); text-decoration: none; }
 /* Selected is a filled row, the way a Finder sidebar does it: the tint carries
    the selection, not a left border or a bolder weight bolted onto grey. */
 /* The selected row is the accent, filled — the one place in the navigation that
    carries it, so where you are is legible before a label is read. */
-.side__row.is-on { background: var(--tint); color: #fff; font-weight: 600; box-shadow: var(--shadow); }
+.side__row.is-on { background: var(--tint); color: var(--on-fill); font-weight: 600; box-shadow: var(--shadow); }
 .side__row.is-on:hover { background: var(--tint); }
 .side__row.is-off { opacity: .5; }
 .side__dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
@@ -212,10 +302,10 @@ body {
 .side__badge {
   margin-left: auto; flex: none;
   min-width: 18px; padding: 0 5px; border-radius: var(--radius-pill);
-  background: var(--alert); color: #fff;
+  background: var(--alert); color: var(--on-fill);
   font-size: var(--t-caption); font-weight: 600; line-height: 18px; text-align: center;
 }
-.side__row.is-on .side__badge { background: rgba(255, 255, 255, .28); }
+.side__row.is-on .side__badge { background: var(--side-chip-on); color: var(--side-chip-on-ink); }
 /* --- The new-mandate mask -------------------------------------------------- */
 /* Two columns: the three fields that have to be typed, and what the tool will
    do with them. The second column is not decoration — it is the answer to "what
@@ -289,7 +379,7 @@ body {
 .tbar__av { width: 28px; height: 28px; border-radius: 50%; flex: none; object-fit: cover; }
 .tbar__av--mono {
   display: inline-flex; align-items: center; justify-content: center;
-  color: #fff; font-size: var(--t-footnote); font-weight: 700; letter-spacing: 0;
+  color: var(--on-fill); font-size: var(--t-footnote); font-weight: 700; letter-spacing: 0;
 }
 .tbar__title:empty { display: none; }
 .datemeta { color: var(--muted); font-size: var(--t-footnote); text-align: left; line-height: 1.4; }
@@ -372,10 +462,10 @@ body {
   display: inline-flex; align-items: center; gap: 6px; flex: none;
   height: 30px; padding: 0 var(--s3);
   border: 0; border-radius: var(--radius-pill);
-  background: var(--tint); color: #fff;
+  background: var(--tint); color: var(--on-fill);
   font-size: var(--t-footnote); font-weight: 600; white-space: nowrap;
 }
-.askraute:hover { filter: brightness(var(--press)); text-decoration: none; color: #fff; }
+.askraute:hover { filter: brightness(var(--press)); text-decoration: none; color: var(--on-fill); }
 .askraute__ico { width: 14px; height: 14px; flex: none; }
 
 /* The icon set, drawn once as symbols in the layout and referenced by <use>.
@@ -498,7 +588,7 @@ a:hover { text-decoration: underline; }
 .fixlist__why { color: var(--muted); }
 .fixlist__num {
   flex: none; width: 20px; height: 20px; border-radius: 50%;
-  background: #eef2ff; color: #4338ca; font-size: var(--t-caption2); font-weight: 700;
+  background: var(--fill-2); color: var(--tint); font-size: var(--t-caption2); font-weight: 700;
   display: inline-flex; align-items: center; justify-content: center; margin-top: 1px;
 }
 .fixlist a { color: var(--accent); font-weight: 600; white-space: nowrap; }
@@ -506,7 +596,7 @@ a:hover { text-decoration: underline; }
    it are that run's, and presenting them as current would be a small lie. */
 .runstale { color: var(--muted); }
 
-.runok { color: #16a34a; font-weight: 600; }
+.runok { color: var(--good); font-weight: 600; }
 .runbad { color: var(--alert); font-weight: 600; }
 .runempty { font-style: italic; }
 
@@ -566,12 +656,12 @@ a:hover { text-decoration: underline; }
   cursor: pointer;
   white-space: nowrap;
 }
-.impulse__copy:hover { color: var(--ink); border-color: #cbd5e1; }
-.impulse__copy--done { color: #15803d; border-color: #86efac; background: #f0fdf4; }
+.impulse__copy:hover { color: var(--ink); border-color: var(--line-strong); }
+.impulse__copy--done { color: var(--good-ink); border-color: var(--good-line); background: var(--fill-2); }
 
 /* The age of a draft, always visible: a card may stand for a week. */
 .impulse__age { font-size: var(--t-caption2); color: var(--muted); white-space: nowrap; }
-.impulse__age--today { color: #16a34a; font-weight: 600; }
+.impulse__age--today { color: var(--good); font-weight: 600; }
 /* The mandates with nothing to send. Folded under the drafts rather than beside
    them: the column is called Impulse and a card of equal weight saying "no
    opening" is not one. Still present, because a rail that goes quiet without
@@ -642,11 +732,11 @@ a:hover { text-decoration: underline; }
   border-radius: var(--radius);
   margin-bottom: 6px;
 }
-.impulse__thesis { background: #f5f3ff; }
+.impulse__thesis { background: var(--card-2); }
 /* Muted, not hidden: it is the claim the draft refuses, and seeing it is how the
    reader checks that the message did not drift into it. */
-.impulse__overclaim { background: #fafafa; color: var(--muted); }
-.impulse__overclaim .impulse__label { color: #b91c1c; }
+.impulse__overclaim { background: var(--card-2); color: var(--muted); }
+.impulse__overclaim .impulse__label { color: var(--alert); }
 
 .impulse__more { margin-top: 8px; font-size: var(--t-footnote); }
 .impulse__more summary { cursor: pointer; color: var(--muted); font-size: var(--t-caption); }
@@ -699,10 +789,10 @@ a:hover { text-decoration: underline; }
 .acard .hl { font-size: var(--t-subhead); font-weight: 600; margin-bottom: 4px; }
 .acard .hl a { color: var(--ink); text-decoration: none; }
 .acard .hl a:hover { text-decoration: underline; }
-.acard .sum { font-size: var(--t-footnote); color: #52290f; margin-bottom: 7px; }
+.acard .sum { font-size: var(--t-footnote); color: var(--warn-ink); margin-bottom: 7px; }
 .acard .meta {
   font-size: var(--t-caption2);
-  color: #9a3412;
+  color: var(--alert-ink);
   display: flex;
   align-items: center;
   gap: 7px;
@@ -726,7 +816,7 @@ a:hover { text-decoration: underline; }
   margin-bottom: 5px;
 }
 .crisis__badge {
-  background: var(--alert); color: #fff; border-radius: 5px;
+  background: var(--alert); color: var(--on-fill); border-radius: 5px;
   padding: 1px 7px; font-size: var(--t-caption2); font-weight: 700;
   text-transform: uppercase; letter-spacing: 0.04em;
 }
@@ -775,7 +865,7 @@ a:hover { text-decoration: underline; }
   width: 30px;
   height: 30px;
   border-radius: var(--radius);
-  background: #eef0fb;
+  background: var(--fill-2);
   color: var(--accent);
   font-weight: 700;
   font-size: var(--t-footnote);
@@ -785,8 +875,8 @@ a:hover { text-decoration: underline; }
 }
 /* An alert keeps its identity in the ranked feed too: the rail is the "act now"
    shortlist, but someone scanning the full feed must still see which rows fired. */
-.item--alert { background: rgba(255, 59, 48, .05); }
-.item--alert .score { background: #fee2e2; color: #b91c1c; }
+.item--alert { background: rgb(var(--alert-rgb) / 0.05); }
+.item--alert .score { background: var(--fill-2); color: var(--alert); }
 .body { flex: 1; min-width: 0; }
 .toprow {
   display: flex;
@@ -806,7 +896,7 @@ a:hover { text-decoration: underline; }
 .hl a:hover { text-decoration: underline; }
 .sum { font-size: var(--t-subhead); color: var(--muted); margin-bottom: var(--s2); max-width: 74ch; }
 .meta { font-size: var(--t-footnote); color: var(--muted); }
-.dot { color: #c7cbd1; }
+.dot { color: var(--line-strong); }
 
 /* --- Category and tonality ------------------------------------------------ */
 /* A caption in the system colour for its kind. Apple tints the *word*; a filled
@@ -861,7 +951,7 @@ a:hover { text-decoration: underline; }
   font-weight: 700;
   padding: 2px 8px;
   border-radius: var(--radius);
-  background: #eef0fb;
+  background: var(--fill-2);
   color: var(--accent);
 }
 .pickup-list { display: inline; }
@@ -872,7 +962,7 @@ a:hover { text-decoration: underline; }
   list-style: none;
 }
 .pickup-list > summary::-webkit-details-marker { display: none; }
-.pickup-list > summary::before { content: "· "; color: #c7cbd1; }
+.pickup-list > summary::before { content: "· "; color: var(--line-strong); }
 .pickup-list > summary:hover { text-decoration: underline; }
 .pickup-list ul { margin: 6px 0 0; padding-left: 16px; }
 .pickup-list li { font-size: var(--t-caption); color: var(--muted); }
@@ -916,7 +1006,7 @@ a:hover { text-decoration: underline; }
 :where(.run-form, .sect__act, .panel) button:where(:not(.linkbtn, .rolebtn, .rival, .feedgroup__all)) {
   font: inherit; font-size: var(--t-subhead); font-weight: 600; letter-spacing: -0.01em;
   padding: 8px 16px; border: 0; border-radius: var(--radius-s);
-  background: var(--tint); color: #fff; cursor: pointer; white-space: nowrap;
+  background: var(--tint); color: var(--on-fill); cursor: pointer; white-space: nowrap;
 }
 .btn:hover:not(:disabled),
 :where(.run-form, .sect__act, .panel) button:where(:not(.linkbtn, .rolebtn, .rival, .feedgroup__all)):hover:not(:disabled) {
@@ -935,13 +1025,13 @@ a:hover { text-decoration: underline; }
 .btn--ghost { background: var(--fill); color: var(--tint); }
 /* The one filled button in the app that destroys something. */
 /* The day-fallback band: informative, not an error. */
-.notice--day { background: #eef2ff; border-color: #c7d2fe; color: #3730a3; margin-bottom: 14px; }
+.notice--day { background: var(--fill-2); border-color: var(--tint-line); color: var(--tint); margin-bottom: 14px; }
 .notice--day a { color: var(--accent); font-weight: 600; }
 .btn--danger { background: var(--alert); }
-.btn--danger:hover { background: #b91c1c; }
+.btn--danger:hover { background: var(--alert); }
 .btn--quiet { background: var(--fill); color: var(--ink-2); font-weight: 500; }
 .btn.secondary, .panel button.secondary { background: var(--card); color: var(--accent); }
-.btn.danger, .panel button.danger { background: var(--card); color: var(--alert); border-color: #fca5a5; }
+.btn.danger, .panel button.danger { background: var(--card); color: var(--alert); border-color: var(--alert-line); }
 
 /* A control that reads as a link: row actions, and anything destructive enough
    that it must not look like the primary thing to click. Defined here rather
@@ -978,7 +1068,7 @@ a:hover { text-decoration: underline; }
    monitored pool behind an expander. A bare <select> under the table said
    nothing about what it did, and offering the whole pool is how a finance
    platform came to be shown fashion brands. */
-.tag--rival { background: #eef0fb; color: var(--accent); margin-right: 0.25rem; text-transform: none; }
+.tag--rival { background: var(--fill-2); color: var(--accent); margin-right: 0.25rem; text-transform: none; }
 .rivalbox { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
 .rivalbox__label {
   display: block; font-size: var(--t-caption2); font-weight: 700; text-transform: uppercase;
@@ -1012,7 +1102,7 @@ a:hover { text-decoration: underline; }
    The measurement stays visible rather than hidden behind a filter. */
 .rival--empty { opacity: 0.55; border-style: dotted; }
 .rival--empty .rival__name { color: var(--muted); }
-.rival__why strong { color: #047857; font-size: 0.8rem; }
+.rival__why strong { color: var(--good-ink); font-size: 0.8rem; }
 .rival__sample { font-style: italic; opacity: .85; }
 
 /* --- Where to send a draft ------------------------------------------------ */
@@ -1031,8 +1121,8 @@ a:hover { text-decoration: underline; }
 .pitchlist__who { font-weight: 600; margin-right: 6px; }
 .pitchlist__new {
   font-size: var(--t-caption2); font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.03em; color: #a16207; background: #fffbeb;
-  border: 1px solid #fde68a; border-radius: var(--radius); padding: 1px 7px; margin-right: 6px;
+  letter-spacing: 0.03em; color: var(--warn-ink); background: var(--fill-2);
+  border: 1px solid var(--warn-line); border-radius: var(--radius); padding: 1px 7px; margin-right: 6px;
 }
 /* Already written to about this very angle, within the quarter the list reads.
    Warm rather than alarming: it is a caution the reader may override, not a
@@ -1040,8 +1130,8 @@ a:hover { text-decoration: underline; }
    mark beside it. */
 .pitchlist__seen {
   font-size: var(--t-caption2); font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.03em; color: var(--warn); background: rgba(178, 80, 0, 0.10);
-  border: 1px solid rgba(178, 80, 0, 0.28); border-radius: var(--radius);
+  letter-spacing: 0.03em; color: var(--warn); background: rgb(var(--warn-rgb) / 0.1);
+  border: 1px solid rgb(var(--warn-rgb) / 0.28); border-radius: var(--radius);
   padding: 1px 7px; margin-right: 6px;
 }
 .pitchlist__why { color: var(--muted); }
@@ -1089,7 +1179,7 @@ a:hover { text-decoration: underline; }
 .btn--sm { font-size: var(--t-caption); padding: 5px 12px; }
 
 .letter {
-  margin-top: 12px; border: 1px solid var(--line); border-left: 3px solid #059669;
+  margin-top: 12px; border: 1px solid var(--line); border-left: 3px solid var(--good-ink);
   border-radius: var(--radius); background: var(--card); padding: 14px 16px;
 }
 .letter__head {
@@ -1118,18 +1208,18 @@ a:hover { text-decoration: underline; }
    for a clean bill of health, which is the whole failure this guards against. */
 .crosscheck {
   margin-top: 10px; padding: 8px 10px; border-radius: var(--radius);
-  background: #f0fdf4; border: 1px solid #bbf7d0;
-  font-size: var(--t-caption); color: #14532d;
+  background: var(--fill-2); border: 1px solid var(--good-line);
+  font-size: var(--t-caption); color: var(--good-ink);
 }
-.crosscheck .impulse__label { color: #15803d; }
+.crosscheck .impulse__label { color: var(--good-ink); }
 .crosscheck ul { margin: 4px 0 0 16px; padding: 0; }
-.crosscheck--hold { background: #fffbeb; border-color: #fde68a; color: #92400e; }
-.crosscheck--hold .impulse__label { color: #b45309; }
+.crosscheck--hold { background: var(--fill-2); border-color: var(--warn-line); color: var(--warn-ink); }
+.crosscheck--hold .impulse__label { color: var(--warn); }
 .crosscheck--none {
   background: var(--bg); border-color: var(--line); color: var(--muted);
 }
 .crosscheck--none a { color: var(--accent); }
-.crosscheck__clean { color: #15803d; }
+.crosscheck__clean { color: var(--good-ink); }
 /* The check's own version, rendered only when it differs from the letter's. Same
    weight as the letter's stamp below it: it is provenance, not a warning. */
 .crosscheck__stamp { display: block; margin-top: var(--s1); font-size: var(--t-caption2); color: var(--faint); }
@@ -1150,13 +1240,13 @@ a:hover { text-decoration: underline; }
   border: 1px solid var(--line); color: var(--muted); background: var(--bg);
 }
 .state__badge--raus { color: var(--tint); background: var(--tint-wash); border-color: var(--tint-line-strong); }
-.state__badge--antwort { color: #14532d; background: rgba(36, 138, 61, 0.1); border-color: rgba(36, 138, 61, 0.3); }
-.state__badge--absage { color: #b25000; background: rgba(178, 80, 0, 0.1); border-color: rgba(178, 80, 0, 0.28); }
-.state__badge--veroeffentlicht { color: #14532d; background: rgba(36, 138, 61, 0.16); border-color: rgba(36, 138, 61, 0.4); }
+.state__badge--antwort { color: var(--good-ink); background: rgb(var(--good-rgb) / 0.1); border-color: rgb(var(--good-rgb) / 0.3); }
+.state__badge--absage { color: var(--warn); background: rgb(var(--warn-rgb) / 0.1); border-color: rgb(var(--warn-rgb) / 0.28); }
+.state__badge--veroeffentlicht { color: var(--good-ink); background: rgb(var(--good-rgb) / 0.16); border-color: rgb(var(--good-rgb) / 0.4); }
 /* The quiet second badge. Crosscheck-hold's amber — "worth a look", not an
    alarm — and distinct from the base grey, so a silent letter cannot be read
    as carrying a draft badge. */
-.state__badge--still { color: #92400e; background: #fffbeb; border-color: #fde68a; }
+.state__badge--still { color: var(--warn-ink); background: var(--fill-2); border-color: var(--warn-line); }
 .state__when { font-size: var(--t-caption); color: var(--muted); }
 .state__acts { margin-left: auto; display: flex; gap: 8px; align-items: center; }
 /* The honest note under an unreleased letter. Nothing is sent from here, and the
@@ -1201,40 +1291,40 @@ a:hover { text-decoration: underline; }
    markup is a hook nobody restyling the block would know is load-bearing. */
 .guidecheck {
   margin-top: 6px; padding: 8px 10px; border-radius: var(--radius);
-  background: #eef2ff; border: 1px solid #c7d2fe; border-left: 3px solid #4f46e5;
-  font-size: var(--t-caption); color: #312e81;
+  background: var(--fill-2); border: 1px solid var(--tint-line); border-left: 3px solid var(--tint);
+  font-size: var(--t-caption); color: var(--tint-ink);
 }
-.guidecheck .impulse__label { color: #4338ca; display: block; }
+.guidecheck .impulse__label { color: var(--tint); display: block; }
 .guidecheck ul { list-style: none; margin: 4px 0 0; padding: 0; }
 .guidecheck li { margin-top: 6px; }
-.guidecheck__verdict { color: #4338ca; }
+.guidecheck__verdict { color: var(--tint); }
 /* The clean verdict. Blue where the crosscheck's clean verdict is green, and
    spelled out here rather than left to the base so that restyling this one state
    has an obvious home. */
 .guidecheck--clean {
-  background: #eef2ff; border-color: #c7d2fe; border-left-color: #4f46e5;
-  color: #312e81;
+  background: var(--fill-2); border-color: var(--tint-line); border-left-color: var(--tint);
+  color: var(--tint-ink);
 }
 /* A breach is the one state here that is not advisory in tone: the client wrote
    the rule down. Red, and unmistakably not the crosscheck's amber "would hold". */
 .guidecheck--breach {
-  background: #fef2f2; border-color: #fecaca; border-left-color: #b91c1c;
-  color: #7f1d1d;
+  background: var(--card-2); border-color: var(--alert-line); border-left-color: var(--alert);
+  color: var(--alert-ink);
 }
-.guidecheck--breach .impulse__label { color: #b91c1c; }
+.guidecheck--breach .impulse__label { color: var(--alert); }
 /* The pair, in the order it is judged in: the sentence that was written, then the
    line it collides with. Blocks rather than a run of text, because a quote that
    wraps into the next quote cannot be told from it. */
 .guidecheck__draft, .guidecheck__line { display: block; font-style: italic; }
 .guidecheck__against {
   display: block; margin: 2px 0; font-style: normal; text-transform: uppercase;
-  letter-spacing: 0.04em; font-size: var(--t-caption2); color: #b91c1c;
+  letter-spacing: 0.04em; font-size: var(--t-caption2); color: var(--alert);
 }
 .guidecheck--none {
-  background: #fffbeb; border-color: #fde68a; border-left-color: #d97706;
-  color: #92400e;
+  background: var(--fill-2); border-color: var(--warn-line); border-left-color: var(--warn);
+  color: var(--warn-ink);
 }
-.guidecheck--none a { color: #b45309; }
+.guidecheck--none a { color: var(--warn); }
 
 /* --- Shared surfaces ------------------------------------------------------ */
 /* Card, table and status box. Every one of these was declared only in
@@ -1319,8 +1409,8 @@ input[type="file"]::file-selector-button:hover { border-color: var(--accent); }
 .actions { display: flex; gap: 0.75rem; align-items: center; margin-top: 0.5rem; }
 
 .notice { border-radius: var(--radius); padding: 0.55rem 0.75rem; margin-bottom: 0.8rem; font-size: 0.85rem; }
-.notice--error { background: var(--alert-bg); border: 1px solid #fca5a5; color: #b91c1c; }
-.notice--ok { background: #ecfdf5; border: 1px solid #6ee7b7; color: #047857; }
+.notice--error { background: var(--alert-bg); border: 1px solid var(--alert-line); color: var(--alert); }
+.notice--ok { background: var(--fill-2); border: 1px solid var(--good); color: var(--good-ink); }
 
 table.data { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
 table.data th, table.data td {
@@ -1394,29 +1484,29 @@ table.data th { color: var(--muted); font-weight: 600; }
   border-top: 1px solid var(--line);
   background: transparent;
 }
-.feed-item--alert { border-color: #fecaca; }
+.feed-item--alert { border-color: var(--alert-line); }
 .feed-item__head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 3px; }
 .feed-item__headline { font-size: var(--t-subhead); font-weight: 600; color: var(--ink); text-decoration: none; }
 .feed-item__headline:hover { text-decoration: underline; }
 .feed-item__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; font-size: var(--t-caption); color: var(--muted); }
-.feed-item__summary { font-size: var(--t-footnote); color: #40454f; margin-top: 5px; }
+.feed-item__summary { font-size: var(--t-footnote); color: var(--ink-2); margin-top: 5px; }
 .importance { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--accent); }
 
 /* The archive names its category chips `tag--<category>`; same hues as the
    Today feed's `t-<category>` so one story reads identically in both views. */
-.tag--produkt { background: #e0f2fe; color: #0369a1; }
-.tag--personalie { background: #ede9fe; color: #6d28d9; }
-.tag--wettbewerb { background: #f3e8ff; color: #7e22ce; }
-.tag--finanzen { background: #dcfce7; color: #15803d; }
-.tag--krise { background: #fee2e2; color: #b91c1c; }
-.tag--regulatorik { background: #fef3c7; color: #a16207; }
-.tag--sonstiges { background: #eef0f3; color: #4b5563; }
-.tag--alert { background: var(--alert); color: #fff; text-transform: uppercase; letter-spacing: 0.03em; }
+.tag--produkt { background: var(--fill-2); color: var(--info-ink); }
+.tag--personalie { background: var(--fill-2); color: var(--tint); }
+.tag--wettbewerb { background: var(--fill-2); color: var(--tint); }
+.tag--finanzen { background: var(--fill); color: var(--good-ink); }
+.tag--krise { background: var(--fill-2); color: var(--alert); }
+.tag--regulatorik { background: var(--warn-line); color: var(--warn-ink); }
+.tag--sonstiges { background: var(--fill-2); color: var(--ink-2); }
+.tag--alert { background: var(--alert); color: var(--on-fill); text-transform: uppercase; letter-spacing: 0.03em; }
 
 .pagination { display: flex; align-items: center; gap: 14px; margin-top: 14px; font-size: var(--t-footnote); }
 .page-link { color: var(--accent); text-decoration: none; }
 .page-link:hover { text-decoration: underline; }
-.page-link--disabled { color: #c7cbd1; pointer-events: none; }
+.page-link--disabled { color: var(--line-strong); pointer-events: none; }
 .page-indicator { color: var(--muted); }
 
 /* --- Empty state --------------------------------------------------------- */
@@ -1456,12 +1546,12 @@ table.sov th { font-size: var(--t-caption2); text-transform: uppercase; letter-s
 .sov-bar { display: inline-block; height: 8px; background: var(--accent); border-radius: var(--radius); vertical-align: middle; margin-right: 6px; min-width: 2px; }
 .advice { border-left: 3px solid var(--accent); }
 .situation { font-size: var(--t-footnote); }
-.kind-reaktiv { background: #fee2e2; color: #b91c1c; }
-.kind-proaktiv { background: #dcfce7; color: #15803d; }
-.kind-beobachten { background: #eef0f3; color: #4b5563; }
-.urgency-heute { background: #fef3c7; color: #a16207; }
-.urgency-diese_woche { background: #e0f2fe; color: #0369a1; }
-.urgency-laufend { background: #eef0f3; color: #6b7280; }
+.kind-reaktiv { background: var(--fill-2); color: var(--alert); }
+.kind-proaktiv { background: var(--fill); color: var(--good-ink); }
+.kind-beobachten { background: var(--fill-2); color: var(--ink-2); }
+.urgency-heute { background: var(--warn-line); color: var(--warn-ink); }
+.urgency-diese_woche { background: var(--fill-2); color: var(--info-ink); }
+.urgency-laufend { background: var(--fill-2); color: var(--muted); }
 .sov-panel { margin-bottom: 16px; }
 .sov-panel h2 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin: 0 0 0.85rem; }
 .sov-panel .panel-hint { font-size: var(--t-caption); color: var(--muted); margin-top: 8px; }
@@ -1475,7 +1565,7 @@ table.sov th { font-size: var(--t-caption2); text-transform: uppercase; letter-s
 /* --- Score legend -------------------------------------------------------- */
 .score-legend { display: inline-flex; align-items: center; gap: 5px; }
 .score--legend { width: 20px; height: 20px; font-size: var(--t-caption2); border-radius: var(--radius); }
-.pcard--benchmark { background: #fbfbfc; border-style: dashed; }
+.pcard--benchmark { background: var(--card-2); border-style: dashed; }
 
 /* --- Client identity ------------------------------------------------------ */
 .phead { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; }
@@ -1492,7 +1582,7 @@ table.sov th { font-size: var(--t-caption2); text-transform: uppercase; letter-s
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
+  color: var(--on-fill);
   font-weight: 700;
   font-size: var(--t-footnote);
   letter-spacing: 0.02em;
@@ -1509,27 +1599,27 @@ table.sov th { font-size: var(--t-caption2); text-transform: uppercase; letter-s
   background: transparent; color: var(--muted);
   border-bottom: 1px solid var(--line-strong);
 }
-.tone--positiv { background: transparent; color: var(--good); border-bottom-color: #86efac; }
+.tone--positiv { background: transparent; color: var(--good); border-bottom-color: var(--good-line); }
 .tone--neutral { background: transparent; color: var(--muted); }
-.tone--negativ { background: transparent; color: var(--alert); border-bottom-color: #fca5a5; }
+.tone--negativ { background: transparent; color: var(--alert); border-bottom-color: var(--alert-line); }
 
 /* --- Coverage map --------------------------------------------------------- */
 .mono-badge {
   display: inline-flex; align-items: center; justify-content: center;
   width: 22px; height: 22px; border-radius: var(--radius);
-  color: #fff; font-size: var(--t-caption2); font-weight: 700; flex: none;
+  color: var(--on-fill); font-size: var(--t-caption2); font-weight: 700; flex: none;
 }
 .gaps-head { color: var(--alert); }
 .gaps-head .n { background: transparent; color: var(--alert); }
 .gapgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; }
 .gapcard {
-  background: var(--card); border: 1px solid #fecaca; border-left: 3px solid var(--alert);
+  background: var(--card); border: 1px solid var(--alert-line); border-left: 3px solid var(--alert);
   border-radius: var(--radius); padding: 13px 14px;
 }
 .gapsource { font-weight: 700; font-size: var(--t-footnote); margin-bottom: 9px; }
 .gapbars { display: flex; flex-direction: column; gap: 5px; }
 .gapbar { display: flex; align-items: center; gap: 8px; }
-.gapbar__track { flex: 1; height: 8px; background: #eef0f3; border-radius: var(--radius); overflow: hidden; }
+.gapbar__track { flex: 1; height: 8px; background: var(--fill-2); border-radius: var(--radius); overflow: hidden; }
 .gapbar__fill { display: block; height: 100%; border-radius: var(--radius); }
 .gapbar__n { font-size: var(--t-caption); color: var(--muted); min-width: 18px; text-align: right; font-variant-numeric: tabular-nums; }
 .gapbar--missing .gapbar__n { color: var(--alert); font-weight: 700; }
@@ -1539,9 +1629,9 @@ table.covmap td.covcell { text-align: center; }
 .covdot {
   display: inline-flex; align-items: center; justify-content: center;
   min-width: 24px; height: 22px; padding: 0 6px; border-radius: var(--radius);
-  color: #fff; font-size: var(--t-caption2); font-weight: 700;
+  color: var(--on-fill); font-size: var(--t-caption2); font-weight: 700;
 }
-.covempty { color: #d5d8dd; }
+.covempty { color: var(--line-strong); }
 .covrow--gap > td:first-child { border-left: 3px solid var(--alert); font-weight: 600; }
 table.covmap th:first-child, table.covmap td:first-child { text-align: left; width: 40%; }
 table.covmap th.covcol { min-width: 74px; vertical-align: bottom; }
@@ -1566,7 +1656,7 @@ table.covmap th.covcol { min-width: 74px; vertical-align: bottom; }
 .cflogo { width: 18px; height: 18px; border-radius: var(--radius); object-fit: contain; background: #fff; flex: none; }
 .cflogo--mono {
   display: flex; align-items: center; justify-content: center;
-  color: #fff; font-size: var(--t-caption2); font-weight: 700;
+  color: var(--on-fill); font-size: var(--t-caption2); font-weight: 700;
 }
 .cfall { padding-left: 0; }
 .cfname { white-space: nowrap; }
@@ -1606,7 +1696,7 @@ table.covmap th.covcol { min-width: 74px; vertical-align: bottom; }
 .diverge__legend { display: flex; gap: 16px; justify-content: center; margin-bottom: 10px; font-size: var(--t-caption); color: var(--muted); }
 .diverge__key { display: inline-flex; align-items: center; gap: 6px; }
 .dk { width: 10px; height: 10px; border-radius: var(--radius); display: inline-block; }
-.dk--rival { background: #a16207; }
+.dk--rival { background: var(--warn-ink); }
 .dk--own { background: var(--accent); }
 .drow { display: grid; grid-template-columns: 170px 1fr 1px 1fr; align-items: center; gap: 8px; padding: 3px 0; }
 .drow__label {
@@ -1622,7 +1712,7 @@ table.covmap th.covcol { min-width: 74px; vertical-align: bottom; }
 .drow__right { display: flex; align-items: center; gap: 6px; }
 .drow__axis { width: 1px; height: 16px; background: var(--line); }
 .dbar { height: 9px; border-radius: var(--radius); display: block; }
-.dbar--rival { background: #a16207; }
+.dbar--rival { background: var(--warn-ink); }
 .dbar--own { background: var(--accent); }
 .dnum { font-size: var(--t-caption2); color: var(--muted); font-variant-numeric: tabular-nums; min-width: 14px; }
 .dnum--zero { color: var(--alert); font-weight: 700; }
@@ -1718,7 +1808,7 @@ table.covmap th.covcol { min-width: 74px; vertical-align: bottom; }
 /* Client identity, wherever it appears: the same circle, the same colour. */
 .plogo, .plogo--mono, .mono-badge, .cflogo, .cflogo--mono { border-radius: 50%; }
 .plogo, .plogo--mono { width: 26px; height: 26px; flex: none; font-size: var(--t-caption); font-weight: 700; }
-.plogo--mono { display: flex; align-items: center; justify-content: center; color: #fff; border: 0; }
+.plogo--mono { display: flex; align-items: center; justify-content: center; color: var(--on-fill); border: 0; }
 
 /* --- The mandate strip ---------------------------------------------------- */
 .clientfilter { display: flex; flex-wrap: wrap; gap: var(--s1); margin: 0 0 var(--s5); padding: 0; border: 0; }
@@ -1729,8 +1819,8 @@ table.covmap th.covcol { min-width: 74px; vertical-align: bottom; }
   font-size: var(--t-footnote); font-weight: 400; box-shadow: none;
 }
 .cfcard:hover { background: var(--fill); text-decoration: none; }
-.cfcard--on { background: var(--tint); color: #fff; font-weight: 600; }
-.cfcard--on .cfn { color: rgba(255, 255, 255, .78); }
+.cfcard--on { background: var(--tint); color: var(--on-fill); font-weight: 600; }
+.cfcard--on .cfn { color: var(--on-fill); opacity: .78; }
 .cfall { padding-left: 10px; }
 .cfn { font-size: var(--t-footnote); color: var(--faint); font-weight: 400; }
 .cflogo, .cflogo--mono { width: 18px; height: 18px; font-size: var(--t-caption2); }
@@ -1822,7 +1912,7 @@ table.covmap th.covcol { min-width: 74px; vertical-align: bottom; }
 .subtabs > a.active .subtabs__ico { opacity: 1; color: var(--tint); }
 .subtabs__id { display: none; }
 .subtabs__logo { width: 30px; height: 30px; border-radius: 50%; object-fit: contain; background: #fff; border: 1px solid var(--line); flex: none; }
-.subtabs__logo--mono { display: flex; align-items: center; justify-content: center; color: #fff; font-size: var(--t-caption); font-weight: 700; border: none; }
+.subtabs__logo--mono { display: flex; align-items: center; justify-content: center; color: var(--on-fill); font-size: var(--t-caption); font-weight: 700; border: none; }
 /* A download, not a destination — so it sits apart and does not read as a tab
    that will paint a page. */
 .subtabs__dl { margin-left: auto; font-size: var(--t-footnote); color: var(--tint); border-bottom-color: transparent; }
@@ -1839,7 +1929,7 @@ button, .btn {
 button:hover, .btn:hover { background: var(--fill-2); text-decoration: none; }
 button:disabled { opacity: .55; cursor: default; }
 /* The one filled button in the chrome: the action the whole app exists to run. */
-.btn--go { background: var(--tint); border-color: transparent; color: #fff; font-weight: 600; }
+.btn--go { background: var(--tint); border-color: transparent; color: var(--on-fill); font-weight: 600; }
 .btn--go:hover { background: var(--tint); filter: brightness(var(--press)); }
 .btn--busy { display: inline-flex; align-items: center; gap: var(--s2); }
 
@@ -1873,7 +1963,7 @@ button:disabled { opacity: .55; cursor: default; }
 .signin__mark {
   display: inline-flex; align-items: center; justify-content: center;
   width: 44px; height: 44px; border-radius: 11px; margin-bottom: var(--s4);
-  background: var(--tint); color: #fff; font-size: var(--t-title2); font-weight: 700; line-height: 1;
+  background: var(--tint); color: var(--on-fill); font-size: var(--t-title2); font-weight: 700; line-height: 1;
 }
 .signin__title { font-size: var(--t-title1); font-weight: 700; letter-spacing: -0.022em; margin-bottom: var(--s2); }
 .signin__lead { font-size: var(--t-subhead); color: var(--muted); margin-bottom: var(--s5); }
@@ -1911,7 +2001,7 @@ button:disabled { opacity: .55; cursor: default; }
   font: inherit; font-size: var(--t-footnote); color: var(--muted);
   cursor: pointer; text-align: left;
 }
-.side__outbtn:hover { background: rgba(255, 255, 255, .6); color: var(--ink); }
+.side__outbtn:hover { background: var(--side-hover); color: var(--ink); }
 .side__outbtn .side__nm { flex: 1; }
 .side__outmark { flex: none; opacity: .5; }
 
@@ -2104,10 +2194,10 @@ button:disabled { opacity: .55; cursor: default; }
 
 /* The class tags. The base `.tag` is the global one; these are its five plan
    variants, one per Herkunftsklasse, in the mock's colours. */
-.tag--study { background: rgba(88, 86, 214, 0.10); color: var(--hook-study); }
+.tag--study { background: rgb(var(--accent-rgb) / 0.1); color: var(--hook-study); }
 .tag--reg { background: var(--warn-wash); color: var(--hook-reg); }
 .tag--event { background: var(--tint-wash); color: var(--hook-event); }
-.tag--thema { background: rgba(0, 113, 164, 0.10); color: var(--hook-thema); }
+.tag--thema { background: rgb(var(--info-rgb) / 0.1); color: var(--hook-thema); }
 .tag--archiv { background: var(--good-wash); color: var(--hook-archiv); }
 .tag--done { background: var(--good-wash); color: var(--good); font-weight: 600; }
 
@@ -2223,7 +2313,7 @@ button:disabled { opacity: .55; cursor: default; }
           border: 1px dashed var(--line-strong); border-radius: var(--radius);
           padding: var(--s2) var(--s4); margin: calc(var(--s6) * -1 + var(--s2)) 0 var(--s6); }
 .koffer__badge { font-size: var(--t-caption); font-weight: 700; background: var(--warn);
-                 color: #fff; border-radius: 5px; padding: 1px 7px; }
+                 color: var(--on-fill); border-radius: 5px; padding: 1px 7px; }
 .koffer__t { font-size: var(--t-subhead); font-weight: 600; min-width: 0; }
 .koffer__why { font-size: var(--t-caption); color: var(--muted); }
 .subtabs > a.subtabs__hot { color: var(--alert); font-weight: 600; }
@@ -2253,7 +2343,7 @@ button:disabled { opacity: .55; cursor: default; }
   display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
 }
 .njack__badge {
-  background: var(--accent); color: #fff; border-radius: 5px;
+  background: var(--accent); color: var(--on-fill); border-radius: 5px;
   padding: 1px 7px; font-size: var(--t-caption2); font-weight: 700;
   text-transform: uppercase; letter-spacing: 0.04em;
 }
@@ -2357,7 +2447,7 @@ button:disabled { opacity: .55; cursor: default; }
 .reg { display: grid; grid-template-columns: minmax(0, 1fr) 240px; gap: var(--s5); }
 .reg__map--full { width: auto; }
 @media (max-width: 900px) { .reg { grid-template-columns: 1fr; } }
-.koffer__badge--issue { background: var(--purple); color: #fff; }
+.koffer__badge--issue { background: var(--purple); color: var(--on-fill); }
 .koffer__note { font-size: var(--t-caption2); color: var(--faint); flex-basis: 100%; }
 
 .icard {
@@ -2798,7 +2888,7 @@ button:disabled { opacity: .55; cursor: default; }
 .rail__e:has(.rail__x[open]) { max-width: 340px; }
 .rail__confirm {
   margin: 0 var(--s3) var(--s3); padding: var(--s3);
-  border: 1px solid rgba(220, 38, 38, .3); border-radius: var(--radius);
+  border: 1px solid rgb(var(--alert-rgb) / 0.3); border-radius: var(--radius);
   background: var(--alert-wash);
 }
 .rail__confirm p { margin: 0 0 var(--s2); font-size: var(--t-footnote); color: var(--ink-2); max-width: none; }
@@ -2824,9 +2914,9 @@ button:disabled { opacity: .55; cursor: default; }
 .rail__e:focus-within .rail__xb,
 .rail__x[open] > .rail__xb { opacity: 1; }
 
-.rail__xb:hover { background: var(--alert); color: #fff; }
+.rail__xb:hover { background: var(--alert); color: var(--on-fill); }
 
-.rail__x[open] > .rail__xb { background: var(--alert); color: #fff; }
+.rail__x[open] > .rail__xb { background: var(--alert); color: var(--on-fill); }
 
 .rail__xb:focus-visible { opacity: 1; outline: 2px solid var(--tint); outline-offset: 2px; }
 
@@ -2859,7 +2949,7 @@ button:disabled { opacity: .55; cursor: default; }
 
 .confirm {
   margin-top: 10px; padding: 12px; border-radius: var(--radius);
-  border: 1px solid rgba(220, 38, 38, .3); background: var(--alert-wash);
+  border: 1px solid rgb(var(--alert-rgb) / 0.3); background: var(--alert-wash);
 }
 
 .confirm p { font-size: var(--t-footnote); color: var(--alert); margin-bottom: 10px; max-width: 64ch; }
@@ -2905,7 +2995,7 @@ button:disabled { opacity: .55; cursor: default; }
   position: fixed; inset: 0; z-index: 60;
   display: flex; align-items: flex-start; justify-content: center;
   padding: var(--s6) var(--s4);
-  background: rgba(15, 23, 42, 0.44);
+  background: var(--scrim);
   overflow-y: auto;
 }
 .sheet__win {
@@ -2940,9 +3030,9 @@ button:disabled { opacity: .55; cursor: default; }
   transition: background .12s ease, color .12s ease;
 }
 .sheet__x .ico { width: 12px; height: 12px; }
-.sheet__bar:hover .sheet__x { color: rgba(15, 23, 42, 0.55); }
-.sheet__x:hover { background: var(--alert); color: #fff; }
-.sheet__x:focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; color: #fff; background: var(--alert); }
+.sheet__bar:hover .sheet__x { color: rgb(var(--ink-rgb) / 0.55); }
+.sheet__x:hover { background: var(--alert); color: var(--on-fill); }
+.sheet__x:focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; color: var(--on-fill); background: var(--alert); }
 .sheet__b { padding: var(--s5); overflow-y: auto; }
 /* The questionnaire's own two columns collapse inside the window on a narrow
    screen exactly as they did on the page. */
@@ -2979,7 +3069,7 @@ body:has([id^="react-"]) .content{padding-top:16px}
 @media(max-width:600px){.profile-section{padding:18px}.profile-page .prof{grid-template-columns:1fr}.profile-page .props__row,.profile-page .rival__head{flex-wrap:wrap}.profile-page .voice{font-size:12px}.profile-page .voice th,.profile-page .voice td{padding-right:8px}.profile-page .guide__actions{flex-wrap:wrap}}
 
 /* Keep the measurement question visible before its statistics. */
-.vis-standard { border-top: 3px solid var(--accent, #7353ff); }
+.vis-standard { border-top: 3px solid var(--accent, var(--tint)); }
 .vis-standard__question { font-size: clamp(1.15rem, 2vw, 1.6rem); line-height: 1.4; max-width: 65ch; margin: .6rem 0; }
 .vis-add-question > summary { padding: 1rem 1.25rem; cursor: pointer; font-weight: 600; }
 .vis-add-question textarea { display: block; width: 100%; margin: .5rem 0 1rem; }
@@ -3018,7 +3108,7 @@ summary:focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; }
 }
 .profile-logo--mono {
   display: inline-flex; align-items: center; justify-content: center; padding: 0; border: 0;
-  color: #fff; font-size: 20px; font-weight: 700; letter-spacing: 0;
+  color: var(--on-fill); font-size: 20px; font-weight: 700; letter-spacing: 0;
 }
 /* The same mark wherever the mandate's name stands: sidebar, breadcrumb,
    client cards and page headings. /client/{id}/logo answers with the monogram

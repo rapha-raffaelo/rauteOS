@@ -3,6 +3,29 @@ import { createRoot } from "react-dom/client";
 import { createPortal } from "react-dom";
 import { t, Action } from "./platform/shared.jsx";
 import { ClientLogo } from "./components/ClientLogo.jsx";
+export function ThemeSwitch() {
+  // Absent when the shell is rendered on the server (render tests): Hell.
+  const root = globalThis.document?.documentElement;
+  const [dark, setDark] = useState(root?.getAttribute("data-theme") === "dark");
+  function flip() {
+    const next = dark ? "light" : "dark";
+    root.setAttribute("data-theme", next);
+    try {
+      localStorage.setItem("raute-theme", next);
+    } catch (e) {
+      // Private window or blocked storage: the switch still works for this page.
+    }
+    setDark(!dark);
+  }
+  const label = t("Dunkler Modus");
+  return (
+    <button type="button" className="theme-switch" onClick={flip} aria-pressed={dark} aria-label={label} title={label}>
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.6 1.1 1.3 1.1 2.2h5c0-.9.4-1.6 1.1-2.2A6 6 0 0 0 12 3z" />
+      </svg>
+    </button>
+  );
+}
 export function ClientTabs({ data, path = window.location.pathname }) {
   const { client, active, crisis } = data;
   const base = `/client/${client.id}`;
@@ -147,7 +170,7 @@ export function Shell({ data, portals = true }) {
       style={{ display: "contents" }}
     >
       <a className="side__brand" href="/">
-        <span className="side__mark">#</span>RauteOS
+        <span className="side__mark" aria-hidden="true"></span>rauteOS
       </a>
       <button
         ref={toggle}
@@ -277,6 +300,7 @@ export function Shell({ data, portals = true }) {
             </form>
           ))}
         </div>
+        <ThemeSwitch />
       </div>
     </div>
   );

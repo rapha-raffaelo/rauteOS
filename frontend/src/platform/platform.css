@@ -152,7 +152,7 @@
   background: var(--card);
 }
 .platform-dialog::backdrop {
-  background: rgb(20 25 40 / 0.4);
+  background: var(--scrim);
 }
 .platform-dialog > header {
   display: flex;

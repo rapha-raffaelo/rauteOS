@@ -2607,6 +2607,7 @@ _EN: dict[str, str] = {
     # The named gap: the most important row of the map, never a blank cell.
     "Kein Ansprechpartner benannt.": "No contact person named.",
     "Im Profil nachtragen": "Add it in the profile",
+    "Dunkler Modus": "Dark mode",
     "Zum Profil": "To the profile",
     "Gruppe hinzufügen": "Add a group",
     "Zeile entfernen": "Remove the row",

@@ -4,6 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}RauteOS{% endblock %}</title>
+  {# The theme, before anything is painted: what the light switch in the top
+     bar stored, else Hell. Written here and not by the shell's bundle, which
+     runs after the first paint and would flash the other theme first. #}
+  <script>try{document.documentElement.setAttribute("data-theme",localStorage.getItem("raute-theme")==="dark"?"dark":"light")}catch(e){document.documentElement.setAttribute("data-theme","light")}</script>
   {# The fingerprint is what makes a stylesheet change arrive. Without it the
      browser keeps the copy it has — the static mount sends an ETag and no
      Cache-Control, so freshness is the browser's guess — and a repaint that is

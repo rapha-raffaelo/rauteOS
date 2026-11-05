@@ -68,7 +68,7 @@
      (.reply in features/mocks/gmail-send.html): green-tinted, bordered, and set
      apart from every other line on the page — this is the only text here that
      somebody outside the agency wrote. */
-  .tl__reply { margin-top: 6px; border: 1px solid rgba(36, 138, 61, 0.30); background: rgba(36, 138, 61, 0.06); border-radius: var(--radius); padding: 8px 11px; max-width: 72ch; }
+  .tl__reply { margin-top: 6px; border: 1px solid rgb(var(--good-rgb) / 0.3); background: rgb(var(--good-rgb) / 0.06); border-radius: var(--radius); padding: 8px 11px; max-width: 72ch; }
   .tl__reply-text { font-size: var(--t-footnote); line-height: 1.6; color: var(--ink-2); white-space: pre-wrap; }
   /* One rule per OutreachState, because the class is generated from the stored
      value (b-{{ state }}) — a state with no rule renders as a colourless box
@@ -79,9 +79,9 @@
   .badge { font-size: var(--t-caption2); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; border-radius: var(--radius); padding: 2px 8px; border: 1px solid; white-space: nowrap; margin-left: 6px; }
   .b-entwurf { color: var(--muted); background: var(--fill-2); border-color: var(--line); }
   .b-raus { color: var(--tint); background: var(--tint-wash); border-color: var(--tint-line-strong); }
-  .b-antwort { color: #14532d; background: rgba(36, 138, 61, 0.10); border-color: rgba(36, 138, 61, 0.30); }
-  .b-veroeffentlicht { color: #14532d; background: rgba(36, 138, 61, 0.16); border-color: rgba(36, 138, 61, 0.36); }
-  .b-absage { color: var(--warn); background: rgba(178, 80, 0, 0.10); border-color: rgba(178, 80, 0, 0.28); }
+  .b-antwort { color: var(--good-ink); background: rgb(var(--good-rgb) / 0.1); border-color: rgb(var(--good-rgb) / 0.3); }
+  .b-veroeffentlicht { color: var(--good-ink); background: rgb(var(--good-rgb) / 0.16); border-color: rgb(var(--good-rgb) / 0.36); }
+  .b-absage { color: var(--warn); background: rgb(var(--warn-rgb) / 0.1); border-color: rgb(var(--warn-rgb) / 0.28); }
   .note { font-size: var(--t-caption); color: var(--muted); margin-top: var(--s5); padding-top: var(--s3); border-top: 1px dashed var(--line); max-width: 76ch; }
   @media (max-width: 900px) { .split { grid-template-columns: 1fr; } }
 </style>
