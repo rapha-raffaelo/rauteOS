@@ -2,6 +2,24 @@ import React, { useEffect, useRef, useState } from 'react';
 import {OnboardingAudio} from './OnboardingAudio.jsx';
 import {LANGUAGES, initialLanguage, rememberLanguage, say} from '../onboardingText.js';
 
+// What a closed topic card shows: the first sentences, up to about two
+// lines, so the customer can confirm at a glance. "Mehr lesen" opens the rest.
+// A sentence ends after a word of three or more letters, so "4. November"
+// and "z. B." do not end one.
+export const GIST_CHARS = 180;
+export function gist(text, limit = GIST_CHARS) {
+  const clean = (text || '').trim();
+  if (clean.length <= limit) return clean;
+  const sentences = clean.split(/(?<=[A-Za-zÄÖÜäöüß)"“]{3}[.!?])\s+(?=[A-ZÄÖÜ„"0-9])/);
+  let out = sentences[0];
+  for (const next of sentences.slice(1)) {
+    if ((out + ' ' + next).length > limit) break;
+    out += ' ' + next;
+  }
+  if (out.length <= limit + 40) return out;
+  return out.slice(0, limit).replace(/\s+\S*$/, '') + ' …';
+}
+
 export function OnboardingPage({ token = window.location.hash.slice(1).split('/')[0], demoApi = null }) {
   const [data, setData] = useState(null), [error, setError] = useState('');
   const [screen, setScreen] = useState('welcome'), [index, setIndex] = useState(0);
@@ -102,12 +120,12 @@ export function OnboardingPage({ token = window.location.hash.slice(1).split('/'
     const label = en ? p.label_en || p.label : p.label;
     const editing = editingPrefill || rowEdits.includes(p.key);
     const text = p.customer_value || p.value || '';
-    const open = openRows.includes(p.key), long = text.length > 320;
+    const short = gist(text), open = openRows.includes(p.key), long = short !== text.trim();
     return <article key={p.key} className={`onb-prefill-row${editing ? ' onb-prefill-row--editing' : ''}`}>
       <div className="onb-prefill-head"><h2><span className="onb-num" aria-hidden="true">{p.key.slice(1, 3)}</span>{label}</h2>
         {!editing && <button type="button" className="onb-link" disabled={busy} onClick={() => setRowEdits([...rowEdits, p.key])}>{tr('Korrigieren')}</button>}</div>
       {editing ? <textarea aria-label={label} maxLength={20000} value={prefillEdits[p.key] ?? text} disabled={busy} onChange={e=>setPrefillEdits({...prefillEdits,[p.key]:e.target.value})}/>
-        : <><div className={`onb-prefill-text${long && !open ? ' onb-prefill-text--clipped' : ''}`}><RichText text={text} /></div>
+        : <><div className="onb-prefill-text"><RichText text={open ? text : short} /></div>
           {long && <button type="button" className="onb-link" onClick={() => setOpenRows(open ? openRows.filter(k => k !== p.key) : [...openRows, p.key])}>{open ? tr('Weniger anzeigen') : tr('Mehr lesen')}</button>}</>}
     </article>;
   }

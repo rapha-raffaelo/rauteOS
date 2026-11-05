@@ -1,6 +1,6 @@
 import React from 'react';
 import {render,screen,fireEvent,waitFor,cleanup} from '@testing-library/react';
-import {afterEach,expect,it,vi} from 'vitest';
+import {afterEach,describe,expect,it,vi} from 'vitest';
 import {OnboardingPage} from './OnboardingPage.jsx';
 const questions=[{key:'A01.01',text:'Wie heißen Sie?',help:'Offizieller Name',section:'Unternehmen',choices:[]},{key:'B03.01',text:'Wohin geht es?',help:'Ihre Ziele',section:'Zukunft',choices:['Premium','Challenger']}];
 const data={customer:'Testfirma',questions,answers:{},completed:false,prefill:[],prefill_confirmed:true};
@@ -135,4 +135,15 @@ it('corrects one topic in place and shows research bold text without asterisks',
   fireEvent.click(screen.getByText('Speichern & weiter'));
   expect(await screen.findByText('Wie heißen Sie?')).toBeTruthy();
   expect(JSON.parse(fetch.mock.calls[1][1].body)).toEqual({corrections:{'R06.01':'Reserve und Pay.'}});
+});
+
+describe('prefill gist', () => {
+  it('shows the first sentences and never ends one on a date or an abbreviation', async () => {
+    const { gist } = await import('./OnboardingPage.jsx');
+    const text = 'Der offizielle Firmenname ist Zenchef SAS, die Software heißt ZenchefOS. Das Unternehmen wurde am 4. November 2010 unter dem Namen 1001Menus gegründet. Der Hauptsitz liegt in der 63 Avenue de Villiers, 75017 Paris. Zenchef ist in der Gastronomie-Software tätig.';
+    const short = gist(text);
+    expect(short).toBe('Der offizielle Firmenname ist Zenchef SAS, die Software heißt ZenchefOS. Das Unternehmen wurde am 4. November 2010 unter dem Namen 1001Menus gegründet.');
+    expect(short.length).toBeLessThanOrEqual(180);
+    expect(gist('Kurz und gut.')).toBe('Kurz und gut.');
+  });
 });
