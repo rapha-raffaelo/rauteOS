@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { fetchDesk } from '../api.js';
+import { fetchDesk, writeBriefing } from '../api.js';
 
 // What the Desk calls each kind of decision, in a list and in the briefing.
 const KIND = {kundenfreigabe: 'Kundenfreigabe', freigabe: 'Freigabe', impuls: 'Impuls', profil: 'Profil'};
@@ -48,6 +48,7 @@ export function DeskPage({ translations = {}, language = 'de' }) {
   const [board, setBoard] = useState(null);
   const [error, setError] = useState(null);
   const [attempt, setAttempt] = useState(0);
+  const [ai, setAi] = useState(null), [writing, setWriting] = useState(false), [aiError, setAiError] = useState('');
   const t = (text) => translations[text] ?? text;
   useEffect(() => {
     const controller = new AbortController();
@@ -78,6 +79,11 @@ export function DeskPage({ translations = {}, language = 'de' }) {
   const waiting = board.in_flight.filter((item) => item.state === 'raus');
   const chances = board.chances || [];
   const brief = briefing(board, t);
+  const written = ai || board.briefing_ai;
+  async function phrase() {
+    setWriting(true); setAiError('');
+    try { setAi(await writeBriefing()); } catch (err) { setAiError(err.message); } finally { setWriting(false); }
+  }
   const tasks = board.tasks || [];
   const isoToday = new Intl.DateTimeFormat('en-CA', {timeZone: zone}).format(now);
   const due = tasks.filter((x) => x.due_on && x.due_on <= isoToday);
@@ -105,9 +111,16 @@ export function DeskPage({ translations = {}, language = 'de' }) {
     <section className="brief" aria-label={t('Dein Briefing von RAUTE')}>
       <div>
         <p className="brief__l"><svg className="ico" aria-hidden="true"><use href="#ico-raute" /></svg>{t('Dein Briefing von RAUTE')}</p>
-        <p className="brief__t"><strong>{brief.lead}</strong> {t('für heute.')} {brief.rest}</p>
+        {written ? <p className="brief__t">{written.text}</p>
+          : <p className="brief__t"><strong>{brief.lead}</strong> {t('für heute.')} {brief.rest}</p>}
+        {written && <p className="brief__src">{t('Von RAUTE formuliert aus den Zahlen dieses Desks')}</p>}
+        {aiError && <p className="brief__src" role="alert">{aiError}</p>}
       </div>
-      <a className="brief__go" href="/ask">{t('Briefing vertiefen')} →</a>
+      <div className="brief__acts">
+        <button type="button" className="brief__go" disabled={writing} onClick={phrase}>
+          {t(writing ? 'RAUTE formuliert …' : written ? 'Neu formulieren' : 'KI-Briefing')}</button>
+        <a className="brief__go" href="/ask">{t('Briefing vertiefen')} →</a>
+      </div>
     </section>
 
     <div className="stat-row">{stats.map(([label, value, hint, bad]) => <div className="stat" key={label}>

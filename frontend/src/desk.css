@@ -140,3 +140,8 @@
 .badge--hoch,.badge--late{background:var(--alert-wash);color:var(--alert)}
 .badge--mittel{background:var(--warn-wash);color:var(--warn)}
 .badge--niedrig{background:var(--fill-2);color:var(--muted)}
+.brief__acts{display:flex;flex-direction:column;gap:8px;flex:none}
+.brief__go{font:inherit;cursor:pointer;text-align:center}
+.brief__go:disabled{opacity:.6;cursor:progress}
+.brief__src{font-size:11px;opacity:.7;margin-top:8px}
+@media(max-width:600px){.brief__acts{flex-direction:row;flex-wrap:wrap}}

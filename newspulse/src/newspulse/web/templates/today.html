@@ -64,7 +64,7 @@
    title says whose day this is, the same way every other workspace tab does. The
    word "Heute" is not lost: it is the active tab in the strip right below, which
    is where it belongs once the heading has a mandate to name. #}
-{% block pagetitle %}{% if workspace_client %}{% set client = workspace_client %}{% include "partials/client_title.html" %}{% else %}{{ translator(request)("Heute") }}{% endif %}{% endblock %}
+{% block pagetitle %}{% if workspace_client %}{% set client = workspace_client %}{% include "partials/client_title.html" %}{% else %}{{ translator(request)("Intelligence") }}{% endif %}{% endblock %}
 
 {% block content %}
 {% set t = translator(request) %}
@@ -81,6 +81,23 @@
   {% include '_client_tabs.html' %}
 {% endif %}
 {% set t = translator(request) %}
+
+{% if chances %}
+  {# Spec 09: Intelligence opens with the open chances of every mandate, the
+     same cards "Stories & Content" leads with. #}
+  <section class="intel-chances" aria-label="{{ t('Offene Chancen') }}">
+    <div class="intel-chances__h"><h2>{{ t("Entwickelte Chancen") }}</h2><span>{{ chances | length }}</span></div>
+    <div class="intel-chances__grid">
+      {% for c in chances %}
+        <a class="intel-chance" href="{{ c.href }}">
+          <span class="intel-chance__k">{{ t("Entwickelte Chance") }}</span>
+          <strong>{{ c.title }}</strong>
+          <span class="intel-chance__m">{{ c.client.name }}</span>
+        </a>
+      {% endfor %}
+    </div>
+  </section>
+{% endif %}
 
 <div id="today-root">
 <div class="today-toolbar">

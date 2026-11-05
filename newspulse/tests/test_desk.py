@@ -585,3 +585,52 @@ def test_a_closed_chance_is_not_listed(session):
     session.commit()
 
     assert desk.build(session, now=_NOW).chances == []
+
+
+# --- The KI-Briefing (spec 09, Festlegung 8) ---------------------------------------
+
+
+@pytest.fixture
+def clean_brief(monkeypatch):
+    from newspulse import desk_brief
+    monkeypatch.setattr(desk_brief, "_cache", {})
+    return desk_brief
+
+
+def test_the_briefing_prompt_carries_only_the_desks_own_figures(session, clean_brief):
+    client = _mandate(session, "Zenchef")
+    _angle(session, client)
+    from newspulse import worklists
+    worklists.save_task(session, {"title": "Freigabe einholen", "client_id": str(client.id), "priority": "hoch"})
+    text = clean_brief.prompt(desk.build(session, now=_NOW))
+    assert "Aufgabe (hoch) für Zenchef: Freigabe einholen" in text
+    assert "Erfinde nichts" in text
+    assert "Chance bei Zenchef: Impuls" in text
+
+
+def test_a_written_briefing_is_plain_kept_for_the_day_and_clipped(session, clean_brief):
+    board = desk.build(session, now=_NOW)
+    seen = []
+
+    def fake(prompt, timeout):
+        seen.append(prompt)
+        return "Zenchef wartet — seit gestern — auf die Freigabe. " * 20
+
+    result = clean_brief.write(board, invoke=fake)
+    assert "—" not in result["text"]
+    assert len(result["text"]) <= clean_brief.MAX_CHARS
+    assert clean_brief.cached()["text"] == result["text"]
+    assert len(seen) == 1
+
+
+def test_a_failed_briefing_is_a_502_and_the_desk_keeps_its_own(web, clean_brief, monkeypatch):
+    from newspulse.analyzer import AnalyzerError
+
+    def boom(prompt, timeout):
+        raise AnalyzerError("CLI nicht angemeldet")
+
+    monkeypatch.setattr(clean_brief, "invoke_with_fallback", boom)
+    response = web.post("/api/v1/desk/briefing")
+    assert response.status_code == 502
+    assert "CLI nicht angemeldet" in response.json()["detail"]
+    assert web.get("/api/v1/desk").json()["briefing_ai"] is None

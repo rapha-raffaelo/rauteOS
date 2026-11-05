@@ -829,7 +829,10 @@ def test_a_draft_older_than_the_window_is_gone(factory, client):
 
     body = rendered(client.get("/today", params={"date": _TEST_DAY.isoformat()}))
 
-    assert "LETZTEWOCHE" not in body
+    # The day's columns only: an old idea that is still an open chance is
+    # listed above them on Intelligence (spec 09), as a chance, not a draft.
+    day = body.split('<div id="today-root">', 1)[1]
+    assert "LETZTEWOCHE" not in day
 
 
 def test_todays_draft_is_marked_as_todays(factory, client):

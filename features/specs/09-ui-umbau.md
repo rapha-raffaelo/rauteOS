@@ -28,8 +28,9 @@ Codebasis. Übernommen werden Aufbau und Aussehen, nicht sein Code.
    Textfarbe dient im Dunkel-Modus ein Olivgrün `#5a6f45`.
 7. **Nichts Leeres in der Navigation.** LinkedIn und Sales CRM erscheinen erst,
    wenn es sie gibt (seit Schritt 6 gibt es sie, siehe Spec 10).
-8. **Das Desk-Briefing** entsteht zuerst ohne Modellaufruf aus den Zahlen, die
-   der Desk schon hat. Ein KI-Briefing folgt, wenn es gewünscht ist.
+8. **Das Desk-Briefing** entsteht aus den Zahlen, die der Desk schon hat. Auf
+   Knopfdruck („KI-Briefing“) formuliert RAUTE es mit einem Modellaufruf aus
+   genau diesen Zahlen; das Ergebnis gilt für den Tag.
 
 ## Zuordnung heute → Prototyp
 
@@ -138,3 +139,11 @@ Seitenleiste: Aufgaben (mit Zahl der offenen) unter Arbeitsplatz, LinkedIn
 unter Kommunikation, Sales CRM unter Wachstum; am Handy „Tasks“ in der Leiste.
 Der Desk zählt offene Aufgaben, zeigt sie in „Heute priorisiert“ vor den
 Entscheidungen und nennt fällige im Briefing.
+
+**Nachtrag, 5. November 2026.** KI-Briefing auf dem Desk (`desk_brief.py`,
+`POST /api/v1/desk/briefing`): ein Aufruf auf Knopfdruck, nur mit den Fakten
+des Desks, ohne Gedankenstriche, höchstens 600 Zeichen, für den Tag gemerkt;
+schlägt der Aufruf fehl, bleibt das Briefing aus den Zahlen. Intelligence
+zeigt über der Tagesberichterstattung die entwickelten Chancen aller
+Mandanten (erkannte stehen schon in der Tagesspalte, auf drei je Mandant
+gekürzt).

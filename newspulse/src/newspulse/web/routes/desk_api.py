@@ -4,11 +4,12 @@ from __future__ import annotations
 import datetime as dt
 from typing import Literal
 
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
-from ... import config, desk
+from ... import config, desk, desk_brief
+from ...analyzer import AnalyzerError
 from ..app import get_db
 
 router = APIRouter(prefix="/api/v1", tags=["desk"])
@@ -94,6 +95,8 @@ class DeskResponse(ReadModel):
     chances: list[ChanceSummary] = []
     tasks: list[TaskSummary] = []
     tasks_open: int = 0
+    #: Today's briefing in RAUTE's words, once somebody asked for it.
+    briefing_ai: dict | None = None
     generated_at: dt.datetime
     clients_active: int
     actions_month: int
@@ -109,5 +112,17 @@ def read_desk(response: Response, session: Session = Depends(get_db)) -> DeskRes
     response.headers["Cache-Control"] = "no-store"
     board = desk.build(session)
     # No dataclasses.asdict(): a Client contains private notes and strategy.
-    values = {name: getattr(board, name) for name in DeskResponse.model_fields if name != "timezone"}
-    return DeskResponse.model_validate({**values, "timezone": str(config.local_zone())})
+    values = {name: getattr(board, name) for name in DeskResponse.model_fields
+              if name not in ("timezone", "briefing_ai")}
+    return DeskResponse.model_validate({**values, "timezone": str(config.local_zone()),
+                                        "briefing_ai": desk_brief.cached()})
+
+
+@router.post("/desk/briefing")
+def write_briefing(response: Response, session: Session = Depends(get_db)) -> dict:
+    """One model call that phrases today's briefing from the Desk's figures."""
+    response.headers["Cache-Control"] = "no-store"
+    try:
+        return desk_brief.write(desk.build(session))
+    except AnalyzerError as exc:
+        raise HTTPException(status_code=502, detail=f"Das Briefing konnte nicht formuliert werden: {exc}") from exc

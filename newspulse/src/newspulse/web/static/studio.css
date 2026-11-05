@@ -360,3 +360,14 @@
 .raute-ui .side__badge.side__count{background:var(--fill-strong);color:var(--ink-2)}
 :root[data-theme="dark"] .raute-ui .side__badge.side__count{background:var(--side-chip);color:var(--side-chip-ink)}
 .raute-ui .side__row.is-on .side__badge.side__count{background:var(--side-chip-on);color:var(--side-chip-on-ink)}
+/* Spec 09: the chances at the top of Intelligence. */
+.intel-chances{margin:0 0 22px}
+.intel-chances__h{display:flex;align-items:baseline;gap:8px;margin-bottom:10px}
+.intel-chances__h h2{font-size:15px;font-weight:750}
+.intel-chances__h span{font-size:11px;color:var(--faint)}
+.intel-chances__grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.intel-chance{display:flex;flex-direction:column;gap:6px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px 18px;color:inherit}
+.intel-chance:hover{text-decoration:none;border-color:var(--line-strong)}
+.intel-chance strong{font-size:13px;line-height:1.4}
+.intel-chance__k,.intel-chance__m{font-size:11px;color:var(--faint)}
+@media(max-width:900px){.intel-chances__grid{grid-template-columns:1fr}}

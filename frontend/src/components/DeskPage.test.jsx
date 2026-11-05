@@ -110,3 +110,19 @@ describe('Briefing', () => {
     expect(firstName(null)).toBe('');
   });
 });
+
+describe('KI-Briefing', () => {
+  it('asks once on click, shows RAUTE\'s text and keeps the figures as the fallback', async () => {
+    const fetch = vi.fn((url, opts) => Promise.resolve(url.endsWith('/briefing')
+      ? reply({text: 'Zenchef wartet auf die Freigabe der Pressemitteilung.', written_at: '2026-11-05T08:00:00Z'})
+      : reply(empty)));
+    vi.stubGlobal('fetch', fetch);
+    render(<DeskPage />);
+    await screen.findByText('Keine offene Entscheidung');
+    fireEvent.click(screen.getByRole('button', {name: 'KI-Briefing'}));
+    await screen.findByText('Zenchef wartet auf die Freigabe der Pressemitteilung.');
+    expect(fetch.mock.calls[1][0]).toBe('/api/v1/desk/briefing');
+    expect(fetch.mock.calls[1][1].method).toBe('POST');
+    expect(screen.getByRole('button', {name: 'Neu formulieren'})).toBeTruthy();
+  });
+});

@@ -774,6 +774,14 @@ def dismiss_opportunity(
     return RedirectResponse(local_target(redirect_to), status_code=303)
 
 
+def _portfolio_chances(session: Session) -> list[dict]:
+    """The developed chances of every mandate. Detected ones are already on
+    this page, in the day's column and cut to three a mandate; listing them
+    again above would undo that cut."""
+    from .workbench import stories
+    return [c for c in stories(session) if c["kind"] == "developed"]
+
+
 @router.get("/today", response_class=HTMLResponse)
 def today_view(
     request: Request,
@@ -940,6 +948,9 @@ def today_view(
             "workspace_client": (
                 session.get(Client, selected_client) if selected_client else None
             ),
+            # Spec 09: the portfolio-wide page is "Intelligence", the open
+            # chances of every mandate above the day's coverage.
+            "chances": [] if selected_client else _portfolio_chances(session),
             # Set when the reader asked for no particular day, today held nothing
             # and this is the newest day that did. The banner has to say it: a page
             # headed "Heute" quietly showing yesterday is worse than an empty one.
