@@ -191,6 +191,18 @@ class Chance:
 
 
 @dataclass(frozen=True, slots=True)
+class TaskItem:
+    """One open task for the Desk (spec 10). ``client`` is None for agency work."""
+
+    id: int
+    client: Client | None
+    title: str
+    priority: str
+    due_on: dt.date | None
+    href: str
+
+
+@dataclass(frozen=True, slots=True)
 class Desk:
     """Everything the morning page states, assembled once."""
 
@@ -198,6 +210,8 @@ class Desk:
     decisions: list[Decision] = field(default_factory=list)
     in_flight: list[InFlight] = field(default_factory=list)
     chances: list[Chance] = field(default_factory=list)
+    tasks: list[TaskItem] = field(default_factory=list)
+    tasks_open: int = 0
     generated_at: dt.datetime | None = None
 
     @property
@@ -510,8 +524,9 @@ def build(session: Session, *, now: dt.datetime | None = None) -> Desk:
         .order_by(Client.name)
     ).all()
     by_id = {client.id: client for client in mandates}
+    open_tasks = _open_tasks(session)
     if not by_id:
-        return Desk(generated_at=moment)
+        return Desk(generated_at=moment, tasks=open_tasks[:TASKS_SHOWN], tasks_open=len(open_tasks))
 
     released_month = _released_counts(session, since_month)
     logged_month = _logged_counts(session, since_month)
@@ -539,8 +554,23 @@ def build(session: Session, *, now: dt.datetime | None = None) -> Desk:
         decisions=_decisions(session, by_id),
         in_flight=_in_flight(session, by_id),
         chances=_chances(session, by_id),
+        tasks=open_tasks[:TASKS_SHOWN],
+        tasks_open=len(open_tasks),
         generated_at=moment,
     )
+
+
+#: How many open tasks "Heute priorisiert" carries before the decisions.
+TASKS_SHOWN = 5
+
+
+def _open_tasks(session: Session) -> list[TaskItem]:
+    """Open tasks, due first (spec 10): the same order as the Aufgaben page."""
+    from . import worklists
+
+    return [TaskItem(id=t.id, client=t.client, title=t.title, priority=t.priority, due_on=t.due_on,
+                     href=t.context_href or f"/aufgaben#task-{t.id}")
+            for t in worklists.open_tasks(session)]
 
 
 #: How many open opportunities the Desk lists. The count beside it is the

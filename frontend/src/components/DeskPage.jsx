@@ -37,6 +37,9 @@ export function briefing(board, t) {
   const crises = board.rows.filter((r) => r.status === 'krise').map((r) => r.client.name);
   const sentences = named.map((d) => `${d.client.name} ${t(WAITS[d.kind] || 'wartet auf eine Entscheidung')}.`);
   if (crises.length) sentences.unshift(`${t('Krise offen bei')} ${crises.join(', ')}.`);
+  const today = new Intl.DateTimeFormat('en-CA', {timeZone: board.timezone || undefined}).format(new Date());
+  const due = (board.tasks || []).filter((x) => x.due_on && x.due_on <= today).length;
+  if (due) sentences.push(`${due} ${t(due === 1 ? 'Aufgabe ist heute fällig oder überfällig.' : 'Aufgaben sind heute fällig oder überfällig.')}`);
   if (board.opportunities) sentences.push(`${board.opportunities} ${t(board.opportunities === 1 ? 'Chance ist offen.' : 'Chancen sind offen.')}`);
   return {lead, rest: sentences.join(' ')};
 }
@@ -75,10 +78,13 @@ export function DeskPage({ translations = {}, language = 'de' }) {
   const waiting = board.in_flight.filter((item) => item.state === 'raus');
   const chances = board.chances || [];
   const brief = briefing(board, t);
+  const tasks = board.tasks || [];
+  const isoToday = new Intl.DateTimeFormat('en-CA', {timeZone: zone}).format(now);
+  const due = tasks.filter((x) => x.due_on && x.due_on <= isoToday);
   const stats = [
+    ['Offene Aufgaben', board.tasks_open || 0, `${due.length} ${t('heute fällig')}`, due.length > 0],
     ['Entscheidungen offen', board.decisions_open,
       customer.length ? `${customer.length} ${t('davon beim Kunden')}` : t('Nichts blockiert'), customer.length > 0],
-    ['In Arbeit', board.in_flight.length, `${waiting.length} ${t('warten auf Antwort')}`, false],
     ['Offene Chancen', board.opportunities, t('Fenster noch offen'), false],
     ['Actions diesen Monat', board.actions_month, t('abgeliefert und nachgetragen'), false],
   ];
@@ -91,7 +97,7 @@ export function DeskPage({ translations = {}, language = 'de' }) {
         <p className="desk__sub">{today} · {t('Alle Kunden und Aufgaben im Blick.')}</p>
       </div>
       <div className="desk__acts">
-        <a className="btn btn--ghost" href="/clients">{t('Alle Kunden')}</a>
+        <a className="btn btn--ghost" href="/aufgaben">{t('Alle Aufgaben')}</a>
         <a className="btn btn--go" href="/mandant/neu">+ {t('Neuer Mandant')}</a>
       </div>
     </header>
@@ -111,14 +117,20 @@ export function DeskPage({ translations = {}, language = 'de' }) {
 
     <div className="desk-grid">
       <div className="desk-col">
-        <Card title={t('Heute priorisiert')} link={board.decisions.length > 5 ? ['/desk#entscheidungen', t('Alle Entscheidungen')] : null}>
-          {board.decisions.slice(0, 5).map((item, index) => <a className="task" href={item.href} key={`${item.href}-${index}`}>
+        <Card title={t('Heute priorisiert')} link={['/aufgaben', t('Alle Aufgaben')]}>
+          {tasks.map((x) => <a className="task" href={x.href} key={`task-${x.id}`}>
+            <span className="task__box" aria-hidden="true" />
+            <span className="task__b"><span className="task__t">{x.title.slice(0, 80)}</span>
+              <span className="task__m">{x.client?.name || t('Agentur')}{x.due_on ? ` · ${t('fällig')} ${date(x.due_on + 'T12:00:00Z')}` : ''} · {t('Aufgabe')}</span></span>
+            <span className={`badge badge--${x.due_on && x.due_on < isoToday ? 'late' : x.priority}`}>{t(x.due_on && x.due_on < isoToday ? 'Überfällig' : ({hoch: 'Hoch', mittel: 'Mittel', niedrig: 'Niedrig'})[x.priority])}</span>
+          </a>)}
+          {board.decisions.slice(0, Math.max(0, 6 - tasks.length)).map((item, index) => <a className="task" href={item.href} key={`${item.href}-${index}`}>
             <span className="task__box" aria-hidden="true" />
             <span className="task__b"><span className="task__t">{item.title.slice(0, 80)}</span>
               <span className="task__m">{item.client.name} · {item.since ? `${t('seit')} ${date(item.since)}` : t(KIND[item.kind])}{item.detail ? ` · ${item.detail}` : ''}</span></span>
             <span className={`badge badge--${KIND_TAG[item.kind] ?? item.kind}`}>{t(KIND[item.kind])}</span>
           </a>)}
-          {!board.decisions.length && <p className="pane__empty">{t('Nichts wartet auf eine Entscheidung.')}</p>}
+          {!board.decisions.length && !tasks.length && <p className="pane__empty">{t('Nichts wartet auf eine Entscheidung.')}</p>}
         </Card>
         <Card title={t('Relevante Chancen')} link={['/today', t('Intelligence öffnen')]}>
           {chances.map((c) => <a className="chance" href={c.href} key={c.href}>

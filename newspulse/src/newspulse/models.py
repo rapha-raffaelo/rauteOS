@@ -4620,3 +4620,99 @@ class CustomerOnboardingAudio(Base):
     lease_until: Mapped[dt.datetime | None] = mapped_column(UTCDateTime(), nullable=True)
     created_at: Mapped[dt.datetime] = mapped_column(UTCDateTime(), default=_utcnow)
     updated_at: Mapped[dt.datetime] = mapped_column(UTCDateTime(), default=_utcnow)
+
+
+# --- Spec 10: Aufgaben, LinkedIn, Sales CRM --------------------------------------
+#: The values each status column may hold, in their working order.
+TASK_PRIORITIES = ("hoch", "mittel", "niedrig")
+TASK_STATES = ("offen", "in_arbeit", "erledigt")
+POST_STATES = ("idee", "entwurf", "freigabe", "geplant", "veroeffentlicht")
+DEAL_STAGES = ("lead", "gespraech", "angebot", "verhandlung", "gewonnen", "verloren")
+
+
+class Task(Base):
+    """One thing somebody at the agency has to do, kept by hand (spec 10).
+
+    A mandate is optional: preparing a pitch belongs to a client, renewing the
+    media database belongs to the agency. A finished task stays with its date,
+    so "what did we get done" has an answer.
+    """
+
+    __tablename__ = "tasks"
+    __table_args__ = (
+        CheckConstraint("priority IN ('hoch','mittel','niedrig')", name="ck_tasks_priority"),
+        CheckConstraint("status IN ('offen','in_arbeit','erledigt')", name="ck_tasks_status"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    client_id: Mapped[int | None] = mapped_column(
+        ForeignKey("clients.id", ondelete="CASCADE"), nullable=True, index=True)
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    note: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    priority: Mapped[str] = mapped_column(String(10), nullable=False, default="mittel")
+    status: Mapped[str] = mapped_column(String(10), nullable=False, default="offen", index=True)
+    due_on: Mapped[dt.date | None] = mapped_column(Date(), nullable=True, index=True)
+    owner: Mapped[str] = mapped_column(String(120), nullable=False, default="")
+    #: Where it came from: a story, a text, a contact. A path on this site.
+    context_href: Mapped[str] = mapped_column(String(300), nullable=False, default="")
+    created_at: Mapped[dt.datetime] = mapped_column(UTCDateTime(), nullable=False, default=_utcnow)
+    done_at: Mapped[dt.datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+
+    client: Mapped["Client | None"] = relationship()
+
+
+class LinkedInPost(Base):
+    """A LinkedIn post for a mandate's speaker, from idea to published (spec 10).
+
+    Planning only: nothing here posts to LinkedIn. ``published_url`` is where
+    a person records the post once it is live.
+    """
+
+    __tablename__ = "linkedin_posts"
+    __table_args__ = (
+        CheckConstraint("status IN ('idee','entwurf','freigabe','geplant','veroeffentlicht')",
+                        name="ck_linkedin_posts_status"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    client_id: Mapped[int] = mapped_column(
+        ForeignKey("clients.id", ondelete="CASCADE"), nullable=False, index=True)
+    author: Mapped[str] = mapped_column(String(120), nullable=False, default="")
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    body: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="idee", index=True)
+    planned_on: Mapped[dt.date | None] = mapped_column(Date(), nullable=True)
+    published_url: Mapped[str] = mapped_column(String(500), nullable=False, default="")
+    created_at: Mapped[dt.datetime] = mapped_column(UTCDateTime(), nullable=False, default=_utcnow)
+    updated_at: Mapped[dt.datetime] = mapped_column(UTCDateTime(), nullable=False, default=_utcnow)
+
+    client: Mapped["Client"] = relationship()
+
+
+class Deal(Base):
+    """A possible new client in the agency's sales pipeline (spec 10).
+
+    Not a :class:`Client`: winning a deal does not create a mandate, because
+    setting one up is a deliberate step with its own research.
+    """
+
+    __tablename__ = "deals"
+    __table_args__ = (
+        CheckConstraint("stage IN ('lead','gespraech','angebot','verhandlung','gewonnen','verloren')",
+                        name="ck_deals_stage"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    company: Mapped[str] = mapped_column(String(200), nullable=False)
+    contact_name: Mapped[str] = mapped_column(String(120), nullable=False, default="")
+    contact_email: Mapped[str] = mapped_column(String(200), nullable=False, default="")
+    stage: Mapped[str] = mapped_column(String(20), nullable=False, default="lead", index=True)
+    #: Monthly retainer the deal would bring, in whole euros.
+    value_eur: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    owner: Mapped[str] = mapped_column(String(120), nullable=False, default="")
+    next_step: Mapped[str] = mapped_column(String(300), nullable=False, default="")
+    next_step_on: Mapped[dt.date | None] = mapped_column(Date(), nullable=True)
+    note: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    created_at: Mapped[dt.datetime] = mapped_column(UTCDateTime(), nullable=False, default=_utcnow)
+    updated_at: Mapped[dt.datetime] = mapped_column(UTCDateTime(), nullable=False, default=_utcnow)
+    closed_at: Mapped[dt.datetime | None] = mapped_column(UTCDateTime(), nullable=True)

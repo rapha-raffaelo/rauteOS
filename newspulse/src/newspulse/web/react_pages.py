@@ -69,7 +69,19 @@ def shell_data(request):
                 path=request.url.path, query=request.url.query, language=language, timezone=str(config.local_zone()),
                 translations=i18n._EN if language == 'en' else {},
                 assistant=assistant_context(request),
-                login=google_auth.is_configured(), user=request.scope.get('user_email'))
+                login=google_auth.is_configured(), user=request.scope.get('user_email'),
+                tasks_open=_tasks_open(request))
+
+
+def _tasks_open(request):
+    """The count beside "Aufgaben" in the sidebar, on the request's own session
+    (the one the sidebar's mandate list reads). No session, no badge."""
+    session = getattr(request.state, 'db', None)
+    if session is None:
+        return 0
+    from sqlalchemy import func, select
+    from ..models import Task
+    return session.scalar(select(func.count()).select_from(Task).where(Task.status != 'erledigt')) or 0
 
 
 def tabs_data(request, client, active):
@@ -93,7 +105,8 @@ def render(request, page, context):
     return templates.TemplateResponse(request, 'react_page.html', {
         'frontend': assets, 'page': page, 'data': data,
         'page_title': ({'rivals': 'Wettbewerb', 'guide': 'Kommunikations-Guide'}.get(data.get('view'), 'Profil') if page == 'profile' else
-                       {'archive': 'Archiv', 'settings': 'Einstellungen', 'new_client': 'Neuer Mandant'}[page]),
+                       {'archive': 'Archiv', 'settings': 'Einstellungen', 'new_client': 'Neuer Mandant',
+                        'tasks': 'Aufgaben', 'linkedin': 'LinkedIn', 'sales': 'Sales CRM'}[page]),
         'client': context.get('client'),
         'active': ({'rivals': 'rivals', 'guide': 'guide'}.get(data.get('view'), 'twin')
                    if page == 'profile' else 'overview'),

@@ -61,6 +61,15 @@ class DecisionSummary(ReadModel):
     href: str
 
 
+class TaskSummary(ReadModel):
+    id: int
+    client: ClientSummary | None
+    title: str
+    priority: str
+    due_on: dt.date | None
+    href: str
+
+
 class ChanceSummary(ReadModel):
     client: ClientSummary
     kind: Literal["detected", "developed"]
@@ -83,6 +92,8 @@ class DeskResponse(ReadModel):
     decisions: list[DecisionSummary]
     in_flight: list[InFlightSummary]
     chances: list[ChanceSummary] = []
+    tasks: list[TaskSummary] = []
+    tasks_open: int = 0
     generated_at: dt.datetime
     clients_active: int
     actions_month: int

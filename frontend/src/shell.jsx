@@ -137,7 +137,7 @@ export function Shell({ data, portals = true }) {
     side?.classList.add("has-menu-toggle");
     side?.classList.toggle("is-expanded", open);
   }, [open]);
-  const link = (href, label, icon) => {
+  const link = (href, label, icon, count) => {
     const selected =
       href === "/"
         ? path === "/"
@@ -155,6 +155,7 @@ export function Shell({ data, portals = true }) {
           </svg>
         )}
         {t(label)}
+        {count > 0 && <span className="side__badge side__count">{count}</span>}
       </a>
     );
   };
@@ -214,11 +215,15 @@ export function Shell({ data, portals = true }) {
       >
         <div className="side__sect">{t("Arbeitsplatz")}</div>
         {link("/desk", "Desk", "desk")}
+        {link("/aufgaben", "Aufgaben", "tasks", data.tasks_open)}
         {link("/clients", "Kunden", "clients")}
         <div className="side__sect">{t("Kommunikation")}</div>
         {link("/today", "Intelligence", "intel")}
         {link("/assets", "Stories & Content", "stories")}
         {link("/contacts", "Media & Relationships", "media")}
+        {link("/linkedin", "LinkedIn", "linkedin")}
+        <div className="side__sect">{t("Wachstum")}</div>
+        {link("/sales", "Sales CRM", "sales")}
         {!!clients.length && (
           <div className="side__sect">
             {t("Mandanten")}
@@ -252,7 +257,7 @@ export function Shell({ data, portals = true }) {
           ["/clients", "Kunden", "clients"],
           ["/today", "Intel", "intel"],
           ["/assets", "Stories", "stories"],
-          ["/contacts", "Medien", "media"],
+          ["/aufgaben", "Tasks", "tasks"],
         ].map(([href, label, icon]) => {
           const on = path === href || path.startsWith(href + "/");
           return (

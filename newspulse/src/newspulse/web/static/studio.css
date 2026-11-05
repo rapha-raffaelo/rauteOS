@@ -357,3 +357,6 @@
   .raute-ui .content{padding-bottom:96px}
   .raute-ui .topsearch__kbd{display:none}
 }
+.raute-ui .side__badge.side__count{background:var(--fill-strong);color:var(--ink-2)}
+:root[data-theme="dark"] .raute-ui .side__badge.side__count{background:var(--side-chip);color:var(--side-chip-ink)}
+.raute-ui .side__row.is-on .side__badge.side__count{background:var(--side-chip-on);color:var(--side-chip-on-ink)}

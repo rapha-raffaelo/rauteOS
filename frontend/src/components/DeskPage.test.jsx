@@ -99,6 +99,10 @@ describe('Briefing', () => {
     expect(text.rest).toBe('Krise offen bei Qonto. Zenchef wartet auf eine Kundenfreigabe. Qonto hat einen neuen Impuls. 2 Chancen sind offen.');
     expect(text.rest).not.toMatch(/\u2014/);
   });
+  it('names tasks that are due', () => {
+    const text = briefing({...empty, timezone: 'Europe/Berlin', tasks: [{id: 1, title: 'x', priority: 'hoch', due_on: '2000-01-01', href: '#'}]}, t);
+    expect(text.rest).toBe('1 Aufgabe ist heute fällig oder überfällig.');
+  });
   it('takes a first name only from an address that starts with one', () => {
     expect(firstName('lucas@raute-kopf.com')).toBe('Lucas');
     expect(firstName('lucas.neurauter@raute-kopf.com')).toBe('Lucas');

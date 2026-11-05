@@ -469,7 +469,8 @@ def test_the_sidebar_keeps_its_rows_and_only_changes_how_they_look(web, mandate)
     page = rendered(web.get("/today"))
     side = page.split('<aside class="side">', 1)[1].split("</aside>", 1)[0]
     rows = re.findall(r'<a href="([^"]+)" class="side__row', side)
-    assert rows[:5] == ["/desk", "/clients", "/today", "/assets", "/contacts"]
+    # Spec 10 added Aufgaben, LinkedIn and, under Wachstum, Sales CRM.
+    assert rows[:8] == ["/desk", "/aufgaben", "/clients", "/today", "/assets", "/contacts", "/linkedin", "/sales"]
     assert '<a href="/" class="side__row' not in side
     assert rows[-2:] == ["/archive", "/settings"]
     assert f"/client/{mandate.id}/overview" in side

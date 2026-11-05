@@ -6,6 +6,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { ArchivePage } from "./ArchivePage.jsx";
 import { SettingsPage } from "./SettingsPage.jsx";
 import { ProfilePage } from "./ProfilePage.jsx";
+import { TasksPage, LinkedInPage, SalesPage } from "./WorklistPages.jsx";
 import { Shell, ClientTabs } from "../shell.jsx";
 export function render({ page, data, shell, tabs }) {
   const Page = {
@@ -13,6 +14,9 @@ export function render({ page, data, shell, tabs }) {
     archive: ArchivePage,
     settings: SettingsPage,
     profile: ProfilePage,
+    tasks: TasksPage,
+    linkedin: LinkedInPage,
+    sales: SalesPage,
   }[page];
   return renderToStaticMarkup(
     <>

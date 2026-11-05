@@ -119,6 +119,9 @@ class NavPath:
 #: and no prefix here is a prefix of another.
 _AREAS: tuple[tuple[str, str], ...] = (
     ("/desk", "Desk"),
+    ("/aufgaben", "Aufgaben"),
+    ("/linkedin", "LinkedIn"),
+    ("/sales", "Sales CRM"),
     ("/clients", "Kunden"),
     ("/assets", "Stories & Content"),
     ("/ask", "Ask RAUTE"),

@@ -368,7 +368,7 @@ def create_app() -> FastAPI:
         language, login,
         opportunity_view,
         plan_view, profile as profile_routes, report as report_routes,
-        rivals_view, runstatus, settings, today, triage, visibility_view,
+        rivals_view, runstatus, settings, today, triage, visibility_view, worklists,
     )
 
     # The workspace chrome asks per mandate whether a Krise tab exists and
@@ -416,6 +416,7 @@ def create_app() -> FastAPI:
     app.include_router(contacts.router)
     app.include_router(profile_routes.router)
     app.include_router(rivals_view.router)
+    app.include_router(worklists.router)
     app.include_router(report_routes.router)
     from .routes import customer_onboarding
     app.include_router(customer_onboarding.router)

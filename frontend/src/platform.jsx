@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import { ArchivePage } from "./platform/ArchivePage.jsx";
 import { SettingsPage } from "./platform/SettingsPage.jsx";
 import { ProfilePage } from "./platform/ProfilePage.jsx";
+import { TasksPage, LinkedInPage, SalesPage } from "./platform/WorklistPages.jsx";
 import "./twin.css";
 import "./platform/platform.css";
 const root = document.getElementById("react-platform");
@@ -16,6 +17,9 @@ function Platform() {
     archive: ArchivePage,
     settings: SettingsPage,
     profile: ProfilePage,
+    tasks: TasksPage,
+    linkedin: LinkedInPage,
+    sales: SalesPage,
   }[root.dataset.page];
   return <Page data={data} onData={setData} />;
 }

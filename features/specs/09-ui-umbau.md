@@ -27,7 +27,7 @@ Codebasis. Übernommen werden Aufbau und Aussehen, nicht sein Code.
 6. **Lime ist eine Fläche, nie Schrift.** Auf Hell ist es unlesbar. Als
    Textfarbe dient im Dunkel-Modus ein Olivgrün `#5a6f45`.
 7. **Nichts Leeres in der Navigation.** LinkedIn und Sales CRM erscheinen erst,
-   wenn es sie gibt (siehe Schritt 6).
+   wenn es sie gibt (seit Schritt 6 gibt es sie, siehe Spec 10).
 8. **Das Desk-Briefing** entsteht zuerst ohne Modellaufruf aus den Zahlen, die
    der Desk schon hat. Ein KI-Briefing folgt, wenn es gewünscht ist.
 
@@ -84,7 +84,7 @@ und ausgerollt. Ein Schritt ist erst fertig, wenn er live ist.
 - [x] **5. Stories & Content und Media & Relationships**
   - Story-Karten, Schrittleiste Analyse → Storyline → Assets → Medien → Outreach → Ergebnisse, Editor mit Seitenspalte.
   - Kontakte dreispaltig: Liste, Profil, Journalisten-Fit.
-- [ ] **6. Neue Bereiche (eigene Specs)**
+- [x] **6. Neue Bereiche (eigene Specs)**
   - Aufgaben, LinkedIn, Sales CRM brauchen eigene Datenmodelle. Erst Spec, dann Bau.
 
 ## Stand
@@ -130,3 +130,11 @@ Assets → Medien → Outreach → Ergebnisse; ein Klick öffnet den Abschnitt, 
 die Arbeit schon macht, markiert ist der erste noch offene Schritt. Media &
 Relationships ist mit geöffnetem Kontakt dreispaltig, rechts „Journalisten-Fit“
 aus Themen, Artikelbelegen, Beziehungsstatus und Präferenz.
+
+**Schritt 6, 5. November 2026.** Spec [10](10-aufgaben-linkedin-sales.md):
+Tabellen `tasks`, `linkedin_posts`, `deals` (Migration 0067), Seiten
+`/aufgaben`, `/linkedin`, `/sales`, alles von Hand gepflegt. In der
+Seitenleiste: Aufgaben (mit Zahl der offenen) unter Arbeitsplatz, LinkedIn
+unter Kommunikation, Sales CRM unter Wachstum; am Handy „Tasks“ in der Leiste.
+Der Desk zählt offene Aufgaben, zeigt sie in „Heute priorisiert“ vor den
+Entscheidungen und nennt fällige im Briefing.
