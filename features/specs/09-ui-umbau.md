@@ -81,7 +81,7 @@ und ausgerollt. Ein Schritt ist erst fertig, wenn er live ist.
 - [x] **4. Client Workspace mit sechs Reitern**
   - Reiter Überblick · Wissen · Strategie · Chancen · Umsetzung · Wirkung, Weiterleitungen.
   - Überblick: Unternehmen + Geschäftsziel, Laufende Stories, Leistungen, Wirkung, Nächste Schritte.
-- [ ] **5. Stories & Content und Media & Relationships**
+- [x] **5. Stories & Content und Media & Relationships**
   - Story-Karten, Schrittleiste Analyse → Storyline → Assets → Medien → Outreach → Ergebnisse, Editor mit Seitenspalte.
   - Kontakte dreispaltig: Liste, Profil, Journalisten-Fit.
 - [ ] **6. Neue Bereiche (eigene Specs)**
@@ -122,3 +122,11 @@ Der Überblick zeigt „Das Unternehmen“ (Recherche-Thema 05 und Kundenfrage 0
 als Geschäftsziel), Laufende Stories, Aktuelle Texte, Leistungen im Quartal,
 Wirkung, Nächste Schritte (die Desk-Entscheidungen des Mandanten) und das
 Profil. Die Leitfragen im internen Kundenfragebogen sind entfernt.
+
+**Schritt 5, 5. November 2026.** „Stories & Content“ beginnt mit Karten der
+laufenden Stories aller Mandanten (die offenen Opportunities), darunter die
+Texte. Der Opportunity-Workspace hat die Schrittleiste Analyse → Storyline →
+Assets → Medien → Outreach → Ergebnisse; ein Klick öffnet den Abschnitt, der
+die Arbeit schon macht, markiert ist der erste noch offene Schritt. Media &
+Relationships ist mit geöffnetem Kontakt dreispaltig, rechts „Journalisten-Fit“
+aus Themen, Artikelbelegen, Beziehungsstatus und Präferenz.

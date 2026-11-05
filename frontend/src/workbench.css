@@ -87,3 +87,15 @@
 .co-deliv{grid-template-columns:minmax(0,1fr) minmax(90px,140px) 40px}
 @media(max-width:1100px){.client-overview .co-layout{grid-template-columns:1fr}}
 .co-delivery-body .co-quiet{padding:0;margin:0}
+/* Spec 09: the story cards on "Stories & Content". */
+.story-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:8px 0 30px}
+.story-card{display:flex;flex-direction:column;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px 22px;color:inherit}
+.story-card:hover{text-decoration:none;border-color:var(--line-strong)}
+.story-card__m{display:flex;justify-content:space-between;gap:8px}
+.story-card h2{font-size:15px;font-weight:720;line-height:1.35;margin:0}
+.story-card p{display:flex;justify-content:space-between;font-size:11px;color:var(--faint);margin:0}
+.story-card .badge,.story-cards .badge{display:inline-flex;border-radius:6px;padding:5px 7px;font-size:10px;font-weight:780;line-height:1;background:var(--fill-2);color:var(--ink-2)}
+.story-card .badge--active{background:var(--warn-wash);color:var(--warn)}
+.story-cards__empty{grid-column:1/-1;color:var(--muted);font-size:13px}
+.story-texts{font-size:18px;margin:0 0 4px}.story-texts__sub{color:var(--muted);font-size:12px;margin:0 0 14px}
+@media(max-width:1000px){.story-cards{grid-template-columns:1fr}}

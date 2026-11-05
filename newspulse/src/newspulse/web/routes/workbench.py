@@ -71,7 +71,7 @@ def clients(response: Response, session: Session = Depends(get_db)):
 @router.get('/api/v1/workbench/assets')
 def assets(response: Response, session: Session = Depends(get_db)):
     response.headers['Cache-Control'] = 'no-store'
-    return {'texts': texts(session), 'limit': 100}
+    return {'texts': texts(session), 'limit': 100, 'stories': stories(session)}
 
 
 @router.get('/api/v1/workbench/clients/{client_id}')
@@ -102,6 +102,19 @@ def overview(client_id: int, response: Response, session: Session = Depends(get_
         company=company(session, client),
         next_steps=[DecisionSummary.model_validate(d) for d in board.decisions if d.client.id == client_id][:5],
         activity=activity, logged_actions=actions, released_reports=reports, released_texts=texts(session, client_id, released_only=True), limit=100)
+
+
+#: How many running stories head "Stories & Content" (spec 09).
+STORIES_SHOWN = 9
+
+
+def stories(session: Session) -> list[dict]:
+    """The open opportunities of every active mandate, newest first: the
+    prototype's story cards. The Desk's own list, only longer."""
+    mandates = session.scalars(select(Client).where(Client.active.is_(True), Client.is_competitor.is_(False))).all()
+    return [dict(client=dict(id=c.client.id, name=c.client.name), kind=c.kind, title=c.title,
+                 status=c.status, since=c.since, href=c.href)
+            for c in desk._chances(session, {m.id: m for m in mandates}, limit=STORIES_SHOWN)]
 
 
 #: What the overview's "Das Unternehmen" card reads: the researched

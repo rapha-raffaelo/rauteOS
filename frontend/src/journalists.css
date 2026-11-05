@@ -14,3 +14,14 @@
 .research-table-wrap{overflow:auto}.research-table{width:100%;border-collapse:collapse;font-size:13px}.research-table caption{text-align:left;font-weight:600;padding:16px 0}.research-table th{text-align:left;color:var(--muted);background:var(--fill-2)}.research-table td,.research-table th{padding:14px;vertical-align:top;border-bottom:1px solid var(--line);min-width:140px}.research-table small{display:block}.research-table td:nth-child(2){min-width:200px}
 
 .journalist-roster button{display:block}.journalist-roster button small{font-weight:400;color:var(--muted)}
+/* Spec 09: three columns once a contact is open, as in the prototype. */
+.raute-ui .journalist-layout--fit{grid-template-columns:240px minmax(0,1fr) 290px}
+.journalist-fit{position:sticky;top:88px;padding:20px}
+.journalist-fit h2{font-size:16px;margin:0 0 6px}
+.journalist-fit p{font-size:13px;color:var(--muted)}
+.journalist-fit ul{list-style:none;padding:0;margin:14px 0}
+.journalist-fit li{position:relative;padding:0 0 12px 24px;font-size:13px;line-height:1.5}
+.journalist-fit li::before{content:"✓";position:absolute;left:0;color:var(--good);font-weight:700}
+.journalist-fit small{font-size:11px;color:var(--faint)}
+@media(max-width:1200px){.raute-ui .journalist-layout--fit{grid-template-columns:240px minmax(0,1fr)}.journalist-fit{grid-column:2;position:static}}
+@media(max-width:900px){.raute-ui .journalist-layout--fit{grid-template-columns:1fr}.journalist-fit{grid-column:auto}}

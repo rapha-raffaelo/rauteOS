@@ -7,6 +7,22 @@ const date=value=>value ? new Date(value).toLocaleString('de-DE',{dateStyle:'med
 const statusLabels={draft:'Entwurf',active:'Aktiviert',closed:'Abgeschlossen'};
 const eventLabels={idea_developed:'Idee entwickelt',choices_saved:'Auswahl gespeichert',activated:'Aktiviert',text_created:'Text erstellt',text_checked:'Aussagen geprüft',text_edited:'Text bearbeitet'};
 const actionLabels={kundenmail:'Kundenmail',pitch:'Journalistenpitch',statement:'Statement',pressemitteilung:'Pressemitteilung',qa:'Q&A',gastbeitrag:'Gastbeitrag',interviewangebot:'Interviewangebot',linkedin:'LinkedIn-Post',briefing:'Briefing',custom:'Eigene Aktion'};
+// Spec 09: the prototype's story steps. Each opens the section of the
+// workspace that already does that work.
+export const STEPS=[['analyse','Analyse','workspace-context'],['storyline','Storyline','workspace-settings'],['assets','Assets','workspace-writing'],
+  ['medien','Medien','workspace-research'],['outreach','Outreach','workspace-writing'],['ergebnisse','Ergebnisse','workspace-history']];
+// Where a story stands: the first step whose work is not done yet.
+export function currentStep(data){
+  if(!data.id)return 'analyse';
+  if(!data.storyline?.trim())return 'storyline';
+  if(!data.assets?.length)return 'assets';
+  if(!data.contact_ids?.length)return 'medien';
+  if(data.status!=='closed'&&!data.assets.some(a=>a.released_at))return 'outreach';
+  return 'ergebnisse';
+}
+export function Stepper({current,onPick}){
+  return <nav className="stepper" aria-label="Arbeitsschritte">{STEPS.map(([key,label],i)=><button type="button" key={key} className={`step${key===current?' step--on':''}`} aria-current={key===current?'step':undefined} onClick={()=>onPick(key)}><span>{i+1}</span>{label}</button>)}</nav>;
+}
 function ErrorMessage({error}){return error ? <p className="twin-error" role="alert">{error}</p>:null;}
 function ResearchSources({queries,sources}){return <details><summary>Recherche und Quellen ({sources.length})</summary>
   <p>Die Recherche deckt nur die genannten Quellen ab. Ein fehlender Treffer ist kein Nachweis, dass es keine Entwicklung gibt.</p>
@@ -16,7 +32,7 @@ function ResearchSources({queries,sources}){return <details><summary>Recherche u
 export function OpportunityWorkspace({clientId,kind,identity,onChanged}){
   const path=`clients/${clientId}/opportunities/${kind}/${identity}`;
   const [data,setData]=useState(null);const [error,setError]=useState('');const [busy,setBusy]=useState(false);const [notice,setNotice]=useState('');
-  const textSection=useRef(null);
+  const textSection=useRef(null),workspace=useRef(null);const [picked,setPicked]=useState('');
   useEffect(()=>{if(data && new URLSearchParams(window.location.search).get('view')==='assets') textSection.current?.scrollIntoView?.({block:'start'});},[data?.id]);
   const [storyline,setStoryline]=useState('');const [speaker,setSpeaker]=useState('');const [contacts,setContacts]=useState([]);
   function receive(value){setData(value);setStoryline(value.storyline);setSpeaker(value.speaker_statement_id || '');setContacts(value.contact_ids);}
@@ -29,7 +45,11 @@ export function OpportunityWorkspace({clientId,kind,identity,onChanged}){
   const angleId=data.angle_id || (kind==='developed'?identity:null);
   const contextDirty=storyline!==data.storyline || String(speaker)!==String(data.speaker_statement_id||'') || JSON.stringify(contacts)!==JSON.stringify(data.contact_ids);
   const prepared=data.assets.find(a=>a.kind==='pressemitteilung');
-  return <div className="opportunity-workspace"><p className="twin-eyebrow">{kind==='detected'?'Erkannte Gelegenheit':'Entwickelte Gelegenheit'} · {statusLabels[data.status]} · {data.evidence_type}</p><h2 className="opportunity-title">{data.title}</h2>
+  const step=picked||currentStep(data);
+  function pick(key){setPicked(key);const section=STEPS.find(s=>s[0]===key)[2];const node=workspace.current?.querySelector(`.${section}`);
+    if(node?.tagName==='DETAILS')node.open=true;node?.scrollIntoView?.({block:'start',behavior:'smooth'});}
+  return <div className="opportunity-workspace" ref={workspace}><p className="twin-eyebrow">{kind==='detected'?'Erkannte Gelegenheit':'Entwickelte Gelegenheit'} · {statusLabels[data.status]} · {data.evidence_type}</p><h2 className="opportunity-title">{data.title}</h2>
+    <Stepper current={step} onPick={pick}/>
     <ErrorMessage error={error}/>{notice&&<p role="status">{notice}</p>}
     <details className="workspace-context" open={!data.id&&!prepared}><summary>Anlass & Belege <span>Relevanz, Timing und Quellen</span></summary>
     <div className="workspace-overview">

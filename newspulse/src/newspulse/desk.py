@@ -548,7 +548,7 @@ def build(session: Session, *, now: dt.datetime | None = None) -> Desk:
 CHANCES_SHOWN = 6
 
 
-def _chances(session: Session, clients: dict[int, Client]) -> list[Chance]:
+def _chances(session: Session, clients: dict[int, Client], limit: int = CHANCES_SHOWN) -> list[Chance]:
     """The newest open opportunities across every mandate.
 
     The same rows each mandate's own opportunity list shows
@@ -573,7 +573,7 @@ def _chances(session: Session, clients: dict[int, Client]) -> list[Chance]:
     ]
     epoch = dt.datetime.min.replace(tzinfo=dt.UTC)
     found.sort(key=lambda c: _aware(c.since) if c.since else epoch, reverse=True)
-    return found[:CHANCES_SHOWN]
+    return found[:limit]
 
 
 def _aware(moment: dt.datetime) -> dt.datetime:

@@ -18,3 +18,10 @@
 
 .workspace-overview{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(230px,1fr);gap:20px;align-items:start}.workspace-overview .opportunity-grid{grid-template-columns:1fr;gap:12px}.workspace-intelligence{border-top:3px solid var(--tint)}
 @media(max-width:1100px){.workspace-overview{grid-template-columns:1fr}}
+/* Spec 09: the story steps of the prototype. */
+.stepper{display:flex;border:1px solid var(--line);border-radius:12px;background:var(--card);padding:5px;overflow-x:auto;margin:18px 0 22px;box-shadow:var(--shadow)}
+.step{flex:1;min-width:98px;display:flex;align-items:center;justify-content:center;gap:9px;border:0;background:none;border-radius:8px;padding:12px 7px;font:inherit;font-size:12px;font-weight:740;color:var(--faint);cursor:pointer}
+.step span{width:21px;height:21px;border-radius:50%;display:grid;place-items:center;font-size:10px;border:1px solid var(--line-strong)}
+.step:hover{color:var(--ink)}
+.step--on{background:var(--action);color:var(--on-action)}
+.step--on span{border-color:currentColor}

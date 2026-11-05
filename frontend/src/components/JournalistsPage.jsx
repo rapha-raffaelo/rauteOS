@@ -92,6 +92,24 @@ export function ResearchPanel({clientId, contextKind, contextId, onContact}) {
       <div className="research-table-wrap"><table className="research-table"><caption>Belegte Journalisten-Vorschläge</caption><thead><tr><th>Journalist / Medium</th><th>Relevanz für diese Gelegenheit</th><th>Aktuelle Belege & Beziehung</th><th>Profil</th></tr></thead><tbody>{research.results.map(person=><tr key={`${person.name}-${person.outlet}`}><td><strong>{person.name}</strong><small>{person.outlet}</small></td><td><strong>{person.fit}</strong><p>{person.reason}</p><details><summary>Ansprache</summary><p>{person.approach}</p></details></td><td><details><summary>Artikelbelege ({person.article_count})</summary><ArticleList articles={person.evidence}/></details>{person.relationship&&<Relationship value={person.relationship}/>}</td><td>{person.contact_id?<button className="btn" onClick={()=>onContact(person.contact_id)}>Profil öffnen</button>:<button className="btn" onClick={()=>onContact(null,person)}>Kontakt hinterlegen</button>}</td></tr>)}</tbody></table></div></>}
   </section>;
 }
+// Spec 09: the prototype's "Journalisten-Fit" column, from what the profile
+// already holds. Each line is a fact on file, not a model's verdict.
+export function FitPanel({data}) {
+  const topics = [].concat(data.profile?.topics || []).filter(Boolean);
+  const articles = data.articles?.length || 0;
+  const status = data.profile?.relationship_status;
+  const label = (data.relationship_options || []).find(o => (o.value ?? o) === status);
+  const lines = [
+    topics.length && `Thematischer Schwerpunkt: ${topics.slice(0, 4).join(' · ')}`,
+    articles && `${articles} ${articles === 1 ? 'Veröffentlichung' : 'Veröffentlichungen'} als Relevanzsignal`,
+    status && `Kontaktstatus: ${label?.label || status}`,
+    data.profile?.preferences && `Präferenz: ${String(data.profile.preferences).slice(0, 90)}`,
+  ].filter(Boolean);
+  return <aside className="twin-field journalist-fit"><h2>Journalisten-Fit</h2>
+    <p>Warum könnte dieser Kontakt zu einer Story passen?</p>
+    {lines.length ? <ul>{lines.map(l => <li key={l}>{l}</li>)}</ul> : <p className="journalist-fit__empty">Noch keine Themen, Artikel oder Beziehungsdaten hinterlegt.</p>}
+    <small>Aus Profil und Artikelbelegen, nicht vollständig.</small></aside>;
+}
 export function JournalistsPage({params = new URLSearchParams(window.location.search)}) {
   const [contacts,setContacts]=useState([]);const [selected,setSelected]=useState(Number(params.get('contact')) || null);
   const [data,setData]=useState(null);const [q,setQ]=useState('');const [error,setError]=useState('');
@@ -109,7 +127,7 @@ export function JournalistsPage({params = new URLSearchParams(window.location.se
   return <div className="twin-page journalists-page"><PageHeading eyebrow="JOURNALIST INTELLIGENCE" title="Media & Relationships" description="Profilwissen, Artikelbelege und Beziehungshistorie an einem Ort."/>
     {clientId>0 && contextId>0 && ['detected','developed'].includes(contextKind) && <ResearchPanel clientId={clientId} contextId={contextId} contextKind={contextKind} onContact={openContact}/>}
     <ErrorMessage error={error}/>{notice && <p role="status">{notice}</p>}
-    <div className="journalist-layout"><aside className="twin-field"><label>Kontakte suchen<input aria-label="Kontakte suchen" value={q} onChange={e=>setQ(e.target.value)}/></label>
+    <div className={`journalist-layout${data ? " journalist-layout--fit" : ""}`}><aside className="twin-field"><label>Kontakte suchen<input aria-label="Kontakte suchen" value={q} onChange={e=>setQ(e.target.value)}/></label>
       <button className="btn" onClick={()=>{setNewContact({name:'',outlet:''});setSelected(null);setNotice('');}}>Neuer Kontakt</button>
       <ul className="journalist-roster">{contacts.filter(c=>`${c.name} ${c.outlet} ${c.beat}`.toLocaleLowerCase().includes(q.toLocaleLowerCase())).map(c=><li key={c.id}>
         <button aria-pressed={selected===c.id} onClick={()=>openContact(c.id)}>{c.name}<small>{c.outlet || 'Medium nicht hinterlegt'}</small></button></li>)}</ul>
@@ -121,6 +139,6 @@ export function JournalistsPage({params = new URLSearchParams(window.location.se
         {selected && !data && !error && <p role="status">Profil wird geladen…</p>}
         {data && <ProfileEditor key={`${data.contact.id}-${data.contact.updated_at}-${data.profile.revision}`} data={data} onSaved={saved}/>}
         {!selected && !newContact && <section className="twin-field"><h2>Kontakt auswählen</h2><p>Öffnen Sie ein Profil oder hinterlegen Sie einen neuen Kontakt.</p></section>}
-      </div></div>
+      </div>{data && <FitPanel data={data}/>}</div>
   </div>;
 }

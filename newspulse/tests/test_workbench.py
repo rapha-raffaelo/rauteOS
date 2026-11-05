@@ -181,3 +181,11 @@ def test_the_overview_names_the_company_its_goal_and_its_next_steps(web, db):
     assert data['company']['goal'] == 'Marktführer in DACH werden.'
     assert isinstance(data['next_steps'], list)
     assert web.get('/api/v1/workbench/clients/2').json()['company']['description'] == ''
+
+
+def test_stories_and_content_leads_with_the_running_stories(web, db):
+    """Spec 09: the story cards are each mandate's open opportunities."""
+    data = web.get('/api/v1/workbench/assets').json()
+    assert [s['title'] for s in data['stories']] == ['Hypothesis']
+    assert data['stories'][0]['client']['name'] == 'Alpha'
+    assert data['stories'][0]['href'].startswith('/client/1/opportunities?kind=developed&context=')
