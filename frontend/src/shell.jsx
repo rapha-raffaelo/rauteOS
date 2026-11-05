@@ -37,38 +37,49 @@ export function ClientTabs({ data, path = window.location.pathname }) {
         )}
       </p>
     );
-  const group = [
-    "opportunities",
-    "heute",
-    "texte",
-    "issues",
-    "plan",
-    "krise",
-  ].includes(active)
-    ? "opportunities"
-    : ["twin", "profile"].includes(active)
-      ? "profile"
-      : ["rivals", "market", "map"].includes(active)
-        ? "rivals"
-        : active === "overview"
-        ? "archive"
-        : active;
+  // Spec 09: the prototype's six tabs. Each groups pages that already exist;
+  // a group with more than one page shows them as views under the tabs.
+  const groups = {
+    client_overview: ["client_overview"],
+    wissen: ["twin", "profile"],
+    strategie: ["guide", "rivals", "market", "map"],
+    chancen: ["opportunities", "issues", "heute"],
+    umsetzung: ["plan", "texte", "krise"],
+    wirkung: ["visibility", "berichte", "overview"],
+  };
+  const group =
+    Object.keys(groups).find((key) => groups[key].includes(active)) || active;
   const tabs = [
-    ["client_overview", "/overview", "Overview"],
-    ["opportunities", "/opportunities", "Opportunities"],
-    ["profile", "/twin", "Profil"],
-    ["rivals", "/wettbewerb", "Wettbewerb"],
-    ["guide", "/guide", "Guide"],
-    ["visibility", "/ki", "KI-Sichtbarkeit"],
-    ["archive", "", "Archiv"],
+    ["client_overview", "/overview", "Überblick"],
+    ["wissen", "/twin", "Wissen"],
+    ["strategie", "/guide", "Strategie"],
+    ["chancen", "/opportunities", "Chancen"],
+    ["umsetzung", "/plan", "Umsetzung"],
+    ["wirkung", "/ki", "Wirkung"],
   ];
-  const views = [
-    ["opportunities", "/opportunities", "Chancen"],
-    ["texte", "/advice", "Impulse"],
-    ["issues", "/issues", "Issues"],
-    ["plan", "/plan", "Plan"],
-    ...(crisis?.has_history ? [["krise", "/krise", "Krise"]] : []),
-  ];
+  const views = {
+    strategie: [
+      ["guide", "/guide", "Kommunikations-Guide"],
+      ["rivals", "/wettbewerb", "Wettbewerb & Markt"],
+      ["map", "/map", "Medienkarte"],
+    ],
+    chancen: [
+      ["opportunities", "/opportunities", "Chancen"],
+      ["issues", "/issues", "Issues"],
+      ["heute", "/heute", "Heute"],
+    ],
+    umsetzung: [
+      ["plan", "/plan", "Plan"],
+      ["texte", "/advice", "Impulse"],
+      ...(crisis?.has_history || active === "krise" ? [["krise", "/krise", "Krise"]] : []),
+    ],
+    wirkung: [
+      ["visibility", "/ki", "KI-Sichtbarkeit"],
+      ["berichte", "/berichte", "Berichte"],
+      ["overview", "", "Archiv"],
+    ],
+  }[group];
+  const current = active === "market" ? "rivals" : active;
   return (
     <>
       <nav className="subtabs" aria-label={t("Mandant")}>
@@ -80,15 +91,15 @@ export function ClientTabs({ data, path = window.location.pathname }) {
             aria-current={key === group ? "page" : undefined}
           >
             {t(label)}
-            {key === "opportunities" && crisis?.open_id && (
+            {key === "umsetzung" && crisis?.open_id && (
               <span className="workspace-crisis">{t("Krise offen")}</span>
             )}
           </a>
         ))}
       </nav>
-      {group === "opportunities" && active !== "heute" && (
-        <nav className="workspace-links" aria-label={t("Ansicht in Opportunities")}>
-          {views.map(([key, suffix, label]) => <a key={key} href={base + suffix} aria-current={key === active ? 'page' : undefined}>{t(label)}</a>)}
+      {views && (
+        <nav className="workspace-links" aria-label={t("Ansicht")}>
+          {views.map(([key, suffix, label]) => <a key={key} href={base + suffix} aria-current={key === current ? 'page' : undefined}>{t(label)}</a>)}
         </nav>
       )}
       {crisis?.offer && (

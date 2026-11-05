@@ -121,12 +121,12 @@ it('shows the brief as numbered cards and the customer questionnaire as its own 
  expect(within(brief).getByText('1 von 2 Themen recherchiert · Prüfung offen, bis jemand bestätigt')).toBeTruthy();
  // The guiding question is the card title's tooltip, not a paragraph.
  expect(within(brief).getByRole('heading',{name:'Unternehmensidentität'}).getAttribute('title')).toBe('Wie lautet der offizielle Firmenname?');
- // The question keeps its own number; its guiding text opens on demand.
+ // The question keeps its own number. The guiding text is the customer's,
+ // on the customer page; the profile shows no "Leitfragen" at all.
  expect(within(asked).getByText('14')).toBeTruthy();
  expect(within(asked).getByText('Offen')).toBeTruthy();
  expect(within(asked).queryByText('Bitte nennen Sie Partner.')).toBeNull();
- fireEvent.click(within(asked).getByRole('button',{name:'Leitfragen'}));
- expect(within(asked).getByText('Bitte nennen Sie Partner.')).toBeTruthy();
+ expect(within(asked).queryByRole('button',{name:'Leitfragen'})).toBeNull();
  // A researched company fact appears at a glance; the catalogue is not shown.
  expect(within(screen.getByLabelText('Auf einen Blick')).getByText('2008 in Berlin.')).toBeTruthy();
  expect(screen.getByRole('progressbar',{name:'Profilvollständigkeit'})).toBeTruthy();

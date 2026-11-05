@@ -164,3 +164,20 @@ def test_card_delete_only_removes_selected_mandate_from_active_roster(web, db):
 def test_card_management_rejects_competitors_and_unknown_ids(web, identity):
     assert web.get(f'/api/v1/workbench/clients/{identity}/settings').status_code == 404
     assert web.request('DELETE', f'/api/v1/workbench/clients/{identity}', json={'name': 'Rival'}).status_code == 404
+
+
+def test_the_overview_names_the_company_its_goal_and_its_next_steps(web, db):
+    """Spec 09: "Das Unternehmen" reads the researched description (R05.01)
+    and the client's own goal (Q01.02); "Nächste Schritte" are this mandate's
+    open decisions from the Desk."""
+    from newspulse.models import ClientFact
+    long = 'Alpha baut Roboterarme für Operationssäle. ' * 12
+    db.add_all([ClientFact(client_id=1, key='R05.01', value=long, is_primary=True),
+                ClientFact(client_id=1, key='Q01.02', value='Marktführer in DACH werden.', is_primary=True)])
+    db.commit()
+    data = web.get('/api/v1/workbench/clients/1').json()
+    assert data['company']['description'].startswith('Alpha baut Roboterarme')
+    assert len(data['company']['description']) <= 280
+    assert data['company']['goal'] == 'Marktführer in DACH werden.'
+    assert isinstance(data['next_steps'], list)
+    assert web.get('/api/v1/workbench/clients/2').json()['company']['description'] == ''

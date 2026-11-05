@@ -57,3 +57,33 @@
 .co-part>div:first-child{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:12px;color:var(--muted)}
 .co-part strong{color:var(--ink);font-variant-numeric:tabular-nums;font-size:14px}.co-part small{font-weight:400;color:var(--muted);font-size:11px}
 .co-bar{height:5px;border-radius:5px;background:var(--fill-2);margin-top:6px;overflow:hidden}.co-bar>span{display:block;height:100%;background:var(--tint);border-radius:5px}
+/* Spec 09, step 4: the overview as in the prototype's client workspace. */
+.co-actions{display:flex;gap:8px;flex-shrink:0}
+.co-company-body{padding:20px 24px 24px}
+.co-desc{color:var(--muted);font-size:14px;line-height:1.65;margin:0 0 22px}
+.co-goal{font-size:16px;font-weight:700;line-height:1.5;margin:0 0 16px}
+.co-tags{display:flex;flex-wrap:wrap;gap:6px}
+.client-overview .badge{display:inline-flex;align-items:center;border-radius:6px;padding:5px 7px;font-size:10px;font-weight:780;line-height:1;background:var(--fill-2);color:var(--ink-2);white-space:nowrap}
+.co-delivery .co-panel-head small{font-size:11px;color:var(--faint)}
+.co-delivery-body{padding:18px 24px 22px;display:flex;flex-direction:column;gap:14px}
+.co-deliv{display:grid;grid-template-columns:minmax(0,1fr) 120px 44px;align-items:center;gap:12px;font-size:12px}
+.co-deliv .co-bar{margin:0;height:7px}
+.co-deliv strong{text-align:right;font-size:12px}
+.co-impact{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:18px 24px 24px}
+.co-tile{border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.co-tile small{display:block;font-size:11px;color:var(--muted);margin-bottom:8px}
+.co-tile strong{font-size:22px;letter-spacing:-.02em}
+.co-step-list{padding:4px 24px 12px}
+.co-step{display:flex;align-items:flex-start;gap:12px;padding:14px 0;border-top:1px solid var(--line);color:inherit}
+.co-step:first-child{border-top:0}
+.co-step:hover{text-decoration:none}.co-step:hover h3{color:var(--tint)}
+.co-step-box{width:17px;height:17px;border:1.5px solid var(--line-strong);border-radius:5px;flex:none;margin-top:2px}
+.co-step>div{flex:1;min-width:0}
+.co-step h3{font-size:13px;font-weight:650;margin:0 0 4px}
+.co-step small{font-size:11px;color:var(--faint)}
+.co-steps .co-quiet,.co-company .co-quiet{padding:0 24px 20px}
+.co-company-body .co-quiet{padding:0;margin:0 0 18px}
+.client-overview .co-layout{grid-template-columns:minmax(0,1.55fr) minmax(340px,1fr)}
+.co-deliv{grid-template-columns:minmax(0,1fr) minmax(90px,140px) 40px}
+@media(max-width:1100px){.client-overview .co-layout{grid-template-columns:1fr}}
+.co-delivery-body .co-quiet{padding:0;margin:0}

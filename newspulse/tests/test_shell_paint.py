@@ -382,20 +382,21 @@ def _strip(html: str) -> str:
 
 
 def test_the_primary_tabs_are_consolidated(web, mandate):
+    """Spec 09: the prototype's six tabs."""
     strip = _strip(rendered(web.get(f"/client/{mandate.id}/heute")))
     assert re.findall(r'<a [^>]+>([^<]+)</a>', strip) == [
-        "Overview", "Opportunities", "Profil", "Wettbewerb", "Guide", "KI-Sichtbarkeit", "Archiv"]
+        "Überblick", "Wissen", "Strategie", "Chancen", "Umsetzung", "Wirkung"]
     assert "subtabs-legacy" not in strip
-    for suffix in ("/overview", "/opportunities", "/twin", "/wettbewerb", "/guide", "/ki", ""):
+    for suffix in ("/overview", "/twin", "/guide", "/opportunities", "/plan", "/ki"):
         assert f'href="/client/{mandate.id}{suffix}"' in strip
 
 
 @pytest.mark.parametrize("suffix,parent", [
-    ("/heute", "/opportunities"), ("/advice", "/opportunities"),
-    ("/issues", "/opportunities"), ("/plan", "/opportunities"),
-    ("/opportunities", "/opportunities"), ("/twin", "/twin"),
-    ("/profil", "/twin"), ("/wettbewerb", "/wettbewerb"), ("/market", "/wettbewerb"),
-    ("/map", "/wettbewerb"), ("/guide", "/guide"), ("", ""), ("/ki", "/ki"),
+    ("/overview", "/overview"), ("/twin", "/twin"), ("/profil", "/twin"),
+    ("/guide", "/guide"), ("/wettbewerb", "/guide"), ("/market", "/guide"), ("/map", "/guide"),
+    ("/opportunities", "/opportunities"), ("/issues", "/opportunities"), ("/heute", "/opportunities"),
+    ("/plan", "/plan"), ("/advice", "/plan"),
+    ("/ki", "/ki"), ("/berichte", "/ki"), ("", "/ki"),
 ])
 def test_specialist_views_select_their_primary_workspace(web, mandate, suffix, parent):
     strip = _strip(rendered(web.get(f"/client/{mandate.id}{suffix}")))
@@ -404,7 +405,10 @@ def test_specialist_views_select_their_primary_workspace(web, mandate, suffix, p
 
 
 @pytest.mark.parametrize("suffix,options", [
-    ("/opportunities", ["/opportunities", "/advice", "/issues", "/plan"]),
+    ("/guide", ["/guide", "/wettbewerb", "/map"]),
+    ("/opportunities", ["/opportunities", "/issues", "/heute"]),
+    ("/plan", ["/plan", "/advice"]),
+    ("/ki", ["/ki", "/berichte", ""]),
 ])
 def test_each_workspace_keeps_its_tools_reachable(web, mandate, suffix, options):
     body = rendered(web.get(f"/client/{mandate.id}{suffix}"))

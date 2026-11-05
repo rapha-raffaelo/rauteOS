@@ -6,7 +6,8 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-from ... import desk, workspaces
+from ... import desk, profile as profiles, workspaces
+from .desk_api import DecisionSummary
 from ...models import Client, Asset, Outreach, ClientAction, Report, OpportunityWorkspace, OpportunityEvent
 from .. import frontend
 from ..app import get_db, templates
@@ -77,7 +78,8 @@ def assets(response: Response, session: Session = Depends(get_db)):
 def overview(client_id: int, response: Response, session: Session = Depends(get_db)):
     client = mandate_or_404(session, client_id)
     response.headers['Cache-Control'] = 'no-store'
-    summary = next((r for r in desk.build(session).rows if r.client.id == client_id), None)
+    board = desk.build(session)
+    summary = next((r for r in board.rows if r.client.id == client_id), None)
     items = texts(session, client_id)
     actions = [dict(id=r.id, title=r.title, happened_at=r.happened_at, note=r.note)
         for r in session.scalars(select(ClientAction).where(ClientAction.client_id == client_id)
@@ -97,7 +99,32 @@ def overview(client_id: int, response: Response, session: Session = Depends(get_
     return dict(client={'id': client.id, 'name': client.name},
         summary=MandateSummary.model_validate(summary) if summary else None,
         opportunities=workspaces.listings(session, client_id)[:30], texts=items,
+        company=company(session, client),
+        next_steps=[DecisionSummary.model_validate(d) for d in board.decisions if d.client.id == client_id][:5],
         activity=activity, logged_actions=actions, released_reports=reports, released_texts=texts(session, client_id, released_only=True), limit=100)
+
+
+#: What the overview's "Das Unternehmen" card reads: the researched
+#: description and the client's own answer on its goals (spec 09).
+DESCRIPTION_KEY, GOAL_KEY = 'R05.01', 'Q01.02'
+#: A card, not the profile: the first sentences up to this many characters.
+CARD_CHARS = 280
+
+
+def _clip(text: str, limit: int = CARD_CHARS) -> str:
+    text = ' '.join((text or '').split())
+    if len(text) <= limit:
+        return text
+    cut = text[:limit]
+    end = max(cut.rfind('. '), cut.rfind('! '), cut.rfind('? '))
+    return cut[:end + 1] if end > limit // 3 else cut.rsplit(' ', 1)[0] + ' …'
+
+
+def company(session: Session, client: Client) -> dict:
+    facts = profiles.stored(session, client.id)
+    value = lambda key: facts[key].value if key in facts else ''
+    tags = [t for t in [client.industry, *(client.keywords or [])[:3]] if t]
+    return dict(description=_clip(value(DESCRIPTION_KEY)), goal=_clip(value(GOAL_KEY), 200), tags=tags[:4])
 
 
 # Client management uses the same validation and soft deletion as Settings.

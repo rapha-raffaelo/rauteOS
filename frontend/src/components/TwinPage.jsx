@@ -35,7 +35,6 @@ export function TwinPage({clientId, embedded = false}) {
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [hints, setHints] = useState([]);
   const importPanel = useRef(null), filePanel = useRef(null), chosenImport = useRef(null);
   const [aiImporting, setAIImporting] = useState(false);
   const [aiStatus, setAIStatus] = useState(null);
@@ -89,12 +88,10 @@ export function TwinPage({clientId, embedded = false}) {
     {editor(item)}{answers(item)}
     {!has(item) && editing?.field.key !== item.key && <p className="twin-empty">Noch keine belegte Angabe.</p>}
   </article>;
-  // A customer question as one row; its guiding text opens on demand.
+  // A customer question as one row: the question, its state, the answer.
   const question = item => <li className={`twin-ask${has(item) ? ' twin-ask--done' : ''}`} key={item.key} id={`feld-${item.key}`}>
     <div className="twin-ask-row"><span className="twin-number">{number(item.key)}</span>
-      <div className="twin-ask-text"><h3>{item.label}</h3>
-        {item.hint && <button type="button" className="linkbtn twin-more" aria-expanded={hints.includes(item.key)} onClick={() => setHints(hints.includes(item.key) ? hints.filter(k => k !== item.key) : [...hints, item.key])}>{hints.includes(item.key) ? 'Leitfragen ausblenden' : 'Leitfragen'}</button>}
-        {hints.includes(item.key) && <p className="twin-hint">{item.hint}</p>}</div>
+      <div className="twin-ask-text"><h3>{item.label}</h3></div>
       <span className={`twin-state${has(item) ? ' twin-state--ok' : ''}`}>{has(item) ? 'Beantwortet' : 'Offen'}</span>
       {!has(item) && add(item, 'Ergänzen')}</div>
     {editor(item)}{answers(item)}

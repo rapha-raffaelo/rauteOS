@@ -330,8 +330,11 @@ def test_the_report_is_reachable_from_the_texte_tab_not_a_tab_of_its_own(http, s
     strip = rendered(http.get(f"/client/{client_id}/guide"))
     tabs = strip.split('class="subtabs"', 1)[1].split("</nav>", 1)[0]
     assert f'/client/{client_id}/berichte' not in tabs, "no tab of its own any more"
-    assert ">Opportunities<" in tabs
-    assert f'/client/{client_id}/opportunities' in tabs
+    # Spec 09: reports are a view of Wirkung, beside KI-Sichtbarkeit.
+    assert ">Wirkung<" in tabs
+    assert f'/client/{client_id}/ki' in tabs
+    views = rendered(http.get(f"/client/{client_id}/ki")).split('class="workspace-links"', 1)[1].split("</nav>", 1)[0]
+    assert f'/client/{client_id}/berichte' in views
 
     rail = rendered(http.get(f"/client/{client_id}/advice"))
     assert f'/client/{client_id}/berichte' in rail, "the rail carries the period"

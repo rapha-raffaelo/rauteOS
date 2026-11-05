@@ -271,14 +271,15 @@ def _crisis_text(
 
 
 def test_crisis_view_appears_in_opportunities_only_after_a_declaration(web, session, mandate):
+    """Since spec 09 the crisis view sits under Umsetzung, beside Plan."""
     _trigger(session, mandate)
-    before = web.get(f"/client/{mandate.id}/opportunities")
+    before = web.get(f"/client/{mandate.id}/plan")
     assert before.status_code == 200
     crisis_link = f'href="/client/{mandate.id}/krise">Krise</a>'
     assert crisis_link not in rendered(before)
 
     _declared(session, mandate)
-    after = web.get(f"/client/{mandate.id}/opportunities")
+    after = web.get(f"/client/{mandate.id}/plan")
     assert crisis_link in rendered(after)
     assert "Krise offen" in rendered(after)
 

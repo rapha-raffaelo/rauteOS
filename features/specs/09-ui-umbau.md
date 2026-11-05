@@ -78,7 +78,7 @@ und ausgerollt. Ein Schritt ist erst fertig, wenn er live ist.
 - [x] **3. Desk wie im Prototyp**
   - Kopf „Guten Morgen, …“, Briefing-Kasten, vier Kennzahlen.
   - „Heute priorisiert“, „Relevante Chancen“, „Das braucht Deine Aufmerksamkeit“, Rückmeldungs-Kacheln.
-- [ ] **4. Client Workspace mit sechs Reitern**
+- [x] **4. Client Workspace mit sechs Reitern**
   - Reiter Überblick · Wissen · Strategie · Chancen · Umsetzung · Wirkung, Weiterleitungen.
   - Überblick: Unternehmen + Geschäftsziel, Laufende Stories, Leistungen, Wirkung, Nächste Schritte.
 - [ ] **5. Stories & Content und Media & Relationships**
@@ -112,3 +112,13 @@ Kennzahlen, „Heute priorisiert“ (Entscheidungen), „Relevante Chancen“ (n
 offene Opportunities aller Mandanten über `workspaces.listings`), „Das braucht
 Deine Aufmerksamkeit“ (In Arbeit) und drei Kacheln. Der Mandantenüberblick aus
 Spec 02 bleibt darunter. Ein KI-Briefing ist noch offen (Festlegung 8).
+
+**Schritt 4, 5. November 2026.** Sechs Reiter (Überblick, Wissen, Strategie,
+Chancen, Umsetzung, Wirkung); unter jedem stehen seine Seiten als Ansichten
+(Strategie: Guide, Wettbewerb & Markt, Medienkarte; Chancen: Opportunities,
+Issues, Heute; Umsetzung: Plan, Impulse, Krise; Wirkung: KI-Sichtbarkeit,
+Berichte, Archiv). Alle Adressen bleiben gleich, nur die Zuordnung ist neu.
+Der Überblick zeigt „Das Unternehmen“ (Recherche-Thema 05 und Kundenfrage 02
+als Geschäftsziel), Laufende Stories, Aktuelle Texte, Leistungen im Quartal,
+Wirkung, Nächste Schritte (die Desk-Entscheidungen des Mandanten) und das
+Profil. Die Leitfragen im internen Kundenfragebogen sind entfernt.
