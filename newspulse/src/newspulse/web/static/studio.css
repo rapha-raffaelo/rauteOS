@@ -314,7 +314,7 @@
 .raute-ui .side__new{color:var(--side-ink)}
 .raute-ui .side__new:hover{color:var(--side-ink-strong)}
 .raute-ui .side__foot{border-top:1px solid var(--side-line)}
-.raute-ui .side__toggle{color:var(--side-ink-strong)}
+.raute-ui .side__toggle,.raute-ui .has-menu-toggle .side__toggle{color:var(--side-ink-strong);background:transparent;border-color:var(--side-line)}
 .raute-ui .side .client-logo{background:#fff}
 @media(max-width:900px){.raute-ui .side{border-bottom:1px solid var(--side-line);border-right:0}}
 
@@ -343,4 +343,16 @@
   .raute-ui .topsearch__in{width:100%}
   .raute-ui .askraute{font-size:0;gap:0;padding:0 11px}
   .raute-ui .askraute__ico{width:17px;height:17px}
+}
+
+/* Spec 09, step 2: the search shortcut, and the phone's bar at the bottom. */
+.topsearch__kbd{font:inherit;font-size:10px;color:var(--faint);border:1px solid var(--line);border-radius:5px;padding:1px 5px;flex:none}
+.mobilebar{display:none}
+@media(max-width:900px){
+  .raute-ui .mobilebar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:40;justify-content:space-around;padding:9px 4px calc(9px + env(safe-area-inset-bottom));background:var(--side-bg);border-top:1px solid var(--side-line)}
+  .raute-ui .mobilebar a{display:grid;justify-items:center;gap:5px;font-size:10px;color:var(--side-ink);text-decoration:none;min-width:56px}
+  .raute-ui .mobilebar a.is-on{color:var(--mobile-on)}
+  .raute-ui .mobilebar .ico{width:19px;height:19px}
+  .raute-ui .content{padding-bottom:96px}
+  .raute-ui .topsearch__kbd{display:none}
 }

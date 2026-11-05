@@ -69,7 +69,7 @@ und ausgerollt. Ein Schritt ist erst fertig, wenn er live ist.
   - Rahmen (Seitenleiste, Kopfzeile, Knöpfe) über eigene Tokens, damit er in beiden Modi stimmt.
   - Licht-Button in der Kopfzeile, Wahl vor dem ersten Zeichnen setzen.
   - Test gegen neue feste Farben; Test für den Button.
-- [ ] **2. Navigation wie im Prototyp**
+- [x] **2. Navigation wie im Prototyp**
   - Seitenleiste in Gruppen Arbeitsplatz / Kommunikation, Bereiche umbenennen.
   - „Intelligence“ als Seite über alle Mandanten (News Heute + Opportunities).
   - Nutzerbereich unten mit Archiv und Einstellungen.
@@ -95,3 +95,11 @@ Tokens; `test_theme.py` verhindert neue. Hell trägt die bisherigen Werte,
 Dunkel die des Prototyps, der Rahmen hat eigene Rollen-Tokens (`--side-*`,
 `--action`, `--assist`, `--mark`). Der Licht-Button sitzt rechts neben DE/EN
 und merkt sich die Wahl im Browser (`raute-theme`); ohne Wahl gilt Hell.
+
+**Schritt 2, 5. November 2026.** Seitenleiste in den Gruppen Arbeitsplatz
+(Desk, Kunden) und Kommunikation (Intelligence, Stories & Content, Media &
+Relationships); die Mandantenliste bleibt darunter, Archiv und Einstellungen
+unten. Pfadzeile und Seitentitel tragen die neuen Namen. Suche mit ⌘K. Am
+Handy eine Leiste unten (Desk, Kunden, Intel, Stories, Medien); „Aufgaben“
+kommt mit Schritt 6. Intelligence ist vorerst die bisherige News-Heute-Seite;
+die Zusammenführung mit den Opportunities aller Mandanten folgt in Schritt 3.

@@ -155,6 +155,17 @@ export function Shell({ data, portals = true }) {
     params.set("opportunity_id", current.get("context"));
   }
   const ask = "/ask?" + params;
+  const search = useRef();
+  useEffect(() => {
+    const focus = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        search.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", focus);
+    return () => window.removeEventListener("keydown", focus);
+  }, []);
   useEffect(() => {
     if (current.has("assistant") && path !== "/ask")
       window.location.assign(ask);
@@ -190,12 +201,13 @@ export function Shell({ data, portals = true }) {
         className="side__nav"
         aria-label={t("Navigation")}
       >
-        <div className="side__sect">{t("Übersicht")}</div>
+        <div className="side__sect">{t("Arbeitsplatz")}</div>
         {link("/desk", "Desk", "desk")}
-        {link("/clients", "Clients", "clients")}
-        {link("/assets", "Assets", "texte")}
-        {link("/today", "News Heute", "heute")}
-        {link("/contacts", "Kontakte", "profil")}
+        {link("/clients", "Kunden", "clients")}
+        <div className="side__sect">{t("Kommunikation")}</div>
+        {link("/today", "Intelligence", "intel")}
+        {link("/assets", "Stories & Content", "stories")}
+        {link("/contacts", "Media & Relationships", "media")}
         {!!clients.length && (
           <div className="side__sect">
             {t("Mandanten")}
@@ -222,6 +234,23 @@ export function Shell({ data, portals = true }) {
           <span className="side__plus">+</span>
           <span className="side__newl">{t("Neuer Mandant")}</span>
         </a>
+      </nav>
+      <nav className="mobilebar" aria-label={t("Schnellnavigation")}>
+        {[
+          ["/desk", "Desk", "desk"],
+          ["/clients", "Kunden", "clients"],
+          ["/today", "Intel", "intel"],
+          ["/assets", "Stories", "stories"],
+          ["/contacts", "Medien", "media"],
+        ].map(([href, label, icon]) => {
+          const on = path === href || path.startsWith(href + "/");
+          return (
+            <a key={href} href={href} className={on ? "is-on" : undefined} aria-current={on ? "page" : undefined}>
+              <svg className="ico" aria-hidden="true"><use href={"#ico-" + icon} /></svg>
+              {t(label)}
+            </a>
+          );
+        })}
       </nav>
       <div id="workspace-account" className="side__foot">
         {link("/archive", "Archiv", "archiv")}
@@ -266,6 +295,7 @@ export function Shell({ data, portals = true }) {
             <use href="#ico-suche" />
           </svg>
           <input
+            ref={search}
             className="topsearch__in"
             type="search"
             name="q"
@@ -274,6 +304,7 @@ export function Shell({ data, portals = true }) {
             placeholder={t("Archiv durchsuchen…")}
             aria-label={t("Archiv durchsuchen")}
           />
+          <kbd className="topsearch__kbd" aria-hidden="true">⌘K</kbd>
           <button type="submit" className="topsearch__go">
             {t("Suchen")}
           </button>

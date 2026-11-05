@@ -5,7 +5,7 @@ import {ClientLogo} from './ClientLogo.jsx';
 export function ClientsPage({clients}){
  const [search,setSearch]=useState('');
  const visible=clients.filter(row=>row.client.name.toLocaleLowerCase().includes(search.toLocaleLowerCase()));
- return <section className="clients-page"><PageHeading eyebrow="MANDANTEN" title="Clients" description="Deine Mandate. Ihr Wissen. Die nächsten Chancen."><a className="btn btn--go" href="/mandant/neu"><span aria-hidden="true">＋</span> Neuer Mandant</a></PageHeading>
+ return <section className="clients-page"><PageHeading eyebrow="MANDANTEN" title="Kunden" description="Deine Mandate. Ihr Wissen. Die nächsten Chancen."><a className="btn btn--go" href="/mandant/neu"><span aria-hidden="true">＋</span> Neuer Mandant</a></PageHeading>
  <div className="clients-toolbar"><label className="client-search"><span>Mandanten suchen</span><input type="search" placeholder="Name eingeben …" value={search} onChange={e=>setSearch(e.target.value)}/></label><p>{visible.length} von {clients.length} Mandanten</p></div>
  <div className="workbench-list client-grid">{visible.map(row=><article className="client-card" key={row.client.id}>
  <div className="client-card-top"><ClientLogo id={row.client.id} size="md"/><span className={`client-status client-status--${row.status}`}>{row.status==='krise'?'Krise':row.status==='aktiv'?'In Arbeit':'Im Überblick'}</span></div>

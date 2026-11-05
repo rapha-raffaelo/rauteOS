@@ -106,7 +106,7 @@ export function JournalistsPage({params = new URLSearchParams(window.location.se
     catch(e){setError(e.message);}finally{setBusy(false);}
   }
   function saved(value) {setData(value);setContacts(v=>v.map(c=>c.id===value.contact.id ? value.contact:c));setNotice('Profil gespeichert.');}
-  return <div className="twin-page journalists-page"><PageHeading eyebrow="MEDIENARBEIT" title="Kontakte" description="Profilwissen, Artikelbelege und Beziehungshistorie an einem Ort."/>
+  return <div className="twin-page journalists-page"><PageHeading eyebrow="JOURNALIST INTELLIGENCE" title="Media & Relationships" description="Profilwissen, Artikelbelege und Beziehungshistorie an einem Ort."/>
     {clientId>0 && contextId>0 && ['detected','developed'].includes(contextKind) && <ResearchPanel clientId={clientId} contextId={contextId} contextKind={contextKind} onContact={openContact}/>}
     <ErrorMessage error={error}/>{notice && <p role="status">{notice}</p>}
     <div className="journalist-layout"><aside className="twin-field"><label>Kontakte suchen<input aria-label="Kontakte suchen" value={q} onChange={e=>setQ(e.target.value)}/></label>

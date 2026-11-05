@@ -210,7 +210,7 @@ def test_the_language_switch_sits_in_the_top_bar(web, mandate):
 
 def test_the_bar_names_the_workspace_and_the_mandate(web, mandate):
     bar = _topbar(rendered(web.get(f"/client/{mandate.id}/profil")))
-    assert "Clients" in bar
+    assert "Kunden" in bar
     assert "Solaris AG" in bar
     assert f'href="/client/{mandate.id}"' in bar
 
@@ -246,10 +246,10 @@ def _request(path: str, db=None, **query: str):
     ("path", "area"),
     [
         ("/", "Portfolio"),
-        ("/clients", "Clients"),
-        ("/today", "News Heute"),
+        ("/clients", "Kunden"),
+        ("/today", "Intelligence"),
         ("/archive", "Archiv"),
-        ("/contacts", "Kontakte"),
+        ("/contacts", "Media & Relationships"),
         ("/settings", "Einstellungen"),
         ("/settings/brain/pitch", "Einstellungen"),
     ],
@@ -262,7 +262,7 @@ def test_a_portfolio_path_crumbs_to_its_own_workspace(path, area):
 
 def test_a_mandate_path_crumbs_to_the_workspace_and_the_name(session, mandate):
     crumbs = navigation.nav_crumbs(_request(f"/client/{mandate.id}/guide", db=session))
-    assert crumbs.area == "Clients"
+    assert crumbs.area == "Kunden"
     assert crumbs.area_href == "/clients"
     assert crumbs.mandate == "Solaris AG"
     assert crumbs.mandate_href == f"/client/{mandate.id}"
@@ -274,7 +274,7 @@ def test_the_day_of_one_mandate_carries_that_mandate(session, mandate):
     the mandate there too, or the bar contradicts the tabs under it — while the
     workspace stays "Heute", which is the row the sidebar is highlighting."""
     crumbs = navigation.nav_crumbs(_request("/today", db=session, client=str(mandate.id)))
-    assert crumbs.area == "News Heute"
+    assert crumbs.area == "Intelligence"
     assert crumbs.mandate == "Solaris AG"
 
 
@@ -282,7 +282,7 @@ def test_a_client_filter_that_is_not_a_number_is_no_mandate(session):
     """``?client=`` is reader-supplied. A stray value leaves the day's own crumb
     standing rather than raising on the way to a page that renders fine."""
     crumbs = navigation.nav_crumbs(_request("/today", db=session, client="alle"))
-    assert crumbs.area == "News Heute"
+    assert crumbs.area == "Intelligence"
     assert crumbs.mandate is None
 
 
@@ -294,7 +294,7 @@ def test_a_client_filter_no_row_could_carry_is_no_mandate(session, stray):
     raise OverflowError inside the template, turning a working page into a 500,
     and '\u00b2' passes ``str.isdigit()`` but not ``int()``."""
     crumbs = navigation.nav_crumbs(_request("/today", db=session, client=stray))
-    assert crumbs.area == "News Heute"
+    assert crumbs.area == "Intelligence"
     assert crumbs.mandate is None
 
 
@@ -315,14 +315,14 @@ def test_the_workspace_crumb_is_the_word_the_sidebar_uses_for_that_page(web, man
 def test_an_unknown_mandate_crumbs_to_the_workspace_alone(session):
     """The 404 under it says the rest; the bar does not invent a name."""
     crumbs = navigation.nav_crumbs(_request("/client/9999/guide", db=session))
-    assert crumbs.area == "Clients"
+    assert crumbs.area == "Kunden"
     assert crumbs.mandate is None
 
 
 def test_no_session_on_the_request_is_a_workspace_not_a_500():
     """Same rule the sidebar follows: a thinner bar beats a broken page."""
     crumbs = navigation.nav_crumbs(_request("/client/1/heute"))
-    assert crumbs.area == "Clients"
+    assert crumbs.area == "Kunden"
     assert crumbs.mandate is None
 
 
@@ -458,12 +458,14 @@ def test_the_sidebar_keeps_its_rows_and_only_changes_how_they_look(web, mandate)
     single mandate is opened. Contact intelligence and the contact book share
     one entry. Since 2026-10-21 the "Weitere Werkzeuge" fold is gone: News Heute
     and Kontakte sit in the main group, Archiv in the foot above Einstellungen,
-    and Portfolio has no row (the brand mark still opens it).
+    and Portfolio has no row (the brand mark still opens it). Since spec 09
+    they sit in the prototype's two groups, Arbeitsplatz and Kommunikation,
+    so Intelligence (/today) comes before Stories & Content (/assets).
     """
     page = rendered(web.get("/today"))
     side = page.split('<aside class="side">', 1)[1].split("</aside>", 1)[0]
     rows = re.findall(r'<a href="([^"]+)" class="side__row', side)
-    assert rows[:5] == ["/desk", "/clients", "/assets", "/today", "/contacts"]
+    assert rows[:5] == ["/desk", "/clients", "/today", "/assets", "/contacts"]
     assert '<a href="/" class="side__row' not in side
     assert rows[-2:] == ["/archive", "/settings"]
     assert f"/client/{mandate.id}/overview" in side

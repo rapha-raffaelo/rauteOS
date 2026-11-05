@@ -64,6 +64,7 @@
   --side-chip-on: var(--alert);
   --side-chip-on-ink: #ffffff;
   --mark: var(--tint);
+  --mobile-on: var(--tint);
   --brand-ink: var(--ink);
   /* The primary button and the assistant button. */
   --action: var(--tint);
@@ -191,6 +192,7 @@
   --side-chip-on: #b6db42;
   --side-chip-on-ink: #2a361c;
   --mark: var(--lime);
+  --mobile-on: var(--lime);
   --brand-ink: #ffffff;
   --action: #1a1d1b;
   --on-action: #ffffff;

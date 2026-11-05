@@ -119,13 +119,13 @@ class NavPath:
 #: and no prefix here is a prefix of another.
 _AREAS: tuple[tuple[str, str], ...] = (
     ("/desk", "Desk"),
-    ("/clients", "Clients"),
-    ("/assets", "Assets"),
+    ("/clients", "Kunden"),
+    ("/assets", "Stories & Content"),
     ("/ask", "Ask RAUTE"),
-    ("/today", "News Heute"),
+    ("/today", "Intelligence"),
     ("/archive", "Archiv"),
-    ("/journalists", "Kontakte"),
-    ("/contacts", "Kontakte"),
+    ("/journalists", "Media & Relationships"),
+    ("/contacts", "Media & Relationships"),
     ("/settings", "Einstellungen"),
 )
 #: Everything else. "/" keeps its page title but no longer has a sidebar row
@@ -134,7 +134,7 @@ _AREAS: tuple[tuple[str, str], ...] = (
 #: sidebar has to name that page, or clicking it lands the reader somewhere no
 #: row is highlighted.
 _PORTFOLIO = "Portfolio"
-_MANDATES = ("Clients", "/clients")
+_MANDATES = ("Kunden", "/clients")
 
 #: SQLite holds a row id in a signed 64-bit integer and raises rather than
 #: answering "no such row" when asked about a larger one. A reader can put any

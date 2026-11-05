@@ -66,7 +66,7 @@ it("uses client path boundaries and exposes exactly one assistant and Contacts l
     screen.getByRole("link", { name: "Ten" }).getAttribute("aria-current"),
   ).toBe("page");
   expect(screen.getAllByRole("link", { name: "Ask RAUTE" })).toHaveLength(1);
-  expect(screen.getAllByRole("link", { name: "Kontakte" })).toHaveLength(1);
+  expect(screen.getAllByRole("link", { name: "Media & Relationships" })).toHaveLength(1);
   expect(screen.queryByRole("link", { name: "Journalisten" })).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "Menü öffnen" }));
   expect(

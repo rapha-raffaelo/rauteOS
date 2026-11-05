@@ -46,7 +46,7 @@ def test_old_workspace_links_keep_their_context_under_contacts(web, monkeypatch,
     assert 'id="react-journalists"' in body
     assert '<title>Kontakte · RauteOS</title>' in body
     side = body.split('<aside class="side">', 1)[1].split('</aside>', 1)[0]
-    assert side.count('href="/contacts"') == 1
+    assert side.count('href="/contacts" class="side__row') == 1
     assert 'href="/journalists"' not in side
     assert 'href="/contacts" class="side__row is-on"' in side
 
