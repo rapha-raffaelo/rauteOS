@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 
 from .models import (
     DEAL_STAGES, POST_STATES, TASK_PRIORITIES, TASK_STATES,
-    Client, Deal, LinkedInPost, Task,
+    Asset, Client, Deal, LinkedInPost, Task,
 )
 
 #: How the pages name each value. One place, so the Desk says the same words.
@@ -153,6 +153,77 @@ def save_post(session: Session, form: Mapping, post: LinkedInPost | None = None)
         raise Invalid("Der Link beginnt mit https://.")
     post.published_url = url
     post.updated_at = _now()
+    session.add(post)
+    session.commit()
+    return post
+
+
+#: How many suggestions of each kind head the LinkedIn page.
+SUGGESTIONS_SHOWN = 6
+
+
+def _first_line(text: str, limit: int = 200) -> str:
+    line = next((l.strip() for l in (text or "").splitlines() if l.strip()), "")
+    return line if len(line) <= limit else line[:limit].rsplit(" ", 1)[0] + " …"
+
+
+def suggestions(session: Session) -> dict:
+    """What RauteOS already has for LinkedIn and is not on the board yet.
+
+    ``texts`` are the LinkedIn posts written in a chance (format ``linkedin``),
+    newest first. ``chances`` are the open chances of the active mandates,
+    the Desk's list. Taking one over is a click; nothing lands on the board
+    by itself.
+    """
+    from . import desk
+
+    clients = {c.id: c for c in mandates(session)}
+    taken = set(session.scalars(select(LinkedInPost.asset_id).where(LinkedInPost.asset_id.is_not(None))))
+    picked = set(session.scalars(select(LinkedInPost.context_href).where(LinkedInPost.context_href != "")))
+    texts = []
+    if clients:
+        rows = session.scalars(select(Asset).where(Asset.kind == "linkedin", Asset.client_id.in_(clients),
+                                                   Asset.angle_id.is_not(None))
+                               .order_by(Asset.generated_at.desc()).limit(50))
+        for a in rows:
+            if a.id in taken:
+                continue
+            texts.append(dict(id=a.id, client=dict(id=a.client_id, name=clients[a.client_id].name),
+                              title=a.title or _first_line(a.body), excerpt=_first_line(a.body, 160) if a.title else "",
+                              speaker=a.speaker, released=a.released_at is not None, written_at=a.generated_at,
+                              href=f"/client/{a.client_id}/advice?eintrag=anlass-{a.angle_id}#asset-{a.id}"))
+            if len(texts) == SUGGESTIONS_SHOWN:
+                break
+    chances = [dict(client=dict(id=c.client.id, name=c.client.name), title=c.title, href=c.href, since=c.since)
+               for c in desk._chances(session, clients, limit=SUGGESTIONS_SHOWN + len(picked))
+               if c.href not in picked][:SUGGESTIONS_SHOWN]
+    return dict(texts=texts, chances=chances)
+
+
+def post_from_asset(session: Session, asset: Asset) -> LinkedInPost:
+    """The board's card for a LinkedIn text RauteOS wrote. Once per text."""
+    post = session.scalar(select(LinkedInPost).where(LinkedInPost.asset_id == asset.id))
+    if post:
+        return post
+    post = LinkedInPost(client_id=asset.client_id, asset_id=asset.id, title=(asset.title or _first_line(asset.body))[:200],
+                        author=asset.speaker[:120], body=asset.body[:3000],
+                        status="freigabe" if asset.released_at else "entwurf", updated_at=_now())
+    session.add(post)
+    session.commit()
+    return post
+
+
+def post_from_chance(session: Session, form: Mapping) -> LinkedInPost:
+    """An idea on the board for one of the open chances. Once per chance."""
+    href = _href(form, "context_href")
+    if not href:
+        raise Invalid("Nur ein Link innerhalb von RauteOS.")
+    post = session.scalar(select(LinkedInPost).where(LinkedInPost.context_href == href))
+    if post:
+        return post
+    post = LinkedInPost(client_id=_mandate(session, form, required=True), context_href=href,
+                        title=_text(form, "title", 200, required="Bitte einen Arbeitstitel."),
+                        status="idee", updated_at=_now())
     session.add(post)
     session.commit()
     return post

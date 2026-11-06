@@ -50,8 +50,18 @@ Erledigen, Löschen und Filter nach Status und Mandant.
 | `published_url` | Link nach Veröffentlichung, optional |
 | `created_at`, `updated_at` | |
 
+| `asset_id` | Der LinkedIn-Text aus RauteOS, aus dem der Beitrag stammt, optional |
+| `context_href` | Die Chance, die der Beitrag aufgreift, optional |
+
 Seite `/linkedin`: Beiträge nach Status gruppiert, Anlegen, Bearbeiten,
 Status wechseln. Kein Publishing über die API.
+
+Darüber „Vorschläge aus RauteOS“: die in einer Chance geschriebenen
+LinkedIn-Posts (Format `linkedin`) und die offenen Chancen der aktiven
+Mandanten. „Übernehmen“ legt eine Karte an, ein freigegebener Text startet in
+„Freigabe“, ein Entwurf in „Entwurf“, eine Chance als „Idee“. Jeder Text und
+jede Chance wird höchstens einmal übernommen; von selbst landet nichts auf dem
+Board.
 
 ## Sales CRM (`deals`)
 

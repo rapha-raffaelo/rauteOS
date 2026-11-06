@@ -392,4 +392,7 @@
 .wl-item h3{font-size:13px;font-weight:700;margin:0 0 4px}
 .wl-item p{font-size:11px;color:var(--faint);margin:0 0 6px}
 .wl-item .wl-form__grid{grid-template-columns:1fr}
-@media(max-width:700px){.wl-form__grid{grid-template-columns:1fr}.wl-row{flex-wrap:wrap}}
+.wl-suggest{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:4px}
+.wl-card__h{font-size:12px;font-weight:750;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin:12px 0 2px}
+.wl-hint{color:var(--muted);font-size:13px;margin:0 0 16px}
+@media(max-width:700px){.wl-form__grid,.wl-suggest{grid-template-columns:1fr}.wl-row{flex-wrap:wrap}}

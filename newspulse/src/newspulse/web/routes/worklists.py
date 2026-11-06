@@ -12,7 +12,7 @@ from fastapi.responses import RedirectResponse, Response
 from sqlalchemy.orm import Session
 
 from ... import worklists
-from ...models import DEAL_STAGES, POST_STATES, TASK_PRIORITIES, TASK_STATES, Deal, LinkedInPost, Task
+from ...models import DEAL_STAGES, POST_STATES, TASK_PRIORITIES, TASK_STATES, Asset, Deal, LinkedInPost, Task
 from ..app import get_db
 from ..react_pages import render as render_react
 
@@ -34,7 +34,16 @@ def _task(t: Task) -> dict:
 def _post(p: LinkedInPost) -> dict:
     return dict(id=p.id, title=p.title, author=p.author, body=p.body, status=p.status,
                 planned_on=p.planned_on, published_url=p.published_url,
-                client=dict(id=p.client.id, name=p.client.name), updated_at=p.updated_at)
+                client=dict(id=p.client.id, name=p.client.name), updated_at=p.updated_at,
+                source_href=_source_href(p))
+
+
+def _source_href(p: LinkedInPost) -> str:
+    """Where the card came from: the chance, or the text RauteOS wrote."""
+    if p.context_href:
+        return p.context_href
+    a = p.asset if p.asset_id else None
+    return f"/client/{a.client_id}/advice?eintrag=anlass-{a.angle_id}#asset-{a.id}" if a and a.angle_id else ""
 
 
 def _deal(d: Deal) -> dict:
@@ -117,6 +126,7 @@ def _posts_page(request: Request, session: Session, *, error: str = "", draft: d
     return render_react(request, "linkedin", dict(
         posts=[_post(p) for p in rows], clients=_clients(session),
         states=[[s, worklists.POST_STATE_LABELS[s]] for s in POST_STATES],
+        suggestions=worklists.suggestions(session),
         error=error, draft=draft or {}))
 
 
@@ -134,6 +144,25 @@ async def create_post(request: Request, session: Session = Depends(get_db)) -> R
         session.rollback()
         return _posts_page(request, session, error=str(exc), draft=form)
     return RedirectResponse("/linkedin", status_code=_SEE_OTHER)
+
+
+@router.post("/linkedin/from-text/{asset_id}")
+def post_from_text(asset_id: int, session: Session = Depends(get_db)) -> Response:
+    asset = _row_or_404(session, Asset, asset_id)
+    if asset.kind != "linkedin":
+        raise HTTPException(status_code=404, detail="Not found")
+    post = worklists.post_from_asset(session, asset)
+    return RedirectResponse(f"/linkedin#post-{post.id}", status_code=_SEE_OTHER)
+
+
+@router.post("/linkedin/from-chance")
+async def post_from_chance(request: Request, session: Session = Depends(get_db)) -> Response:
+    try:
+        post = worklists.post_from_chance(session, await _form(request))
+    except worklists.Invalid as exc:
+        session.rollback()
+        return _posts_page(request, session, error=str(exc))
+    return RedirectResponse(f"/linkedin#post-{post.id}", status_code=_SEE_OTHER)
 
 
 @router.post("/linkedin/{post_id}")

@@ -148,6 +148,39 @@ function Move({ action, field, keys, current }) {
   );
 }
 
+// What RauteOS already has for LinkedIn: the posts written in a chance, and the
+// open chances themselves. Taking one over puts it on the board; nothing moves
+// there by itself.
+function Suggestions({ texts = [], chances = [] }) {
+  if (!texts.length && !chances.length) {
+    return <p className="wl-hint">{t("Noch keine Vorschläge. Einen LinkedIn-Post schreibt RauteOS in einer Chance unter Umsetzung; offene Chancen erscheinen hier als Ideen.")}</p>;
+  }
+  return (
+    <div className="wl-suggest">
+      {[["Von RauteOS geschrieben", texts], ["Ideen aus offenen Chancen", chances]].map(([title, items]) => (
+        <section key={title} className="wl-card" aria-label={t(title)}>
+          <h2 className="wl-card__h">{t(title)}</h2>
+          {items.map((x) => (
+            <article key={x.id ?? x.href} className="wl-row">
+              <div className="wl-row__b">
+                <h2><a href={x.href}>{x.title}</a></h2>
+                <p>{[x.client.name, x.speaker, x.written_at && day(x.written_at.slice(0, 10)), x.id && t(x.released ? "freigegeben" : "Entwurf")].filter(Boolean).join(" · ")}</p>
+                {x.excerpt && <p className="wl-note">{x.excerpt}</p>}
+              </div>
+              <div className="wl-acts">
+                {x.id
+                  ? <Action action={`/linkedin/from-text/${x.id}`} label="Übernehmen" />
+                  : <Action action="/linkedin/from-chance" label="Als Idee übernehmen" values={{ client_id: x.client.id, title: x.title.slice(0, 200), context_href: x.href }} />}
+              </div>
+            </article>
+          ))}
+          {!items.length && <p className="wl-empty">{t("Nichts Neues.")}</p>}
+        </section>
+      ))}
+    </div>
+  );
+}
+
 export function LinkedInPage({ data: d }) {
   const [adding, setAdding] = useState(!!d.error && !!Object.keys(d.draft || {}).length);
   const [editing, setEditing] = useState(null);
@@ -159,9 +192,10 @@ export function LinkedInPage({ data: d }) {
       <Notice>{d.error}</Notice>
       <div className="wl-bar"><span /><Toggle open={adding} onClick={() => setAdding(!adding)}>+ Neuer Beitrag</Toggle></div>
       {adding && <div className="wl-card"><Form action="/linkedin" fields={postFields(d, d.draft)} submit="Beitrag anlegen" onCancel={() => setAdding(false)} /></div>}
+      <Suggestions {...(d.suggestions || {})} />
       <Board columns={columns} render={(p) => (
         <article key={p.id} id={`post-${p.id}`} className="wl-item">
-          <h3>{p.title}</h3>
+          <h3>{p.source_href ? <a href={p.source_href}>{p.title}</a> : p.title}</h3>
           <p>{[p.client.name, p.author, p.planned_on && day(p.planned_on)].filter(Boolean).join(" · ")}</p>
           {p.body && <p className="wl-note">{p.body.slice(0, 140)}{p.body.length > 140 ? " …" : ""}</p>}
           {p.published_url && <a href={p.published_url} target="_blank" rel="noreferrer">{t("Auf LinkedIn ansehen")}</a>}

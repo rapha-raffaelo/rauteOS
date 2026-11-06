@@ -176,3 +176,67 @@ def test_the_sidebar_carries_the_three_new_areas(web):
     for href in ("/aufgaben", "/linkedin", "/sales"):
         assert f'href="{href}" class="side__row' in side
     assert "Wachstum" in side
+
+
+# --- LinkedIn: what RauteOS already has -----------------------------------------
+
+
+def _linkedin_text(session, *, released=False):
+    from newspulse.models import Angle, Asset
+    angle = Angle(client_id=1, subject="Kreditkosten im Mittelstand", message="m", context="c", thesis="t", statements=[])
+    session.add(angle)
+    session.flush()
+    asset = Asset(client_id=1, angle_id=angle.id, kind="linkedin", title="",
+                  body="Kredite werden teurer.\n\nWas das für Gründer heißt.", speaker="Alexandre Prot",
+                  released_at=dt.datetime.now(dt.UTC) if released else None)
+    session.add(asset)
+    session.commit()
+    return asset
+
+
+def test_a_linkedin_text_rauteos_wrote_is_suggested_and_taken_over_once(web, session):
+    asset = _linkedin_text(session, released=True)
+    texts = worklists.suggestions(session)["texts"]
+    assert [(t["id"], t["title"], t["speaker"]) for t in texts] == [(asset.id, "Kredite werden teurer.", "Alexandre Prot")]
+    assert "Kredite werden teurer." in rendered(web.get("/linkedin"))
+
+    for _ in range(2):
+        assert web.post(f"/linkedin/from-text/{asset.id}", follow_redirects=False).status_code == 303
+    post = session.scalar(select(LinkedInPost))
+    assert (post.client_id, post.asset_id, post.status, post.author) == (1, asset.id, "freigabe", "Alexandre Prot")
+    assert post.body.startswith("Kredite werden teurer.")
+    assert len(session.scalars(select(LinkedInPost)).all()) == 1
+    assert worklists.suggestions(session)["texts"] == []
+
+
+def test_an_unreleased_text_starts_as_a_draft_and_another_format_is_a_404(web, session):
+    from newspulse.models import Asset
+    asset = _linkedin_text(session)
+    web.post(f"/linkedin/from-text/{asset.id}")
+    assert session.scalar(select(LinkedInPost)).status == "entwurf"
+    other = Asset(client_id=1, angle_id=asset.angle_id, kind="statement", title="x", body="y")
+    session.add(other)
+    session.commit()
+    assert web.post(f"/linkedin/from-text/{other.id}").status_code == 404
+
+
+def test_an_open_chance_becomes_an_idea_once(web, session, monkeypatch):
+    href = "/client/1/opportunities?kind=developed&context=7"
+    chance = desk.Chance(client=session.get(Client, 1), kind="developed", title="Kreditkosten", status="draft",
+                         since=None, href=href)
+    monkeypatch.setattr(desk, "_chances", lambda s, clients, limit=6: [chance])
+    assert [c["href"] for c in worklists.suggestions(session)["chances"]] == [href]
+    form = {"client_id": "1", "title": "Kreditkosten", "context_href": href}
+    web.post("/linkedin/from-chance", data=form)
+    web.post("/linkedin/from-chance", data=form)
+    post = session.scalar(select(LinkedInPost))
+    assert (post.status, post.context_href, post.title) == ("idee", href, "Kreditkosten")
+    assert len(session.scalars(select(LinkedInPost)).all()) == 1
+    assert worklists.suggestions(session)["chances"] == []
+    assert f'href="{href}"' in rendered(web.get("/linkedin")).replace("&amp;", "&")
+
+
+def test_a_chance_from_outside_rauteos_is_refused(web, session):
+    body = rendered(web.post("/linkedin/from-chance", data={"client_id": "1", "title": "x", "context_href": "https://evil.example"}))
+    assert "innerhalb von RauteOS" in body
+    assert session.scalar(select(LinkedInPost)) is None

@@ -4687,10 +4687,17 @@ class LinkedInPost(Base):
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="idee", index=True)
     planned_on: Mapped[dt.date | None] = mapped_column(Date(), nullable=True)
     published_url: Mapped[str] = mapped_column(String(500), nullable=False, default="")
+    #: The LinkedIn text RauteOS wrote that this post was taken from, if any.
+    #: SET NULL: deleting the text does not delete the planning around it.
+    asset_id: Mapped[int | None] = mapped_column(
+        ForeignKey("assets.id", ondelete="SET NULL"), nullable=True, index=True)
+    #: The chance this post picks up. A path on this site, like a task's.
+    context_href: Mapped[str] = mapped_column(String(300), nullable=False, default="")
     created_at: Mapped[dt.datetime] = mapped_column(UTCDateTime(), nullable=False, default=_utcnow)
     updated_at: Mapped[dt.datetime] = mapped_column(UTCDateTime(), nullable=False, default=_utcnow)
 
     client: Mapped["Client"] = relationship()
+    asset: Mapped["Asset | None"] = relationship()
 
 
 class Deal(Base):
