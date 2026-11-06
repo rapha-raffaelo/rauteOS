@@ -201,4 +201,20 @@ def test_without_an_app_the_page_says_so_and_offers_no_connection(web, monkeypat
     monkeypatch.setattr(config, "DATABASE_PATH", tmp_path / "newspulse.db")
     monkeypatch.delenv("NEWSPULSE_LINKEDIN_CLIENT_ID", raising=False)
     page = rendered(web.get("/linkedin"))
-    assert "noch nicht eingerichtet" in page and "/linkedin/connect" not in page
+    assert "In LinkedIn öffnen" in page and "/linkedin/connect" not in page
+
+
+def test_a_post_published_by_hand_takes_its_linkedin_link(web, session):
+    url = "https://www.linkedin.com/posts/lucas_kreditkosten-activity-1"
+    assert web.post("/linkedin/5/published", data={"published_url": url}, follow_redirects=False).status_code == 303
+    session.expire_all()
+    post = session.get(LinkedInPost, 5)
+    assert (post.status, post.published_url) == ("veroeffentlicht", url)
+    assert post.planned_on is not None
+
+
+def test_a_link_elsewhere_is_not_taken_as_the_post(web, session):
+    page = rendered(web.post("/linkedin/5/published", data={"published_url": "https://evil.example/x"}))
+    assert "kein Link zu LinkedIn" in page
+    session.expire_all()
+    assert session.get(LinkedInPost, 5).status == "freigabe"

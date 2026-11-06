@@ -189,7 +189,7 @@ const moment = (iso) =>
 
 // The signed-in person's own LinkedIn profile: RauteOS posts through it.
 function Account({ a = {} }) {
-  if (!a.configured) return <p className="wl-hint">{t("Die LinkedIn-Anbindung ist auf dem Server noch nicht eingerichtet. Bis dahin hier planen und auf LinkedIn selbst posten.")}</p>;
+  if (!a.configured) return <span />;
   const connect = (label) => <a className="btn btn--go" href="/linkedin/connect">{t(label)}</a>;
   if (!a.connected) {
     return (
@@ -208,6 +208,36 @@ function Account({ a = {} }) {
   );
 }
 
+// Without a connected account: LinkedIn opens with the text, which is also on
+// the clipboard in case LinkedIn leaves the field empty. The person posts in
+// their own login and brings the link back.
+const composeUrl = (text) => `https://www.linkedin.com/feed/?shareActive=true&text=${encodeURIComponent(text)}`;
+
+function ByHand({ p }) {
+  const [opened, setOpened] = useState(false);
+  const [linking, setLinking] = useState(false);
+  if (p.published_url) return null;
+  const open = () => {
+    try { navigator.clipboard?.writeText(p.body).catch(() => {}); } catch { /* the field may still be filled */ }
+    window.open(composeUrl(p.body), "_blank", "noopener");
+    setOpened(true);
+    setLinking(true);
+  };
+  return (
+    <div className="wl-li">
+      {p.body && <button type="button" className="btn btn--go" onClick={open}>{t("In LinkedIn öffnen")}</button>}
+      {opened && <p>{t("Der Text ist auch kopiert. Bleibt das Feld auf LinkedIn leer, einfach einfügen.")}</p>}
+      {linking
+        ? <form method="post" action={`/linkedin/${p.id}/published`} className="wl-li__plan">
+            <label><span className="sr-only">{t("Link zum Beitrag")}</span>
+              <input name="published_url" type="url" required maxLength={500} placeholder="https://www.linkedin.com/…" /></label>
+            <button type="submit" className="btn btn--quiet">{t("Als veröffentlicht speichern")}</button>
+          </form>
+        : <button type="button" className="btn btn--quiet" onClick={() => setLinking(true)}>{t("Schon gepostet? Link eintragen")}</button>}
+    </div>
+  );
+}
+
 // Posting one card: now, or at a moment the scheduler keeps.
 function OnLinkedIn({ p, a = {} }) {
   if (p.on_linkedin) return null;
@@ -220,7 +250,8 @@ function OnLinkedIn({ p, a = {} }) {
       </div>
     );
   }
-  if (!a.connected || !p.body) return error || null;
+  if (!a.connected) return <ByHand p={p} />;
+  if (!p.body) return error || null;
   return (
     <div className="wl-li">
       {error}
@@ -244,7 +275,7 @@ export function LinkedInPage({ data: d }) {
   const columns = d.states.map(([key, label]) => ({ key, label: t(label), note: "", items: d.posts.filter((p) => p.status === key) }));
   return (
     <section className="worklist">
-      <PageHeading eyebrow="KOMMUNIKATION" title="LinkedIn" description="Redaktionsarbeit für die Sprecher der Mandanten. Geplant, freigegeben und gepostet wird hier." />
+      <PageHeading eyebrow="KOMMUNIKATION" title="LinkedIn" description="Redaktionsarbeit für die Sprecher der Mandanten. Geplant und freigegeben wird hier, gepostet im eigenen LinkedIn." />
       <Notice>{d.error || d.notice}</Notice>
       <div className="wl-bar"><Account a={d.account} /><Toggle open={adding} onClick={() => setAdding(!adding)}>+ Neuer Beitrag</Toggle></div>
       {adding && <div className="wl-card"><Form action="/linkedin" fields={postFields(d, d.draft)} submit="Beitrag anlegen" onCancel={() => setAdding(false)} /></div>}

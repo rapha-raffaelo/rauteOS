@@ -60,7 +60,17 @@ Erledigen, Löschen und Filter nach Status und Mandant.
 Seite `/linkedin`: Beiträge nach Status gruppiert, Anlegen, Bearbeiten,
 Status wechseln.
 
-### Posten über LinkedIn
+### Posten von Hand (Standard)
+
+Solange keine LinkedIn-App eingerichtet ist (die braucht eine
+Unternehmensseite), steht an jeder Karte mit Text „In LinkedIn öffnen“. Der
+Knopf kopiert den Text in die Zwischenablage und öffnet LinkedIn mit dem
+Text im Eingabefeld. Ob LinkedIn das Feld füllt, ist nicht dokumentiert,
+deshalb die Kopie. Die Person postet in ihrem eigenen Login und trägt den
+Link ein. Dann steht der Beitrag auf „Veröffentlicht“. Angenommen werden nur
+Links zu linkedin.com oder lnkd.in.
+
+### Posten über LinkedIn (sobald eine App eingerichtet ist)
 
 Jede Person verbindet auf `/linkedin` ihr eigenes LinkedIn-Profil
 („Sign In with LinkedIn using OpenID Connect“ und „Share on LinkedIn“,

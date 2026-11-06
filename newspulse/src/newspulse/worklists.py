@@ -306,6 +306,22 @@ def schedule_post(session: Session, post: LinkedInPost, owner: str, form: Mappin
     return post
 
 
+#: Where a post someone published by hand lives.
+_LINKEDIN_HOSTS = ("https://www.linkedin.com/", "https://linkedin.com/", "https://lnkd.in/")
+
+
+def mark_published(session: Session, post: LinkedInPost, form: Mapping) -> LinkedInPost:
+    """A person posted it on LinkedIn themselves and brings back the link."""
+    url = _text(form, "published_url", 500, required="Bitte den Link zum Beitrag einfügen.")
+    if not url.startswith(_LINKEDIN_HOSTS):
+        raise Invalid("Das ist kein Link zu LinkedIn.")
+    post.published_url, post.status, post.post_at = url, "veroeffentlicht", None
+    post.planned_on = post.planned_on or dt.datetime.now(config.local_zone()).date()
+    post.updated_at = _now()
+    session.commit()
+    return post
+
+
 def unschedule_post(session: Session, post: LinkedInPost) -> None:
     post.post_at = None
     post.updated_at = _now()

@@ -265,6 +265,17 @@ async def schedule_post(post_id: int, request: Request, session: Session = Depen
     return RedirectResponse(f"/linkedin#post-{post.id}", status_code=_SEE_OTHER)
 
 
+@router.post("/linkedin/{post_id}/published")
+async def mark_published(post_id: int, request: Request, session: Session = Depends(get_db)) -> Response:
+    post = _row_or_404(session, LinkedInPost, post_id)
+    try:
+        worklists.mark_published(session, post, await _form(request))
+    except worklists.Invalid as exc:
+        session.rollback()
+        return _posts_page(request, session, error=str(exc))
+    return RedirectResponse(f"/linkedin#post-{post.id}", status_code=_SEE_OTHER)
+
+
 @router.post("/linkedin/{post_id}/unschedule")
 def unschedule_post(post_id: int, session: Session = Depends(get_db)) -> Response:
     post = _row_or_404(session, LinkedInPost, post_id)
