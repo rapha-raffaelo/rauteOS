@@ -218,3 +218,25 @@ def test_a_link_elsewhere_is_not_taken_as_the_post(web, session):
     assert "kein Link zu LinkedIn" in page
     session.expire_all()
     assert session.get(LinkedInPost, 5).status == "freigabe"
+
+
+def test_an_idea_from_a_chance_gets_its_text_and_goes_out_by_hand(web, session):
+    """The whole board flow without an app: chance, idea, text, LinkedIn, link."""
+    made = web.post("/linkedin/from-chance", data={"client_id": "1", "title": "Neue Wettbewerber",
+                                                   "context_href": "/client/1/opportunities?kind=detected&context=9"},
+                    follow_redirects=False)
+    assert made.status_code == 303
+    idea = session.scalar(select(LinkedInPost).where(LinkedInPost.title == "Neue Wettbewerber"))
+    page = rendered(web.get("/linkedin"))
+    assert "Text schreiben" in page and f'action="/linkedin/{idea.id}/published"' not in page
+
+    web.post(f"/linkedin/{idea.id}", data={"title": idea.title, "client_id": "1", "status": "idee",
+                                           "body": "Der Engpass ist der Betrieb nach dem Start."})
+    session.expire_all()
+    assert session.get(LinkedInPost, idea.id).status == "entwurf"
+    assert "In LinkedIn öffnen" in rendered(web.get("/linkedin"))
+
+    url = "https://www.linkedin.com/posts/lucas_activity-2"
+    web.post(f"/linkedin/{idea.id}/published", data={"published_url": url})
+    session.expire_all()
+    assert session.get(LinkedInPost, idea.id).status == "veroeffentlicht"

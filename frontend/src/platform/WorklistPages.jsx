@@ -127,7 +127,7 @@ function postFields(d, v = {}) {
       <Field name="status" label="Status" value={v.status || "idee"} options={d.states} />
       <Field name="planned_on" label="Geplant für" type="date" value={v.planned_on || ""} />
       <Field name="published_url" label="Link nach Veröffentlichung" value={v.published_url} maxLength={500} placeholder="https://www.linkedin.com/…" />
-      <Field name="body" label="Text" type="textarea" value={v.body} rows={6} maxLength={3000} />
+      <Field name="body" label="Text" type="textarea" value={v.body} rows={6} maxLength={3000} autoFocus={v.id != null && !v.body} />
     </>
   );
 }
@@ -142,12 +142,14 @@ function Board({ columns, render }) {
   ))}</div>;
 }
 
-function Move({ action, field, keys, current }) {
+// Each arrow names the column it moves to, when the board gives the names.
+function Move({ action, field, keys, current, names = {} }) {
   const i = keys.indexOf(current);
+  const to = (k) => names[k] ? ` ${t(names[k])}` : "";
   return (
     <div className="wl-move">
-      {i > 0 && <Action action={action} label="←" values={{ [field]: keys[i - 1] }} />}
-      {i < keys.length - 1 && <Action action={action} label="→" values={{ [field]: keys[i + 1] }} />}
+      {i > 0 && <Action action={action} label={`←${to(keys[i - 1])}`} values={{ [field]: keys[i - 1] }} />}
+      {i < keys.length - 1 && <Action action={action} label={`${to(keys[i + 1]).trim()} →`.trim()} values={{ [field]: keys[i + 1] }} />}
     </div>
   );
 }
@@ -217,7 +219,7 @@ const composeUrl = (text) => `https://www.linkedin.com/feed/?shareActive=true&te
 function ByHand({ p }) {
   const [opened, setOpened] = useState(false);
   const [linking, setLinking] = useState(false);
-  if (p.published_url) return null;
+  if (p.published_url || !p.body) return null;
   const open = () => {
     try { navigator.clipboard?.writeText(p.body).catch(() => {}); } catch { /* the field may still be filled */ }
     window.open(composeUrl(p.body), "_blank", "noopener");
@@ -226,7 +228,7 @@ function ByHand({ p }) {
   };
   return (
     <div className="wl-li">
-      {p.body && <button type="button" className="btn btn--go" onClick={open}>{t("In LinkedIn öffnen")}</button>}
+      <button type="button" className="btn btn--go" onClick={open}>{t("In LinkedIn öffnen")}</button>
       {opened && <p>{t("Der Text ist auch kopiert. Bleibt das Feld auf LinkedIn leer, einfach einfügen.")}</p>}
       {linking
         ? <form method="post" action={`/linkedin/${p.id}/published`} className="wl-li__plan">
@@ -273,6 +275,7 @@ export function LinkedInPage({ data: d }) {
   const [adding, setAdding] = useState(!!d.error && !!Object.keys(d.draft || {}).length);
   const [editing, setEditing] = useState(null);
   const keys = d.states.map(([k]) => k);
+  const names = Object.fromEntries(d.states);
   const columns = d.states.map(([key, label]) => ({ key, label: t(label), note: "", items: d.posts.filter((p) => p.status === key) }));
   return (
     <section className="worklist">
@@ -285,11 +288,15 @@ export function LinkedInPage({ data: d }) {
         <article key={p.id} id={`post-${p.id}`} className="wl-item">
           <h3>{p.source_href ? <a href={p.source_href}>{p.title}</a> : p.title}</h3>
           <p>{[p.client.name, p.author, p.planned_on && day(p.planned_on)].filter(Boolean).join(" · ")}</p>
-          {p.body && <p className="wl-note">{clip(p.body, 140)}</p>}
+          {p.body ? <p className="wl-note">{clip(p.body, 140)}</p>
+            : editing !== p.id && <div className="wl-li">
+                <p>{t("Noch kein Text. Sobald er steht, öffnet die Karte ihn fertig in LinkedIn.")}</p>
+                <button type="button" className="btn btn--go" onClick={() => setEditing(p.id)}>{t("Text schreiben")}</button>
+              </div>}
           {p.published_url && <a href={p.published_url} target="_blank" rel="noreferrer">{t("Auf LinkedIn ansehen")}</a>}
           <OnLinkedIn p={p} a={d.account} />
           <div className="wl-item__acts">
-            <Move action={`/linkedin/${p.id}`} field="status" keys={keys} current={p.status} />
+            <Move action={`/linkedin/${p.id}`} field="status" keys={keys} current={p.status} names={names} />
             <button type="button" className="btn btn--quiet" onClick={() => setEditing(editing === p.id ? null : p.id)}>{t("Bearbeiten")}</button>
           </div>
           {editing === p.id && <><Form action={`/linkedin/${p.id}`} fields={postFields(d, p)} submit="Speichern" onCancel={() => setEditing(null)} />

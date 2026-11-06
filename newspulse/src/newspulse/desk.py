@@ -45,7 +45,6 @@ from sqlalchemy.orm import Session
 from . import config, profile as profiles
 from .models import (
     Analysis,
-    Angle,
     Article,
     Asset,
     Client,
@@ -377,15 +376,17 @@ def _opportunity_counts(session: Session, now: dt.datetime, listed: dict[int, li
 def _decisions(session: Session, clients: dict[int, Client]) -> list[Decision]:
     """Everything standing still until somebody decides, newest need first.
 
-    Four kinds, and they are four because each has a different answer:
+    Three kinds, and they are three because each has a different answer:
 
     * a letter written and not yet signed off by the client — the gate OUT-05
       put in front of every journalist;
     * a letter signed off and not yet released — the agency's own last look;
-    * an impulse drafted and neither used nor dismissed;
     * a profile value the research contradicts, which only a person can settle.
 
-    Not included: anything the tool can decide itself. A dashboard that lists
+    Not included: an impulse RAUTE proposed. It is already an open chance
+    (a developed one) in "Relevante Chancen" and in the count beside it, and
+    listing it here too made one proposal read as two kinds of work.
+    Nor anything the tool can decide itself. A dashboard that lists
     work it could have done is a dashboard nobody finishes reading.
     """
     from . import workspaces
@@ -412,23 +413,6 @@ def _decisions(session: Session, clients: dict[int, Client]) -> list[Decision]:
                 ),
                 since=letter.generated_at,
                 href=workspaces.text_href(session, letter, "outreach"),
-            )
-        )
-
-    impulses = session.scalars(
-        select(Angle).where(
-            Angle.dismissed_at.is_(None), Angle.client_id.in_(clients)
-        )
-    ).all()
-    for impulse in impulses:
-        pending.append(
-            Decision(
-                client=clients[impulse.client_id],
-                kind="impuls",
-                title=impulse.subject or "Impuls ohne Betreff",
-                detail="Vorgeschlagen und weder verwendet noch verworfen.",
-                since=impulse.generated_at,
-                href=workspaces.advice_href(impulse.client_id, impulse.id, f"impulse-{impulse.id}"),
             )
         )
 

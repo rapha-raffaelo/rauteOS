@@ -28,3 +28,14 @@ it("opens LinkedIn with the text, copies it, and then asks for the link", () => 
   expect(container.querySelector('form[action="/linkedin/5/published"] input[name="published_url"]')).toBeTruthy();
   expect(screen.queryByRole("link", { name: "Mit LinkedIn verbinden" })).toBeNull();
 });
+
+it("an idea without text asks for the text, not for a link, and says where its arrow goes", () => {
+  const idea = { ...data.posts[0], id: 6, body: "", status: "idee", title: "Neue Wettbewerber" };
+  const { container } = render(<LinkedInPage data={{ ...data, posts: [idea] }} />);
+  expect(screen.queryByRole("button", { name: "Schon gepostet? Link eintragen" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "In LinkedIn öffnen" })).toBeNull();
+  expect(screen.getByRole("button", { name: "Freigabe →" })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Text schreiben" }));
+  const body = container.querySelector('form[action="/linkedin/6"] textarea[name="body"]');
+  expect(document.activeElement).toBe(body);
+});

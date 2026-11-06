@@ -51,10 +51,11 @@ _TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"
 # accepts only one rejects real sign-ins at random.
 _ISSUERS = frozenset({"accounts.google.com", "https://accounts.google.com"})
 
-# Identity only. No mailbox, no Drive, no contacts: the consent screen should be
-# able to say "sieht Ihre E-Mail-Adresse" and nothing more, because that is all
-# this uses. Sending mail (OUT-04) asks for its own scopes separately.
-SCOPES = ("openid", "email")
+# Identity only. No mailbox, no Drive, no contacts: the email address to check
+# against the list, and the first name the Desk greets with ("raphaelmankopf@"
+# holds no first name to guess). Sending mail (OUT-04) asks for its own scopes
+# separately.
+SCOPES = ("openid", "email", "profile")
 
 _SECRET_FILENAME = ".session-secret"
 _SECRET_MODE = 0o600
@@ -78,6 +79,7 @@ class Identity:
 
     email: str
     subject: str
+    given_name: str = ""
 
 
 # --- Configuration ------------------------------------------------------------
@@ -265,7 +267,7 @@ def issue_session(identity: Identity, *, now: float | None = None) -> str:
     """A signed cookie value naming who signed in and when it lapses."""
     expires = (now if now is not None else time.time()) + SESSION_DAYS * 86400
     body = json.dumps(
-        {"email": identity.email, "sub": identity.subject, "exp": int(expires)},
+        {"email": identity.email, "sub": identity.subject, "name": identity.given_name, "exp": int(expires)},
         separators=(",", ":"),
     ).encode("utf-8")
     return _sign(body)
@@ -292,6 +294,17 @@ def read_session(token: str | None, *, now: float | None = None) -> str | None:
         return None
     email = str(claims.get("email", ""))
     return email if is_allowed(email) else None
+
+
+def session_name(token: str | None) -> str:
+    """The first name Google gave at sign-in, or "" (also for sessions from
+    before the name was asked for). Read only after :func:`read_session` let
+    the cookie in."""
+    payload = _unsign(token or "")
+    try:
+        return str(json.loads(payload).get("name", ""))[:60] if payload else ""
+    except json.JSONDecodeError:
+        return ""
 
 
 def issue_state(*, now: float | None = None) -> str:
@@ -392,7 +405,8 @@ def _verify_claims(claims: dict, *, now: float | None = None) -> Identity:
     # they proved they own — accepting it would make the allow-list meaningless.
     if claims.get("email_verified") not in (True, "true"):
         raise SignInError("Diese Google-Adresse ist nicht bestätigt.")
-    return Identity(email=email, subject=str(claims.get("sub", "")))
+    return Identity(email=email, subject=str(claims.get("sub", "")),
+                    given_name=str(claims.get("given_name", "")).strip())
 
 
 def exchange_code(code: str, *, base: str | None = None, now: float | None = None,

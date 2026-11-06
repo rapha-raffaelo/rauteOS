@@ -108,6 +108,8 @@ describe('Briefing', () => {
     expect(firstName('lucas.neurauter@raute-kopf.com')).toBe('Lucas');
     expect(firstName('r.mankopf@raute-kopf.com')).toBe('');
     expect(firstName(null)).toBe('');
+    expect(firstName('raphaelmankopf@gmail.com')).toBe('');
+    expect(firstName('raphaelmankopf@gmail.com', 'Raphael')).toBe('Raphael');
   });
 });
 

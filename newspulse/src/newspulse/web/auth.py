@@ -137,6 +137,8 @@ class BasicAuthMiddleware(BaseHTTPMiddleware):
             )
             if email:
                 request.scope["user_email"] = email
+                request.scope["user_name"] = google_auth.session_name(
+                    request.cookies.get(google_auth.SESSION_COOKIE))
                 return await call_next(request)
             return _sign_in_required(request)
 

@@ -369,3 +369,13 @@ def test_naming_the_agency_did_not_open_its_domain(monkeypatch, stranger):
     monkeypatch.setattr(config, "ALLOWED_EMAILS", config._DEFAULT_ALLOWED_EMAILS)
 
     assert not google_auth.is_allowed(stranger)
+
+
+def test_the_first_name_google_gives_travels_with_the_session(web, monkeypatch):
+    """"raphaelmankopf@" holds no first name to guess; Google knows it."""
+    web.get("/auth/google/start")
+    state = web.cookies[google_auth.STATE_COOKIE]
+    _google_returns(monkeypatch, _id_token(given_name="Raphael"))
+    web.get(f"/auth/google/callback?code=abc&state={state}")
+    assert google_auth.session_name(web.cookies[google_auth.SESSION_COOKIE]) == "Raphael"
+    assert google_auth.session_name(google_auth.issue_session(google_auth.Identity(_ALLOWED, "1"))) == ""

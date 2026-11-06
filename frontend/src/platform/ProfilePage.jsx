@@ -648,19 +648,23 @@ export function ProfilePage({ data: d, onData }) {
         description={d.client.legal_name ? `${t("Unternehmen dahinter")}: ${d.client.legal_name} · ${t(heading[1])}` : t(heading[1])}
       />
       {view === "profile" && <>
-        <OnboardingLinks key={d.client.id} clientId={d.client.id} />
+        {/* Onboarding and the contacts side by side: who to ask, next to the
+            link that asks them. */}
+        <div className="profile-top">
+          <OnboardingLinks key={d.client.id} clientId={d.client.id} />
+          <section id="unternehmen" className="profile-section" onChangeCapture={() => setDirty(true)}>
+            <Notice>{refreshError}</Notice>
+            {ready && (
+              <Notice>
+                Recherche abgeschlossen. Bitte ungespeicherte Eingaben sichern und
+                die Seite neu laden, um die Vorschläge zu sehen.
+              </Notice>
+            )}
+            <Company data={d.company} base={base} />
+          </section>
+        </div>
         <section id="wissen" className="profile-knowledge" aria-label={t("Wissen & Aussagen")}>
           <TwinPage clientId={d.client.id} embedded />
-        </section>
-        <section id="unternehmen" className="profile-section" onChangeCapture={() => setDirty(true)}>
-          <Notice>{refreshError}</Notice>
-          {ready && (
-            <Notice>
-              Recherche abgeschlossen. Bitte ungespeicherte Eingaben sichern und
-              die Seite neu laden, um die Vorschläge zu sehen.
-            </Notice>
-          )}
-          <Company data={d.company} base={base} />
         </section>
       </>}
       {view === "rivals" && <>

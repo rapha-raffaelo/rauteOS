@@ -148,7 +148,9 @@ def save_post(session: Session, form: Mapping, post: LinkedInPost | None = None)
     post.title = _text(form, "title", 200, required="Bitte einen Arbeitstitel.")
     post.author = _text(form, "author", 120)
     post.body = _text(form, "body", 3000)
-    set_post_status(post, _choice(form, "status", POST_STATES, post.status or "idee"))
+    status = _choice(form, "status", POST_STATES, post.status or "idee")
+    # An idea with its text written is a draft: the board's next column.
+    set_post_status(post, "entwurf" if status == "idee" and post.body else status)
     post.planned_on = _date(form, "planned_on") if post.post_at is None else post.planned_on
     url = _text(form, "published_url", 500)
     if url and not url.startswith("https://"):

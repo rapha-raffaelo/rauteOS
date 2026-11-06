@@ -71,13 +71,12 @@ export function NewClientPage({ data: d }) {
           </form>
         </Panel>
         <Panel title="Was danach von selbst passiert">
-          <p><a href="/onboarding/demo" target="_blank" rel="noopener noreferrer">Onboarding mit Beispieldaten testen ↗</a></p>
           <ol>
             {[
               "Das Profil wird von der Website gelesen und durch öffentliche Quellen ergänzt.",
               "Belegte Informationen werden mit Quelle im Kundenprofil gespeichert.",
               "Ein persönlicher Onboarding-Link wird automatisch vorbereitet.",
-              "Der CEO prüft die Angaben und beantwortet fünf kurze Fragen.",
+              "Der Ansprechpartner beim Kunden prüft die Angaben und beantwortet fünf kurze Fragen.",
               "Antworten und Korrekturen fließen direkt in die Kundendatenbank.",
             ].map((text) => (
               <li key={text}>{t(text)}</li>

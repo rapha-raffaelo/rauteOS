@@ -7,16 +7,18 @@ const KIND_TAG = {kundenfreigabe: 'kunde', freigabe: 'agentur'};
 const WAITS = {kundenfreigabe: 'wartet auf eine Kundenfreigabe', freigabe: 'wartet auf die Freigabe',
   impuls: 'hat einen neuen Impuls', profil: 'braucht eine Profil-Entscheidung'};
 
-// A first name only when the address starts with one ("lucas@…"), never a
-// guess from initials ("r.mankopf@…").
-export function firstName(email) {
+// The first name Google gave at sign-in. Failing that, one read off the
+// address only when it starts with one ("lucas@…"): never initials
+// ("r.mankopf@…") and never a run-on full name ("raphaelmankopf@…").
+export function firstName(email, given = '') {
+  if (given) return given;
   const head = (email || '').split('@')[0].split(/[._-]/)[0];
-  return head.length > 1 && /^[a-zäöüß]+$/i.test(head) ? head[0].toUpperCase() + head.slice(1) : '';
+  return head.length > 1 && head.length <= 12 && /^[a-zäöüß]+$/i.test(head) ? head[0].toUpperCase() + head.slice(1) : '';
 }
 
 function shellUser() {
-  try { return JSON.parse(document.getElementById('react-shell-data')?.textContent || '{}').user; }
-  catch { return null; }
+  try { return JSON.parse(document.getElementById('react-shell-data')?.textContent || '{}'); }
+  catch { return {}; }
 }
 
 function greeting(hour) {
@@ -74,7 +76,8 @@ export function DeskPage({ translations = {}, language = 'de' }) {
   const now = new Date();
   const hour = Number(new Intl.DateTimeFormat('en-GB', {hour: 'numeric', hourCycle: 'h23', timeZone: zone}).format(now));
   const today = new Intl.DateTimeFormat(language, {weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: zone}).format(now);
-  const name = firstName(shellUser());
+  const shell = shellUser();
+  const name = firstName(shell.user, shell.user_name);
   const customer = board.decisions.filter((d) => d.kind === 'kundenfreigabe');
   const waiting = board.in_flight.filter((item) => item.state === 'raus');
   const chances = board.chances || [];
