@@ -542,3 +542,21 @@ def test_an_unconfirmed_customer_link_shows_the_shortened_topic(setup):
         s.add(CustomerOnboardingJob(client_id=1,invite_id=invite.id,status='ready')); s.commit()
         flow.condense_stored(s,ask=lambda p: json.dumps({'answers':[{'key':'R01.01','value':'Kurz.'}]}))
         assert [p['value'] for p in s.get(CustomerOnboardingInvite,invite.id).prefill]==['Kurz.']
+
+
+def test_a_glance_fact_is_only_taken_as_a_bare_value():
+    sentence='Zenchef wurde im Jahr 2010 in Paris von Bertrand Crétin und weiteren gegründet.'
+    still=lambda p: json.dumps({'answers':[{'key':'A01.03','value':'Zenchef wurde 2010 gegründet.'}]})
+    assert crawler.condense([dict(key='A01.03',value=sentence)],ask=still)[0]['value']==sentence
+    bare=lambda p: json.dumps({'answers':[{'key':'A01.03','value':'2010'}]})
+    assert crawler.condense([dict(key='A01.03',value=sentence)],ask=bare)[0]['value']=='2010'
+
+
+def test_an_ai_imported_glance_sentence_is_condensed_too(setup):
+    _,factory=setup
+    with factory() as s:
+        s.add(Client(id=1,name='Zenchef',website='zenchef.com',country='FR'))
+        s.add(ClientFact(client_id=1,key='A01.04',value='Laut Impressum hat Zenchef seinen Sitz in Paris.',filled_by='ki'))
+        s.commit()
+        assert flow.condense_stored(s,ask=lambda p: json.dumps({'answers':[{'key':'A01.04','value':'Paris'}]}))==1
+        assert s.scalar(select(ClientFact.value).where(ClientFact.key=='A01.04'))=='Paris'

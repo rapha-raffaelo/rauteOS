@@ -20,6 +20,11 @@ const readable = value => ({'Client Statement':'Kundenaussage','Fact':'Fakt','Ma
 // The company facts the glance row shows when research has them.
 const GLANCE = [['A01.03', 'Gegründet', 'calendar'], ['A01.04', 'Hauptsitz', 'pin'], ['A01.07', 'Mitarbeitende', 'people'],
   ['A01.06', 'Märkte', 'globe'], ['A01.09', 'Eigentümer', 'building']];
+// Mirrors newspulse.onboarding_crawler.glance_value: one value, at most 30 characters.
+export const glanceValue = (value) => {
+  const v = (value || '').trim();
+  return v.length > 0 && v.length <= 30 && !v.includes('\n') && !v.endsWith('.');
+};
 const ICONS = {
   calendar: 'M7 3v3M17 3v3M4 9h16M5 6h14a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z',
   pin: 'M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21zM12 12a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z',
@@ -96,8 +101,9 @@ export function TwinPage({clientId, embedded = false}) {
       {!has(item) && add(item, 'Ergänzen')}</div>
     {editor(item)}{answers(item)}
   </li>;
-  // Short facts for the glance row; each is a one-sentence research answer.
-  const glance = GLANCE.map(([key, label, icon]) => [label, icon, statements(key).find(active)?.value]).filter(([, , value]) => value);
+  // Short facts for the glance row. Only a bare value gets a tile; a sentence
+  // stays in the Steckbrief below until the model has shortened it.
+  const glance = GLANCE.map(([key, label, icon]) => [label, icon, statements(key).filter(active).map(s => s.value).find(glanceValue)]).filter(([, , value]) => value);
   const part = (label, done, total, note) => <div className="twin-part"><div><span>{label}</span><strong>{done}<small> / {total} {note}</small></strong></div>
     <div className="twin-bar"><span style={{width: `${total ? Math.round(100 * done / total) : 0}%`}}/></div></div>;
   return <div className="twin-page">

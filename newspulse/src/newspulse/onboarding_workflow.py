@@ -200,8 +200,9 @@ def backfill_legal_names(session, *, ask=None, dry_run=True):
 def condense_stored(session, *, ask=None):
     """Shorten researched profile answers stored before the length rule.
 
-    Only untouched research rows: a sentence someone edited stays theirs."""
-    rows = [row for row in session.scalars(select(ClientFact).where(ClientFact.filled_by == 'recherche'))
+    Only rows a model wrote, by research or by the AI import: a sentence
+    someone edited stays theirs."""
+    rows = [row for row in session.scalars(select(ClientFact).where(ClientFact.filled_by.in_(('recherche', 'ki'))))
             if onboarding_crawler.limit(row.key) and len(row.value) > onboarding_crawler.limit(row.key)]
     changed = 0
     # Topics are long; four of them already fill a reply.

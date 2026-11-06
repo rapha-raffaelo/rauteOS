@@ -105,13 +105,14 @@ it('automatically reveals a saved AI preview on returning to the profile',async(
 it('shows the brief as numbered cards and the customer questionnaire as its own panel',async()=>{
  const researched={...row,id:7,key:'R01.01',value:'Zalando SE',source_url:'https://www.corporate.zalando.com/de/impressum',
   source_title:'Öffentliche Onboarding-Recherche',note:'Weitere Quellen: https://handelsregister.de/x, https://de.wikipedia.org/wiki/Zalando'};
- const founded={...row,id:8,key:'A01.03',value:'2008 in Berlin.'};
+ const founded={...row,id:8,key:'A01.03',value:'2008'};
+ const seat={...row,id:9,key:'A01.04',value:'Laut Impressum hat Zalando seinen Sitz in Berlin.'};
  const fields=[{key:'R01.01',label:'Unternehmensidentität',section:'R',group:'R01 Öffentliches Unternehmensbild',requirement:'Optional',hint:'Wie lautet der offizielle Firmenname?'},
   {key:'R02.01',label:'Rechtliche Unternehmensdaten',section:'R',group:'R01 Öffentliches Unternehmensbild',requirement:'Optional',hint:''},
   {key:'Q01.14',label:'Von welchen externen Akteuren hängt Ihr Geschäft ab?',section:'Q',group:'Q01 Strategie',requirement:'Optional',hint:'Bitte nennen Sie Partner.'},
   {key:'A01.03',label:'Wann wurde das Unternehmen gegründet?',section:'A. Client Facts',group:'A01 Unternehmen',requirement:'Empfohlen'},
   {key:'A01.04',label:'Wo befindet sich der Hauptsitz?',section:'A. Client Facts',group:'A01 Unternehmen',requirement:'Pflicht'}];
- stubFetch(vi.fn().mockResolvedValue(response({...data,fields,statements:[researched,founded]})));
+ stubFetch(vi.fn().mockResolvedValue(response({...data,fields,statements:[researched,founded,seat]})));
  render(<TwinPage clientId={1}/>);
  const brief=(await screen.findByRole('heading',{name:'Unternehmenssteckbrief'})).closest('section');
  const asked=screen.getByRole('heading',{name:'Kundenfragebogen'}).closest('section');
@@ -128,7 +129,11 @@ it('shows the brief as numbered cards and the customer questionnaire as its own 
  expect(within(asked).queryByText('Bitte nennen Sie Partner.')).toBeNull();
  expect(within(asked).queryByRole('button',{name:'Leitfragen'})).toBeNull();
  // A researched company fact appears at a glance; the catalogue is not shown.
- expect(within(screen.getByLabelText('Auf einen Blick')).getByText('2008 in Berlin.')).toBeTruthy();
+ // A sentence never fills a tile: it waits for the model to shorten it.
+ const glance=screen.getByLabelText('Auf einen Blick');
+ expect(within(glance).getByText('2008')).toBeTruthy();
+ expect(within(glance).queryByText(/Impressum/)).toBeNull();
+ expect(within(glance).queryByText('Hauptsitz')).toBeNull();
  expect(screen.getByRole('progressbar',{name:'Profilvollständigkeit'})).toBeTruthy();
  expect(within(brief).getByRole('link',{name:'corporate.zalando.com'}).getAttribute('href')).toBe(researched.source_url);
  expect(within(brief).getByText('+2 Quellen')).toBeTruthy();

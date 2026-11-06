@@ -169,8 +169,23 @@ Antworte nur als JSON: {{"answers":[{{"key":"A01.01","value":"kurzer Text"}}]}}
     except Exception as exc:
         _log.warning('Condensing %d profile answers failed, keeping them long: %s', len(long), exc)
         return answers
-    return [dict(a, value=prose.plain(short[a['key']]))
-            if a['key'] in short and 0 < len(short[a['key']]) < len(a['value']) else a for a in answers]
+    return [dict(a, value=prose.plain(short[a['key']])) if a['key'] in short and fits(a, short[a['key']]) else a
+            for a in answers]
+
+
+def fits(answer, value):
+    """A shorter answer, and for a glance fact a bare value that fits its tile.
+    A glance answer the model left as a sentence is not taken: the tile hides
+    it rather than show half a sentence."""
+    if not 0 < len(value) < len(answer['value']):
+        return False
+    return answer['key'] not in GLANCE or glance_value(value)
+
+
+def glance_value(value):
+    """Whether a value reads as one fact in a glance tile ("2008", "Berlin")."""
+    value = value.strip()
+    return 0 < len(value) <= GLANCE_LIMIT and '\n' not in value and not value.endswith('.')
 
 
 class Page(HTMLParser):
