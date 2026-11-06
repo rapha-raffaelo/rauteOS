@@ -395,4 +395,12 @@
 .wl-suggest{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:4px}
 .wl-card__h{font-size:12px;font-weight:750;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin:12px 0 2px}
 .wl-hint{color:var(--muted);font-size:13px;margin:0 0 16px}
+.wl-account{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.wl-account p{margin:0}
+.wl-account strong{color:var(--ink)}
+.raute-ui .wl-quiet button{background:none;border:0;color:var(--muted);text-decoration:underline;padding:0;min-height:0}
+.wl-li{display:flex;flex-direction:column;gap:6px;margin:8px 0;padding-top:8px;border-top:1px solid var(--line)}
+.wl-li__plan{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.wl-li__plan input{font:inherit;font-size:12px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);min-width:0}
+.wl-item .wl-error{color:var(--alert);font-size:11px;margin:0}
 @media(max-width:700px){.wl-form__grid,.wl-suggest{grid-template-columns:1fr}.wl-row{flex-wrap:wrap}}

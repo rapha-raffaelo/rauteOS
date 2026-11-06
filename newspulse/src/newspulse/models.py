@@ -4668,8 +4668,10 @@ class Task(Base):
 class LinkedInPost(Base):
     """A LinkedIn post for a mandate's speaker, from idea to published (spec 10).
 
-    Planning only: nothing here posts to LinkedIn. ``published_url`` is where
-    a person records the post once it is live.
+    A person records ``published_url`` by hand, or RauteOS posts the text
+    itself through the LinkedIn account of whoever pressed the button
+    (``newspulse.linkedin_link``). Then ``linkedin_urn`` is what LinkedIn
+    answered, and a post that is never sent twice is one with a urn.
     """
 
     __tablename__ = "linkedin_posts"
@@ -4693,6 +4695,13 @@ class LinkedInPost(Base):
         ForeignKey("assets.id", ondelete="SET NULL"), nullable=True, index=True)
     #: The chance this post picks up. A path on this site, like a task's.
     context_href: Mapped[str] = mapped_column(String(300), nullable=False, default="")
+    #: When the scheduler posts it, and through whose connected account (the
+    #: RauteOS sign-in address). Cleared the moment the scheduler tries, so a
+    #: failed attempt is shown rather than repeated.
+    post_at: Mapped[dt.datetime | None] = mapped_column(UTCDateTime(), nullable=True, index=True)
+    post_as: Mapped[str] = mapped_column(String(254), nullable=False, default="")
+    linkedin_urn: Mapped[str] = mapped_column(String(120), nullable=False, default="")
+    post_error: Mapped[str] = mapped_column(String(300), nullable=False, default="")
     created_at: Mapped[dt.datetime] = mapped_column(UTCDateTime(), nullable=False, default=_utcnow)
     updated_at: Mapped[dt.datetime] = mapped_column(UTCDateTime(), nullable=False, default=_utcnow)
 

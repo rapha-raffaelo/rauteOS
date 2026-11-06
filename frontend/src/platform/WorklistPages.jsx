@@ -184,6 +184,59 @@ function Suggestions({ texts = [], chances = [] }) {
   );
 }
 
+const moment = (iso) =>
+  iso ? new Date(iso).toLocaleString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
+
+// The signed-in person's own LinkedIn profile: RauteOS posts through it.
+function Account({ a = {} }) {
+  if (!a.configured) return <p className="wl-hint">{t("Die LinkedIn-Anbindung ist auf dem Server noch nicht eingerichtet. Bis dahin hier planen und auf LinkedIn selbst posten.")}</p>;
+  const connect = (label) => <a className="btn btn--go" href="/linkedin/connect">{t(label)}</a>;
+  if (!a.connected) {
+    return (
+      <div className="wl-account">
+        <p>{t(a.lost || a.expired ? "Deine LinkedIn-Verbindung ist abgelaufen." : "Verbinde dein LinkedIn-Profil, dann postet RauteOS freigegebene Beiträge direkt oder zum geplanten Zeitpunkt.")}</p>
+        {connect(a.lost || a.expired ? "Neu verbinden" : "Mit LinkedIn verbinden")}
+      </div>
+    );
+  }
+  return (
+    <div className="wl-account">
+      <p>{t("Verbunden als")} <strong>{a.name || t("dein Profil")}</strong> · {t(a.expiring ? "läuft ab am" : "gültig bis")} {day(a.expires_at.slice(0, 10))}</p>
+      {a.expiring && connect("Neu verbinden")}
+      <Action action="/linkedin/disconnect" label="Trennen" className="wl-quiet" />
+    </div>
+  );
+}
+
+// Posting one card: now, or at a moment the scheduler keeps.
+function OnLinkedIn({ p, a = {} }) {
+  if (p.on_linkedin) return null;
+  const error = p.post_error && <p className="wl-error" role="alert">{p.post_error}</p>;
+  if (p.post_at) {
+    return (
+      <div className="wl-li">
+        <p>{t("Geht am")} {moment(p.post_at)} {t("auf LinkedIn raus")}{p.post_as ? ` · ${p.post_as}` : ""}</p>
+        <Action action={`/linkedin/${p.id}/unschedule`} label="Nicht mehr einplanen" className="wl-quiet" />
+      </div>
+    );
+  }
+  if (!a.connected || !p.body) return error || null;
+  return (
+    <div className="wl-li">
+      {error}
+      <form method="post" action={`/linkedin/${p.id}/publish`} className="platform-action"
+        onSubmit={(e) => { if (!window.confirm(t("Diesen Beitrag jetzt öffentlich auf deinem LinkedIn-Profil posten?"))) e.preventDefault(); }}>
+        <button type="submit">{t("Jetzt auf LinkedIn posten")}</button>
+      </form>
+      <form method="post" action={`/linkedin/${p.id}/schedule`} className="wl-li__plan">
+        <label><span className="sr-only">{t("Zeitpunkt")}</span>
+          <input type="datetime-local" name="post_at" required defaultValue={p.planned_on ? `${p.planned_on}T09:00` : ""} /></label>
+        <button type="submit" className="btn btn--quiet">{t("Einplanen")}</button>
+      </form>
+    </div>
+  );
+}
+
 export function LinkedInPage({ data: d }) {
   const [adding, setAdding] = useState(!!d.error && !!Object.keys(d.draft || {}).length);
   const [editing, setEditing] = useState(null);
@@ -191,9 +244,9 @@ export function LinkedInPage({ data: d }) {
   const columns = d.states.map(([key, label]) => ({ key, label: t(label), note: "", items: d.posts.filter((p) => p.status === key) }));
   return (
     <section className="worklist">
-      <PageHeading eyebrow="KOMMUNIKATION" title="LinkedIn" description="Redaktionsarbeit für die Sprecher der Mandanten. Geplant und freigegeben wird hier, veröffentlicht auf LinkedIn." />
-      <Notice>{d.error}</Notice>
-      <div className="wl-bar"><span /><Toggle open={adding} onClick={() => setAdding(!adding)}>+ Neuer Beitrag</Toggle></div>
+      <PageHeading eyebrow="KOMMUNIKATION" title="LinkedIn" description="Redaktionsarbeit für die Sprecher der Mandanten. Geplant, freigegeben und gepostet wird hier." />
+      <Notice>{d.error || d.notice}</Notice>
+      <div className="wl-bar"><Account a={d.account} /><Toggle open={adding} onClick={() => setAdding(!adding)}>+ Neuer Beitrag</Toggle></div>
       {adding && <div className="wl-card"><Form action="/linkedin" fields={postFields(d, d.draft)} submit="Beitrag anlegen" onCancel={() => setAdding(false)} /></div>}
       <Suggestions {...(d.suggestions || {})} />
       <Board columns={columns} render={(p) => (
@@ -202,6 +255,7 @@ export function LinkedInPage({ data: d }) {
           <p>{[p.client.name, p.author, p.planned_on && day(p.planned_on)].filter(Boolean).join(" · ")}</p>
           {p.body && <p className="wl-note">{p.body.slice(0, 140)}{p.body.length > 140 ? " …" : ""}</p>}
           {p.published_url && <a href={p.published_url} target="_blank" rel="noreferrer">{t("Auf LinkedIn ansehen")}</a>}
+          <OnLinkedIn p={p} a={d.account} />
           <div className="wl-item__acts">
             <Move action={`/linkedin/${p.id}`} field="status" keys={keys} current={p.status} />
             <button type="button" className="btn btn--quiet" onClick={() => setEditing(editing === p.id ? null : p.id)}>{t("Bearbeiten")}</button>

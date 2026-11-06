@@ -8,8 +8,8 @@ gebaut wird, und was bewusst noch nicht.
 ## Grundsätze
 
 - **Von Hand gepflegt, nichts automatisch.** Keine Aufgabe entsteht aus einer
-  E-Mail, kein Beitrag wird auf LinkedIn veröffentlicht, kein Deal aus einem
-  Postfach angelegt. Das sind die Integrationen aus Abschnitt 7 des READMEs,
+  E-Mail, kein Deal aus einem Postfach angelegt. Ein Beitrag geht nur auf
+  LinkedIn, wenn eine Person ihn postet oder einplant (siehe unten). Das sind die Integrationen aus Abschnitt 7 des READMEs,
   und jede braucht eigene Berechtigungs- und Freigaberegeln. Die Tabellen sind
   so angelegt, dass diese Integrationen später Zeilen schreiben können.
 - **Ein Mandant ist optional, wo es um Agenturarbeit geht.** Eine Aufgabe kann
@@ -52,9 +52,33 @@ Erledigen, Löschen und Filter nach Status und Mandant.
 
 | `asset_id` | Der LinkedIn-Text aus RauteOS, aus dem der Beitrag stammt, optional |
 | `context_href` | Die Chance, die der Beitrag aufgreift, optional |
+| `post_at` | Wann RauteOS den Beitrag postet, optional |
+| `post_as` | Über wessen LinkedIn-Konto (RauteOS-Anmeldeadresse) |
+| `linkedin_urn` | Was LinkedIn für den geposteten Beitrag antwortete |
+| `post_error` | Warum der letzte Versuch nicht geklappt hat |
 
 Seite `/linkedin`: Beiträge nach Status gruppiert, Anlegen, Bearbeiten,
-Status wechseln. Kein Publishing über die API.
+Status wechseln.
+
+### Posten über LinkedIn
+
+Jede Person verbindet auf `/linkedin` ihr eigenes LinkedIn-Profil
+(„Sign In with LinkedIn using OpenID Connect“ und „Share on LinkedIn“,
+Scopes `openid profile w_member_social`, ohne Prüfung durch LinkedIn).
+Danach steht an jeder Karte mit Text „Jetzt auf LinkedIn posten“ (mit
+Rückfrage) und „Einplanen“ mit Datum und Uhrzeit.
+
+- Gepostet wird öffentlich als die Person, die gedrückt oder eingeplant hat.
+- Ein Beitrag mit `linkedin_urn` geht nie ein zweites Mal raus.
+- Der Scheduler prüft jede Minute. Er nimmt einen fälligen Beitrag aus dem
+  Plan, bevor er postet. Ein Fehler steht danach an der Karte und wird nicht
+  von selbst wiederholt.
+- Ohne Refresh-Token gilt eine Verbindung 60 Tage. Sieben Tage vorher bittet
+  die Seite um eine neue Verbindung. Ein Termin nach dem Ablauf wird
+  abgelehnt.
+- Die Tokens liegen in `linkedin_tokens.json` neben der Datenbank (0600),
+  nie in einer Tabelle.
+- Eine Karte, die von „Geplant“ weggeschoben wird, ist nicht mehr eingeplant.
 
 Darüber „Vorschläge aus RauteOS“: die in einer Chance geschriebenen
 LinkedIn-Posts (Format `linkedin`) und die offenen Chancen der aktiven
@@ -82,5 +106,6 @@ Mandanten an: Das bleibt ein bewusster Schritt über „Neuer Mandant“.
 
 ## Noch nicht
 
-Aufgaben aus E-Mails, Wiedervorlagen mit Benachrichtigung, LinkedIn-Publishing
-und -Metriken, E-Mail-Zuordnung zu Deals, Aktivitätsverlauf je Deal.
+Aufgaben aus E-Mails, Wiedervorlagen mit Benachrichtigung, Posten auf
+Unternehmensseiten und LinkedIn-Metriken (beides braucht die Community
+Management API mit Prüfung durch LinkedIn), E-Mail-Zuordnung zu Deals, Aktivitätsverlauf je Deal.
