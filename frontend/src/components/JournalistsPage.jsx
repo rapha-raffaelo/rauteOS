@@ -1,6 +1,7 @@
 import React, {useEffect, useState} from 'react';
 import {PageHeading} from './PageHeading.jsx';
 import {journalistRequest as request} from '../journalists-api.js';
+import {clip} from '../text.js';
 
 const listLabels = {topics:'Themen', specialties:'Spezialisierungen', story_types:'Story-Typen', companies:'Beobachtete Unternehmen', source_aliases:'Weitere Quellenbezeichnungen'};
 const contactLabels = {name:'Name', outlet:'Medium', first_name:'Vorname', last_name:'Nachname', email:'E-Mail', phone:'Telefon', beat:'Ressort', position:'Position', notes:'Notizen'};
@@ -111,7 +112,7 @@ export function FitPanel({data}) {
     tally?.anschreiben && `Bisher ${tally.anschreiben} Anschreiben, ${tally.antworten} ${tally.antworten === 1 ? 'Antwort' : 'Antworten'}, ${tally.veroeffentlicht} veröffentlicht`,
     last && `Letzter Kontakt: ${new Date(last).toLocaleDateString('de-DE')}`,
     status && status !== 'Unbekannt' && `Kontaktstatus: ${label?.label || status}`,
-    data.profile?.preferences && `Präferenz: ${String(data.profile.preferences).slice(0, 90)}`,
+    data.profile?.preferences && `Präferenz: ${clip(data.profile.preferences, 90)}`,
   ].filter(Boolean);
   return <aside className="twin-field journalist-fit"><h2>Journalisten-Fit</h2>
     <p>Warum könnte dieser Kontakt zu einer Story passen?</p>

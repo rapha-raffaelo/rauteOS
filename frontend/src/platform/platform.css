@@ -395,6 +395,7 @@
 .wl-suggest{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:4px}
 .wl-card__h{font-size:12px;font-weight:750;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin:12px 0 2px}
 .wl-hint{color:var(--muted);font-size:13px;margin:0 0 16px}
+.wl-hint--bar{margin:0;max-width:60ch}
 .wl-account{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
 .wl-account p{margin:0}
 .wl-account strong{color:var(--ink)}

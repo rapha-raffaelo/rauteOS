@@ -2674,6 +2674,7 @@ _EN: dict[str, str] = {
     "Die Anmeldung bei LinkedIn wurde abgebrochen.": "The LinkedIn sign-in was cancelled.",
     "Die Verbindung mit LinkedIn hat nicht geklappt. Bitte noch einmal versuchen.": "Connecting LinkedIn did not work. Please try again.",
     "In LinkedIn öffnen": "Open in LinkedIn",
+    "Gepostet wird in deinem eigenen LinkedIn: An jeder Karte mit Text öffnet „In LinkedIn öffnen“ den Beitrag fertig zum Posten.": "You post from your own LinkedIn: on every card with text, “Open in LinkedIn” opens the post ready to publish.",
     "Der Text ist auch kopiert. Bleibt das Feld auf LinkedIn leer, einfach einfügen.": "The text is copied too. If the LinkedIn field stays empty, just paste it.",
     "Link zum Beitrag": "Link to the post",
     "Als veröffentlicht speichern": "Save as published",

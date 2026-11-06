@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { PageHeading } from "../components/PageHeading.jsx";
 import { Action, Field, Notice, t } from "./shared.jsx";
+import { clip } from "../text.js";
 
 // Spec 10: Aufgaben, LinkedIn and Sales CRM. Plain forms that post and come
 // back; the server checks every value (newspulse.worklists).
@@ -189,7 +190,7 @@ const moment = (iso) =>
 
 // The signed-in person's own LinkedIn profile: RauteOS posts through it.
 function Account({ a = {} }) {
-  if (!a.configured) return <span />;
+  if (!a.configured) return <p className="wl-hint wl-hint--bar">{t("Gepostet wird in deinem eigenen LinkedIn: An jeder Karte mit Text öffnet „In LinkedIn öffnen“ den Beitrag fertig zum Posten.")}</p>;
   const connect = (label) => <a className="btn btn--go" href="/linkedin/connect">{t(label)}</a>;
   if (!a.connected) {
     return (
@@ -284,7 +285,7 @@ export function LinkedInPage({ data: d }) {
         <article key={p.id} id={`post-${p.id}`} className="wl-item">
           <h3>{p.source_href ? <a href={p.source_href}>{p.title}</a> : p.title}</h3>
           <p>{[p.client.name, p.author, p.planned_on && day(p.planned_on)].filter(Boolean).join(" · ")}</p>
-          {p.body && <p className="wl-note">{p.body.slice(0, 140)}{p.body.length > 140 ? " …" : ""}</p>}
+          {p.body && <p className="wl-note">{clip(p.body, 140)}</p>}
           {p.published_url && <a href={p.published_url} target="_blank" rel="noreferrer">{t("Auf LinkedIn ansehen")}</a>}
           <OnLinkedIn p={p} a={d.account} />
           <div className="wl-item__acts">

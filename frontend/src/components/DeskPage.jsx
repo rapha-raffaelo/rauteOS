@@ -134,13 +134,13 @@ export function DeskPage({ translations = {}, language = 'de' }) {
         <Card title={t('Heute priorisiert')} link={['/aufgaben', t('Alle Aufgaben')]}>
           {tasks.map((x) => <a className="task" href={x.href} key={`task-${x.id}`}>
             <span className="task__box" aria-hidden="true" />
-            <span className="task__b"><span className="task__t">{x.title.slice(0, 80)}</span>
+            <span className="task__b"><span className="task__t" title={x.title}>{x.title}</span>
               <span className="task__m">{x.client?.name || t('Agentur')}{x.due_on ? ` · ${t('fällig')} ${date(x.due_on + 'T12:00:00Z')}` : ''} · {t('Aufgabe')}</span></span>
             <span className={`badge badge--${x.due_on && x.due_on < isoToday ? 'late' : x.priority}`}>{t(x.due_on && x.due_on < isoToday ? 'Überfällig' : ({hoch: 'Hoch', mittel: 'Mittel', niedrig: 'Niedrig'})[x.priority])}</span>
           </a>)}
           {board.decisions.slice(0, Math.max(0, 6 - tasks.length)).map((item, index) => <a className="task" href={item.href} key={`${item.href}-${index}`}>
             <span className="task__box" aria-hidden="true" />
-            <span className="task__b"><span className="task__t">{item.title.slice(0, 80)}</span>
+            <span className="task__b"><span className="task__t" title={item.title}>{item.title}</span>
               <span className="task__m">{item.client.name} · {item.since ? `${t('seit')} ${date(item.since)}` : t(KIND[item.kind])}{item.detail ? ` · ${item.detail}` : ''}</span></span>
             <span className={`badge badge--${KIND_TAG[item.kind] ?? item.kind}`}>{t(KIND[item.kind])}</span>
           </a>)}
@@ -149,7 +149,7 @@ export function DeskPage({ translations = {}, language = 'de' }) {
         <Card title={t('Relevante Chancen')} link={['/today', t('Intelligence öffnen')]}>
           {chances.map((c) => <a className="chance" href={c.href} key={c.href}>
             <span className="chance__ico" aria-hidden="true"><svg className="ico"><use href="#ico-intel" /></svg></span>
-            <span className="task__b"><span className="task__t">{c.title.slice(0, 90)}</span>
+            <span className="task__b"><span className="task__t" title={c.title}>{c.title}</span>
               <span className="task__m">{c.client.name} · {t(c.kind === 'detected' ? 'Erkannte Chance' : 'Entwickelte Chance')}{c.since ? ` · ${date(c.since)}` : ''}</span></span>
             <span className="chance__go" aria-hidden="true">›</span>
           </a>)}
@@ -160,7 +160,7 @@ export function DeskPage({ translations = {}, language = 'de' }) {
         <Card title={t('Das braucht Deine Aufmerksamkeit')}>
           {board.in_flight.slice(0, 5).map((item, index) => <a className="info-row" href={item.href} key={`${item.href}-${index}`}>
             <span className="info-row__ico" aria-hidden="true"><svg className="ico"><use href={item.state === 'raus' ? '#ico-media' : '#ico-texte'} /></svg></span>
-            <span className="task__b"><span className="task__t">{item.title.slice(0, 70)}</span>
+            <span className="task__b"><span className="task__t" title={item.title}>{item.title}</span>
               <span className="task__m">{item.client.name} · {t(item.state === 'raus' ? 'Raus, wartet auf Antwort' : 'Entwurf')}</span></span>
             <span className="info-row__age">{date(item.since)}</span>
           </a>)}
@@ -184,7 +184,7 @@ export function DeskPage({ translations = {}, language = 'de' }) {
             <th scope="col" key={label}>{t(label)}</th>)}
         </tr></thead><tbody>{board.rows.map((row) => <tr key={row.client.id}>
           <td><a className="board__nm" href={`/client/${row.client.id}/overview`}>{row.client.name}</a>
-            {row.client.industry && <div className="board__sec">{row.client.industry.slice(0, 44)}</div>}</td>
+            {row.client.industry && <div className="board__sec" title={row.client.industry}>{row.client.industry}</div>}</td>
           <td><div className="twin" title={row.twin.required_total != null ? `${row.twin.required_filled}/${row.twin.required_total} Pflichtfelder beantwortet` : `${t('Profil')} ${row.twin.profile_filled}/${row.twin.profile_total}`}>
             <span className="twin__n">{row.twin.percent} %</span>
             <span className="twin__bar" aria-hidden="true"><span className="twin__fill" style={{width: `${row.twin.percent}%`}} /></span>
