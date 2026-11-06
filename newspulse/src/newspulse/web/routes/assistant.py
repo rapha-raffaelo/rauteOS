@@ -245,7 +245,14 @@ def _build_prompt(
 ) -> str:
     frame = _FRAMES.get(language, _FRAME_DE)
     context, conversation, ask = _HEADINGS.get(language, _HEADINGS["de"])
-    parts = [frame, """ASK RAUTE: Nutze den gelieferten Kontext einschließlich Twin, Opportunities
+    parts = [frame, """ASK RAUTE: Suche und antworte systemweit anhand der SYSTEMWEITEN SUCHERGEBNISSE.
+Der ausgewählte Arbeitskontext ist ein Fokus, keine Suchgrenze. Nennt die Frage einen
+anderen Kunden, nutze dessen Daten und verwechsel sie nicht mit dem geöffneten Mandanten.
+Alte Antworten im Gespräch können einen überholten, eingeschränkten Kontext beschreiben.
+Die aktuellen Suchergebnisse haben Vorrang. Die Auswahl ist begrenzt: Keine Treffer
+bedeutet nicht, dass im gesamten System keine Daten existieren. Nenne Quelle, Datensatz
+und Mandant, damit Aussagen nachvollziehbar bleiben. Wende einen Kommunikations-Guide
+nur auf den zugehörigen Mandanten an. Nutze den gelieferten Kontext einschließlich Twin, Opportunities
 und Textentwürfen. Herkunft und Unsicherheit bleiben erhalten: Client Statement
 ist keine unabhängige Bestätigung, RAUTE Hypothesis kein Fakt. Historische Checks
 können veraltet sein. Fehlende Recherche ist kein Beleg für fehlende Publikationen.
@@ -307,7 +314,7 @@ def assistant_stream(
     language = i18n.normalize(request.cookies.get(i18n.COOKIE_NAME))
     translate = lambda text: i18n.translate(text, language)  # noqa: E731
 
-    from ... import assistant_context
+    from ... import assistant_context, assistant_search, quoting
     try:
         _, context_text = assistant_context.build(
             session, client_id=client_id, scope=scope, opportunity_kind=opportunity_kind,
@@ -319,7 +326,13 @@ def assistant_stream(
     # Snapshot all database context before starting an external streaming call.
     label, coverage = _coverage_lines(session, client_id=client_id,
         day=_parse_day(date) if date else None, translate=translate)
-    comms_guide = _guide_for(session, client_id)
+    previous_questions = [text for role, text in _parse_history(history) if role == 'user']
+    search = assistant_search.build(session, question, client_id=client_id,
+        previous_question=previous_questions[-1] if previous_questions else '')
+    context_text += '\n\n' + quoting.fence(json.dumps(search, ensure_ascii=False, default=str), label='SYSTEMWEITE SUCHERGEBNISSE')
+    mentioned = search['mentioned_client_ids']
+    guide_client = mentioned[0] if len(mentioned) == 1 else None if mentioned else client_id
+    comms_guide = _guide_for(session, guide_client)
     session.commit()
 
     def _events():

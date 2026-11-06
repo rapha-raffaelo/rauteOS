@@ -68,12 +68,12 @@
     <div class="main">
       <div id="react-topbar"></div>
       {# Legacy page heading and live run status. Manual collection lives in Settings. #}
-      {% if not frontend %}<header class="tbar">
+      {% block legacy_heading %}{% if not frontend %}<header class="tbar">
         <div class="tbar__l"{% if frontend %} hidden{% endif %}>
           <h1 class="tbar__title">{%- block pagetitle -%}{%- endblock -%}</h1>
           {% include "partials/runmeta.html" %}
         </div>
-      </header>{% endif %}
+      </header>{% endif %}{% endblock %}
 
       <main class="content">
         {% block content %}{% endblock %}

@@ -147,3 +147,19 @@ schlägt der Aufruf fehl, bleibt das Briefing aus den Zahlen. Intelligence
 zeigt über der Tagesberichterstattung die entwickelten Chancen aller
 Mandanten (erkannte stehen schon in der Tagesspalte, auf drei je Mandant
 gekürzt).
+
+**Korrekturen, 6. November 2026.** Der Reiter „Wissen“ heißt „Kundenprofil“.
+Intelligence beginnt mit Überschrift, Laufstatus, Datum und Filtern. Die
+Tagesmeldungen bilden die Hauptspalte; entwickelte Chancen und Impulse stehen
+kompakt daneben, auf kleinen Bildschirmen darunter. Eine Warnfläche erscheint
+nur bei Warnungen oder Krisen. Identische Chancen und Impulse werden nicht
+doppelt dargestellt, weitere Chancen lassen sich über einen ruhigen Knopf
+öffnen. Datum und Kategorie behalten den gewählten Mandanten bei.
+
+Ask RAUTE durchsucht unabhängig vom Arbeitskontext Kundenprofile, Dokumente,
+Aufgaben, Chancen, Texte, Marktsignale, Redaktionspläne, Issues, Leistungen,
+LinkedIn-Beiträge, Kontakte, Sales und das Artikelarchiv. Explizit in der Frage
+genannte Kunden bestimmen den Fokus, auch wenn ein anderer Mandant geöffnet ist.
+Quellen und Mandantenzuordnung bleiben im Modellkontext erhalten. Die Treffer
+sind eine begrenzte Auswahl; keine Treffer sind kein Beweis für fehlende Daten.
+Die Suche ist rein lesend und führt keine externe Webrecherche aus.

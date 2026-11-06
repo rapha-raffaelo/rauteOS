@@ -829,10 +829,11 @@ def test_a_draft_older_than_the_window_is_gone(factory, client):
 
     body = rendered(client.get("/today", params={"date": _TEST_DAY.isoformat()}))
 
-    # The day's columns only: an old idea that is still an open chance is
-    # listed above them on Intelligence (spec 09), as a chance, not a draft.
-    day = body.split('<div id="today-root">', 1)[1]
-    assert "LETZTEWOCHE" not in day
+    # Older open chances remain available in the compact opportunity rail,
+    # but must not be presented as a recent sendable impulse.
+    import re
+    impulses = re.findall(r'<article class="impulse".*?</article>', body, re.S)
+    assert all('LETZTEWOCHE' not in entry for entry in impulses)
 
 
 def test_todays_draft_is_marked_as_todays(factory, client):
@@ -1132,9 +1133,37 @@ def test_picking_a_mandate_puts_its_name_in_the_heading(factory, client):
 
     head = rendered(client.get(
         "/today", params={"date": _TEST_DAY.isoformat(), "client": arrakis}
-    )).split('tbar__title', 1)[1].split("</h1>", 1)[0]
+    )).split('class="intel-heading"', 1)[1].split("</h1>", 1)[0]
 
     assert "Arrakis" in head
     # The portfolio's own day belongs to nobody, and must not borrow a name.
     plain = rendered(client.get("/today", params={"date": _TEST_DAY.isoformat()}))
-    assert "Arrakis" not in plain.split("tbar__title", 1)[1].split("</h1>", 1)[0]
+    assert "Arrakis" not in plain.split('class="intel-heading"', 1)[1].split("</h1>", 1)[0]
+
+
+def test_intelligence_places_filters_before_content_and_has_no_empty_alert_rail(client):
+    body = client.get('/today', params={'date': _TEST_DAY.isoformat()}).text
+    assert body.index('class="today-toolbar"') < body.index('class="feedcol"')
+    assert 'class="alertcol"' not in body
+    assert 'class="intel-heading"' in body
+    assert 'class="tbar"' not in body
+
+
+def test_intelligence_date_filter_keeps_selected_mandate(factory, client):
+    with factory() as session:
+        c = _seed_client(session, 'Zenchef')
+        session.commit()
+        identity = c.id
+    body = client.get('/today', params={'date': _TEST_DAY.isoformat(), 'client': identity}).text
+    toolbar = body.split('class="today-toolbar"', 1)[1].split('</form>', 1)[0]
+    assert f'name="client" value="{identity}"' in toolbar
+    assert 'hx-get="/today"' in toolbar
+    assert 'hx-include="closest form"' in toolbar
+
+
+def test_intelligence_does_not_duplicate_current_impulse_as_chance(factory, client):
+    with factory() as session:
+        _seed_angle(session, generated_at=_noon_utc(_TEST_DAY), subject='EINMALIGER STORYANSATZ')
+        session.commit()
+    body = client.get('/today', params={'date': _TEST_DAY.isoformat()}).text
+    assert body.count('EINMALIGER STORYANSATZ') == 1

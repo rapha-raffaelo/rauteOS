@@ -470,7 +470,7 @@ def test_the_band_stands_above_the_days_coverage(factory, client):
 
     body = client.get("/today").text
 
-    assert body.index('class="band"') < body.index('class="cols"')
+    assert body.index('class="band"') < body.index('class="feedcol"')
 
 
 # --- Both languages ---------------------------------------------------------------

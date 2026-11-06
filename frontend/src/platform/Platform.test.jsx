@@ -20,13 +20,13 @@ it("shows the six workspace tabs of the prototype with the views of the open one
     <ClientTabs data={data} path="/client/1/opportunities" />,
   );
   expect(within(screen.getByRole("navigation", {name:"Mandant"})).getAllByRole("link").map((l) => l.textContent)).toEqual([
-    "Überblick", "Wissen", "Strategie", "Chancen", "Umsetzung", "Wirkung",
+    "Überblick", "Kundenprofil", "Strategie", "Chancen", "Umsetzung", "Wirkung",
   ]);
   expect(within(screen.getByRole("navigation", {name:"Ansicht"})).getAllByRole("link").map((o) => o.textContent)).toEqual([
     "Chancen", "Issues", "Heute",
   ]);
   rerender(<ClientTabs data={{ ...data, active: "twin" }} path="/client/1/twin" />);
-  expect(screen.getByRole("link", { name: "Wissen" }).getAttribute("aria-current")).toBe("page");
+  expect(screen.getByRole("link", { name: "Kundenprofil" }).getAttribute("aria-current")).toBe("page");
   expect(screen.queryByRole("navigation", {name:"Ansicht"})).toBeNull();
   // The coverage map and the market belong to Strategie.
   rerender(<ClientTabs data={{ ...data, active: "map" }} path="/client/1/map" />);

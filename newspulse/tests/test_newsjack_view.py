@@ -206,7 +206,7 @@ def test_the_cards_stand_above_the_days_coverage(web, session, mandate):
 
     page = web.get("/today")
 
-    assert rendered(page).index('class="njacks"') < rendered(page).index('class="cols"')
+    assert rendered(page).index('class="njacks"') < rendered(page).index('class="feedcol"')
 
 
 def test_without_an_open_opportunity_heute_shows_no_placeholder(web, session, mandate):

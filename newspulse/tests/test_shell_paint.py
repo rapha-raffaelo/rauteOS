@@ -385,7 +385,7 @@ def test_the_primary_tabs_are_consolidated(web, mandate):
     """Spec 09: the prototype's six tabs."""
     strip = _strip(rendered(web.get(f"/client/{mandate.id}/heute")))
     assert re.findall(r'<a [^>]+>([^<]+)</a>', strip) == [
-        "Überblick", "Wissen", "Strategie", "Chancen", "Umsetzung", "Wirkung"]
+        "Überblick", "Kundenprofil", "Strategie", "Chancen", "Umsetzung", "Wirkung"]
     assert "subtabs-legacy" not in strip
     for suffix in ("/overview", "/twin", "/guide", "/opportunities", "/plan", "/ki"):
         assert f'href="/client/{mandate.id}{suffix}"' in strip

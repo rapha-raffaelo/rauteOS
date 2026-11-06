@@ -296,9 +296,12 @@ worüber die Fachpresse dieses Mandats überhaupt schreibt. Und das Archiv des
 Vorjahres sagt, in welchem Monat ein Thema getragen hat, was die einzige Quelle
 für die wiederkehrenden Termine ohne festes Datum ist.
 
-Das Modell schreibt hier nur Prosa. Es formuliert, warum ein Termin für dieses
-Mandat einer ist, und schlägt ein Format vor. Datum und Beleg kommen aus der
-Datenbank, und ein Haken, dessen Beleg nicht auflösbar ist, wird nicht gespeichert.
+Das Modell prüft anhand von Kundenprofil, Geschäftstätigkeit und Themen zuerst
+den konkreten Kundenbezug. Nur mit ausdrücklich bestätigter Relevanz und einer
+tragfähigen Begründung wird ein Vorschlag gespeichert. Ein offizieller Absender
+und ein Datum allein reichen nicht. Das Modell schlägt außerdem ein Format vor.
+Datum und Beleg kommen aus der Datenbank; ein Haken ohne auflösbaren Beleg wird
+nicht gespeichert. Bei einem Modellfehler entstehen keine ungeprüften Vorschläge.
 
 Neu berechnen darf nicht die Arbeit von Menschen wegwerfen. Ein Haken, den jemand
 angenommen, verworfen oder in einen anderen Monat verschoben hat, überlebt jede
@@ -310,7 +313,7 @@ Neuberechnung; ersetzt wird nur, was noch niemand angefasst hat.
   - Ein Haken entsteht aus genau einer belegten Quelle: einem Marktsignal mit Datum in der Zukunft, einem Thema mit gemessener Resonanz, oder einem Vorjahresmonat mit getragener Berichterstattung
   - Jeder Haken trägt die Kennung der Zeile, aus der er stammt; ein Haken ohne auflösbaren Beleg wird nicht gespeichert
   - Ein Datum wird nie geraten: trägt die Quelle nur einen Monat, trägt der Haken einen Monat und keinen Tag
-  - Das Modell liefert Begründung und Formatvorschlag und weder Datum noch Beleg; ein Test mit eingespeister Erzeugung prüft, dass ein vom Modell genanntes Datum verworfen wird
+  - Das Modell bestätigt den Kundenbezug, liefert Begründung und Formatvorschlag und weder Datum noch Beleg; ein Test mit eingespeister Erzeugung prüft, dass ein vom Modell genanntes Datum verworfen wird
   - Neu berechnen ersetzt nur unangetastete Haken; angenommene, verworfene und verschobene überleben
   - Ein Monat ohne Beleg bleibt leer und wird als leer gespeichert, statt mit einem allgemeinen Thema gefüllt zu werden
   - Der Plan reicht sechs Monate ab dem laufenden Monat; ältere Haken fallen aus dem Plan, ohne gelöscht zu werden

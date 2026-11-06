@@ -72,6 +72,64 @@ def test_ask_stream_has_context_and_releases_transaction(web,db,monkeypatch):
     assert db.get(Asset,1).body=='Client statement, not verified'
 
 
+def test_ask_finds_other_client_profile_from_selected_context(web, db, monkeypatch):
+    from newspulse.models import ClientFact
+    from newspulse.web.routes import assistant
+    from newspulse.streaming import StreamEvent
+    db.get(Client, 1).name = 'Remexian'
+    db.get(Client, 2).name = 'Zenchef'
+    db.add(ClientFact(client_id=2, key='A01.01', value='Zenchef SAS gehört einer Holding.',
+                      source_url='https://example.org/zenchef', filled_by='recherche'))
+    db.commit()
+    def stream(prompt, **kwargs):
+        assert 'Zenchef SAS gehört einer Holding.' in prompt
+        assert 'https://example.org/zenchef' in prompt
+        assert 'SYSTEMWEITE SUCHERGEBNISSE' in prompt
+        assert not db.in_transaction()
+        yield StreamEvent('text', 'Zenchef gefunden')
+        yield StreamEvent('done', '')
+    monkeypatch.setattr(assistant, 'stream_assistant', stream)
+    result = web.get('/api/assistant/stream', params=dict(q='Wie ist Zenchef strukturiert?', scope='client', client_id=1))
+    assert result.status_code == 200 and 'Zenchef gefunden' in result.text
+
+
+def test_system_search_finds_unselected_tasks_archived_profiles_and_documents(db):
+    from newspulse import assistant_search
+    from newspulse.models import ClientFact, GuideSource, Task
+    db.get(Client, 2).active = False
+    db.add_all([ClientFact(client_id=2, key='R05.01', value='Beta baut Spezialroboter.'),
+                GuideSource(client_id=2, filename='Positionierung', text='Spezialroboter für Kliniken.'),
+                Task(client_id=2, title='Robotik-Pressegespräch vorbereiten')])
+    db.commit()
+    found = assistant_search.build(db, 'Was wissen wir über Beta?', client_id=1)
+    assert found['mentioned_client_ids'] == [2]
+    assert {r['type'] for r in found['results']} >= {'client_facts','guide_sources','tasks'}
+    assert 'Spezialroboter' in str(found)
+    assert assistant_search.build(db, 'Welche Aufgaben sind offen?', client_id=1)['results']
+
+
+def test_system_search_keeps_followup_client_and_bounds_the_snapshot(db):
+    import json
+    from newspulse import assistant_search
+    from newspulse.models import ClientFact
+    db.add_all(ClientFact(client_id=2, key=f'custom-{n}', value='Langer Text ' * 1000) for n in range(80))
+    db.commit()
+    found = assistant_search.build(db, 'Und wer führt das Unternehmen?', client_id=1,
+                                    previous_question='Wie arbeitet Beta?')
+    assert found['mentioned_client_ids'] == [2]
+    assert len(json.dumps(found, ensure_ascii=False, default=str)) <= assistant_search.MAX_CHARS + 100
+
+
+def test_system_search_bounds_large_directory_and_prioritizes_named_client(db):
+    import json
+    from newspulse import assistant_search
+    db.add_all(Client(name=f'Company {n} ' + 'x' * 200, legal_name='y' * 200) for n in range(200))
+    db.commit()
+    found = assistant_search.build(db, 'Beta', client_id=1)
+    assert found['clients'][0]['name'] == 'Beta'
+    assert len(json.dumps(found, ensure_ascii=False, default=str)) <= assistant_search.MAX_CHARS
+
+
 def test_opportunity_chat_carries_dated_journalist_research(db):
     from newspulse.models import JournalistResearch
     db.add(JournalistResearch(client_id=1,context_kind='developed',context_id=1,

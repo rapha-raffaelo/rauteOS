@@ -936,6 +936,11 @@ def today_view(
             c for c in opportunity_cuts if c.client_id == selected_client
         ]
 
+    chances = [] if selected_client else _portfolio_chances(session)
+    # The latest impulses already have their own expandable text below. Do not
+    # show the same subject again as an additional opportunity card.
+    draft_subjects = {(d.client_id, d.subject) for d in drafts}
+    chances = [c for c in chances if (c['client']['id'], c['title']) not in draft_subjects]
     return templates.TemplateResponse(
         request,
         "today.html",
@@ -950,7 +955,7 @@ def today_view(
             ),
             # Spec 09: the portfolio-wide page is "Intelligence", the open
             # chances of every mandate above the day's coverage.
-            "chances": [] if selected_client else _portfolio_chances(session),
+            "chances": chances,
             # Set when the reader asked for no particular day, today held nothing
             # and this is the newest day that did. The banner has to say it: a page
             # headed "Heute" quietly showing yesterday is worse than an empty one.

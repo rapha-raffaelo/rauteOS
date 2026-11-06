@@ -11,8 +11,8 @@ exactly as well as the four real ones. So the roles are inverted:
   the trade press measurably writes about, and a previous-year month the archive
   shows carried coverage. Each candidate carries the id of the row it came from,
   and a candidate whose row does not resolve is never stored.
-* **The model writes prose.** Why this date is an occasion for *this* mandate,
-  and which format fits. It is handed the dated candidates and returns reasons
+* **The model checks fit and writes prose.** Why this date is an occasion for
+  *this* mandate, and which format fits. It returns a relevance decision and reasons
   keyed by reference — never a date, never evidence. A date in its answer has
   nowhere to land: the parse schema has no field for one, and month and day are
   copied from the stored row before the model is ever called.
@@ -43,18 +43,19 @@ from dataclasses import dataclass
 from importlib import resources
 from string import Template
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, StrictBool
 from sqlalchemy import ColumnElement, and_, delete, select
 from sqlalchemy.orm import Session
 
-from . import brain, config, prose
-from .analyzer import ParseError, invoke_with_fallback, strip_code_fence
+from . import analyzer, brain, config, prose
+from .analyzer import ParseError, strip_code_fence
 from .assets import REGISTRY
 from .matching import terms_matcher
 from .models import (
     Analysis,
     Article,
     Client,
+    ClientFact,
     HookSource,
     HookState,
     MarketSignal,
@@ -151,13 +152,13 @@ class HookProse(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     ref: str
+    relevant: StrictBool = False
     reason: str = ""
     format: str = ""
 
 
 class HookProseSet(BaseModel):
-    """The model's whole answer. An empty list is a legal answer — the hooks
-    exist because of their evidence, with or without prose."""
+    """Only explicitly relevant, explained candidates may become proposals."""
 
     model_config = ConfigDict(extra="ignore")
 
@@ -261,7 +262,8 @@ def _signal_candidates(
                 context=(
                     f"Marktsignal ({signal.kind.value}), {what} am "
                     f"{local.day:02d}.{local.month:02d}.{local.year}: "
-                    f"{signal.title} ({signal.publisher or 'ohne Absender'})"
+                    f"{signal.title} ({signal.publisher or 'ohne Absender'}). "
+                    f"{signal.summary[:1500]}"
                 ),
             )
         )
@@ -502,13 +504,11 @@ def _describe(index: int, candidate: HookCandidate) -> str:
 
 
 def _ask_for_prose(
-    client: Client, candidates: list[HookCandidate], invoke
+    session: Session, client: Client, candidates: list[HookCandidate], invoke
 ) -> dict[str, HookProse]:
     """One model call for the whole candidate list, keyed ``K1``…``Kn``.
 
-    A failure costs the prose and nothing else: the hooks are stored either way,
-    because the date and the evidence are the substance and both are already in
-    hand. The empty dict is that honest fallback.
+    A failure produces no new proposals: a date alone does not establish fit.
     """
     listing = "\n".join(
         _describe(index, candidate) for index, candidate in enumerate(candidates, 1)
@@ -516,13 +516,20 @@ def _ask_for_prose(
     prompt = _prompt_template().substitute(
         client_name=client.name,
         industry=client.industry or "—",
+        profile=json.dumps(dict(website=client.website, legal_name=client.legal_name,
+            topics=_client_themes(client), facts=[dict(key=row.key, value=row.value[:1000])
+                for row in session.scalars(select(ClientFact).where(
+                    ClientFact.client_id == client.id, ClientFact.is_primary.is_(True),
+                    ClientFact.key.in_(['R01.01', 'R05.01', 'R06.01', 'R07.01',
+                                       'A01.02', 'A02.01', 'A02.02', 'A02.03']))
+                    .order_by(ClientFact.key))]), ensure_ascii=False),
         candidates=listing,
         formats=", ".join(sorted(REGISTRY)),
     )
     try:
         answer = _parse(invoke(prompt, timeout=config.ANALYZER_TIMEOUT))
-    except Exception as exc:  # noqa: BLE001 — prose is not worth losing the dates
-        _log.warning("hook prose for %r failed: %s; storing hooks without it", client.name, exc)
+    except Exception as exc:  # noqa: BLE001 — unchecked dates are not proposals
+        _log.warning("hook relevance for %r failed: %s; no new proposals", client.name, exc)
         return {}
     return {entry.ref.strip(): entry for entry in answer.hooks}
 
@@ -626,7 +633,7 @@ def recompute(
     session: Session,
     client: Client,
     *,
-    invoke=invoke_with_fallback,
+    invoke=None,
     now: dt.datetime | None = None,
 ) -> list[PlanHook]:
     """Rebuild this mandate's plan window; return the hooks newly stored.
@@ -641,13 +648,14 @@ def recompute(
       a moved hook does not reappear in its old month.
     * The model is asked once, about the whole candidate list, and only when
       there is one — a mandate with no evidence costs no call. Its answer
-      contributes prose and a format suggestion; month, day and evidence are
-      already fixed before the call is made.
+      must confirm relevance and explain the customer connection. Month, day
+      and evidence are already fixed before the call is made.
     * A candidate whose evidence does not resolve is dropped, not stored.
     * The delete and the insert land together. The plan a person had is only
       gone once its replacement is written in the same transaction.
     """
     reference = _reference(now)
+    invoke = invoke or analyzer.invoke_with_fallback
     months = month_window(reference)
     _record_computed(session, client, reference)
 
@@ -660,9 +668,12 @@ def recompute(
         # editing a standard while the sweep runs must not retroactively change
         # what a stored reason claims to have been written under.
         written_under = brain.version(session)
-        prose_by_ref = _ask_for_prose(client, fresh, invoke)
+        prose_by_ref = _ask_for_prose(session, client, fresh, invoke)
         for index, candidate in enumerate(fresh, 1):
-            reason, fmt = _prose_fields(prose_by_ref.get(f"K{index}"))
+            entry = prose_by_ref.get(f"K{index}")
+            if entry is None or not entry.relevant or not entry.reason.strip():
+                continue
+            reason, fmt = _prose_fields(entry)
             hooks.append(
                 PlanHook(
                     client_id=client.id,

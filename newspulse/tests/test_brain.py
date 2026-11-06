@@ -1827,7 +1827,7 @@ def _store_a_hook(session) -> PlanHook:
         session,
         client,
         invoke=lambda *a, **k: json.dumps(
-            {"hooks": [{"ref": "K1", "reason": "Der Termin betrifft das Mandat.",
+            {"hooks": [{"ref": "K1", "relevant": True, "reason": "Der Termin betrifft das Mandat.",
                         "format": "statement"}]}
         ),
     )

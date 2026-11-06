@@ -51,7 +51,7 @@ export function ClientTabs({ data, path = window.location.pathname }) {
     Object.keys(groups).find((key) => groups[key].includes(active)) || active;
   const tabs = [
     ["client_overview", "/overview", "Überblick"],
-    ["wissen", "/twin", "Wissen"],
+    ["wissen", "/twin", "Kundenprofil"],
     ["strategie", "/guide", "Strategie"],
     ["chancen", "/opportunities", "Chancen"],
     ["umsetzung", "/plan", "Umsetzung"],

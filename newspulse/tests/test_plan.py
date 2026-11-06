@@ -235,7 +235,7 @@ def unasked() -> _Generator:
 
 
 def _prose(ref: str = "K1", reason: str = "Das Mandat betreibt genau das.", **extra):
-    return {"ref": ref, "reason": reason, "format": "statement", **extra}
+    return {"ref": ref, "relevant": True, "reason": reason, "format": "statement", **extra}
 
 
 # --- The dated market signal ------------------------------------------------------
@@ -660,7 +660,7 @@ def test_a_format_the_registry_does_not_know_is_dropped(session, mandate):
     hooks = plan.recompute(
         session,
         mandate,
-        invoke=_Generator({"ref": "K1", "reason": "Passt.", "format": "kalenderblatt"}),
+        invoke=_Generator({"ref": "K1", "relevant": True, "reason": "Passt.", "format": "kalenderblatt"}),
         now=_NOW,
     )
 
@@ -668,8 +668,8 @@ def test_a_format_the_registry_does_not_know_is_dropped(session, mandate):
     assert hooks[0].reason == "Passt."
 
 
-def test_a_failed_model_call_costs_the_prose_and_not_the_date(session, mandate):
-    """The hook exists because of its evidence, with or without prose."""
+def test_a_failed_model_call_does_not_propose_unchecked_dates(session, mandate):
+    """An official date is not evidence that the client has something to say."""
     signal = _signal(session, mandate, effective_at=_NOW + dt.timedelta(days=20))
 
     def _broken(prompt: str, **kwargs) -> str:
@@ -677,9 +677,37 @@ def test_a_failed_model_call_costs_the_prose_and_not_the_date(session, mandate):
 
     hooks = plan.recompute(session, mandate, invoke=_broken, now=_NOW)
 
-    assert len(hooks) == 1
-    assert hooks[0].source_id == signal.id
-    assert hooks[0].reason == ""
+    assert hooks == []
+    assert session.get(MarketSignal, signal.id) is not None
+
+
+@pytest.mark.parametrize('entry', [
+    {"ref": "K1", "reason": "Allgemeines Thema"},
+    {"ref": "K1", "relevant": False, "reason": "Passt nicht"},
+    {"ref": "K1", "relevant": True, "reason": "  "},
+    {"ref": "K1", "relevant": "false", "reason": "Allgemeines Thema"},
+])
+def test_unconfirmed_or_unexplained_fit_never_becomes_a_hook(session, mandate, entry):
+    _signal(session, mandate, title='Anhörung der Verteidigungsminister',
+            effective_at=_NOW + dt.timedelta(days=20))
+    assert plan.recompute(session, mandate, invoke=_Generator(entry), now=_NOW) == []
+
+
+def test_relevance_uses_client_profile_and_rejects_unrelated_official_dates(session, mandate):
+    from newspulse.models import ClientFact
+    s1 = _signal(session, mandate, title='Anhörung der Verteidigungsminister',
+                 effective_at=_NOW + dt.timedelta(days=20))
+    s2 = _signal(session, mandate, title='Förderung für Wärmepumpen',
+                 summary='Förderung für Installationsbetriebe',
+                 effective_at=_NOW + dt.timedelta(days=21))
+    session.add(ClientFact(client_id=mandate.id, key='R05.01', value='Installiert Wärmepumpen.'))
+    session.commit()
+    invoke = _Generator(_prose('K1', relevant=False), _prose('K2'))
+    hooks = plan.recompute(session, mandate, invoke=invoke, now=_NOW)
+    assert [h.source_id for h in hooks] == [s2.id]
+    assert 'Installiert Wärmepumpen.' in invoke.prompt
+    assert 'Förderung für Installationsbetriebe' in invoke.prompt
+    assert session.get(MarketSignal, s1.id) is not None
 
 
 def test_a_mandate_without_evidence_spends_no_model_call(session, mandate, unasked):

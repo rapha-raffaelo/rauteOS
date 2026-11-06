@@ -66,6 +66,8 @@
    is where it belongs once the heading has a mandate to name. #}
 {% block pagetitle %}{% if workspace_client %}{% set client = workspace_client %}{% include "partials/client_title.html" %}{% else %}{{ translator(request)("Intelligence") }}{% endif %}{% endblock %}
 
+{% block legacy_heading %}{% endblock %}
+
 {% block content %}
 {% set t = translator(request) %}
 {# The same stamp the impulse page renders, from the same partial: this column is
@@ -82,34 +84,27 @@
 {% endif %}
 {% set t = translator(request) %}
 
-{% if chances %}
-  {# Spec 09: Intelligence opens with the open chances of every mandate, the
-     same cards "Stories & Content" leads with. #}
-  <section class="intel-chances" aria-label="{{ t('Offene Chancen') }}">
-    <div class="intel-chances__h"><h2>{{ t("Entwickelte Chancen") }}</h2><span>{{ chances | length }}</span></div>
-    <div class="intel-chances__grid">
-      {% for c in chances %}
-        <a class="intel-chance" href="{{ c.href }}">
-          <span class="intel-chance__k">{{ t("Entwickelte Chance") }}</span>
-          <strong>{{ c.title }}</strong>
-          <span class="intel-chance__m">{{ c.client.name }}</span>
-        </a>
-      {% endfor %}
-    </div>
-  </section>
-{% endif %}
-
-<div id="today-root">
+<div id="today-root" class="intelligence">
+<header class="intel-heading">
+  <div><p class="intel-eyebrow">{{ t("MONITORING & CHANCEN") }}</p>
+    <h1>{% if workspace_client %}{{ workspace_client.name }}{% else %}{{ t("Intelligence") }}{% endif %}</h1>
+    <p class="intel-description">{{ t("Was passiert. Was es bedeutet. Wo wir ansetzen.") }}</p>
+  </div>
+  {% include "partials/runmeta.html" %}
+</header>
 <div class="today-toolbar">
   {# Category filter and date picker share one form so changing either keeps the
      other's value; the whole toolbar sits inside #today-root so an HTMX swap
      re-renders it with the new day's categories. #}
   <form class="date-picker" method="get" action="/today">
+    {% if selected_client %}<input type="hidden" name="client" value="{{ selected_client }}">{% endif %}
+    {% if show_muted %}<input type="hidden" name="show_muted" value="1">{% endif %}
     <label for="category">{{ t("Kategorie") }}:</label>
     <select
       id="category"
       name="category"
-      hx-get="/"
+      hx-get="/today"
+      hx-include="closest form"
       hx-trigger="change"
       hx-target="#today-root"
       hx-select="#today-root"
@@ -152,7 +147,8 @@
       id="date"
       name="date"
       value="{{ day_iso }}"
-      hx-get="/"
+      hx-get="/today"
+      hx-include="closest form"
       hx-trigger="change"
       hx-target="#today-root"
       hx-select="#today-root"
@@ -243,7 +239,8 @@
     {% endfor %}
   </section>
 {% endif %}
-<div class="cols">
+<div class="cols intel-layout">
+  {% if alerts or open_crises or crisis_offers %}
   <aside class="alertcol" aria-label="{{ t('Warnungen') }}">
     <div class="colhead">{{ t("Warnungen") }} <span class="n">{{ alerts | length }}</span></div>
     {# A declared crisis sits above the day's alerts, because it is the one thing
@@ -327,7 +324,9 @@
     {% endfor %}
   </aside>
 
-  <main class="feedcol" aria-label="{{ t('Gesamter Tag') }}">
+  {% endif %}
+
+  <section class="feedcol" aria-label="{{ t('Gesamter Tag') }}">
     {# Counts stories, not articles: a syndicated event is one thing to read.
        The article count is shown alongside when the two differ. #}
     <div class="colhead">
@@ -416,12 +415,31 @@
         </div>
       {% endif %}
     {% endif %}
-  </main>
+  </section>
 
   {# The third column: what to send a mandate, drafted by the daily run off market
      coverage the mandate is not in. Advisory — nothing is sent from here. The
      reader copies, edits, decides. #}
-  <aside class="anglecol" aria-label="{{ t('Impulse') }}">
+  <aside class="anglecol" aria-label="{{ t('Chancen und Impulse') }}">
+    {% if chances %}
+    <section class="intel-chances" aria-label="{{ t('Offene Chancen') }}">
+      <div class="intel-chances__h"><h2>{{ t("Entwickelte Chancen") }}</h2><span>{{ chances | length }}</span></div>
+      <p class="intel-rail-note">{{ t("Ansätze für die nächste Geschichte. Zum Weiterentwickeln öffnen.") }}</p>
+      <div class="intel-chances__grid">
+      {% for c in chances[:3] %}
+        <a class="intel-chance" href="{{ c.href }}"><span class="intel-chance__m">{{ c.client.name }}</span><strong>{{ c.title }}</strong><span class="intel-chance__action">{{ t("Chance öffnen") }} →</span></a>
+      {% endfor %}
+      </div>
+      {% if chances | length > 3 %}
+      <details class="intel-more"><summary>{{ t("Weitere Chancen anzeigen") }} · {{ chances | length - 3 }}</summary>
+        <div class="intel-chances__grid">{% for c in chances[3:] %}
+          <a class="intel-chance" href="{{ c.href }}"><span class="intel-chance__m">{{ c.client.name }}</span><strong>{{ c.title }}</strong><span class="intel-chance__action">{{ t("Chance öffnen") }} →</span></a>
+        {% endfor %}</div>
+      </details>
+      {% endif %}
+    </section>
+    {% endif %}
+    {% if angles or not chances %}
     <div class="colhead">{{ t("Impulse") }} <span class="n">{{ angles | length }}</span></div>
     {# One line per mandate, opened on demand.
 
@@ -533,6 +551,7 @@
 
     {% if not angles and not quiet_clients %}
       <p class="rail__empty">{{ t("Kein Anlass heute.") }}</p>
+    {% endif %}
     {% endif %}
   </aside>
 </div>
