@@ -27,3 +27,17 @@ it('states the fit from what the profile holds and nothing else', () => {
   expect(screen.getByText('2 Veröffentlichungen als Relevanzsignal')).toBeTruthy();
   expect(screen.getByText('Kontaktstatus: Interessiert')).toBeTruthy();
 });
+
+it('counts a pitch for this story as written and, once sent, as outreach done', () => {
+  const base = { id: 1, storyline: 'x', assets: [], contact_ids: [], status: 'active' };
+  expect(currentStep({ ...base, letters: [{ id: 1, released_at: null }] })).toBe('outreach');
+  expect(currentStep({ ...base, letters: [{ id: 1, released_at: '2026-11-01' }] })).toBe('ergebnisse');
+});
+
+it('reads the pitch history when the profile is empty', () => {
+  render(<FitPanel data={{ profile: { relationship_status: 'Unbekannt' }, contact: { beat: 'Fintech' }, articles: [],
+    relationship: { tally: { anschreiben: 3, antworten: 1, veroeffentlicht: 1, still: 2 }, last_interaction_at: '2026-10-02T10:00:00' } }} />);
+  expect(screen.getByText('Thematischer Schwerpunkt: Fintech')).toBeTruthy();
+  expect(screen.getByText('Bisher 3 Anschreiben, 1 Antwort, 1 veröffentlicht')).toBeTruthy();
+  expect(screen.queryByText(/Kontaktstatus/)).toBeNull();
+});

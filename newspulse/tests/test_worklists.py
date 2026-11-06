@@ -240,3 +240,38 @@ def test_a_chance_from_outside_rauteos_is_refused(web, session):
     body = rendered(web.post("/linkedin/from-chance", data={"client_id": "1", "title": "x", "context_href": "https://evil.example"}))
     assert "innerhalb von RauteOS" in body
     assert session.scalar(select(LinkedInPost)) is None
+
+
+# --- Links and counts that must agree (review 2026-11-06) ------------------------
+
+
+def test_every_open_task_counts_as_due_not_just_the_five_shown(session):
+    for i in range(7):
+        worklists.save_task(session, {"title": f"t{i}", "due_on": "2026-01-01"})
+    board = desk.build(session)
+    assert (len(board.tasks), board.tasks_open, board.tasks_due) == (5, 7, 7)
+
+
+def test_the_tasks_heading_counts_every_open_task_whatever_the_filter(web, session):
+    worklists.save_task(session, {"title": "offen", "client_id": "1"})
+    worklists.save_task(session, {"title": "fertig", "status": "erledigt"})
+    body = rendered(web.get("/aufgaben?status=erledigt"))
+    assert "1 offen" in body
+
+
+def test_a_mandates_next_steps_start_with_its_tasks(web, session):
+    worklists.save_task(session, {"title": "Statement abstimmen", "client_id": "1", "due_on": "2026-11-09"})
+    worklists.save_task(session, {"title": "Agenturarbeit"})
+    steps = web.get("/api/v1/workbench/clients/1").json()["next_steps"]
+    assert [(s["kind"], s["title"], s["detail"]) for s in steps] == [("aufgabe", "Statement abstimmen", "fällig 09.11.2026")]
+
+
+def test_a_text_link_names_its_occasion_and_an_anchor_that_exists(session):
+    from newspulse import workspaces
+    asset = _linkedin_text(session)
+    href = workspaces.text_href(session, asset)
+    assert href == f"/client/1/advice?eintrag=anlass-{asset.angle_id}#asset-text-{asset.id}"
+    from pathlib import Path
+    template = Path(workspaces.__file__).parent / "web/templates/advice.html"
+    assert 'id="asset-text-{{ asset.id }}"' in template.read_text()
+    assert 'id="letter-text-{{ msg.id }}"' in template.read_text()

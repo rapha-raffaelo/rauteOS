@@ -4,7 +4,7 @@ import datetime as dt
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from . import journalists, twin
-from .models import (Angle, Article, Asset, ClientFact, Contact, NewsjackOpportunity, OpportunityEvent,
+from .models import (Angle, Article, Asset, ClientFact, Contact, NewsjackOpportunity, OpportunityEvent, Outreach,
                      OpportunityWorkspace, Standing)
 
 SPEAKER_KEYS={'ceo','sprecher','pressekontakt','A11.01'}
@@ -18,6 +18,27 @@ def anchor(session,client_id,kind,identity):
     if kind=='detected' and row.standing!=Standing.BELEGT:
         return None
     return row
+
+
+def advice_href(client_id,angle_id,anchor=''):
+    """The advice page on one occasion. It shows a single occasion, the newest
+    unless ``eintrag`` names one, so a link without it lands somewhere else."""
+    return f'/client/{client_id}/advice?eintrag=anlass-{angle_id}'+(f'#{anchor}' if anchor else '')
+
+
+def text_href(session,row,kind='asset'):
+    """Where a stored text or letter is read: in its chance if it has one, else
+    on its occasion's advice page, and a crisis text in the crisis."""
+    if not row.angle_id:
+        return f'/client/{row.client_id}/krise'
+    if kind=='asset':
+        workspace=session.scalar(select(OpportunityWorkspace).where(OpportunityWorkspace.client_id==row.client_id,
+            OpportunityWorkspace.angle_id==row.angle_id))
+        if workspace:
+            return (f'/client/{row.client_id}/opportunities?kind={workspace.context_kind}&context={workspace.context_id}'
+                    f'&view=assets&text=asset-{row.id}')
+        return advice_href(row.client_id,row.angle_id,f'asset-text-{row.id}')
+    return advice_href(row.client_id,row.angle_id,f'letter-text-{row.id}')
 
 
 def stored(session,client_id,kind,identity):
@@ -49,6 +70,9 @@ def read(session: Session,client_id,kind,identity):
         sources=[dict(journalists.article_dict(a),article_id=a.id) for a in session.scalars(select(Article).where(Article.id.in_(ids)))
                  if journalists.public_url(a.url)]
     assets=list(session.scalars(select(Asset).where(Asset.angle_id==angle.id).order_by(Asset.generated_at.desc()))) if angle else []
+    # The pitches written for this chance are letters, not assets; without them a
+    # story with a pitch out still reads "Assets" on its steps.
+    letters=list(session.scalars(select(Outreach).where(Outreach.angle_id==angle.id).order_by(Outreach.generated_at.desc()))) if angle else []
     events=list(session.scalars(select(OpportunityEvent).where(OpportunityEvent.workspace_id==saved.id)
         .order_by(OpportunityEvent.created_at.desc(),OpportunityEvent.id.desc()).limit(200))) if saved else []
     title=article.title if article else row.reason if kind=='detected' else row.subject
@@ -72,9 +96,11 @@ def read(session: Session,client_id,kind,identity):
         proof_points=[twin.snapshot(r) for r in session.scalars(select(ClientFact).where(ClientFact.client_id==client_id,
             ClientFact.id.in_(info.get('proof_statement_ids',[]))))],
         assets=[dict(id=a.id,kind=a.kind,title=a.title,generated_at=a.generated_at,released_at=a.released_at,
-                     href=f'/client/{client_id}/advice?eintrag=anlass-{angle.id}#asset-{a.id}') for a in assets],
+                     href=advice_href(client_id,angle.id,f'asset-text-{a.id}')) for a in assets],
+        letters=[dict(id=o.id,subject=o.subject,journalist=o.journalist,outlet=o.outlet,state=o.state.value,
+                      generated_at=o.generated_at,released_at=o.released_at,href=text_href(session,o,'outreach')) for o in letters],
         events=[dict(id=e.id,kind=e.kind,detail=e.detail,actor=e.actor,created_at=e.created_at) for e in events],
-        legacy_href=f'/client/{client_id}/advice?eintrag=anlass-{angle.id}#impulse-{angle.id}' if angle else f'/client/{client_id}/gelegenheit/{identity}')
+        legacy_href=advice_href(client_id,angle.id,f'impulse-{angle.id}') if angle else f'/client/{client_id}/gelegenheit/{identity}')
 
 
 def listings(session,client_id):

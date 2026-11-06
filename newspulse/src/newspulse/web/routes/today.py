@@ -778,8 +778,14 @@ def _portfolio_chances(session: Session) -> list[dict]:
     """The developed chances of every mandate. Detected ones are already on
     this page, in the day's column and cut to three a mandate; listing them
     again above would undo that cut."""
-    from .workbench import stories
-    return [c for c in stories(session) if c["kind"] == "developed"]
+    from ... import desk
+    from .workbench import STORIES_SHOWN
+    mandates = {c.id: c for c in session.scalars(select(Client).where(
+        Client.active.is_(True), Client.is_competitor.is_(False)))}
+    # Filtered before the cut: the newest few are often all detected ones.
+    return [dict(client=dict(id=c.client.id, name=c.client.name), kind=c.kind, title=c.title,
+                 status=c.status, since=c.since, href=c.href)
+            for c in desk._chances(session, mandates, limit=STORIES_SHOWN, kind="developed")]
 
 
 @router.get("/today", response_class=HTMLResponse)

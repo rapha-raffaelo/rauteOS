@@ -162,7 +162,7 @@ def save_post(session: Session, form: Mapping, post: LinkedInPost | None = None)
 SUGGESTIONS_SHOWN = 6
 
 
-def _first_line(text: str, limit: int = 200) -> str:
+def first_line(text: str, limit: int = 200) -> str:
     line = next((l.strip() for l in (text or "").splitlines() if l.strip()), "")
     return line if len(line) <= limit else line[:limit].rsplit(" ", 1)[0] + " …"
 
@@ -175,7 +175,7 @@ def suggestions(session: Session) -> dict:
     the Desk's list. Taking one over is a click; nothing lands on the board
     by itself.
     """
-    from . import desk
+    from . import desk, workspaces
 
     clients = {c.id: c for c in mandates(session)}
     taken = set(session.scalars(select(LinkedInPost.asset_id).where(LinkedInPost.asset_id.is_not(None))))
@@ -189,9 +189,9 @@ def suggestions(session: Session) -> dict:
             if a.id in taken:
                 continue
             texts.append(dict(id=a.id, client=dict(id=a.client_id, name=clients[a.client_id].name),
-                              title=a.title or _first_line(a.body), excerpt=_first_line(a.body, 160) if a.title else "",
+                              title=a.title or first_line(a.body), excerpt=first_line(a.body, 160) if a.title else "",
                               speaker=a.speaker, released=a.released_at is not None, written_at=a.generated_at,
-                              href=f"/client/{a.client_id}/advice?eintrag=anlass-{a.angle_id}#asset-{a.id}"))
+                              href=workspaces.text_href(session, a)))
             if len(texts) == SUGGESTIONS_SHOWN:
                 break
     chances = [dict(client=dict(id=c.client.id, name=c.client.name), title=c.title, href=c.href, since=c.since)
@@ -205,7 +205,7 @@ def post_from_asset(session: Session, asset: Asset) -> LinkedInPost:
     post = session.scalar(select(LinkedInPost).where(LinkedInPost.asset_id == asset.id))
     if post:
         return post
-    post = LinkedInPost(client_id=asset.client_id, asset_id=asset.id, title=(asset.title or _first_line(asset.body))[:200],
+    post = LinkedInPost(client_id=asset.client_id, asset_id=asset.id, title=(asset.title or first_line(asset.body))[:200],
                         author=asset.speaker[:120], body=asset.body[:3000],
                         status="freigabe" if asset.released_at else "entwurf", updated_at=_now())
     session.add(post)

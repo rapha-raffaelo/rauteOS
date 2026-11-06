@@ -6,7 +6,8 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-from ... import desk, profile as profiles, workspaces
+from ... import desk, profile as profiles, worklists, workspaces
+from ...assets import CRISIS_REGISTRY, REGISTRY
 from .desk_api import DecisionSummary
 from ...models import Client, Asset, Outreach, ClientAction, Report, OpportunityWorkspace, OpportunityEvent
 from .. import frontend
@@ -48,15 +49,16 @@ def texts(session, client_id=None, released_only=False):
         if client_id is not None:
             query = query.where(model.client_id == client_id)
         for row, name in session.execute(query.order_by(model.generated_at.desc()).limit(100)):
-            workspace = session.scalar(select(OpportunityWorkspace).where(
-                OpportunityWorkspace.client_id == row.client_id,
-                OpportunityWorkspace.angle_id == row.angle_id)) if row.angle_id else None
-            href = (f'/client/{row.client_id}/opportunities?kind={workspace.context_kind}&context={workspace.context_id}&view=assets&text={kind}-{row.id}'
-                if workspace else f'/client/{row.client_id}/advice?eintrag=anlass-{row.angle_id}'
-                if row.angle_id else f'/client/{row.client_id}/krise')
+            href = workspaces.text_href(session, row, kind)
+            fmt = row.kind if kind == 'asset' else 'pitch'
+            known = REGISTRY.get(fmt) or CRISIS_REGISTRY.get(fmt)
+            title = row.title if kind == 'asset' else row.subject
             items.append(dict(id=row.id, type=kind, client_id=row.client_id, client=name,
-                title=row.title if kind == 'asset' else row.subject,
-                format=row.kind if kind == 'asset' else 'pitch', generated_at=row.generated_at,
+                # Formats without a title of their own (LinkedIn, statement, Q&A)
+                # are named by their first line rather than "Ohne Titel".
+                title=title or worklists.first_line(row.body if kind == 'asset' else row.message),
+                format=fmt, format_name=known.name if known else 'Pitch' if fmt == 'pitch' else fmt,
+                generated_at=row.generated_at,
                 released_at=row.released_at,
                 href=href))
     return sorted(items, key=lambda r: r['generated_at'], reverse=True)[:100]
@@ -98,10 +100,24 @@ def overview(client_id: int, response: Response, session: Session = Depends(get_
             .order_by(OpportunityEvent.created_at.desc(), OpportunityEvent.id.desc()).limit(100))]
     return dict(client={'id': client.id, 'name': client.name},
         summary=MandateSummary.model_validate(summary) if summary else None,
-        opportunities=workspaces.listings(session, client_id)[:30], texts=items,
+        # Closed ones left out before the cut, so thirty closed ones cannot hide an open one.
+        opportunities=[r for r in workspaces.listings(session, client_id) if r['status'] != 'closed'][:30], texts=items,
         company=company(session, client),
-        next_steps=[DecisionSummary.model_validate(d) for d in board.decisions if d.client.id == client_id][:5],
+        next_steps=next_steps(board, client_id),
         activity=activity, logged_actions=actions, released_reports=reports, released_texts=texts(session, client_id, released_only=True), limit=100)
+
+
+#: How many entries "Nächste Schritte" carries on a mandate's overview.
+NEXT_STEPS_SHOWN = 5
+
+
+def next_steps(board, client_id: int) -> list[dict]:
+    """The mandate's open tasks, due first, then its open decisions (spec 10)."""
+    tasks = [dict(kind='aufgabe', title=t.title, href=t.href,
+                  detail=f'fällig {t.due_on:%d.%m.%Y}' if t.due_on else '', since=None)
+             for t in board.all_tasks if t.client and t.client.id == client_id]
+    decisions = [DecisionSummary.model_validate(d).model_dump() for d in board.decisions if d.client.id == client_id]
+    return (tasks + decisions)[:NEXT_STEPS_SHOWN]
 
 
 #: How many running stories head "Stories & Content" (spec 09).

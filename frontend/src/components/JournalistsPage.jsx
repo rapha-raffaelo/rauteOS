@@ -95,14 +95,22 @@ export function ResearchPanel({clientId, contextKind, contextId, onContact}) {
 // Spec 09: the prototype's "Journalisten-Fit" column, from what the profile
 // already holds. Each line is a fact on file, not a model's verdict.
 export function FitPanel({data}) {
-  const topics = [].concat(data.profile?.topics || []).filter(Boolean);
+  const list = key => [].concat(data.profile?.[key] || []).filter(Boolean);
+  const topics = list('topics').length ? list('topics') : [data.contact?.beat].filter(Boolean);
+  const special = [...list('specialties'), ...list('story_types')];
   const articles = data.articles?.length || 0;
   const status = data.profile?.relationship_status;
   const label = (data.relationship_options || []).find(o => (o.value ?? o) === status);
+  // The pitch history is on file even when nobody filled in the profile.
+  const tally = data.relationship?.tally;
+  const last = data.relationship?.last_interaction_at;
   const lines = [
     topics.length && `Thematischer Schwerpunkt: ${topics.slice(0, 4).join(' · ')}`,
+    special.length && `Schreibt gern: ${special.slice(0, 4).join(' · ')}`,
     articles && `${articles} ${articles === 1 ? 'Veröffentlichung' : 'Veröffentlichungen'} als Relevanzsignal`,
-    status && `Kontaktstatus: ${label?.label || status}`,
+    tally?.anschreiben && `Bisher ${tally.anschreiben} Anschreiben, ${tally.antworten} ${tally.antworten === 1 ? 'Antwort' : 'Antworten'}, ${tally.veroeffentlicht} veröffentlicht`,
+    last && `Letzter Kontakt: ${new Date(last).toLocaleDateString('de-DE')}`,
+    status && status !== 'Unbekannt' && `Kontaktstatus: ${label?.label || status}`,
     data.profile?.preferences && `Präferenz: ${String(data.profile.preferences).slice(0, 90)}`,
   ].filter(Boolean);
   return <aside className="twin-field journalist-fit"><h2>Journalisten-Fit</h2>

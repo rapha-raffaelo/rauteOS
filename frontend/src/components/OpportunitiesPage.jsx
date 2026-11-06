@@ -6,6 +6,7 @@ import {ActivationPanel,PreparedRelease} from './ActivationPanel.jsx';
 const date=value=>value ? new Date(value).toLocaleString('de-DE',{dateStyle:'medium',timeStyle:'short'}) : 'Nicht festgelegt';
 const statusLabels={draft:'Entwurf',active:'Aktiviert',closed:'Abgeschlossen'};
 const eventLabels={idea_developed:'Idee entwickelt',choices_saved:'Auswahl gespeichert',activated:'Aktiviert',text_created:'Text erstellt',text_checked:'Aussagen geprüft',text_edited:'Text bearbeitet'};
+const letterStates={entwurf:'Entwurf',raus:'Verschickt',antwort:'Antwort erhalten',absage:'Absage',veroeffentlicht:'Veröffentlicht'};
 const actionLabels={kundenmail:'Kundenmail',pitch:'Journalistenpitch',statement:'Statement',pressemitteilung:'Pressemitteilung',qa:'Q&A',gastbeitrag:'Gastbeitrag',interviewangebot:'Interviewangebot',linkedin:'LinkedIn-Post',briefing:'Briefing',custom:'Eigene Aktion'};
 // Spec 09: the prototype's story steps. Each opens the section of the
 // workspace that already does that work.
@@ -15,9 +16,10 @@ export const STEPS=[['analyse','Analyse','workspace-context'],['storyline','Stor
 export function currentStep(data){
   if(!data.id)return 'analyse';
   if(!data.storyline?.trim())return 'storyline';
-  if(!data.assets?.length)return 'assets';
-  if(!data.contact_ids?.length)return 'medien';
-  if(data.status!=='closed'&&!data.assets.some(a=>a.released_at))return 'outreach';
+  const letters=data.letters||[];
+  if(!data.assets?.length&&!letters.length)return 'assets';
+  if(!data.contact_ids?.length&&!letters.length)return 'medien';
+  if(data.status!=='closed'&&!data.assets.some(a=>a.released_at)&&!letters.some(l=>l.released_at))return 'outreach';
   return 'ergebnisse';
 }
 export function Stepper({current,onPick}){
@@ -83,7 +85,8 @@ export function OpportunityWorkspace({clientId,kind,identity,onChanged}){
     {data.status==='active'&&<p><a href={data.legacy_href}>Freigaben öffnen</a></p>}</section><details className="workspace-research"><summary>Passende Kontakte recherchieren <span>Aktuelle Artikel & Empfehlungen</span></summary><ResearchPanel clientId={clientId} contextKind={kind} contextId={identity} onContact={(id,person)=>{window.location.href=id?`/contacts?contact=${id}`:`/contacts?client=${clientId}&kind=${kind}&context=${identity}`;}}/>
     </details><details className="workspace-history"><summary>Aktivität & gespeicherte Texte <span>{data.events.length} Arbeitsschritte</span></summary><section className="twin-field"><h3>Aktivität dieser Gelegenheit</h3><p>Entwicklung und Aktivierung sind noch keine ausgelieferte Kundenleistung.</p>
       {data.events.length?<ul>{data.events.map(e=><li key={e.id}>{date(e.created_at)} · {eventLabels[e.kind]||e.kind} · {e.actor}{e.detail.kind&&` · ${actionLabels[e.detail.kind]||e.detail.kind}`}{e.detail.contact_ids&&` · ${e.detail.contact_ids.length} Journalisten ausgewählt`}</li>)}</ul>:<p>Noch keine Aktivität hinterlegt.</p>}
-      <h3>Texte</h3>{data.assets.length?<ul>{data.assets.map(a=><li key={a.id}><a href={a.href}>{a.title||a.kind}</a> · {a.released_at?'Freigegeben':'Entwurf'} · {date(a.generated_at)}</li>)}</ul>:<p>Noch keine Texte erstellt.</p>}</section></details>
+      <h3>Texte</h3>{data.assets.length||data.letters?.length?<ul>{data.assets.map(a=><li key={a.id}><a href={a.href}>{a.title||actionLabels[a.kind]||a.kind}</a> · {a.released_at?'Freigegeben':'Entwurf'} · {date(a.generated_at)}</li>)}
+        {(data.letters||[]).map(l=><li key={`letter-${l.id}`}><a href={l.href}>{l.subject||actionLabels.pitch}</a> · {[l.journalist,l.outlet].filter(Boolean).join(', ')||actionLabels.pitch} · {letterStates[l.state]||l.state} · {date(l.generated_at)}</li>)}</ul>:<p>Noch keine Texte erstellt.</p>}</section></details>
   </div>;
 }
 export function OpportunitiesPage({clientId,params=new URLSearchParams(window.location.search)}){

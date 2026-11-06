@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse, Response
 from sqlalchemy.orm import Session
 
-from ... import worklists
+from ... import worklists, workspaces
 from ...models import DEAL_STAGES, POST_STATES, TASK_PRIORITIES, TASK_STATES, Asset, Deal, LinkedInPost, Task
 from ..app import get_db
 from ..react_pages import render as render_react
@@ -31,19 +31,18 @@ def _task(t: Task) -> dict:
                 created_at=t.created_at, done_at=t.done_at)
 
 
-def _post(p: LinkedInPost) -> dict:
+def _post(session: Session, p: LinkedInPost) -> dict:
     return dict(id=p.id, title=p.title, author=p.author, body=p.body, status=p.status,
                 planned_on=p.planned_on, published_url=p.published_url,
                 client=dict(id=p.client.id, name=p.client.name), updated_at=p.updated_at,
-                source_href=_source_href(p))
+                source_href=_source_href(session, p))
 
 
-def _source_href(p: LinkedInPost) -> str:
+def _source_href(session: Session, p: LinkedInPost) -> str:
     """Where the card came from: the chance, or the text RauteOS wrote."""
     if p.context_href:
         return p.context_href
-    a = p.asset if p.asset_id else None
-    return f"/client/{a.client_id}/advice?eintrag=anlass-{a.angle_id}#asset-{a.id}" if a and a.angle_id else ""
+    return workspaces.text_href(session, p.asset) if p.asset_id and p.asset else ""
 
 
 def _deal(d: Deal) -> dict:
@@ -72,8 +71,11 @@ def _tasks_page(request: Request, session: Session, *, error: str = "", draft: d
     raw = request.query_params.get("client", "")
     client_id = int(raw) if raw.isdigit() else None
     rows = worklists.tasks(session, status=status, client_id=client_id)
+    # Over every open task, whatever the filter: the same number as the sidebar.
+    everything = worklists.open_tasks(session)
     return render_react(request, "tasks", dict(
         tasks=[_task(t) for t in rows], clients=_clients(session),
+        open_total=len(everything), due_on=[t.due_on for t in everything if t.due_on],
         priorities=[[p, worklists.TASK_PRIORITY_LABELS[p]] for p in TASK_PRIORITIES],
         states=[[s, worklists.TASK_STATE_LABELS[s]] for s in TASK_STATES],
         filter=dict(status=status, client=client_id), error=error, draft=draft or {}))
@@ -124,7 +126,7 @@ def delete_task(task_id: int, session: Session = Depends(get_db)) -> Response:
 def _posts_page(request: Request, session: Session, *, error: str = "", draft: dict | None = None) -> Response:
     rows = worklists.posts(session)
     return render_react(request, "linkedin", dict(
-        posts=[_post(p) for p in rows], clients=_clients(session),
+        posts=[_post(session, p) for p in rows], clients=_clients(session),
         states=[[s, worklists.POST_STATE_LABELS[s]] for s in POST_STATES],
         suggestions=worklists.suggestions(session),
         error=error, draft=draft or {}))

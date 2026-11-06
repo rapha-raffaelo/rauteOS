@@ -58,6 +58,9 @@ export function TasksPage({ data: d }) {
   const prio = Object.fromEntries(d.priorities);
   const now = today();
   const open = d.tasks.filter((x) => x.status !== "erledigt");
+  // The heading counts every open task, not the filtered view.
+  const total = d.open_total ?? open.length;
+  const dueCount = (d.due_on ?? open.map((x) => x.due_on).filter(Boolean)).filter((x) => x <= now).length;
   const filterHref = (status) => {
     const q = new URLSearchParams();
     if (status) q.set("status", status);
@@ -67,7 +70,7 @@ export function TasksPage({ data: d }) {
   return (
     <section className="worklist">
       <PageHeading eyebrow="ARBEITSPLATZ" title="Aufgaben"
-        description={`${open.length} ${t("offen")} · ${open.filter((x) => x.due_on && x.due_on <= now).length} ${t("heute fällig oder überfällig")}`} />
+        description={`${total} ${t("offen")} · ${dueCount} ${t("heute fällig oder überfällig")}`} />
       <Notice>{d.error}</Notice>
       <div className="wl-bar">
         <nav className="workspace-links" aria-label={t("Status")}>

@@ -7,7 +7,7 @@ const activityLabels={idea_developed:'Idee entwickelt',activated:'Opportunity ak
 const date=v=>v?new Date(v).toLocaleDateString('de-DE'):'–';
 const storyStatus={draft:'Idee',active:'In Bearbeitung',closed:'Abgeschlossen'};
 function Summary({row}){return <p>Profil: {row.twin.percent} % · Quartal: {row.actions_quarter.total} geliefert{row.promised_quarter!==null?` / ${row.promised_quarter} zugesagt`:' · Zusage offen'} · {row.opportunities} Opportunities</p>;}
-function Texts({items}){return <div className="workbench-list">{items.length?items.map(t=><article key={`${t.type}-${t.id}`}><span>{t.client} · {t.format} · {t.released_at?'Freigegeben':'Entwurf'}</span><h2><a href={t.href}>{t.title||'Ohne Titel'}</a></h2><p>{date(t.generated_at)}</p></article>):<p>Noch keine Texte.</p>}</div>;}
+function Texts({items}){return <div className="workbench-list">{items.length?items.map(t=><article key={`${t.type}-${t.id}`}><span>{t.client} · {t.format_name||t.format} · {t.released_at?'Freigegeben':'Entwurf'}</span><h2><a href={t.href}>{t.title||'Ohne Titel'}</a></h2><p>{date(t.generated_at)}</p></article>):<p>Noch keine Texte.</p>}</div>;}
 export function WorkbenchPage({page,clientId}){
  const [data,setData]=useState(null),[error,setError]=useState(''),[search,setSearch]=useState(''),[filter,setFilter]=useState('all');
  useEffect(()=>{if(page==='ask')return;let live=true;fetch(`/api/v1/workbench/${clientId?`clients/${clientId}`:page}`).then(r=>{if(!r.ok)throw Error('Ansicht konnte nicht geladen werden.');return r.json();}).then(v=>{if(live)setData(v);}).catch(e=>{if(live)setError(e.message);});return()=>{live=false;};},[page,clientId]);

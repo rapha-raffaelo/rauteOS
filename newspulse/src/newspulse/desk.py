@@ -42,7 +42,7 @@ from dataclasses import dataclass, field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from . import profile as profiles
+from . import config, profile as profiles
 from .models import (
     Analysis,
     Angle,
@@ -212,6 +212,10 @@ class Desk:
     chances: list[Chance] = field(default_factory=list)
     tasks: list[TaskItem] = field(default_factory=list)
     tasks_open: int = 0
+    #: Of those, due today or overdue. Counted over all of them, not the five shown.
+    tasks_due: int = 0
+    #: Every open task, for the mandate pages that filter by client.
+    all_tasks: list[TaskItem] = field(default_factory=list)
     generated_at: dt.datetime | None = None
 
     @property
@@ -349,38 +353,25 @@ def _open_crises(session: Session) -> set[int]:
     return {client_id for (client_id,) in rows}
 
 
-def _opportunity_counts(session: Session, now: dt.datetime) -> dict[int, int]:
-    """Opportunities still open: not dismissed, window not yet closed.
+def _open_listings(session: Session, clients) -> dict[int, list[dict]]:
+    """Each mandate's open chances, exactly as its own opportunity list has them
+    (:func:`workspaces.listings`): evidenced, not dismissed, window open, not
+    closed. The count and the lists read this, so they cannot disagree."""
+    from . import workspaces
+
+    return {cid: [r for r in workspaces.listings(session, cid) if r["status"] != "closed"] for cid in clients}
+
+
+def _opportunity_counts(session: Session, now: dt.datetime, listed: dict[int, list[dict]] | None = None) -> dict[int, int]:
+    """Opportunities still open, per mandate: the length of its open list.
 
     A closed window is not an opportunity any more, and drawing it as one is how
     a dashboard teaches people to ignore its numbers.
     """
-    rows = session.execute(
-        select(NewsjackOpportunity.client_id, func.count())
-        .where(
-            NewsjackOpportunity.dismissed_at.is_(None),
-            NewsjackOpportunity.window_ends_at >= now,
-        )
-        .group_by(NewsjackOpportunity.client_id)
-    ).all()
-    counts = {client_id: count for client_id, count in rows}
-    # Standalone angles are the same developed opportunities shown in the list.
-    # An angle anchored to detected news is already counted above.
-    closed_workspace = select(OpportunityWorkspace.id).where(
-        OpportunityWorkspace.client_id == Angle.client_id,
-        OpportunityWorkspace.context_kind == "developed",
-        OpportunityWorkspace.context_id == Angle.id,
-        OpportunityWorkspace.status == "closed",
-    ).exists()
-    developed = session.execute(select(Angle.client_id, func.count()).where(
-        Angle.newsjack_id.is_(None), Angle.dismissed_at.is_(None), ~closed_workspace,
-    ).group_by(Angle.client_id)).all()
-    for client_id, count in developed:
-        counts[client_id] = counts.get(client_id, 0) + count
-    return counts
-
-
-# --- What is waiting on a person ---------------------------------------------------
+    if listed is None:
+        listed = _open_listings(session, [c.id for c in session.scalars(select(Client).where(
+            Client.active.is_(True), Client.is_competitor.is_(False)))])
+    return {cid: len(rows) for cid, rows in listed.items() if rows}
 
 
 def _decisions(session: Session, clients: dict[int, Client]) -> list[Decision]:
@@ -397,6 +388,8 @@ def _decisions(session: Session, clients: dict[int, Client]) -> list[Decision]:
     Not included: anything the tool can decide itself. A dashboard that lists
     work it could have done is a dashboard nobody finishes reading.
     """
+    from . import workspaces
+
     pending: list[Decision] = []
 
     letters = session.scalars(
@@ -418,7 +411,7 @@ def _decisions(session: Session, clients: dict[int, Client]) -> list[Decision]:
                     else "Wartet auf die Abstimmung mit dem Kunden."
                 ),
                 since=letter.generated_at,
-                href=f"/client/{letter.client_id}/advice#outreach-{letter.id}",
+                href=workspaces.text_href(session, letter, "outreach"),
             )
         )
 
@@ -435,7 +428,7 @@ def _decisions(session: Session, clients: dict[int, Client]) -> list[Decision]:
                 title=impulse.subject or "Impuls ohne Betreff",
                 detail="Vorgeschlagen und weder verwendet noch verworfen.",
                 since=impulse.generated_at,
-                href=f"/client/{impulse.client_id}/advice#impulse-{impulse.id}",
+                href=workspaces.advice_href(impulse.client_id, impulse.id, f"impulse-{impulse.id}"),
             )
         )
 
@@ -465,6 +458,7 @@ def _decisions(session: Session, clients: dict[int, Client]) -> list[Decision]:
 
 def _in_flight(session: Session, clients: dict[int, Client]) -> list[InFlight]:
     """Work between drafted and delivered: letters out, texts not yet released."""
+    from . import workspaces
     running: list[InFlight] = []
 
     sent = session.scalars(
@@ -479,7 +473,7 @@ def _in_flight(session: Session, clients: dict[int, Client]) -> list[InFlight]:
                 title=letter.subject or "Anschreiben",
                 state="raus",
                 since=letter.released_at or letter.generated_at,
-                href=f"/client/{letter.client_id}/advice#outreach-{letter.id}",
+                href=workspaces.text_href(session, letter, "outreach"),
             )
         )
 
@@ -495,7 +489,7 @@ def _in_flight(session: Session, clients: dict[int, Client]) -> list[InFlight]:
                 title=asset.title or str(asset.kind),
                 state="entwurf",
                 since=asset.edited_at or asset.generated_at,
-                href=f"/client/{asset.client_id}/advice",
+                href=workspaces.text_href(session, asset),
             )
         )
 
@@ -526,7 +520,8 @@ def build(session: Session, *, now: dt.datetime | None = None) -> Desk:
     by_id = {client.id: client for client in mandates}
     open_tasks = _open_tasks(session)
     if not by_id:
-        return Desk(generated_at=moment, tasks=open_tasks[:TASKS_SHOWN], tasks_open=len(open_tasks))
+        return Desk(generated_at=moment, tasks=open_tasks[:TASKS_SHOWN], tasks_open=len(open_tasks),
+                    tasks_due=_due(open_tasks, moment), all_tasks=open_tasks)
 
     released_month = _released_counts(session, since_month)
     logged_month = _logged_counts(session, since_month)
@@ -534,7 +529,8 @@ def build(session: Session, *, now: dt.datetime | None = None) -> Desk:
     logged_quarter = _logged_counts(session, since_quarter)
     live = _live_clients(session, since_week)
     crises = _open_crises(session)
-    opportunities = _opportunity_counts(session, moment)
+    listed = _open_listings(session, by_id)
+    opportunities = _opportunity_counts(session, moment, listed)
 
     rows = [
         MandateRow(
@@ -553,15 +549,22 @@ def build(session: Session, *, now: dt.datetime | None = None) -> Desk:
         rows=rows,
         decisions=_decisions(session, by_id),
         in_flight=_in_flight(session, by_id),
-        chances=_chances(session, by_id),
+        chances=_chances(session, by_id, listed=listed),
         tasks=open_tasks[:TASKS_SHOWN],
         tasks_open=len(open_tasks),
+        tasks_due=_due(open_tasks, moment),
+        all_tasks=open_tasks,
         generated_at=moment,
     )
 
 
 #: How many open tasks "Heute priorisiert" carries before the decisions.
 TASKS_SHOWN = 5
+
+
+def _due(tasks: list["TaskItem"], moment: dt.datetime) -> int:
+    today = moment.astimezone(config.local_zone()).date()
+    return sum(1 for t in tasks if t.due_on and t.due_on <= today)
 
 
 def _open_tasks(session: Session) -> list[TaskItem]:
@@ -578,15 +581,16 @@ def _open_tasks(session: Session) -> list[TaskItem]:
 CHANCES_SHOWN = 6
 
 
-def _chances(session: Session, clients: dict[int, Client], limit: int = CHANCES_SHOWN) -> list[Chance]:
+def _chances(session: Session, clients: dict[int, Client], limit: int = CHANCES_SHOWN, *,
+             listed: dict[int, list[dict]] | None = None, kind: str | None = None) -> list[Chance]:
     """The newest open opportunities across every mandate.
 
     The same rows each mandate's own opportunity list shows
     (:func:`workspaces.listings`), so the Desk cannot name a chance the
-    mandate's page does not have. Closed ones are left out.
+    mandate's page does not have. Closed ones are left out; ``kind`` keeps
+    only detected or developed ones, before the cut to ``limit``.
     """
-    from . import workspaces
-
+    listed = listed if listed is not None else _open_listings(session, clients)
     found = [
         Chance(
             client=client,
@@ -598,8 +602,8 @@ def _chances(session: Session, clients: dict[int, Client], limit: int = CHANCES_
                   f"&context={row['context_id']}"),
         )
         for client in clients.values()
-        for row in workspaces.listings(session, client.id)
-        if row["status"] != "closed"
+        for row in listed.get(client.id, [])
+        if kind is None or row["context_kind"] == kind
     ]
     epoch = dt.datetime.min.replace(tzinfo=dt.UTC)
     found.sort(key=lambda c: _aware(c.since) if c.since else epoch, reverse=True)

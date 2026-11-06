@@ -86,9 +86,10 @@ export function DeskPage({ translations = {}, language = 'de' }) {
   }
   const tasks = board.tasks || [];
   const isoToday = new Intl.DateTimeFormat('en-CA', {timeZone: zone}).format(now);
-  const due = tasks.filter((x) => x.due_on && x.due_on <= isoToday);
+  // Counted on the server over every open task; the list shows only the first few.
+  const due = board.tasks_due ?? tasks.filter((x) => x.due_on && x.due_on <= isoToday).length;
   const stats = [
-    ['Offene Aufgaben', board.tasks_open || 0, `${due.length} ${t('heute fällig')}`, due.length > 0],
+    ['Offene Aufgaben', board.tasks_open || 0, `${due} ${t('heute fällig')}`, due > 0],
     ['Entscheidungen offen', board.decisions_open,
       customer.length ? `${customer.length} ${t('davon beim Kunden')}` : t('Nichts blockiert'), customer.length > 0],
     ['Offene Chancen', board.opportunities, t('Fenster noch offen'), false],

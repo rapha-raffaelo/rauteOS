@@ -68,6 +68,7 @@ def corpus(session: Session, *, since: dt.datetime | None = None, until: dt.date
 
 
 def relationship(session: Session, contact: Contact, profile: JournalistProfile | None):
+    from . import workspaces  # it imports this module
     history = outreach.history_for_contact(session, contact.id)
     timeline = outreach.timeline(history)
     dates = [event.at for event in timeline]
@@ -76,7 +77,7 @@ def relationship(session: Session, contact: Contact, profile: JournalistProfile 
                 capped=len(history) >= outreach.MAX_HISTORY,
                 timeline=[dict(at=event.at.isoformat(),kind=event.kind.value,subject=event.letter.subject,
                                mandate=event.mandate,state=event.letter.state.value,
-                               href=f'/client/{event.letter.client_id}/advice#outreach-{event.letter.id}') for event in timeline])
+                               href=workspaces.text_href(session,event.letter,'outreach')) for event in timeline])
 
 
 def profile_data(session: Session, contact: Contact):
