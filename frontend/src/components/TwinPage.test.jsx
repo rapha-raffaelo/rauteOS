@@ -12,7 +12,7 @@ const data = {client:{id:1,name:'Demo'},fields:[{key:'R02.01',label:'Rechtliche 
  statements:[row],progress:{percent:1,required_filled:1,required_total:43,verified:0,missing:[]},options};
 const response = (body, status=200) => ({ok:status<400,status,headers:new Headers({'content-type':'application/json'}),json:async()=>body});
 afterEach(()=>vi.unstubAllGlobals());
-const stubFetch=fetch=>vi.stubGlobal('fetch',(url,options)=>url.endsWith('/ai-import')?Promise.resolve(response({job:null,preview:null})):fetch(url,options));
+const stubFetch=fetch=>vi.stubGlobal('fetch',(url,options)=>url.endsWith('/ai-import')?Promise.resolve(response({job:null,preview:null})):url.endsWith('/onboarding-audio')?Promise.resolve(response([])):fetch(url,options));
 
 it('edits a statement by id and revision without flattening its evidence', async()=>{
  const fetch=vi.fn().mockResolvedValueOnce(response(data)).mockResolvedValueOnce(response({...row,value:'Revised',revision:5})).mockResolvedValue(response({...data,statements:[{...row,value:'Revised',revision:5}]}));
@@ -100,7 +100,7 @@ it('automatically reveals a saved AI preview on returning to the profile',async(
  fireEvent.click(screen.getByRole('button',{name:'Mit KI importieren'}));
  fireEvent.click(screen.getByRole('button',{name:'Mit KI importieren'}));
  expect(screen.getByText('Saved answer')).toBeTruthy();
- expect(fetch).toHaveBeenCalledTimes(2);
+ expect(fetch.mock.calls.filter(([url])=>!url.endsWith('/onboarding-audio'))).toHaveLength(2);
 });
 it('shows the brief as numbered cards and the customer questionnaire as its own panel',async()=>{
  const researched={...row,id:7,key:'R01.01',value:'Zalando SE',source_url:'https://www.corporate.zalando.com/de/impressum',

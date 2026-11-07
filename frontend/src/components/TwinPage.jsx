@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { TwinAIImport } from './TwinAIImport.jsx';
 import { twinRequest } from '../twin-api.js';
+import { QuestionAudio } from './QuestionAudio.jsx';
 
 const labels = {evidence_type: 'Herkunft', source_type: 'Quellentyp', confidence: 'Sicherheit der Aussage',
   confidentiality: 'Vertraulichkeit', external_use: 'Externe Nutzung', fact_status: 'Status', input_owner: 'Verantwortlich'};
@@ -47,13 +48,30 @@ export function TwinPage({clientId, embedded = false}) {
   useEffect(() => {if (aiImporting) importPanel.current?.scrollIntoView?.({behavior: 'smooth', block: 'start'});}, [aiImporting]);
   useEffect(()=>{if(importing)filePanel.current?.scrollIntoView?.({behavior:'smooth',block:'start'});},[importing]);
   const load = async () => setData(await twinRequest(clientId));
+  // The customer's recordings, each under the question it answers until it is
+  // archived or deleted; looked at again while one is still being transcribed.
+  const [audios, setAudios] = useState([]);
+  const loadAudio = async () => {
+    try {
+      const response = await fetch(`/client/${clientId}/onboarding-audio`, {credentials: 'same-origin', headers: {Accept: 'application/json'}});
+      const rows = response.ok ? await response.json() : null;
+      if (Array.isArray(rows)) setAudios(rows);
+    } catch { /* the questionnaire stands without them */ }
+  };
   useEffect(() => {
     const controller = new AbortController();
     twinRequest(clientId, '', {signal: controller.signal}).then(setData).catch(err => {
       if (!controller.signal.aborted) setError(err.message);
     });
+    loadAudio();
     return () => controller.abort();
   }, [clientId]);
+  const transcribing = audios.some(a => !a.review && ['queued', 'processing'].includes(a.status));
+  useEffect(() => {
+    if (!transcribing) return;
+    const timer = setInterval(loadAudio, 5000);
+    return () => clearInterval(timer);
+  }, [transcribing, clientId]);
   async function mutate(path, payload, method = 'POST') {
     setBusy(true); setError(''); setNotice('');
     try {
@@ -94,12 +112,14 @@ export function TwinPage({clientId, embedded = false}) {
     {!has(item) && editing?.field.key !== item.key && <p className="twin-empty">Noch keine belegte Angabe.</p>}
   </article>;
   // A customer question as one row: the question, its state, the answer.
+  const recordings = item => audios.filter(a => a.question_key === item.key && !a.review);
   const question = item => <li className={`twin-ask${has(item) ? ' twin-ask--done' : ''}`} key={item.key} id={`feld-${item.key}`}>
     <div className="twin-ask-row"><span className="twin-number">{number(item.key)}</span>
       <div className="twin-ask-text"><h3>{item.label}</h3></div>
-      <span className={`twin-state${has(item) ? ' twin-state--ok' : ''}`}>{has(item) ? 'Beantwortet' : 'Offen'}</span>
+      <span className={`twin-state${has(item) ? ' twin-state--ok' : ''}`}>{has(item) ? 'Beantwortet' : recordings(item).length ? 'Audio liegt vor' : 'Offen'}</span>
       {!has(item) && add(item, 'Ergänzen')}</div>
     {editor(item)}{answers(item)}
+    <QuestionAudio clientId={clientId} items={recordings(item)} onChanged={async () => {await loadAudio(); await load();}} />
   </li>;
   // Short facts for the glance row. Only a bare value gets a tile; a sentence
   // stays in the Steckbrief below until the model has shortened it.

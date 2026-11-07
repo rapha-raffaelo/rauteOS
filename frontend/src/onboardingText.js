@@ -12,7 +12,7 @@ const EN = {
   'Weiter, wo ich war': 'Continue where I left off',
   'Los geht’s': 'Let’s start',
   'Guten Tag': 'Hello',
-  'Ihr Fragebogen für': 'Your questionnaire for',
+  'Damit wir Ihr Unternehmen gut vertreten, möchten wir es besser kennenlernen. Was öffentlich bekannt ist, haben wir bereits zusammengetragen: Sie prüfen es kurz und beantworten dann einige Fragen, schriftlich oder per Sprachaufnahme.': 'To represent your company well, we would like to get to know it better. We have already gathered what is publicly known: you check it briefly and then answer a few questions, in writing or as a voice recording.',
   'Ihre Antworten': 'Your answers',
   'Vielen Dank.': 'Thank you.',
   'Das wissen wir schon.': 'What we already know.',

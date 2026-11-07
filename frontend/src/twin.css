@@ -83,3 +83,18 @@
 .raute-ui .twin-editor .twin-save{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;min-height:0;padding:0;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink);cursor:pointer}
 .raute-ui .twin-editor .twin-save:hover:not(:disabled){border-color:var(--tint);color:var(--tint)}
 .raute-ui .twin-editor .twin-save:disabled{opacity:.45;cursor:default}
+/* A customer's recording under its question: player, transcript, answer. */
+.qa-audio{display:grid;gap:10px;margin:10px 0 4px}
+.qa-rec{border:1px solid var(--line);border-radius:12px;background:var(--card);padding:14px;display:grid;gap:10px}
+.qa-rec__head{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:12px;color:var(--muted)}
+.qa-rec audio{width:100%}
+.qa-rec__cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+.qa-rec__label{display:block;margin:0 0 6px;font-size:12px;font-weight:650;color:var(--muted)}
+.qa-rec__transcript{margin:0;padding:10px 12px;border-radius:8px;background:var(--fill-2);font-size:13px;line-height:1.55;white-space:pre-wrap;max-height:240px;overflow:auto;user-select:text}
+.qa-rec__transcript--wait{color:var(--muted)}
+.qa-rec textarea{width:100%;min-height:150px;font:inherit;font-size:13px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink)}
+.qa-rec__acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.qa-rec__done{margin:6px 0 0;font-size:12px;color:var(--muted)}
+.raute-ui .qa-icon{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;padding:0;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--muted);cursor:pointer}
+.raute-ui .qa-icon:hover:not(:disabled){border-color:var(--alert);color:var(--alert)}
+@media(max-width:800px){.qa-rec__cols{grid-template-columns:1fr}}

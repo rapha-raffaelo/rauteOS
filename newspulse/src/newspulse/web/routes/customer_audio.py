@@ -2,11 +2,13 @@
 import datetime as dt
 import secrets
 from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import BaseModel, ConfigDict, Field
 from fastapi.responses import Response
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
-from ... import customer_onboarding, onboarding_audio as audio
-from ...models import CustomerOnboardingAudio as Audio, CustomerOnboardingInvite as Invite
+from ... import customer_onboarding, onboarding_audio as audio, twin
+from ...evidence import Confidentiality, ExternalUse, InputOwner, SourceType
+from ...models import ClientFact, CustomerOnboardingAudio as Audio, CustomerOnboardingInvite as Invite
 from ..app import get_db
 from ..mandates import mandate_or_404
 from .customer_onboarding import HEADERS, invite_for, result, commit
@@ -73,11 +75,11 @@ def content(identity: str, request: Request, session: Session = Depends(get_db))
     return audio_response(media_for(session, invite, identity))
 
 
-@router.delete('/api/onboarding/audio/{identity}')
-def delete(identity: str, request: Request, session: Session = Depends(get_db)):
-    invite, _ = invite_for(request, session)
-    row = media_for(session, invite, identity)
-    for link in session.scalars(select(Invite).where(Invite.client_id == invite.client_id)):
+def forget(session, row):
+    """Delete a recording and take it out of every link's answers. An answer
+    with text keeps its text; one that was only this recording is gone."""
+    identity = row.id
+    for link in session.scalars(select(Invite).where(Invite.client_id == row.client_id)):
         answers = dict(link.answers)
         for key, answer in list(answers.items()):
             if answer.get('audio_id') != identity: continue
@@ -88,6 +90,13 @@ def delete(identity: str, request: Request, session: Session = Depends(get_db)):
             link.answers = answers
             link.completed_at = None
     session.delete(row)
+
+
+@router.delete('/api/onboarding/audio/{identity}')
+def delete(identity: str, request: Request, session: Session = Depends(get_db)):
+    invite, _ = invite_for(request, session)
+    row = media_for(session, invite, identity)
+    forget(session, row)
     commit(session)
     answer = invite.answers.get(row.question_key)
     return result({'answer': {k:v for k,v in answer.items() if k != 'fact_id'} if answer else None})
@@ -129,3 +138,48 @@ def agency_content(client_id: int, identity: str, session: Session = Depends(get
 @router.post('/client/{client_id}/onboarding-audio/{identity}/retry')
 def agency_retry(client_id: int, identity: str, session: Session = Depends(get_db)):
     return retry_row(agency_row(client_id, identity, session), session)
+
+
+# --- In RauteOS: a recording under its question --------------------------------
+
+class AnswerInput(BaseModel):
+    model_config = ConfigDict(extra='forbid', str_strip_whitespace=True)
+    value: str = Field(min_length=1, max_length=20000)
+
+
+@router.post('/client/{client_id}/onboarding-audio/{identity}/answer')
+def agency_answer(client_id: int, identity: str, body: AnswerInput, request: Request, session: Session = Depends(get_db)):
+    """What the consultant took from the recording, saved as the question's
+    answer. Saving again revises that same statement."""
+    row = agency_row(client_id, identity, session)
+    field = twin.CATALOG_BY_KEY[row.question_key]
+    restricted = row.question_key in customer_onboarding.RESTRICTED
+    statement = twin.StatementInput(key=row.question_key, value=body.value,
+        source_title='Kunden-Onboarding · Audio, zusammengefasst von raute+kopf', source_type=SourceType.CLIENT_INTERVIEW,
+        input_owner=InputOwner(field['input_owner']),
+        confidentiality=Confidentiality.HIGHLY_RESTRICTED if restricted else Confidentiality.CLIENT_CONFIDENTIAL,
+        external_use=ExternalUse.INTERNAL_ONLY if restricted else ExternalUse.APPROVAL_REQUIRED)
+    fact = session.get(ClientFact, row.answer_fact_id) if row.answer_fact_id else None
+    if fact is not None and (fact.client_id != client_id or fact.key != row.question_key):
+        fact = None
+    fact = twin.apply(session, client_id, statement, str(request.scope.get('user_email') or 'RAUTE')[:200], row=fact)
+    row.answer_fact_id = fact.id
+    row.updated_at = dt.datetime.now(dt.UTC)
+    commit(session)
+    return result(audio.describe(row))
+
+
+@router.post('/client/{client_id}/onboarding-audio/{identity}/archive')
+def agency_archive(client_id: int, identity: str, session: Session = Depends(get_db)):
+    row = agency_row(client_id, identity, session)
+    row.review = 'archiviert'
+    row.updated_at = dt.datetime.now(dt.UTC)
+    commit(session)
+    return result(audio.describe(row))
+
+
+@router.delete('/client/{client_id}/onboarding-audio/{identity}')
+def agency_delete(client_id: int, identity: str, session: Session = Depends(get_db)):
+    forget(session, agency_row(client_id, identity, session))
+    commit(session)
+    return result({'ok': True})

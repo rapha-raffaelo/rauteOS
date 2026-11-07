@@ -4625,6 +4625,11 @@ class CustomerOnboardingAudio(Base):
     duration: Mapped[int | None] = mapped_column(Integer, nullable=True)
     token: Mapped[str] = mapped_column(String(64), default='')
     lease_until: Mapped[dt.datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+    #: '' while it waits under its question in RauteOS, 'archiviert' once
+    #: put away. Discarding deletes the row.
+    review: Mapped[str] = mapped_column(String(20), nullable=False, default='', server_default='')
+    #: The statement a consultant wrote from it, the question's answer.
+    answer_fact_id: Mapped[int | None] = mapped_column(ForeignKey('client_facts.id', ondelete='SET NULL'), nullable=True)
     created_at: Mapped[dt.datetime] = mapped_column(UTCDateTime(), default=_utcnow)
     updated_at: Mapped[dt.datetime] = mapped_column(UTCDateTime(), default=_utcnow)
 

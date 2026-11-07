@@ -195,7 +195,7 @@ def store_answer(session, invite, client, key, data):
             row = None
         field = twin.CATALOG_BY_KEY[key]
         statement = twin.StatementInput(key=key, value=data.value,
-            source_title='Kunden-Onboarding · KI-Transkript (Deepgram Nova-3)' if data.audio_id and data.mode == 'audio' else 'Kunden-Onboarding', source_type=SourceType.CLIENT_INTERVIEW,
+            source_title='Kunden-Onboarding', source_type=SourceType.CLIENT_INTERVIEW,
             input_owner=InputOwner(field['input_owner']),
             confidentiality=Confidentiality.HIGHLY_RESTRICTED if key in customer_onboarding.RESTRICTED else Confidentiality.CLIENT_CONFIDENTIAL,
             external_use=ExternalUse.INTERNAL_ONLY if key in customer_onboarding.RESTRICTED else ExternalUse.APPROVAL_REQUIRED)
@@ -218,7 +218,8 @@ def save(key: str, data: Answer, request: Request, session: Session = Depends(ge
         if media.question_key != key or media.mode != data.mode or data.skipped:
             raise HTTPException(422, 'Audio gehört nicht zu dieser Antwort.')
         if data.mode == 'audio':
-            data.value = media.transcript if media.status == 'ready' else ''
+            # The recording is the answer; RauteOS makes it a statement.
+            data.value = ''
         elif media.status != 'ready':
             raise HTTPException(409, 'Bitte auf das Transkript warten.')
     if data.skipped and data.value or not data.skipped and not data.value and not (data.audio_id and data.mode == 'audio'):

@@ -10,7 +10,7 @@ import urllib.parse
 import urllib.request
 from sqlalchemy import or_, select, update
 from .db import session_factory
-from .models import Client, CustomerOnboardingAudio as Audio, CustomerOnboardingInvite
+from .models import Client, CustomerOnboardingAudio as Audio
 
 _log = logging.getLogger(__name__)
 MAX_BYTES = 25 * 1024 * 1024
@@ -44,6 +44,8 @@ def describe(row):
     return dict(id=row.id, question_key=row.question_key, mode=row.mode, filename=row.filename,
         mime=row.mime, size=row.size, status=row.status, transcript=row.transcript,
         note=row.note, duration=row.duration, retained=row.mode == 'audio',
+        review=row.review or '', answer_fact_id=row.answer_fact_id,
+        created_at=row.created_at.isoformat() if row.created_at else None,
         transcription_configured=configured())
 
 
@@ -97,16 +99,8 @@ def work(factory, identity, token, invoke=None):
             if not changed: session.rollback(); return
             row = session.get(Audio, identity)
             if row.mode == 'transcript': row.content = None
-            # Only submitted audio answers become evidence. Transcripts requested
-            # for editing remain drafts until the customer explicitly saves them.
-            from .web.routes.customer_onboarding import Answer, store_answer
-            client = session.get(Client, row.client_id)
-            for invite in session.scalars(select(CustomerOnboardingInvite).where(
-                    CustomerOnboardingInvite.client_id == row.client_id, CustomerOnboardingInvite.revoked == False)):
-                prior = invite.answers.get(row.question_key, {})
-                if prior.get('audio_id') == row.id and prior.get('mode') == 'audio':
-                    store_answer(session, invite, client, row.question_key,
-                        Answer(value=transcript, audio_id=row.id, mode='audio'))
+            # A transcript is not an answer by itself: the consultant reads it
+            # under its question in RauteOS and saves what matters (save_answer).
             session.commit()
     except Exception as exc:
         note = str(exc) if isinstance(exc, ValueError) else 'Transkription unterbrochen. Bitte erneut versuchen.'

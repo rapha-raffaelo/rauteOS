@@ -138,9 +138,10 @@ export function OnboardingPage({ token = window.location.hash.slice(1).split('/'
       {demoApi && <aside className="onb-demo"><span>{tr('Demo · nur in diesem Tab gespeichert')}</span><button onClick={async () => {await demoApi.reset(); window.location.reload();}}>{tr('Neustart')}</button></aside>}
       {!data ? <section className="onb-card"><h1>{tr('Ihr Start mit raute+kopf.')}</h1><p role={error ? 'alert' : 'status'}>{error || tr('Ihr Fragebogen wird geladen …')}</p>{token && error && <button onClick={() => window.location.reload()}>{tr('Erneut versuchen')}</button>}</section> : <>
         {screen === 'welcome' && <section className="onb-card onb-welcome">
-          {data.logo && <img className="onb-client-logo" src={data.logo} alt={data.customer} />}
+          {data.logo && <img className="onb-client-logo" src={data.logo} alt="" />}
+          <p className="onb-company">{data.customer}</p>
           <h1 ref={heading} tabIndex={-1}>{data.contact ? `${tr('Guten Tag')}, ${data.contact}.` : `${tr('Guten Tag')}.`}</h1>
-          <p>{tr('Ihr Fragebogen für')} {data.customer}.</p>
+          <p>{tr('Damit wir Ihr Unternehmen gut vertreten, möchten wir es besser kennenlernen. Was öffentlich bekannt ist, haben wir bereits zusammengetragen: Sie prüfen es kurz und beantworten dann einige Fragen, schriftlich oder per Sprachaufnahme.')}</p>
           <button className="onb-primary" onClick={() => data.prefill_confirmed ? resume() : setScreen('prefill')}>{settled ? tr('Weiter, wo ich war') : tr('Los geht’s')}</button>
         </section>}
         {screen === 'prefill' && <section className="onb-card">
