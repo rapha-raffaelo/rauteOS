@@ -25,3 +25,4 @@
 .step:hover{color:var(--ink)}
 .step--on{background:var(--action);color:var(--on-action)}
 .step--on span{border-color:currentColor}
+.workspace-proposal{color:var(--tint);font-size:13px;margin:4px 0 0}

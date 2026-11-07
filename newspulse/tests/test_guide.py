@@ -543,24 +543,16 @@ def test_a_non_json_reply_is_a_parse_error(session):
         coach.review(session, client, invoke=lambda *a, **k: "Gerne! Hier die Analyse:")
 
 
-def test_the_page_offers_the_coach_and_says_it_has_not_run(factory, client):
+def test_the_guide_page_offers_no_coach(factory, client):
+    """The strategy coach is off the page: the guide is written and kept here,
+    not graded."""
     with factory() as session:
         client_id = _client(session, comms_guide="Nachweis vor Neuheit").id
 
     body = rendered(client.get(f"/client/{client_id}/guide"))
 
-    assert "Strategie-Coach" in body
-    assert f'action="/client/{client_id}/guide/coach"' in body
-    assert "Noch nicht geprüft" in body
-
-
-def test_running_the_coach_without_a_guide_says_so_on_the_page(factory, client):
-    with factory() as session:
-        client_id = _client(session).id
-
-    body = rendered(client.post(f"/client/{client_id}/guide/coach"))
-
-    assert "Kein Kommunikations-Guide hinterlegt." in body
+    assert "Strategie-Coach" not in body
+    assert f'action="/client/{client_id}/guide/coach"' not in body
 
 
 # --- The third way in: what the tool already holds ------------------------------

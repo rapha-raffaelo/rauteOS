@@ -47,8 +47,23 @@ def stored(session,client_id,kind,identity):
 
 
 def speakers(session,client_id):
-    return [r for r in twin.all_statements(session,client_id) if r.key in SPEAKER_KEYS
+    """Profile statements that name someone who may be quoted. With media
+    contacts in the phone book, "Sprecher" is only their names run together
+    (people.sync_profile), so the people are offered instead of that line."""
+    from . import people
+    keys=SPEAKER_KEYS-{'sprecher'} if people.media(session,client_id) else SPEAKER_KEYS
+    return [r for r in twin.all_statements(session,client_id) if r.key in keys
             and r.value.strip() and not twin.externally_blocked(r)]
+
+
+def speaker_people(session,client_id,title,about,saved):
+    """The media contacts on offer, and the one RAUTE proposes while nobody has
+    been chosen yet."""
+    from . import people
+    offered=[dict(id=p.id,label=people.label(p),topics=p.topics) for p in people.media(session,client_id)]
+    chosen=saved is not None and (saved.speaker_person_id or saved.speaker_statement_id)
+    found=None if chosen else people.proposal(session,client_id,f"{title} {about}")
+    return offered,(dict(person_id=found[0].id,reason=found[1]) if found else None)
 
 
 def ended(row,kind,now):
@@ -76,6 +91,9 @@ def read(session: Session,client_id,kind,identity):
     events=list(session.scalars(select(OpportunityEvent).where(OpportunityEvent.workspace_id==saved.id)
         .order_by(OpportunityEvent.created_at.desc(),OpportunityEvent.id.desc()).limit(200))) if saved else []
     title=article.title if article else row.reason if kind=='detected' else row.subject
+    storyline=saved.storyline if saved else angle.thesis if angle else ''
+    about=' '.join([storyline,row.message if kind=='developed' else row.reason,info.get('situation','')])
+    people_offered,proposed=speaker_people(session,client_id,title,about,saved)
     status='closed' if ended(row,kind,now) else saved.status if saved else 'draft'
     return dict(client_id=client_id,context_kind=kind,context_id=identity,id=saved.id if saved else None,
         title=title,revision=saved.revision if saved else 0,status=status,angle_id=angle.id if angle else None,
@@ -85,8 +103,10 @@ def read(session: Session,client_id,kind,identity):
         why_now=info.get('why_now','Aktuelles Nachrichtenfenster' if kind=='detected' else 'Zeitfenster noch zu prüfen'),
         window_ends_at=row.window_ends_at if kind=='detected' else None,
         proposed_window_days=info.get('window_days'),storylines=info.get('storylines',angle.statements if angle else []),
-        storyline=saved.storyline if saved else angle.thesis if angle else '',
+        storyline=storyline,
         speaker_statement_id=saved.speaker_statement_id if saved else None,
+        speaker_person_id=saved.speaker_person_id if saved else None,
+        people=people_offered,speaker_proposal=proposed,
         speakers=[dict(id=r.id,value=r.value,evidence_type=r.evidence_type,external_use=r.external_use) for r in speakers(session,client_id)],
         contact_ids=saved.contact_ids if saved else [],
         contacts=[dict(id=c.id,name=c.name,outlet=c.outlet) for c in session.scalars(select(Contact).order_by(Contact.name))],

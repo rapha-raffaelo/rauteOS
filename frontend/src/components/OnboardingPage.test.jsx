@@ -25,7 +25,7 @@ it('resumes saved answers, accepts tap choices and allows reviewing skipped answ
   fireEvent.click(screen.getByText('Premium'));
   expect(screen.getByLabelText('Ihre Antwort').value).toBe('Premium');
   fireEvent.click(screen.getByText('Antworten ansehen'));
-  expect(await screen.findByText('So klingt Ihr Unternehmen.')).toBeTruthy();
+  expect(await screen.findByText('Ihre Antworten')).toBeTruthy();
   expect(screen.getByText('Firma')).toBeTruthy();
 });
 it('shows sourced public prefills once and moves straight to the CEO questions after confirmation',async()=>{
@@ -92,7 +92,8 @@ it('reads the protected token from links ending in a customer name',async()=>{
 it('shows each question with its explanation and lets the customer finish with open questions',async()=>{
   global.fetch=vi.fn().mockImplementationOnce(()=>ok(data)).mockImplementationOnce(()=>ok({value:'',skipped:true})).mockImplementationOnce(()=>ok({value:'',skipped:true})).mockImplementationOnce(()=>ok({ok:true}));
   render(<OnboardingPage token="test"/>);
-  expect(await screen.findByText(/2 Fragen · jede ist freiwillig/)).toBeTruthy();
+  expect(await screen.findByText('Guten Tag.')).toBeTruthy();
+  expect(screen.queryByText(/freiwillig/)).toBeNull();
   fireEvent.click(screen.getByText('Los geht’s'));
   expect(screen.getByText('Offizieller Name')).toBeTruthy();
   fireEvent.click(screen.getByText('Später beantworten'));
@@ -116,7 +117,10 @@ it('switches questions, explanations, topic titles and labels to English and bac
   expect(await screen.findByText('EN Wie heißen Sie?')).toBeTruthy();
   expect(screen.getByText('EN Offizieller Name')).toBeTruthy();
   expect(screen.getByLabelText('Your answer')).toBeTruthy();
+  fireEvent.click(screen.getByRole('button',{name:'Audio'}));
   expect(screen.getByRole('button',{name:'Start recording'})).toBeTruthy();
+  expect(screen.queryByLabelText('Your answer')).toBeNull();
+  fireEvent.click(screen.getByRole('button',{name:'Type'}));
   fireEvent.click(screen.getByRole('button',{name:'DE'}));
   expect(screen.getByText('Wie heißen Sie?')).toBeTruthy();
   expect(screen.getByText('Später beantworten')).toBeTruthy();

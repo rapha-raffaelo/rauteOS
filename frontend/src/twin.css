@@ -77,3 +77,9 @@
   .twin-topics{grid-template-columns:1fr}.twin-questionnaire{padding:16px}.twin-ask-row{flex-wrap:wrap}.twin-ask .twin-statement{padding-left:0}}
 .twin-ask .twin-value{font-size:14px;line-height:1.55}
 .twin-page .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+/* The editor's save: a small icon top right, beside its title. */
+.twin-editor-head{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.twin-editor-head h3{margin:0}
+.raute-ui .twin-editor .twin-save{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;min-height:0;padding:0;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink);cursor:pointer}
+.raute-ui .twin-editor .twin-save:hover:not(:disabled){border-color:var(--tint);color:var(--tint)}
+.raute-ui .twin-editor .twin-save:disabled{opacity:.45;cursor:default}

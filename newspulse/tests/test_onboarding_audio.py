@@ -24,7 +24,9 @@ def test_audio_scope_and_durable_processing(setup):
     assert web.put('/api/onboarding/answers/Q01.02',headers=h,json={'audio_id':a['id'],'mode':'audio'}).status_code==200
     run(f)
     answer=web.get('/api/onboarding',headers=h).json()['answers']['Q01.02']
-    assert answer['value']=='Ein klares Ziel.' and answer['audio_id']==a['id']
+    # The customer sees the recording, never its transcript; RauteOS holds it.
+    assert answer['value']=='' and answer['audio_id']==a['id']
+    assert web.get(path,headers=h).json()['transcript'] is None
     assert web.get(path+'/content',headers=h).content==WAV
     with f() as s:
         fact=s.scalar(select(ClientFact).where(ClientFact.key=='Q01.02'))
@@ -86,7 +88,9 @@ def test_audio_survives_link_renewal_but_not_accessible_to_other_link(setup):
     renewed={'X-Onboarding-Token':response.json()['path'].split('#')[1].split('/')[0]}
     run(f)
     assert web.get('/api/onboarding/audio/'+a['id']+'/content',headers=renewed).content==WAV
-    assert web.get('/api/onboarding',headers=renewed).json()['answers']['Q01.02']['value']=='Ein klares Ziel.'
+    assert web.get('/api/onboarding',headers=renewed).json()['answers']['Q01.02']['audio_id']==a['id']
+    with f() as s:
+        assert s.scalar(select(ClientFact).where(ClientFact.key=='Q01.02')).value=='Ein klares Ziel.'
     assert web.get('/api/onboarding/audio/'+a['id'],headers=h).status_code==401
 
 def test_delete_scoped_audio_preserves_text(setup):

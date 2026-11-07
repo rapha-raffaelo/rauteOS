@@ -31,21 +31,33 @@ function ResearchSources({queries,sources}){return <details><summary>Recherche u
   {queries.map((q,i)=><div key={i}><strong>{q.category}</strong> · {q.query}<ul>{Object.entries(q.providers).map(([name,v])=><li key={name}>{name}: {v.status==='ok' ? `${v.articles} Artikel abgerufen`:v.status==='failed'?'Abruf fehlgeschlagen':'Nicht konfiguriert'}</li>)}</ul></div>)}
   <ul>{sources.map(s=><li key={s.url}><a href={s.url} target="_blank" rel="noreferrer">{s.title}</a> · {s.source} · {date(s.published_at)} · {s.provider}</li>)}</ul>
 </details>;}
+// The speaker select holds "p:<id>" for a phone-book media contact and
+// "f:<id>" for a profile statement; RAUTE's proposal stands in while nothing
+// is chosen yet.
+function speakerOf(value,proposed=false){
+  if(value.speaker_person_id)return `p:${value.speaker_person_id}`;
+  if(value.speaker_statement_id)return `f:${value.speaker_statement_id}`;
+  return proposed&&value.speaker_proposal?`p:${value.speaker_proposal.person_id}`:'';
+}
+function speakerChoice(value){
+  const [kind,id]=value.split(':');
+  return {speaker_statement_id:kind==='f'?Number(id):null,speaker_person_id:kind==='p'?Number(id):null};
+}
 export function OpportunityWorkspace({clientId,kind,identity,onChanged}){
   const path=`clients/${clientId}/opportunities/${kind}/${identity}`;
   const [data,setData]=useState(null);const [error,setError]=useState('');const [busy,setBusy]=useState(false);const [notice,setNotice]=useState('');
   const textSection=useRef(null),workspace=useRef(null);const [picked,setPicked]=useState('');
   useEffect(()=>{if(data && new URLSearchParams(window.location.search).get('view')==='assets') textSection.current?.scrollIntoView?.({block:'start'});},[data?.id]);
   const [storyline,setStoryline]=useState('');const [speaker,setSpeaker]=useState('');const [contacts,setContacts]=useState([]);
-  function receive(value){setData(value);setStoryline(value.storyline);setSpeaker(value.speaker_statement_id || '');setContacts(value.contact_ids);}
+  function receive(value){setData(value);setStoryline(value.storyline);setSpeaker(speakerOf(value,true));setContacts(value.contact_ids);}
   useEffect(()=>{let active=true;setData(null);setError('');setNotice('');request(path).then(v=>{if(active)receive(v);}).catch(e=>{if(active)setError(e.message);});return()=>{active=false;};},[path]);
   async function save(activate=false){setBusy(true);setError('');setNotice('');try{
-    receive(await request(path+(activate?'/activate':''),{method:activate?'POST':'PUT',body:JSON.stringify({revision:data.revision,storyline,speaker_statement_id:speaker?Number(speaker):null,contact_ids:contacts})}));
+    receive(await request(path+(activate?'/activate':''),{method:activate?'POST':'PUT',body:JSON.stringify({revision:data.revision,storyline,...speakerChoice(speaker),contact_ids:contacts})}));
     setNotice(activate?'Gelegenheit aktiviert. Wählen Sie den nächsten Arbeitsschritt.':'Auswahl gespeichert.');onChanged?.();
   }catch(e){setError(e.message);}finally{setBusy(false);}}
   if(!data)return <><ErrorMessage error={error}/>{!error&&<p role="status">Workspace wird geladen…</p>}</>;
   const angleId=data.angle_id || (kind==='developed'?identity:null);
-  const contextDirty=storyline!==data.storyline || String(speaker)!==String(data.speaker_statement_id||'') || JSON.stringify(contacts)!==JSON.stringify(data.contact_ids);
+  const contextDirty=storyline!==data.storyline || speaker!==speakerOf(data) || JSON.stringify(contacts)!==JSON.stringify(data.contact_ids);
   const prepared=data.assets.find(a=>a.kind==='pressemitteilung');
   const step=picked||currentStep(data);
   function pick(key){setPicked(key);const section=STEPS.find(s=>s[0]===key)[2];const node=workspace.current?.querySelector(`.${section}`);
@@ -70,8 +82,10 @@ export function OpportunityWorkspace({clientId,kind,identity,onChanged}){
       {data.storylines.length>0&&<label>Storyline-Vorschlag übernehmen<select aria-label="Storyline-Vorschlag übernehmen" value="" onChange={e=>setStoryline(data.storylines[Number(e.target.value)])} disabled={busy||data.status==='closed'}><option value="" disabled>Vorschlag auswählen …</option>{data.storylines.map((s,i)=><option key={i} value={i}>{s}</option>)}</select></label>}
       <label>Gewählte Storyline<textarea aria-label="Gewählte Storyline" value={storyline} onChange={e=>setStoryline(e.target.value)} disabled={busy||data.status==='closed'}/></label>
       <label>Sprecher aus dem Profil<select aria-label="Sprecher aus dem Profil" value={speaker} onChange={e=>setSpeaker(e.target.value)} disabled={busy||data.status==='closed'}><option value="">Noch nicht gewählt</option>
-        {data.speakers.map(s=><option key={s.id} value={s.id}>{s.value} · {s.evidence_type || 'Ungeprüft'}</option>)}</select></label>
-      <p><a href={`/client/${clientId}/twin`}>Sprecher und Freigabe im Profil pflegen</a></p>
+        {(data.people||[]).map(p=><option key={`p${p.id}`} value={`p:${p.id}`}>{p.label}{p.topics?` · ${p.topics}`:''}</option>)}
+        {data.speakers.map(s=><option key={s.id} value={`f:${s.id}`}>{s.value} · {s.evidence_type || 'Ungeprüft'}</option>)}</select></label>
+      {data.speaker_proposal&&speaker===`p:${data.speaker_proposal.person_id}`&&<p className="workspace-proposal">Von RAUTE vorgeschlagen · {data.speaker_proposal.reason}</p>}
+      <p><a href={`/client/${clientId}/twin#kontakte`}>Sprecher im Telefonbuch des Profils pflegen</a></p>
       <fieldset disabled={busy||data.status==='closed'}><legend>Journalisten auswählen</legend><div className="opportunity-contacts">{data.contacts.map(c=><label key={c.id}>
         <input type="checkbox" checked={contacts.includes(c.id)} onChange={e=>setContacts(e.target.checked?[...contacts,c.id]:contacts.filter(id=>id!==c.id))}/>{c.name} · {c.outlet}</label>)}</div>
         {!data.contacts.length&&<p>Noch keine Kontakte hinterlegt. Recherchiere passende Kontakte weiter unten.</p>}</fieldset>

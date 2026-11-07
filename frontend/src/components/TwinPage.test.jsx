@@ -140,3 +140,18 @@ it('shows the brief as numbered cards and the customer questionnaire as its own 
  expect(screen.queryByText('Wo befindet sich der Hauptsitz?')).toBeNull();
  expect(screen.queryByRole('button',{name:/Katalog/})).toBeNull();
 });
+
+it('saves a new answer from the icon top right and warns before leaving unsaved text',async()=>{
+ const empty={...data,statements:[]};
+ const fetch=vi.fn().mockResolvedValueOnce(response(empty)).mockResolvedValueOnce(response({...row,value:'Neu'})).mockResolvedValue(response(data));
+ stubFetch(fetch); render(<TwinPage clientId={1}/>);
+ fireEvent.click(await screen.findByRole('button',{name:'Ergänzen'}));
+ const save=screen.getByRole('button',{name:'Speichern'});
+ expect(save.disabled).toBe(true);
+ fireEvent.change(screen.getByLabelText('Aussage'),{target:{value:'Neu'}});
+ const leave=new Event('beforeunload',{cancelable:true});window.dispatchEvent(leave);
+ expect(leave.defaultPrevented).toBe(true);
+ fireEvent.click(save);
+ await waitFor(()=>expect(fetch.mock.calls[1][0]).toBe('/api/v1/clients/1/twin/statements'));
+ expect(JSON.parse(fetch.mock.calls[1][1].body)).toMatchObject({key:'R02.01',value:'Neu'});
+});

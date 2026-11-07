@@ -253,3 +253,16 @@ def test_every_question_and_topic_title_exists_in_german_and_english(setup):
     _,header=invite(web)
     prefill=web.get('/api/onboarding',headers=header).json()['prefill']
     assert prefill[0]['label']=='Unternehmensbeschreibung' and prefill[0]['label_en']=='Company description'
+
+
+def test_the_first_page_greets_the_profiles_contact_under_the_clients_logo(setup):
+    web,factory=setup
+    logo='data:image/png;base64,iVBORw0KGgo='
+    with factory() as s:
+        client=s.get(Client,1);client.contact_name='Anna Berg';client.logo_url=logo;s.commit()
+    _,header=invite(web)
+    snapshot=web.get('/api/onboarding',headers=header).json()
+    assert (snapshot['contact'],snapshot['logo'])==('Anna Berg',logo)
+    with factory() as s:
+        s.get(Client,1).logo_url='javascript:alert(1)';s.commit()
+    assert web.get('/api/onboarding',headers=header).json()['logo']==''

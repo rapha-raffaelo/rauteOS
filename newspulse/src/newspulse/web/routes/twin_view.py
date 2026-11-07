@@ -14,7 +14,7 @@ router = APIRouter()
 VIEWS = ('profile', 'rivals', 'guide')
 
 
-def render_profile(request, session, client, *, view='profile', **extra):
+def render_profile(request, session, client, *, view='profile', people_error='', people_draft=None, **extra):
     # Lazy imports keep the existing form handlers free to render this page too.
     from .profile import profile_context
     from .rivals_view import rivals_context
@@ -24,6 +24,10 @@ def render_profile(request, session, client, *, view='profile', **extra):
     data = dict(client=client, view=view)
     if view in ('profile', 'guide'):
         data['company'] = profile_context(request, session, client, **extra)
+    if view == 'profile':
+        from ... import people
+        data.update(people=[people.as_dict(p) for p in people.book(session, client.id)],
+                    people_error=people_error, people_draft=people_draft or {})
     if view == 'rivals':
         data.update(rivals=rivals_context(session, client), market=market_context(session, client))
     return render(request, 'profile', data)
@@ -32,6 +36,71 @@ def render_profile(request, session, client, *, view='profile', **extra):
 @router.get('/client/{client_id}/twin', response_class=HTMLResponse)
 def twin_page(client_id: int, request: Request, session: Session = Depends(get_db)):
     return render_profile(request, session, mandate_or_404(session, client_id))
+
+
+# --- The phone book -----------------------------------------------------------
+
+async def _person_form(request):
+    return {k: str(v) for k, v in (await request.form()).items()}
+
+
+def _person_or_404(session, client, person_id):
+    from fastapi import HTTPException
+    from ...models import ClientPerson
+    person = session.get(ClientPerson, person_id)
+    if person is None or person.client_id != client.id:
+        raise HTTPException(404, 'Kontakt nicht gefunden.')
+    return person
+
+
+def _to_book(client, person=None):
+    return RedirectResponse(f'/client/{client.id}/twin#kontakte' if person is None
+                            else f'/client/{client.id}/twin#kontakt-{person.id}', status_code=303)
+
+
+@router.post('/client/{client_id}/kontakte')
+async def add_person(client_id: int, request: Request, session: Session = Depends(get_db)):
+    from ... import people
+    client = mandate_or_404(session, client_id)
+    form = await _person_form(request)
+    try:
+        person = people.save(session, client, form)
+    except people.Invalid as exc:
+        session.rollback()
+        return render_profile(request, session, client, people_error=str(exc), people_draft=dict(form, id='neu'))
+    return _to_book(client, person)
+
+
+@router.post('/client/{client_id}/kontakte/{person_id}')
+async def update_person(client_id: int, person_id: int, request: Request, session: Session = Depends(get_db)):
+    from ... import people
+    client = mandate_or_404(session, client_id)
+    person = _person_or_404(session, client, person_id)
+    form = await _person_form(request)
+    try:
+        people.save(session, client, form, person)
+    except people.Invalid as exc:
+        session.rollback()
+        return render_profile(request, session, client, people_error=str(exc), people_draft=dict(form, id=person_id))
+    return _to_book(client, person)
+
+
+@router.post('/client/{client_id}/kontakte/{person_id}/medien')
+async def toggle_media(client_id: int, person_id: int, request: Request, session: Session = Depends(get_db)):
+    from ... import people
+    client = mandate_or_404(session, client_id)
+    person = _person_or_404(session, client, person_id)
+    form = await request.form()
+    people.set_media(session, client, person, str(form.get('media_contact', '')) == '1')
+    return _to_book(client, person)
+
+
+@router.post('/client/{client_id}/kontakte/{person_id}/delete')
+def delete_person(client_id: int, person_id: int, session: Session = Depends(get_db)):
+    from ... import people
+    client = mandate_or_404(session, client_id)
+    people.delete(session, client, _person_or_404(session, client, person_id))
+    return _to_book(client)
 
 
 @router.get('/client/{client_id}/kickoff')

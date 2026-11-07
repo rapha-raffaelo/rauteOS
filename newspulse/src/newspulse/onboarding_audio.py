@@ -31,6 +31,15 @@ def mime_type(body):
     raise ValueError('Bitte eine Audio-Datei hochladen: MP3, M4A, WAV, WebM, OGG oder FLAC.')
 
 
+def for_customer(row):
+    """What the link holder sees of a recording: a kept recording's transcript
+    is raute+kopf's to read in RauteOS, not shown back on the questionnaire."""
+    data = describe(row)
+    if row.mode == 'audio':
+        data['transcript'] = None
+    return data
+
+
 def describe(row):
     return dict(id=row.id, question_key=row.question_key, mode=row.mode, filename=row.filename,
         mime=row.mime, size=row.size, status=row.status, transcript=row.transcript,

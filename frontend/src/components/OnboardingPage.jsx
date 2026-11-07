@@ -137,20 +137,16 @@ export function OnboardingPage({ token = window.location.hash.slice(1).split('/'
     <main lang={language}>
       {demoApi && <aside className="onb-demo"><span>{tr('Demo · nur in diesem Tab gespeichert')}</span><button onClick={async () => {await demoApi.reset(); window.location.reload();}}>{tr('Neustart')}</button></aside>}
       {!data ? <section className="onb-card"><h1>{tr('Ihr Start mit raute+kopf.')}</h1><p role={error ? 'alert' : 'status'}>{error || tr('Ihr Fragebogen wird geladen …')}</p>{token && error && <button onClick={() => window.location.reload()}>{tr('Erneut versuchen')}</button>}</section> : <>
-        <div className="onb-context"><span>{data.customer}</span><span>ONBOARDING</span></div>
         {screen === 'welcome' && <section className="onb-card onb-welcome">
-
-          <h1 ref={heading} tabIndex={-1}>{tr('Ihre Perspektive.')}</h1>
-          <p>{tr('Die Fakten stehen. Jetzt Ihre Perspektive.')}</p>
-          <p className="onb-meta">{data.questions.length} {tr('Fragen · jede ist freiwillig · in mehreren Etappen möglich')}</p>
+          {data.logo && <img className="onb-client-logo" src={data.logo} alt={data.customer} />}
+          <h1 ref={heading} tabIndex={-1}>{data.contact ? `${tr('Guten Tag')}, ${data.contact}.` : `${tr('Guten Tag')}.`}</h1>
+          <p>{tr('Ihr Fragebogen für')} {data.customer}.</p>
           <button className="onb-primary" onClick={() => data.prefill_confirmed ? resume() : setScreen('prefill')}>{settled ? tr('Weiter, wo ich war') : tr('Los geht’s')}</button>
-          <p className="onb-note">{tr('Speichern & später weitermachen — jederzeit.')}</p>
         </section>}
         {screen === 'prefill' && <section className="onb-card">
 
           <h1 ref={heading} tabIndex={-1}>{tr('Das wissen wir schon.')}</h1>
-          <p className="onb-lead">{tr('Aus öffentlichen Quellen zusammengetragen. Stimmt etwas nicht, korrigieren Sie es direkt an der Stelle.')}</p>
-          <div className="onb-prefill-tools"><span>{data.prefill.length} {tr('Themen')}</span>
+          <div className="onb-prefill-tools"><span/>
             <button className="onb-link" disabled={busy} onClick={() => {setEditingPrefill(!editingPrefill); setPrefillEdits({}); setRowEdits([]);}}>{editingPrefill ? tr('Bearbeitung abbrechen') : tr('Angaben bearbeiten')}</button></div>
           <div className="onb-prefill">
             {data.prefill.map(renderPrefill)}
@@ -180,12 +176,12 @@ export function OnboardingPage({ token = window.location.hash.slice(1).split('/'
           </section>
 
         </>}
-        {screen === 'review' && <section className="onb-card"><h1 ref={heading} tabIndex={-1}>{tr('So klingt Ihr Unternehmen.')}</h1><p>{answered} {tr('Antworten gespeichert')} · {data.questions.length-answered} {tr('Fragen noch offen.')}</p>
+        {screen === 'review' && <section className="onb-card"><h1 ref={heading} tabIndex={-1}>{tr('Ihre Antworten')}</h1><p>{answered} {tr('Antworten gespeichert')} · {data.questions.length-answered} {tr('Fragen noch offen.')}</p>
           <button className="onb-skip" disabled={busy} onClick={()=>setScreen('prefill')}>{tr('Unternehmensangaben')}</button>
           <div className="onb-review">{data.questions.map((q,i)=><button disabled={busy} key={q.key} onClick={()=>openQuestion(i)}><strong>{en ? q.text_en || q.text : q.text}</strong><span>{data.answers[q.key]?.mode === 'audio' ? tr('Audio gespeichert') : data.answers[q.key]?.value || tr('Noch offen — später beantworten')}</span><small>{tr('Bearbeiten ↗')}</small></button>)}</div>
           <button className="onb-primary" disabled={busy} onClick={complete}>{busy ? tr('Wird abgeschlossen …') : tr('Abschließen')}</button>
         </section>}
-        {screen === 'done' && <section className="onb-card onb-welcome"><span className="onb-eyebrow">{tr('DER ANFANG IST GEMACHT')}</span><h1 ref={heading} tabIndex={-1}>{tr('Danke für')}<br/><em>{tr('Ihre Einblicke.')}</em></h1><p>{demoApi ? `${tr('Demo abgeschlossen.')} ${answered} ${tr('Antworten lokal gespeichert.')}` : `${tr('Ihre')} ${answered} ${tr('Antworten sind gespeichert.')}`}</p><p className="onb-note">{demoApi ? tr('Sie können Ihre Antworten jederzeit bearbeiten.') : tr('Über diesen Link können Sie Ihre Antworten weiter bearbeiten.')}</p><button className="onb-primary" onClick={()=>setScreen('review')}>{tr('Antworten ansehen')}</button></section>}
+        {screen === 'done' && <section className="onb-card onb-welcome"><h1 ref={heading} tabIndex={-1}>{tr('Vielen Dank.')}</h1><p>{demoApi ? `${tr('Demo abgeschlossen.')} ${answered} ${tr('Antworten lokal gespeichert.')}` : `${tr('Ihre')} ${answered} ${tr('Antworten sind gespeichert.')}`}</p><p className="onb-note">{demoApi ? tr('Sie können Ihre Antworten jederzeit bearbeiten.') : tr('Über diesen Link können Sie Ihre Antworten weiter bearbeiten.')}</p><button className="onb-primary" onClick={()=>setScreen('review')}>{tr('Antworten ansehen')}</button></section>}
         {error && <p className="onb-error" role="alert">{error}</p>}
       </>}
     </main>

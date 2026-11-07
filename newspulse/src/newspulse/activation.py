@@ -6,7 +6,7 @@ import json
 from sqlalchemy import select,update
 from . import asset_evidence,assets,journalists,outreach,profile,quoting,twin,workspaces
 from .analyzer import invoke_with_fallback
-from .models import (Angle,Asset,Client,ClientFact,Contact,JournalistProfile,OpportunityAssetRun,OpportunityEvent,
+from .models import (Angle,Asset,Client,ClientFact,ClientPerson,Contact,JournalistProfile,OpportunityAssetRun,OpportunityEvent,
                      OpportunityWorkspace,Outreach)
 from .pitch import PitchTarget
 
@@ -19,7 +19,9 @@ def fingerprint(session,workspace):
     client=session.get(Client,workspace.client_id)
     contacts=[(c.id,c.updated_at.isoformat(),p.revision if (p:=session.get(JournalistProfile,c.id)) else 0)
         for c in session.scalars(select(Contact).where(Contact.id.in_(workspace.contact_ids)))]
+    person=session.get(ClientPerson,workspace.speaker_person_id) if workspace.speaker_person_id else None
     return hashlib.sha256(json.dumps(dict(revision=workspace.revision,guide=client.comms_guide,contacts=contacts,
+        speaker_person=(person.id,person.updated_at.isoformat()) if person else None,
         statements=[(r.id,r.revision) for r in twin.all_statements(session,client.id)]),sort_keys=True).encode()).hexdigest()
 
 
@@ -30,6 +32,12 @@ def context_for(session,workspace,*,contact_id=None,instruction=''):
     speaker=available.get(workspace.speaker_statement_id)
     if workspace.speaker_statement_id and speaker is None:
         raise ValueError('Der gewählte Sprecher ist nicht mehr verwendbar. Auswahl im Workspace prüfen.')
+    from . import people
+    spokesperson=None
+    if workspace.speaker_person_id:
+        spokesperson={p.id:p for p in people.media(session,client.id)}.get(workspace.speaker_person_id)
+        if spokesperson is None:
+            raise ValueError('Der gewählte Sprecher ist kein Medienansprechpartner mehr. Auswahl im Workspace prüfen.')
     target=None;person=None
     if contact_id:
         contact=session.get(Contact,contact_id)
@@ -52,18 +60,30 @@ def context_for(session,workspace,*,contact_id=None,instruction=''):
     if person:sources+=person['articles']
     sources=list({s['url']:s for s in sources}.values())[:40]
     context=dict(workspace_id=workspace.id,workspace_revision=workspace.revision,client_id=client.id,
-        storyline=workspace.storyline,speaker=twin.snapshot(speaker) if speaker else None,
+        storyline=workspace.storyline,
+        speaker=person_speaker(spokesperson) if spokesperson else twin.snapshot(speaker) if speaker else None,
         statements=[twin.snapshot(r) for r in all_facts],sources=sources,guide=client.comms_guide or '',
         journalist=person,instruction=instruction,fingerprint=fingerprint(session,workspace))
     return json.loads(json.dumps(context,default=str)),target
 
 
 
+def person_speaker(person):
+    """A phone-book media contact in the shape the writer reads a speaker in:
+    the client's own entry, for outside use."""
+    from . import people
+    return dict(id=None,person_id=person.id,key='ceo',value=people.label(person),topics=person.topics,
+        evidence_type='Client Statement',external_use='Allowed')
+
+
 def writing_facts(session,workspace,context):
     facts=profile.stored(session,workspace.client_id)
     for key,row in list(facts.items()):
         if twin.externally_blocked(row):del facts[key]
-    if context['speaker']:
+    if context['speaker'] and context['speaker'].get('person_id'):
+        # Not added to the session: it names the speaker for this draft only.
+        facts['ceo']=ClientFact(client_id=workspace.client_id,key='ceo',value=context['speaker']['value'])
+    elif context['speaker']:
         facts['ceo']=session.get(ClientFact,context['speaker']['id'])
     return facts
 

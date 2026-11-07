@@ -95,7 +95,8 @@ def revoke(client_id: int, invite_id: int, session: Session = Depends(get_db)):
 
 
 def demo_data():
-    return dict(customer='Nordlicht Studio · Beispielkunde', questions=customer_onboarding.questions(),
+    return dict(customer='Nordlicht Studio · Beispielkunde', contact='Lena Hansen', logo='',
+        questions=customer_onboarding.questions(),
         answers={}, completed=False, prefill_confirmed=False,
         prefill=[customer_onboarding.with_english_label(dict(key=key, label=twin.CATALOG_BY_KEY[key]['label'], value=value,
             source_url='https://example.org', source_title='Fiktive Beispielquelle', researched_at='2026-10-13T12:00:00Z'))
@@ -121,7 +122,10 @@ def page(request: Request):
 def read(request: Request, session: Session = Depends(get_db)):
     invite, client = invite_for(request, session)
     # Never return existing facts or other invites' answers to a link holder.
-    return result(dict(customer=client.name, questions=customer_onboarding.questions(),
+    from ..app import logo_src
+    # The first page greets the person the profile names, under their own logo.
+    return result(dict(customer=client.name, contact=client.contact_name, logo=logo_src(client.logo_url),
+        questions=customer_onboarding.questions(),
         prefill=[customer_onboarding.with_english_label({k: v for k, v in item.items() if k not in {'fact_id', 'correction_fact_id'}})
                  for item in invite.prefill],
         prefill_confirmed=invite.prefill_confirmed,
@@ -168,7 +172,10 @@ def confirm_prefill(data: PrefillReview, request: Request, session: Session = De
 
 
 def public_answer(answer):
-    result = {'value': answer['value'], 'skipped': answer['skipped']}
+    """An answer as the link holder sees it. A spoken answer is its recording;
+    the transcript stored as its value is for RauteOS only."""
+    spoken = answer.get('audio_id') and answer.get('mode', 'audio') == 'audio'
+    result = {'value': '' if spoken else answer['value'], 'skipped': answer['skipped']}
     if answer.get('audio_id'):
         result.update(audio_id=answer['audio_id'], mode=answer.get('mode', 'audio'))
     return result

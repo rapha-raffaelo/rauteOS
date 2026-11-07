@@ -21,12 +21,12 @@ it('opens the workspace without activation and sends explicit choices',async()=>
  const fetch=vi.fn().mockImplementation((url,options)=>Promise.resolve(response(url.includes('journalist-research')?{context:{title:'Data story'},research:null}:options?.method?{...data,revision:1,status:'active'}:data)));
  vi.stubGlobal('fetch',fetch);render(<OpportunityWorkspace clientId={1} kind="developed" identity={1}/>);
  await screen.findByText('A study idea');expect(fetch.mock.calls.every(([,options])=>!options?.method)).toBe(true);
- fireEvent.change(screen.getByLabelText('Sprecher aus dem Profil'),{target:{value:'7'}});
+ fireEvent.change(screen.getByLabelText('Sprecher aus dem Profil'),{target:{value:'f:7'}});
  fireEvent.click(screen.getByRole('checkbox',{name:'A Journalist · Paper'}));
  fireEvent.click(screen.getByRole('button',{name:'Opportunity aktivieren'}));
  await screen.findByText('Gelegenheit aktiviert. Wählen Sie den nächsten Arbeitsschritt.');
  const call=fetch.mock.calls.find(([url])=>url.endsWith('/activate'));
- expect(JSON.parse(call[1].body)).toEqual({revision:0,storyline:'Publish a study',speaker_statement_id:7,contact_ids:[9]});
+ expect(JSON.parse(call[1].body)).toEqual({revision:0,storyline:'Publish a study',speaker_statement_id:7,speaker_person_id:null,contact_ids:[9]});
 });
 it('preserves unsaved storyline on a conflict',async()=>{
  vi.stubGlobal('fetch',vi.fn().mockImplementation((url,options)=>Promise.resolve(response(url.includes('journalist-research')?{context:{title:'Data story'},research:null}:options?.method?{detail:'Neu laden und vergleichen.'}:data,options?.method?409:200))));

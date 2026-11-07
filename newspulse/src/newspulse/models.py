@@ -1032,6 +1032,9 @@ class OpportunityWorkspace(Base):
     data: Mapped[dict] = mapped_column(JSON, default=dict)
     storyline: Mapped[str] = mapped_column(Text, default="")
     speaker_statement_id: Mapped[int | None] = mapped_column(ForeignKey("client_facts.id", ondelete="SET NULL"), nullable=True)
+    #: A media contact from the profile's phone book, chosen instead of a
+    #: profile statement as the speaker.
+    speaker_person_id: Mapped[int | None] = mapped_column(ForeignKey("client_people.id", ondelete="SET NULL"), nullable=True)
     contact_ids: Mapped[list] = mapped_column(JSON, default=list)
     status: Mapped[str] = mapped_column(String(16), default="draft")
     revision: Mapped[int] = mapped_column(Integer, default=1)
@@ -4736,3 +4739,29 @@ class Deal(Base):
     created_at: Mapped[dt.datetime] = mapped_column(UTCDateTime(), nullable=False, default=_utcnow)
     updated_at: Mapped[dt.datetime] = mapped_column(UTCDateTime(), nullable=False, default=_utcnow)
     closed_at: Mapped[dt.datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+
+
+class ClientPerson(Base):
+    """A person at the mandate: the profile's phone book.
+
+    Who may speak to the press is ``media_contact``. Those are the people
+    RauteOS offers, and proposes by ``topics``, as the speaker of a chance's
+    texts; everyone else is in the book to be reached, not quoted.
+    """
+
+    __tablename__ = "client_people"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    client_id: Mapped[int] = mapped_column(
+        ForeignKey("clients.id", ondelete="CASCADE"), nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    position: Mapped[str] = mapped_column(String(200), nullable=False, default="")
+    phone: Mapped[str] = mapped_column(String(80), nullable=False, default="")
+    email: Mapped[str] = mapped_column(String(320), nullable=False, default="")
+    linkedin_url: Mapped[str] = mapped_column(String(500), nullable=False, default="")
+    #: Themenverantwortung, in the client's own words.
+    topics: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    media_contact: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("0"))
+    created_at: Mapped[dt.datetime] = mapped_column(UTCDateTime(), nullable=False, default=_utcnow)
+    updated_at: Mapped[dt.datetime] = mapped_column(UTCDateTime(), nullable=False, default=_utcnow)

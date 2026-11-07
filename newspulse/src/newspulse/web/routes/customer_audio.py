@@ -58,13 +58,13 @@ async def upload(key: str, request: Request, mode: str = 'transcript', filename:
         question_key=key, mode=mode, filename=filename.replace('\\', '/').split('/')[-1][:200] or 'Audio',
         mime=mime, size=len(body), content=bytes(body))
     session.add(row); commit(session)
-    return result(audio.describe(row))
+    return result(audio.for_customer(row))
 
 
 @router.get('/api/onboarding/audio/{identity}')
 def status(identity: str, request: Request, session: Session = Depends(get_db)):
     invite, _ = invite_for(request, session)
-    return result(audio.describe(media_for(session, invite, identity)))
+    return result(audio.for_customer(media_for(session, invite, identity)))
 
 
 @router.get('/api/onboarding/audio/{identity}/content')
@@ -99,7 +99,7 @@ def retry_row(row, session):
     row.status = 'queued'; row.note = ''; row.token = ''; row.lease_until = None
     row.updated_at = dt.datetime.now(dt.UTC)
     session.commit()
-    return result(audio.describe(row))
+    return result(audio.for_customer(row))
 
 
 @router.post('/api/onboarding/audio/{identity}/retry')

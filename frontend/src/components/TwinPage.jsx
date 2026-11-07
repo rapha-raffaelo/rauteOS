@@ -181,8 +181,20 @@ function StatementEditor({field, row, options, busy, onCancel, onSave}) {
     source_url: row?.source_url || '', as_of: row?.as_of?.slice(0, 10) || '', note: row?.note || '',
     verification_note: row?.verification_note || '', ...Object.fromEntries(Object.keys(labels).map(key => [key, row?.[key] || (key === 'input_owner' ? field.input_owner : key === 'evidence_type' && field.key.startsWith('C') ? 'RAUTE Hypothesis' : key === 'evidence_type' && field.key.startsWith('D') ? 'External Observation' : defaults[key])]))}));
   const input = (key) => ({'aria-label': labels[key] || ({value:'Aussage',source_title:'Quelle / Dokument',source_url:'Quellen-URL',as_of:'Stand der Aussage',note:'Notizen'})[key], value: values[key], onChange: e => setValues({...values, [key]: e.target.value})});
+  // Typed text is only in this form until it is saved: leaving the page asks first.
+  const initial = useRef(values);
+  const dirty = Object.keys(values).some(key => values[key] !== initial.current[key]);
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = e => {e.preventDefault(); e.returnValue = '';};
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [dirty]);
   return <form className="twin-editor" aria-label="Aussage bearbeiten" onSubmit={e => {e.preventDefault(); onSave({...values, as_of: values.as_of || null});}}>
-    <h3>{row ? 'Aussage bearbeiten' : 'Antwort ergänzen'}</h3>
+    <div className="twin-editor-head"><h3>{row ? 'Aussage bearbeiten' : 'Antwort ergänzen'}</h3>
+      <button type="submit" className="twin-save" disabled={busy || !values.value.trim()} aria-label="Speichern" title="Speichern">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M5 3h11l3 3v13a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2zM8 3v5h7V3M8 21v-7h8v7"/></svg></button></div>
     {row?.verified_at && <p>Ändern hebt die bisherige Bestätigung auf. Danach die Aussage erneut prüfen.</p>}
     <label>Aussage<textarea autoFocus required maxLength={20000} {...input('value')} /></label>
     <div className="twin-form-grid">
