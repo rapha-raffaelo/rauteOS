@@ -184,7 +184,7 @@ export function OpportunitiesPage({clientId,params=new URLSearchParams(window.lo
         {proactive.length?proactive.map(card):<p className="communication-empty">Noch keine offenen Themen-Pitches. Beginne mit einem Recherchefokus.</p>}
       </section>
     </div>
-    <p className="communication-handoff">Bereit für die Ausarbeitung? <a href={`/client/${clientId}/plan`}>Zur Umsetzung →</a></p>
+    <p className="communication-handoff">Bereit für die Ausarbeitung? <a href="#redaktionsplan">Zum Redaktionsplan ↓</a></p>
     {selected&&<section className="communication-workspace" aria-label="Kommunikation bearbeiten"><button type="button" className="btn" onClick={()=>{setSelected(null);history.replaceState(null,'',window.location.pathname);}}>Bearbeitung schließen</button><OpportunityWorkspace key={`${selected.kind}-${selected.id}`} clientId={clientId} kind={selected.kind} identity={selected.id} onChanged={()=>refresh().catch(e=>setError(e.message))}/></section>}
     {board.opportunities.some(row=>row.status==='closed')&&<details className="communication-closed"><summary>Abgeschlossene Vorgänge</summary>{board.opportunities.filter(row=>row.status==='closed').map(card)}</details>}
     </>}

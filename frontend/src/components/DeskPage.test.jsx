@@ -88,6 +88,9 @@ describe('Desk', () => {
     const tick = screen.getByRole('button', {name: 'Erledigt: Pitch'}).closest('form');
     expect(tick.getAttribute('action')).toBe('/aufgaben/4');
     expect(new FormData(tick).get('status')).toBe('erledigt');
+    const decision = screen.getByRole('link', {name: /Brief.*Prüfen/});
+    expect(decision.getAttribute('href')).toBe('/client/7/x');
+    expect(decision.querySelector('.task__box')).toBeNull();
     expect(new FormData(tick).get('redirect_to')).toBe('/desk');
     expect(screen.getByRole('link', {name: /Kundenfreigaben/}).getAttribute('href')).toBe('/aufgaben#entscheidungen');
   });

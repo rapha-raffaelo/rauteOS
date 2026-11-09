@@ -153,3 +153,5 @@ button.task__box:hover{border-color:var(--tint);background:var(--tint-wash)}
 .brief__go:disabled{opacity:.6;cursor:progress}
 .brief__src{font-size:11px;opacity:.7;margin-top:8px}
 @media(max-width:600px){.brief__acts{flex-direction:row;flex-wrap:wrap}}
+
+.task__review{flex:none;white-space:nowrap;font-size:12px;font-weight:600;color:var(--tint)}

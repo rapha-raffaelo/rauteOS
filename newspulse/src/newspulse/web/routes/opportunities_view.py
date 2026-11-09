@@ -16,7 +16,7 @@ def page(client_id:int,request:Request,session:Session=Depends(get_db)):
     # The Redaktionsplan sits below the list; an open workspace is about one
     # opportunity and stays on its own.
     plan=({} if request.query_params.get('context') else
-          dict(_page_context(session,client,now=dt.datetime.now(dt.UTC)),plan_embedded=True,show_plan=True))
+          dict(_page_context(session,client,now=dt.datetime.now(dt.UTC)),show_plan=True))
     return templates.TemplateResponse(request,'opportunities_react.html',dict(plan,client=client,
         frontend=frontend.page_assets('opportunities'),last_run=_fetch_last_run(session),
         header_date=dt.datetime.now(_local_tz()).date()))

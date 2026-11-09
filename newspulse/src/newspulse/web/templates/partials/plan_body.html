@@ -1,16 +1,15 @@
-{# The Redaktionsplan's body, shared by its own page and by the bottom of
-   Aktivitäten. ``plan_embedded`` is set there: the title drops a level and
-   every form says where to come back to (``zurueck``). #}
+{# The Redaktionsplan, at the bottom of Aktivitäten (the page under
+   /client/<id>/plan redirects there). Every hook links to the stored row it
+   was built from; a hook whose row is gone says so and carries no link. #}
 <div class="planhead">
   <div>
-    {% if plan_embedded %}<h2 class="pagetitle">{{ t("Redaktionsplan") }}</h2>{% else %}<h1 class="pagetitle">{{ t("Redaktionsplan") }}</h1>{% endif %}
+    <h2 class="pagetitle">{{ t("Redaktionsplan") }}</h2>
     <p class="planhead__d">
       {{ t("%(n)s Monate voraus, gebaut aus datierten Marktsignalen, geprüften Themen und dem, was das Archiv im selben Monat des Vorjahres getragen hat. Jeder Haken hängt an einer gespeicherten Zeile. Kein Datum wird geraten.") | format(n=plan_months) }}
     </p>
   </div>
   <div class="planhead__r">
     <form method="post" action="/client/{{ client.id }}/plan/neu">
-      {% if plan_embedded %}<input type="hidden" name="zurueck" value="aktivitaeten">{% endif %}
       <button type="submit" class="btn btn--ghost"{% if busy %} disabled{% endif %}>
         {% if busy %}{{ t("Wird berechnet…") }}{% else %}{{ t("Neu berechnen") }}{% endif %}
       </button>
@@ -134,7 +133,6 @@
              a hook, and these two are the decisions that make a plan a person's
              rather than a machine's. Both survive every later recompute. #}
           <form method="post" action="/client/{{ client.id }}/plan/{{ hook.id }}/verschieben" class="hook__move">
-      {% if plan_embedded %}<input type="hidden" name="zurueck" value="aktivitaeten">{% endif %}
             <select name="monat" aria-label="{{ t('In einen anderen Monat verschieben') }}">
               {% for option in months %}
                 <option value="{{ option.key }}"{% if option.key == hook.month %} selected{% endif %}>{{ t(option.name) }}</option>
@@ -143,7 +141,6 @@
             <button type="submit" class="linkbtn">{{ t("Verschieben") }}</button>
           </form>
           <form method="post" action="/client/{{ client.id }}/plan/{{ hook.id }}/verwerfen">
-      {% if plan_embedded %}<input type="hidden" name="zurueck" value="aktivitaeten">{% endif %}
             <button type="submit" class="linkbtn linkbtn--danger">{{ t("Verwerfen") }}</button>
           </form>
         </div>

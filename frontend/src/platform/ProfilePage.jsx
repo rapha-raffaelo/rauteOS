@@ -54,7 +54,6 @@ function Guide({ data: d, base }) {
           <label className="platform-field"><span>Guide bearbeiten · {guide.length}/{d.max_chars} Zeichen</span><textarea name="comms_guide" value={guide} onChange={e=>setGuide(e.target.value)} maxLength={d.max_chars} rows={16}/></label>
           <div className="guide-save"><button type="submit" className="btn btn--go">{d.proposal?'Entwurf übernehmen':'Speichern'}</button>{d.proposal&&<a href={base+'/guide'}>Entwurf verwerfen</a>}{dirty&&<small>Ungespeicherte Änderungen</small>}</div>
         </form>
-        <p className="onb-meta">Die KI nutzt Profil, Kundenantworten und hinterlegte Unterlagen. Erst Speichern aktiviert deine Änderungen.</p>
       </div>
       <aside className="guide-material">
         <h3>Unterlagen ergänzen</h3><p>Briefing oder Markenleitfaden hinzufügen. Danach den KI-Entwurf erstellen.</p>

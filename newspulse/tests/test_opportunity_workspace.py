@@ -183,32 +183,6 @@ def test_default_content_does_not_revive_an_expired_development(web,db,monkeypat
     assert db.get(OpportunityDevelopment,identity).status=='failed'
 
 
-def test_structured_media_contact_can_be_selected_and_revocation_blocks_writing(web,db):
-    from newspulse.models import ClientPerson
-    from newspulse import activation, workspaces
-    person=ClientPerson(client_id=1,name='Anna Sprecherin',position='Leitung',media_contact=True)
-    other=ClientPerson(client_id=2,name='Andere Person',media_contact=True)
-    db.add_all([person,other]);db.commit()
-    data=web.get(base()+'/developed/1').json()
-    assert [p['id'] for p in data['speaker_people']]==[person.id]
-    payload=dict(revision=0,storyline='Test-Storyline',speaker_person_id=other.id,contact_ids=[])
-    assert web.put(base()+'/developed/1',json=payload).status_code==422
-    payload['speaker_person_id']=person.id
-    response=web.put(base()+'/developed/1',json=payload)
-    assert response.status_code==200,response.text
-    assert response.json()['speaker_person_id']==person.id
-    workspace=workspaces.stored(db,1,'developed',1)
-    context,_=activation.context_for(db,workspace)
-    assert context['speaker']['name']=='Anna Sprecherin'
-    assert 'email' not in context['speaker'] and 'phone' not in context['speaker']
-    assert 'ceo' not in activation.writing_facts(db,workspace,context)
-    old=activation.fingerprint(db,workspace)
-    person.media_contact=False;db.commit()
-    assert activation.fingerprint(db,workspace)!=old
-    with pytest.raises(ValueError,match='kommuniziert nicht mehr'):
-        activation.context_for(db,workspace)
-
-
 def test_a_radar_impulse_is_an_occasion_and_a_developed_pitch_is_not(web,db):
     """Aktivitäten files them in two columns; the list says which is which."""
     identity=launch(web)

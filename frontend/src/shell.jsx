@@ -43,8 +43,8 @@ export function ClientTabs({ data, path = window.location.pathname }) {
     client_overview: ["client_overview", "heute"],
     wissen: ["twin", "profile"],
     strategie: ["guide", "rivals", "market", "map"],
-    chancen: ["opportunities", "issues", "krise", "texte"],
-    umsetzung: ["plan"],
+    // The Redaktionsplan sits at the bottom of Aktivitäten; /plan redirects there.
+    chancen: ["opportunities", "issues", "krise", "texte", "plan"],
     wirkung: ["visibility", "berichte", "overview", "monitoring_social", "monitoring_kpis"],
   };
   const group =
@@ -54,8 +54,7 @@ export function ClientTabs({ data, path = window.location.pathname }) {
     ["wissen", "/twin", "Kundenprofil"],
     ["strategie", "/guide", "Strategie"],
     ["chancen", "/opportunities", "Aktivitäten"],
-    ["umsetzung", "/plan", "Umsetzung"],
-    ["wirkung", "", "Monitoring"],
+    ["wirkung", "/ki", "Monitoring"],
   ];
   const views = {
     strategie: [
@@ -63,11 +62,7 @@ export function ClientTabs({ data, path = window.location.pathname }) {
       ["rivals", "/wettbewerb", "Wettbewerb & Markt"],
       ["map", "/map", "Medienkarte"],
     ],
-    umsetzung: [
-      ["plan", "/plan", "Plan"],
-    ],
     wirkung: [
-      ["overview", "", "News"],
       ["visibility", "/ki", "KI-Sichtbarkeit"],
       ["monitoring_kpis", "/monitoring/kpis", "KPIs"],
     ],

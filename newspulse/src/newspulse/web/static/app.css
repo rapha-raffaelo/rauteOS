@@ -376,10 +376,10 @@ body {
 .main { display: flex; flex-direction: column; min-width: 0; }
 
 /* --- Toolbar -------------------------------------------------------------- */
-/* Sticky and translucent, because it is a toolbar: it stays with the window, not
-   with the document that scrolls under it. */
+/* The customer heading belongs to the document; it must not follow the
+   viewport and cover page controls while scrolling. */
 .tbar {
-  position: sticky; top: var(--topbar-h); z-index: 20;
+  position: static;
   display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s4);
   padding: var(--s5) var(--s7) var(--s3);
   background: var(--veil);

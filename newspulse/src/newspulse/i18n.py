@@ -31,6 +31,7 @@ COOKIE_MAX_AGE = 60 * 60 * 24 * 365
 
 # German source string -> English. Ordered roughly by where it appears.
 _EN: dict[str, str] = {
+    "Prüfen": "Review",
     "Standardfrage": "Default question",
     "Wird bei jeder Messung automatisch verwendet": "Used automatically for every measurement",
     "Diese Frage bestimmt, in welchem Markt wir die Sichtbarkeit messen. Weitere Fragen sind optional.": "This question defines the market in which visibility is measured. Additional questions are optional.",

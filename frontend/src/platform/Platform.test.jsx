@@ -20,7 +20,7 @@ it("shows the six workspace tabs of the prototype with the views of the open one
     <ClientTabs data={data} path="/client/1/opportunities" />,
   );
   expect(within(screen.getByRole("navigation", {name:"Mandant"})).getAllByRole("link").map((l) => l.textContent)).toEqual([
-    "Überblick", "Kundenprofil", "Strategie", "Aktivitäten", "Umsetzung", "Monitoring",
+    "Überblick", "Kundenprofil", "Strategie", "Aktivitäten", "Monitoring",
   ]);
   expect(screen.queryByRole("navigation", {name:"Ansicht"})).toBeNull();
   rerender(<ClientTabs data={{ ...data, active: "twin" }} path="/client/1/twin" />);
@@ -30,11 +30,10 @@ it("shows the six workspace tabs of the prototype with the views of the open one
   rerender(<ClientTabs data={{ ...data, active: "map" }} path="/client/1/map" />);
   expect(screen.getByRole("link", { name: "Strategie" }).getAttribute("aria-current")).toBe("page");
   expect(screen.getByRole("link", { name: "Kommunikations-Guide" }).getAttribute("href")).toBe("/client/1/guide");
-  // Umsetzung keeps its production views.
-  rerender(<ClientTabs data={{ ...data, active: "plan", crisis: { has_history: true } }} path="/client/1/plan" />);
-  expect(within(screen.getByRole("navigation", {name:"Ansicht"})).getAllByRole("link").map((o) => o.textContent)).toEqual([
-    "Plan",
-  ]);
+  // The Redaktionsplan is part of Aktivitäten; there is no Umsetzung tab.
+  rerender(<ClientTabs data={{ ...data, active: "plan" }} path="/client/1/plan" />);
+  expect(screen.getByRole("link", { name: "Aktivitäten" }).getAttribute("aria-current")).toBe("page");
+  expect(screen.queryByRole("link", { name: "Umsetzung" })).toBeNull();
 });
 it("uses client path boundaries and exposes exactly one assistant and Contacts link", () => {
   const data = {
@@ -171,8 +170,10 @@ it("reports a settings network error without resetting the form", async () => {
     "Keep this client name",
   );
 });
-it('groups monitoring into news, AI visibility and KPIs',()=>{
+it('groups monitoring into AI visibility and KPIs',()=>{
  render(<ClientTabs data={{client:{id:1,name:'Alpha'},active:'monitoring_kpis',crisis:{}}} path="/client/1/monitoring/kpis"/>);
  expect(screen.getByRole('link',{name:'Monitoring'}).getAttribute('aria-current')).toBe('page');
- expect(within(screen.getByRole('navigation',{name:'Ansicht'})).getAllByRole('link').map(l=>l.textContent)).toEqual(['News','KI-Sichtbarkeit','KPIs']);
+ expect(screen.getByRole('link',{name:'Monitoring'}).getAttribute('href')).toBe('/client/1/ki');
+ expect(screen.queryByRole('link',{name:'News',exact:true})).toBeNull();
+ expect(within(screen.getByRole('navigation',{name:'Ansicht'})).getAllByRole('link').map(l=>l.textContent)).toEqual(['KI-Sichtbarkeit','KPIs']);
 });

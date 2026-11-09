@@ -85,7 +85,11 @@ def test_audio_survives_link_renewal_but_not_accessible_to_other_link(setup):
         s.add(CustomerOnboardingJob(client_id=1,status='ready',invite_id=link['id']));s.commit()
     response=web.post('/client/1/onboarding-workflow/link',auth=('agency','test-password'))
     assert response.status_code==200
-    renewed={'X-Onboarding-Token':response.json()['path'].split('#')[1].split('/')[0]}
+    # The short link stays the same on renewal; the token behind it changes.
+    from newspulse import onboarding_workflow as flow
+    from newspulse.models import CustomerOnboardingInvite
+    with f() as s:
+        renewed={'X-Onboarding-Token':flow.invite_token(s.get(CustomerOnboardingInvite,s.get(CustomerOnboardingJob,1).invite_id))}
     run(f)
     assert web.get('/api/onboarding/audio/'+a['id']+'/content',headers=renewed).content==WAV
     assert web.get('/api/onboarding',headers=renewed).json()['answers']['Q01.02']['audio_id']==a['id']

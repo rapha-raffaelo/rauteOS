@@ -382,12 +382,12 @@ def _strip(html: str) -> str:
 
 
 def test_the_primary_tabs_are_consolidated(web, mandate):
-    """Spec 09: the prototype's six tabs."""
+    """Spec 09: the prototype's tabs, five since the Redaktionsplan moved under Aktivitäten."""
     strip = _strip(rendered(web.get(f"/client/{mandate.id}/heute")))
     assert re.findall(r'<a [^>]+>([^<]+)</a>', strip) == [
-        "Überblick", "Kundenprofil", "Strategie", "Aktivitäten", "Umsetzung", "Monitoring"]
+        "Überblick", "Kundenprofil", "Strategie", "Aktivitäten", "Monitoring"]
     assert "subtabs-legacy" not in strip
-    for suffix in ("/overview", "/twin", "/guide", "/opportunities", "/plan", ""):
+    for suffix in ("/overview", "/twin", "/guide", "/opportunities", "/ki"):
         assert f'href="/client/{mandate.id}{suffix}"' in strip
 
 
@@ -395,8 +395,9 @@ def test_the_primary_tabs_are_consolidated(web, mandate):
     ("/overview", "/overview"), ("/twin", "/twin"), ("/profil", "/twin"),
     ("/guide", "/guide"), ("/wettbewerb", "/guide"), ("/market", "/guide"), ("/map", "/guide"),
     ("/opportunities", "/opportunities"), ("/issues", "/opportunities"), ("/heute", "/overview"),
-    ("/plan", "/plan"), ("/advice", "/opportunities"),
-    ("/ki", ""), ("/berichte", ""), ("", ""),
+    ("/plan", "/opportunities"), ("/advice", "/opportunities"),
+    # Monitoring opens on KI-Sichtbarkeit; the news moved into the Überblick.
+    ("/ki", "/ki"), ("/berichte", "/ki"), ("", "/ki"),
 ])
 def test_specialist_views_select_their_primary_workspace(web, mandate, suffix, parent):
     strip = _strip(rendered(web.get(f"/client/{mandate.id}{suffix}")))
@@ -406,8 +407,7 @@ def test_specialist_views_select_their_primary_workspace(web, mandate, suffix, p
 
 @pytest.mark.parametrize("suffix,options", [
     ("/guide", ["/guide", "/wettbewerb", "/map"]),
-    ("/plan", ["/plan"]),
-    ("/ki", ["", "/ki", "/monitoring/kpis"]),
+    ("/ki", ["/ki", "/monitoring/kpis"]),
 ])
 def test_each_workspace_keeps_its_tools_reachable(web, mandate, suffix, options):
     body = rendered(web.get(f"/client/{mandate.id}{suffix}"))

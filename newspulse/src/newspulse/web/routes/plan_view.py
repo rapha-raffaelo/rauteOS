@@ -723,31 +723,21 @@ def _page_context(session: Session, client: Client, *, now: dt.datetime) -> dict
     }
 
 
-@router.get("/client/{client_id}/plan", response_class=HTMLResponse)
-def plan_view(
-    request: Request, client_id: int, session: Session = Depends(get_db)
-) -> HTMLResponse:
-    """The editorial plan: six months, every hook on its evidence."""
-    client = mandate_or_404(session, client_id)
-    return templates.TemplateResponse(
-        request,
-        "client_plan.html",
-        _page_context(session, client, now=dt.datetime.now(dt.UTC)),
-    )
+@router.get("/client/{client_id}/plan")
+def plan_view(client_id: int, session: Session = Depends(get_db)) -> Response:
+    """The plan lives at the bottom of Aktivitäten now; old links land there."""
+    mandate_or_404(session, client_id)
+    return RedirectResponse(f"/client/{client_id}/opportunities#redaktionsplan", status_code=_SEE_OTHER)
 
 
-def _back(client_id: int, month: str = "", zurueck: str = "") -> RedirectResponse:
-    """Back to the plan, at the month that was acted on.
-
-    The plan is also shown under Aktivitäten; a click there comes back there.
-    """
-    anchor = f"#monat-{month}" if month else "#redaktionsplan" if zurueck == "aktivitaeten" else ""
-    page = "opportunities" if zurueck == "aktivitaeten" else "plan"
-    return RedirectResponse(f"/client/{client_id}/{page}{anchor}", status_code=_SEE_OTHER)
+def _back(client_id: int, month: str = "") -> RedirectResponse:
+    """Back to the plan under Aktivitäten, at the month that was acted on."""
+    anchor = f"#monat-{month}" if month else "#redaktionsplan"
+    return RedirectResponse(f"/client/{client_id}/opportunities{anchor}", status_code=_SEE_OTHER)
 
 
 @router.post("/client/{client_id}/plan/neu")
-def recompute_plan(client_id: int, zurueck: str = Form(""), session: Session = Depends(get_db)) -> Response:
+def recompute_plan(client_id: int, session: Session = Depends(get_db)) -> Response:
     """Rebuild the plan from the evidence as it stands now.
 
     Only untouched proposals are replaced — that contract is
@@ -757,7 +747,7 @@ def recompute_plan(client_id: int, zurueck: str = Form(""), session: Session = D
     client = mandate_or_404(session, client_id)
     if not _recomputing.acquire(blocking=False):
         _remember(client.id, _BUSY)
-        return _back(client_id, zurueck=zurueck)
+        return _back(client_id)
     _forget(client.id)
     spawn.start_or_release(
         _run_recompute,
@@ -765,19 +755,19 @@ def recompute_plan(client_id: int, zurueck: str = Form(""), session: Session = D
         name=f"newspulse-plan-{client.id}",
         release=_recomputing.release,
     )
-    return _back(client_id, zurueck=zurueck)
+    return _back(client_id)
 
 
 @router.post("/client/{client_id}/plan/{hook_id}/verwerfen")
 def discard_hook(
-    client_id: int, hook_id: int, zurueck: str = Form(""), session: Session = Depends(get_db)
+    client_id: int, hook_id: int, session: Session = Depends(get_db)
 ) -> Response:
     """A person refuses the hook. The refusal survives every recompute."""
     client = mandate_or_404(session, client_id)
     hook = _hook_or_404(session, client, hook_id)
     plan.discard(session, hook)
     _forget(client.id)
-    return _back(client_id, hook.month, zurueck)
+    return _back(client_id, hook.month)
 
 
 @router.post("/client/{client_id}/plan/{hook_id}/verschieben")
@@ -785,7 +775,6 @@ def move_hook(
     client_id: int,
     hook_id: int,
     monat: str = Form(""),
-    zurueck: str = Form(""),
     session: Session = Depends(get_db),
 ) -> Response:
     """A person moves the hook to another month of the plan.
@@ -806,7 +795,7 @@ def move_hook(
         # sentence stood on every later render of the page, including the one
         # right after the reader picked a month that was in the plan.
         _forget(client.id)
-    return _back(client_id, hook.month, zurueck)
+    return _back(client_id, hook.month)
 
 
 @router.post("/client/{client_id}/plan/{hook_id}/text")
