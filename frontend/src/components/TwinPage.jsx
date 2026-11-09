@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
 import {FactValue,hasMissingFact} from './FactValue.jsx';
-import { TwinAIImport } from './TwinAIImport.jsx';
 import { twinRequest } from '../twin-api.js';
 import { OnboardingAudioList } from './OnboardingAudioList.jsx';
 
@@ -37,11 +36,8 @@ export function TwinPage({clientId, embedded = false}) {
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState(null);
-  const importPanel = useRef(null), filePanel = useRef(null), chosenImport = useRef(null);
-  const [aiImporting, setAIImporting] = useState(false);
-  const [aiStatus, setAIStatus] = useState(null);
+  const filePanel = useRef(null);
   const [importing, setImporting] = useState(false);
-  useEffect(() => {if (aiImporting) importPanel.current?.scrollIntoView?.({behavior: 'smooth', block: 'start'});}, [aiImporting]);
   useEffect(()=>{if(importing)filePanel.current?.scrollIntoView?.({behavior:'smooth',block:'start'});},[importing]);
   const load = async () => setData(await twinRequest(clientId));
   useEffect(() => {
@@ -107,10 +103,9 @@ export function TwinPage({clientId, embedded = false}) {
   return <div className="twin-page">
     <header>{embedded ? <h2>Wissen & Aussagen</h2> : <><p className="twin-eyebrow">PROFIL · {data.client.name}</p><h1>Was wir wissen. Und woher.</h1></>}
       <p>Jede Aussage mit ihrer Quelle, ihrem Stand und ihrer Freigabe.</p>
-      <div className="twin-toolbar"><button className="btn btn--go" type="button" aria-controls={`twin-ai-${clientId}`} aria-expanded={aiImporting} onClick={()=>{chosenImport.current='ai';setAIImporting(!aiImporting);setImporting(false);}}>Mit KI importieren</button>{aiStatus&&<span role="status">{aiStatus.preview?`${aiStatus.preview.rows.length} KI-Vorschläge gespeichert`:aiStatus.job?.note}</span>}<button className="btn btn--quiet" aria-expanded={importing} aria-controls={`twin-file-${clientId}`} onClick={() => {chosenImport.current='file';setImporting(!importing);setAIImporting(false);}}>Fragebogen importieren</button></div>
+      <div className="twin-toolbar"><button className="btn btn--quiet" aria-expanded={importing} aria-controls={`twin-file-${clientId}`} onClick={() => setImporting(!importing)}>Fragebogen importieren</button></div>
     </header>
     <div hidden={!importing} ref={filePanel} id={`twin-file-${clientId}`}><ImportPanel clientId={clientId} onImported={async result=>{await load();setNotice(`${result.created} Aussagen importiert; ${result.skipped} bereits vorhanden.`);}}/></div>
-    {<div hidden={!aiImporting} ref={importPanel} id={`twin-ai-${clientId}`}><TwinAIImport clientId={clientId} fields={data.fields} onStatus={setAIStatus} onRestore={v=>{if(chosenImport.current!=='file'&&(v.preview||v.job?.status==='running'||v.job?.status==='failed'))setAIImporting(true);}} onImported={async result=>{await load();setNotice(`${result.created} KI-Vorschläge übernommen; ${result.skipped} bereits beantwortet oder vorhanden.`);}}/></div>}
     <section className="twin-overview" aria-label="Vollständigkeit">
       <div className="twin-ring" style={{'--p': data.progress.percent}} role="progressbar" aria-label="Profilvollständigkeit"
         aria-valuenow={data.progress.percent} aria-valuemin={0} aria-valuemax={100}><strong>{data.progress.percent} %</strong><span>vollständig</span></div>

@@ -89,19 +89,6 @@ it('edits in the field and keeps permission values when using the compact form',
  await waitFor(()=>expect(fetch).toHaveBeenCalledTimes(3));
  expect(JSON.parse(fetch.mock.calls[1][1].body)).toMatchObject({confidentiality:'Client Confidential',external_use:'Approval Required',evidence_type:'Client Statement'});
 });
-it('automatically reveals a saved AI preview on returning to the profile',async()=>{
- const saved={id:'saved',rows:[{index:0,data:{key:'R02.01',value:'Saved answer'},sources:[],message:'Source'}],unanswered:0};
- const fetch=vi.fn().mockImplementation(url=>Promise.resolve(response(url.endsWith('/ai-import')?{job:{status:'complete',note:'Ready'},preview:saved}:data)));
- vi.stubGlobal('fetch',fetch);render(<TwinPage clientId={1}/>);
- await screen.findByText('Saved answer');
- expect(screen.getByRole('button',{name:'Mit KI importieren'}).getAttribute('aria-expanded')).toBe('true');
- expect(screen.getByText('1 KI-Vorschläge gespeichert')).toBeTruthy();
- expect(fetch.mock.calls.every(([,options])=>!options?.method)).toBe(true);
- fireEvent.click(screen.getByRole('button',{name:'Mit KI importieren'}));
- fireEvent.click(screen.getByRole('button',{name:'Mit KI importieren'}));
- expect(screen.getByText('Saved answer')).toBeTruthy();
- expect(fetch.mock.calls.filter(([url])=>!url.endsWith('/onboarding-audio'))).toHaveLength(2);
-});
 it('shows the brief as numbered cards and the customer questionnaire as its own panel',async()=>{
  const researched={...row,id:7,key:'R01.01',value:'Zalando SE',source_url:'https://www.corporate.zalando.com/de/impressum',
   source_title:'Öffentliche Onboarding-Recherche',note:'Weitere Quellen: https://handelsregister.de/x, https://de.wikipedia.org/wiki/Zalando'};

@@ -13,6 +13,7 @@ const EN = {
   'Demo · nur in diesem Tab gespeichert': 'Demo · saved in this tab only',
   'Neustart': 'Restart',
   'Ihre Perspektive.': 'Your perspective.',
+  'Guten Tag {name}, schön, dass Sie sich die Zeit nehmen. Ihre Antworten sind die Grundlage für alles, was wir gemeinsam für {customer} erarbeiten.': 'Hello {name}, thank you for taking the time. Your answers are the basis for everything we develop together for {customer}.',
   'Dieser Fragebogen umfasst zu Beginn 22 Fragen sowie bereits recherchierte Daten, die durch Sie freigegeben werden können.': 'This questionnaire initially includes 22 questions and previously researched information for you to approve.',
   'Wir nutzen diese Informationen zur Ausarbeitung Ihrer Kommunikationsstrategie. Wir freuen uns auf die Zusammenarbeit.': 'We use this information to develop your communication strategy. We look forward to working with you.',
   'Weiter, wo ich war': 'Continue where I left off',

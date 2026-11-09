@@ -23,7 +23,6 @@
 .twin-page details summary{cursor:pointer}.twin-filters label:first-child{flex:1}.twin-page button:disabled{opacity:.5;cursor:wait}
 @media(max-width:600px){.twin-field,.twin-progress,.twin-import,.twin-editor{padding:16px}.twin-field-head{flex-direction:column}.twin-toolbar{align-items:stretch}.twin-form-grid{grid-template-columns:1fr}}
 
-.twin-ai-import{padding:28px;background:var(--card);border:1px solid var(--line);border-top:3px solid var(--tint);border-radius:12px;margin:24px 0}.twin-ai-import header p{line-height:1.7;max-width:80ch}.twin-ai-import label{display:flex;flex-direction:column;gap:8px;margin:16px 0}.twin-ai-import .twin-ai-check{flex-direction:row;align-items:flex-start;gap:10px}.twin-ai-check input{width:auto;flex:none;margin-top:4px}.twin-ai-preview{margin-top:28px;border-top:1px solid var(--line);padding-top:24px}.twin-ai-answer{padding:20px;border:1px solid var(--line);border-radius:10px;margin:16px 0}.twin-ai-answer details{font-size:13px;line-height:1.7}.twin-ai-answer summary{cursor:pointer;color:var(--tint)}.twin-ai-answer details p{white-space:pre-wrap;overflow-wrap:anywhere}@media(max-width:600px){.twin-ai-import{padding:18px}.twin-ai-answer{padding:14px}}
 .twin-brief,.twin-open{margin:32px 0}.twin-brief>h2,.twin-open h2{margin:0 0 4px}
 .twin-group-title{font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:28px 0 -8px}
 .twin-question h3{font-size:16px;margin:4px 0 0}.twin-question--empty{padding:16px 24px}

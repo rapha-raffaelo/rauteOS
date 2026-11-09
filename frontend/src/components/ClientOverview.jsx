@@ -31,9 +31,7 @@ export function ClientOverview({data,clientId}){
   <header className="co-header"><div><p className="co-eyebrow">CLIENT WORKSPACE</p><h1><ClientTitle client={data.client}/></h1><p className="co-subtitle">{company.legal_name&&<>Unternehmen dahinter: {company.legal_name}{company.tags?.length?' · ':''}</>}{company.tags?.length?company.tags.join(' · '):company.legal_name?'':'Chancen, Wissen und Ergebnisse für dieses Mandat.'}</p></div>
    <div className="co-actions"><a className="btn btn--ghost" href={`/ask?client_id=${clientId}`}>Zu {data.client.name} fragen</a><a className="btn btn--go" href={`${base}/opportunities?develop=1`}>+ Opportunity entwickeln</a></div></header>
   <div className="co-layout"><div className="co-main">
-   <section className="co-panel co-news" id="kundennews"><header className="co-panel-head"><h2>Heute · Kundennews <span className="co-count">{data.today_news?.total??0}</span></h2><a href={base}>Zum Presse-Monitoring →</a></header>
-    {data.today_news?.items?.length?<div>{data.today_news.items.map(item=><article className="co-news-item" key={item.id}><div className="co-card-meta"><span>{item.source} · {new Date(item.published_at).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Berlin'})}</span>{item.important&&<span className="badge">Wichtig</span>}</div><h3><a href={/^https?:\/\//i.test(item.url)?item.url:undefined} target="_blank" rel="noreferrer">{item.title} ↗</a></h3>{item.summary&&<p>{item.summary}</p>}</article>)}</div>:<p className="co-quiet">Heute wurden noch keine relevanten Kundenmeldungen erfasst.</p>}
-   </section>
+   <News news={data.today_news} base={base}/>
    <section className="co-panel co-company"><header className="co-panel-head"><h2>Das Unternehmen</h2><span className="badge">Client Intelligence</span></header>
     <div className="co-company-body">
      {company.description?<p className="co-desc">{company.description}</p>:<p className="co-quiet">Noch keine Unternehmensbeschreibung recherchiert. <a href={`${base}/twin`}>Im Profil ergänzen →</a></p>}
@@ -62,5 +60,31 @@ export function ClientOverview({data,clientId}){
     <a className="btn" href={`${base}/twin`}>Profil bearbeiten <span aria-hidden="true">→</span></a></section>
    <section className="co-panel co-activity"><header className="co-panel-head"><h2>Letzte Aktivität</h2>{data.activity?.length>4&&<a href={`${base}/actions`}>Alle →</a>}</header>{data.activity?.length?<ol>{data.activity.slice(0,4).map(e=><li key={e.id}><span className="co-activity-dot" aria-hidden="true"/><div><a href={e.href}>{eventNames[e.kind]||e.kind}</a><small>{date(e.happened_at)}{e.actor&&` · ${e.actor}`}</small></div></li>)}</ol>:<p className="co-quiet">Noch keine Arbeitsschritte erfasst. Entwicklung und Textarbeit werden hier sichtbar.</p>}</section>
   </aside></div>
+ </section>;
+}
+
+const clock=value=>new Date(value).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Berlin'});
+const day=value=>new Date(value).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',timeZone:'Europe/Berlin'});
+const weight=score=>score>=7?'high':score>=4?'mid':'low';
+const cap=text=>text?text[0].toUpperCase()+text.slice(1):text;
+
+// The client's newest coverage, as the archive (Monitoring · News) shows it.
+// Today first; a quiet day is topped up with the latest earlier articles.
+function News({news,base}){
+ const today=news?.items||[];
+ const earlier=(news?.earlier||[]).slice(0,Math.max(0,5-today.length));
+ const back=`${base}/overview#kundennews`;
+ const row=(item,dated)=><article className="co-news-item" key={item.id}>
+  <div className="co-card-meta"><span>{dated?`${day(item.published_at)} · `:''}{clock(item.published_at)} · {item.source}{item.category&&<span className="co-news-cat"> {cap(item.category)}</span>}</span>
+   <span className="co-news-side">{item.important&&<span className="tag tag--alert">Alert</span>}{item.importance!=null&&<span className={`co-score co-score--${weight(item.importance)}`} title="Wichtigkeit für diesen Mandanten, 0–10">{item.importance}/10</span>}</span></div>
+  <h3><a href={/^https?:\/\//i.test(item.url)?item.url:undefined} target="_blank" rel="noreferrer">{item.title} ↗</a></h3>
+  {item.summary&&<p>{item.summary}</p>}
+  {item.analysis_id&&<form method="post" action={`/coverage/${item.analysis_id}/dismiss`} className="co-news-dismiss"><input type="hidden" name="redirect_to" value={back}/><button type="submit" className="btn btn--quiet">nicht relevant</button></form>}
+ </article>;
+ return <section className="co-panel co-news" id="kundennews"><header className="co-panel-head"><h2>Kundennews <span className="co-count">{news?.total??0} heute</span></h2><a href={base}>Ganzes Archiv →</a></header>
+  {today.map(item=>row(item,false))}
+  {!today.length&&<p className="co-quiet">Heute wurden noch keine relevanten Kundenmeldungen erfasst.{earlier.length?' Zuletzt berichtet:':''}</p>}
+  {earlier.length>0&&today.length>0&&<p className="co-news-sep">Zuvor</p>}
+  {earlier.map(item=>row(item,true))}
  </section>;
 }

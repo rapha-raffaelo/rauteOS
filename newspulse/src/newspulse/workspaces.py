@@ -110,6 +110,18 @@ def read(session: Session,client_id,kind,identity):
         legacy_href=advice_href(client_id,angle.id,f'impulse-{angle.id}') if angle else f'/client/{client_id}/gelegenheit/{identity}')
 
 
+def _origin(kind,row,workspace):
+    """Where an opportunity came from, which decides its column under Aktivitäten.
+
+    ``anlass``: a market story, detected or drafted by the topic radar.
+    ``pitch``: a theme RAUTE developed on request. ``plan``: opened from a plan hook.
+    """
+    if kind=='detected':return 'anlass'
+    if row.plan_hook_id:return 'plan'
+    if workspace and (workspace.data or {}).get('development_id'):return 'pitch'
+    return 'anlass'
+
+
 def listings(session,client_id):
     result=[]
     workspaces={(w.context_kind,w.context_id):w for w in session.scalars(select(OpportunityWorkspace).where(OpportunityWorkspace.client_id==client_id))}
@@ -120,7 +132,13 @@ def listings(session,client_id):
         for row in session.scalars(stmt.order_by(order.desc()).limit(100)):
             workspace=workspaces.get((kind,row.id))
             article=session.get(Article,row.article_id) if kind=='detected' else None
+            # The story it rests on: the detected one's own article, or the
+            # first market report an impulse cites. Shown on the card's hover.
+            occasion=article or (session.get(Article,row.article_ids[0]) if kind=='developed' and row.article_ids else None)
             result.append(dict(context_kind=kind,context_id=row.id,title=article.title if article else row.reason if kind=='detected' else row.subject,
                 status='closed' if ended(row,kind,dt.datetime.now(dt.UTC)) else workspace.status if workspace else 'draft',
-                created_at=row.created_at if kind=='detected' else row.generated_at))
+                created_at=row.created_at if kind=='detected' else row.generated_at,
+                origin=_origin(kind,row,workspace),
+                summary=(row.reason if kind=='detected' else row.message or row.context or '')[:400],
+                occasion=dict(title=occasion.title,source=occasion.source,published_at=occasion.published_at,url=occasion.url) if occasion else None))
     return sorted(result,key=lambda r:r['created_at'],reverse=True)

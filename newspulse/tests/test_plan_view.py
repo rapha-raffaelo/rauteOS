@@ -1137,3 +1137,33 @@ def _no_prose(prompt: str, **kwargs) -> str:
     Used by the recompute tests so nothing in this file reaches a model.
     """
     return '{"hooks": []}'
+
+
+# --- The plan under Aktivitäten ---------------------------------------------------
+
+
+def test_the_plan_sits_below_the_activities_and_a_click_there_comes_back_there(
+    web, session, mandate
+):
+    signal = _signal(session, mandate, effective_at=_NOW + dt.timedelta(days=30))
+    hook = _hook(
+        session, mandate, source_kind=HookSource.MARKTSIGNAL, source_id=signal.id,
+        month=_window()[1],
+    )
+
+    page = web.get(f"/client/{mandate.id}/opportunities").text
+    assert 'id="redaktionsplan"' in page
+    assert f'id="haken-{hook.id}"' in page
+    assert 'name="zurueck" value="aktivitaeten"' in page
+    # An open workspace is about one opportunity: no plan beneath it.
+    assert 'id="redaktionsplan"' not in web.get(
+        f"/client/{mandate.id}/opportunities?kind=detected&context=1").text
+    # The plan's own page keeps its own way back.
+    assert 'name="zurueck"' not in web.get(f"/client/{mandate.id}/plan").text
+
+    posted = web.post(f"/client/{mandate.id}/plan/{hook.id}/verwerfen",
+                      data={"zurueck": "aktivitaeten"}, follow_redirects=False)
+    assert posted.headers["location"] == (
+        f"/client/{mandate.id}/opportunities#monat-{_window()[1]}")
+    plain = web.post(f"/client/{mandate.id}/plan/{hook.id}/verwerfen", follow_redirects=False)
+    assert plain.headers["location"].startswith(f"/client/{mandate.id}/plan")

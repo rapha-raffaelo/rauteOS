@@ -172,3 +172,13 @@ it('saves a corrected topic with an icon and shows no confirmation ticks',async(
  expect(screen.getByText('25 Mitarbeitende')).toBeTruthy();
  expect(JSON.parse(global.fetch.mock.calls[1][1].body)).toEqual({corrections:{'R03.01':'25 Mitarbeitende'},confirmed_keys:['R03.01']});
 });
+it('greets the contact person from the client profile by full name, and no one when none is set',async()=>{
+  global.fetch=vi.fn().mockImplementationOnce(()=>ok({...data,contact:'Michael Rohrmair'}));
+  render(<OnboardingPage token="test"/>);
+  expect((await screen.findByText(/Guten Tag Michael Rohrmair,/)).textContent).toContain('für Testfirma erarbeiten.');
+  cleanup();
+  global.fetch=vi.fn().mockImplementationOnce(()=>ok(data));
+  render(<OnboardingPage token="test"/>);
+  await screen.findByText('Los geht’s');
+  expect(screen.queryByText(/Guten Tag/)).toBeNull();
+});

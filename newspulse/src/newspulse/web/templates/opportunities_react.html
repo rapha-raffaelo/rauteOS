@@ -10,4 +10,7 @@
 <script type="module" src="{{ frontend.script }}"></script>
 {% else %}<p>Die Opportunity-Oberfläche ist noch nicht verfügbar.</p>{% endif %}
 {% if not frontend %}<p><a href="/client/{{ client.id }}/heute">Aktuelle Nachrichten öffnen</a></p>{% endif %}
+{% if show_plan %}<section class="activities-plan" id="redaktionsplan" aria-label="{{ t('Redaktionsplan') }}">
+{% include 'partials/plan_body.html' %}
+</section>{% endif %}
 {% endblock %}

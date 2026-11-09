@@ -207,3 +207,13 @@ def test_structured_media_contact_can_be_selected_and_revocation_blocks_writing(
     assert activation.fingerprint(db,workspace)!=old
     with pytest.raises(ValueError,match='kommuniziert nicht mehr'):
         activation.context_for(db,workspace)
+
+
+def test_a_radar_impulse_is_an_occasion_and_a_developed_pitch_is_not(web,db):
+    """Aktivitäten files them in two columns; the list says which is which."""
+    identity=launch(web)
+    development.develop(db,identity,providers=[],invoke=lambda prompt,**kw:json.dumps({'ideas':[idea()],'note':'Researched.'}))
+    rows={r['title']:r for r in web.get(base()).json()['opportunities']}
+    assert rows['Existing idea']['origin']=='anlass'
+    assert rows['Existing idea']['summary']=='Business relevance'
+    assert rows['New data story']['origin']=='pitch'

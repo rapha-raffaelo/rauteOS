@@ -383,3 +383,14 @@ def test_keywords_are_scoped_and_save_only_with_current_revision(setup):
     with factory() as s:
         assert s.get(Client,1).keywords==['CBD Spray']
         assert s.get(Client,2).keywords==[]
+
+
+def test_the_questionnaire_names_the_contact_person_from_the_client_profile(setup):
+    web,factory=setup
+    with factory() as s:
+        s.get(Client,1).contact_name='  Michael Rohrmair '
+        s.commit()
+    _,header=invite(web)
+    _,other=invite(web,2)
+    assert web.get('/api/onboarding',headers=header).json()['contact']=='Michael Rohrmair'
+    assert web.get('/api/onboarding',headers=other).json()['contact']==''

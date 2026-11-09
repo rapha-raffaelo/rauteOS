@@ -307,7 +307,7 @@ def test_research_accepts_only_requested_topics_and_real_source_urls():
     assert answers==[dict(key='R01.01',value='• Example AG, gegründet 2010',source_url='https://example.org/about',
                           note='Weitere Quellen: https://press.example/story')]
     assert 'Wer ist offiziell vertretungsberechtigt' not in prompts[0]
-    assert 'Wann wurde das Unternehmen gegründet' in prompts[0]
+    assert 'Welche Vision und welche Mission' in prompts[0]
 
 
 def test_a_source_beyond_the_thirtieth_search_hit_still_counts():
@@ -563,3 +563,15 @@ def test_questionnaire_origin_can_be_configured_for_local_installations(setup,mo
     response=web.post('/client/1/onboarding-workflow/link/ensure')
     assert response.status_code==200,response.text
     assert response.json()['public_url']=='http://127.0.0.1:8765'+response.json()['path']
+
+
+def test_a_sentence_reporting_a_gap_is_stored_as_an_open_field_not_prose():
+    from newspulse.onboarding_crawler import compact_value
+    from newspulse.fact_values import has_missing
+    value = compact_value('R03.01', 'Öffentlich bekannt ist nur ein Standort, der Firmensitz in Münchendorf. '
+                          'Zu Mitarbeiterzahl und Umsatz gibt es keine öffentlichen Angaben.')
+    assert value == ('• Öffentlich bekannt ist nur ein Standort, der Firmensitz in Münchendorf.\n'
+                     '• Mitarbeitende: bitte ergänzen\n• Umsatz: bitte ergänzen')
+    assert has_missing(value)
+    assert not has_missing('Die behauptete Wirkung ist nicht unabhängig belegt.')
+    assert not has_missing('• Ein bislang unbekannter Hersteller übernahm 2021.')

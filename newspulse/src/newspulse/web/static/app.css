@@ -2157,6 +2157,8 @@ button:disabled { opacity: .55; cursor: default; }
    value in this file, at the top. */
 
 .planhead { display: flex; align-items: flex-start; gap: var(--s4); flex-wrap: wrap; margin-bottom: var(--s5); }
+/* The plan below the Aktivitäten list: a section of its own, set off from the React list above. */
+.activities-plan { margin-top: var(--s8); padding-top: var(--s5); border-top: 1px solid var(--line); }
 .planhead__d { font-size: var(--t-footnote); color: var(--muted); margin-top: var(--s1); max-width: 64ch; }
 .planhead__r { margin-left: auto; display: flex; gap: var(--s2); align-items: center; }
 /* The download is an <a>, so it needs the button's own line-height to sit level

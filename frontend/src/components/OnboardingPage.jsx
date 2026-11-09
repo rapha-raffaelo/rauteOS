@@ -7,6 +7,10 @@ import {LANGUAGES, initialLanguage, rememberLanguage, say} from '../onboardingTe
 // lines, so the customer can confirm at a glance. "Mehr lesen" opens the rest.
 // A sentence ends after a word of three or more letters, so "4. November"
 // and "z. B." do not end one.
+// The welcome names the contact person from the client's profile. Full name,
+// no "Liebe/Lieber": the profile does not say which would be right.
+const GREETING = 'Guten Tag {name}, schön, dass Sie sich die Zeit nehmen. Ihre Antworten sind die Grundlage für alles, was wir gemeinsam für {customer} erarbeiten.';
+
 export const GIST_CHARS = 180;
 export function gist(text, limit = GIST_CHARS) {
   const clean = (text || '').trim();
@@ -154,6 +158,7 @@ export function OnboardingPage({ token = window.location.hash.slice(1).split('/'
         {screen === 'welcome' && <section className="onb-card onb-welcome">
 
           <h1 ref={heading} tabIndex={-1}>{tr('Ihre Perspektive.')}</h1>
+          {data.contact && <p className="onb-greeting">{tr(GREETING).replace('{name}', data.contact).replace('{customer}', data.customer)}</p>}
           <p>{tr('Dieser Fragebogen umfasst zu Beginn 22 Fragen sowie bereits recherchierte Daten, die durch Sie freigegeben werden können.')}</p>
           <p>{tr('Wir nutzen diese Informationen zur Ausarbeitung Ihrer Kommunikationsstrategie. Wir freuen uns auf die Zusammenarbeit.')}</p>
           <button className="onb-primary" onClick={() => data.prefill_confirmed ? resume() : setScreen('prefill')}>{settled ? tr('Weiter, wo ich war') : tr('Los geht’s')}</button>

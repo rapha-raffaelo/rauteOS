@@ -28,6 +28,6 @@ export function OnboardingAccess({slug}) {
       <button disabled={busy} type="submit">{busy?'Wird geöffnet …':'Fragebogen öffnen'}</button>
       {error&&<p role="alert">{error}</p>}
     </form>}
-    <aside><h2>Ihre Daten sind geschützt</h2><p>Die Übertragung erfolgt verschlüsselt. Der Zugang gilt nur für diesen Fragebogen und kann von raute+kopf deaktiviert werden. Antworten werden für Ihr Kundenprofil und die Kommunikationsarbeit gespeichert. Bitte tragen Sie keine Passwörter oder Zugangsdaten ein.</p><p>Fragen zu Zugriff, Berichtigung oder Löschung richten Sie bitte an Ihren Ansprechpartner bei raute+kopf.</p></aside>
+    <aside><h2>Ihre Daten sind geschützt</h2><p>Die Übertragung erfolgt verschlüsselt. Der Zugang gilt nur für diesen Fragebogen und kann von raute+kopf deaktiviert werden. Antworten werden für Ihr Kundenprofil und die Kommunikationsarbeit gespeichert. Bitte tragen Sie keine Passwörter oder Zugangsdaten ein.</p></aside>
   </main>;
 }

@@ -23,7 +23,9 @@ _log = logging.getLogger(__name__)
 # text the customer later confirms or corrects. One topic per search call: a
 # topic like products or competitors needs the whole answer budget to itself.
 TOPICS = {
-    'R01.01': "Wie lautet der offizielle Firmenname? Welche Marken- oder Unternehmensbezeichnung wird verwendet? Wann wurde das Unternehmen gegründet, von wem, wo befindet sich der Hauptsitz und in welcher Branche beziehungsweise welchem Geschäftsfeld ist es tätig?",
+    # Identity is what the company says it is for, not its register entry:
+    # founding, seat and legal data have their own fields (A01.*, R02, R12).
+    'R01.01': "Welche Vision und welche Mission formuliert das Unternehmen selbst? Antworte kurz und präzise: ein Stichpunkt Vision, ein Stichpunkt Mission, jeweils als Eigenangabe gekennzeichnet. Keine Gründungsdaten, kein Sitz, keine Gründer, keine Registerangaben.",
     'R02.01': "Welche Rechtsform hat das Unternehmen? Unter welcher Handelsregisternummer ist es eingetragen? Wer ist offiziell vertretungsberechtigt? Welche Mutter-, Tochter- oder Beteiligungsgesellschaften und öffentlich bekannten Eigentümer beziehungsweise Gesellschafter gibt es?",
     'R03.01': "Wie viele Mitarbeitende beschäftigt das Unternehmen? Welche öffentlich verfügbaren Angaben gibt es zu Umsatz, Unternehmenswachstum, Standorten, Niederlassungen und geografischer Präsenz?",
     'R04.01': "Wer gehört zur Geschäftsführung beziehungsweise zum Vorstand? Wer sind die Gründer und wichtigsten öffentlich sichtbaren Führungskräfte? Welche Funktionen, beruflichen Hintergründe und fachlichen Kompetenzen haben diese Personen?",
@@ -35,7 +37,7 @@ TOPICS = {
     'R10.01': "Welche Investoren, Beteiligungsgesellschaften oder sonstigen Kapitalgeber sind öffentlich bekannt? Welche Finanzierungsrunden, Fördermittel, Übernahmen, Beteiligungen oder anderen wichtigen Finanzierungsereignisse lassen sich nachvollziehen?",
     'R11.01': "Welche Technologien, Verfahren, Methoden und besonderen Kompetenzen setzt das Unternehmen ein? Welche Patente, Schutzrechte, Forschungsaktivitäten, Zertifizierungen und fachlichen Qualifikationen sind öffentlich dokumentiert?",
     'R12.01': "Welche wichtigen Ereignisse haben die Entwicklung des Unternehmens geprägt? Wann fanden Gründung, wesentliche Produkteinführungen, Expansionen, Übernahmen, Partnerschaften, Auszeichnungen oder andere bedeutende Meilensteine statt?",
-    'R13.01': "Wie lauten die offiziellen Marken-, Unternehmens- und Produktnamen und wie werden sie korrekt geschrieben? Welche Claims, Missionen, Visionen und Markenwerte kommuniziert das Unternehmen? Welche Logos, Corporate-Design-Vorgaben und Markenrichtlinien sind verfügbar?",
+    'R13.01': "Wie lauten die offiziellen Marken-, Unternehmens- und Produktnamen und wie werden sie korrekt geschrieben? Welche Claims und Markenwerte kommuniziert das Unternehmen? Welche Logos, Corporate-Design-Vorgaben und Markenrichtlinien sind verfügbar?",
     'R14.01': "Welche offiziellen Websites, Domains, Social-Media-Profile, Blogs, Newsletter, Podcasts, YouTube-Kanäle und sonstigen eigenen Kommunikationsplattformen betreibt das Unternehmen?",
     'R15.01': "Über welche Themen wurde in den vergangenen Jahren über das Unternehmen berichtet? Welche relevanten Presseartikel, Interviews, Unternehmensporträts, Fachbeiträge, Gastartikel und Pressemitteilungen existieren? Welche Personen sind bisher öffentlich als Sprecher aufgetreten?",
     'R16.01': "Wie positioniert sich das Unternehmen bislang in seinem Markt? Welche zentralen Botschaften, Themen, Alleinstellungsmerkmale und Leistungsversprechen kommuniziert es? Welche Aussagen und Argumente wiederholen sich in seiner bisherigen Kommunikation?",
@@ -257,7 +259,8 @@ fehlende Einzelangaben mit "Mitarbeitende: bitte ergänzen" bzw. "Umsatz: bitte 
 Keine Formulierungen wie "nicht veröffentlicht" oder "keine Angaben". Was sich nicht öffentlich belegen lässt, weglassen statt raten; ein Thema
 ohne belastbare Quelle ganz auslassen. Keine Artikeltexte kopieren. Firmenclaims als solche formulieren.
 Beantworte jedes Thema auf Deutsch in ein bis drei sehr kurzen Stichpunkten. Jede Zeile beginnt mit •.
-Insgesamt höchstens 320 Zeichen, je Stichpunkt ein Fakt. Keine Einleitung oder Fließtext. Beantworte nur das jeweilige Thema. Unternehmensgröße: Mitarbeitende, Umsatz
+Insgesamt höchstens 320 Zeichen, je Stichpunkt ein Fakt. Keine Einleitung oder Fließtext. Beantworte nur das jeweilige Thema.
+Unternehmensidentität (R01.01): nur "Vision: ..." und "Mission: ..." in den Worten des Unternehmens; nennt es keine, "Vision: bitte ergänzen" bzw. "Mission: bitte ergänzen". Unternehmensgröße: Mitarbeitende, Umsatz
 und gegebenenfalls Standorte mit Bezugsjahr; keine Registerdaten, Produktdetails oder Prognosen. Themen-IDs, die mit A oder D beginnen, sind einzelne Profilfragen:
 beantworte sie knapp in ein bis zwei Sätzen, höchstens 300 Zeichen, direkt und ohne allgemeine Einleitung. Erhalte Bezugsjahre, Unsicherheit und die Kennzeichnung von Eigenangaben. Keine Gedankenstriche. Nenne die wichtigste Quelle als source_url
 und weitere verwendete Quellen in sources.
@@ -316,10 +319,13 @@ def compact_value(key, value):
         return None
     if key[:1] not in {'R', 'Q'}:
         return value.strip()
+    from .fact_values import has_missing, open_lines
     lines = [re.sub(r'^\s*(?:[•*\-]\s+|\d+[.)]\s+)', '', line).strip() for line in value.strip().splitlines() if line.strip()]
     if len(lines) > 3:
         return None
-    from .fact_values import has_missing
+    # "Zu Umsatz gibt es keine Angaben" is a gap, not a fact: it becomes an
+    # open "Umsatz: bitte ergänzen" line the customer fills in.
+    lines = [part for line in lines for part in open_lines(line)]
     normalized = []
     for line in lines:
         if has_missing(line):

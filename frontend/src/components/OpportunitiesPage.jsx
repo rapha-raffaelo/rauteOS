@@ -6,6 +6,7 @@ import {ActivationPanel,PreparedRelease} from './ActivationPanel.jsx';
 import './communication.css';
 const date=value=>value ? new Date(value).toLocaleString('de-DE',{dateStyle:'medium',timeStyle:'short'}) : 'Nicht festgelegt';
 const statusLabels={draft:'Entwurf',active:'Aktiviert',closed:'Abgeschlossen'};
+const originLabels={anlass:'Anlass',pitch:'Themen-Pitch',plan:'Aus dem Plan'};
 const eventLabels={idea_developed:'Idee entwickelt',choices_saved:'Auswahl gespeichert',activated:'Aktiviert',text_created:'Text erstellt',text_checked:'Aussagen geprüft',text_edited:'Text bearbeitet'};
 const letterStates={entwurf:'Entwurf',raus:'Verschickt',antwort:'Antwort erhalten',absage:'Absage',veroeffentlicht:'Veröffentlicht'};
 const actionLabels={kundenmail:'Kundenmail',pitch:'Journalistenpitch',statement:'Statement',pressemitteilung:'Pressemitteilung',qa:'Q&A',gastbeitrag:'Gastbeitrag',interviewangebot:'Interviewangebot',linkedin:'LinkedIn-Post',briefing:'Briefing',custom:'Eigene Aktion'};
@@ -128,10 +129,24 @@ export function OpportunitiesPage({clientId,params=new URLSearchParams(window.lo
   async function develop(event){event.preventDefault();setBusy(true);setError('');try{const job=await request(path+'/develop',{method:'POST',body:JSON.stringify({focus})});setBoard(v=>({...v,development:job}));}catch(e){setError(e.message);}finally{setBusy(false);}}
   useEffect(()=>{if(selected)document.querySelector('.communication-workspace')?.scrollIntoView?.({behavior:'smooth',block:'start'});},[selected,board!==null]);
   function open(row){setSelected({kind:row.context_kind,id:row.context_id});history.replaceState(null,'',`?kind=${row.context_kind}&context=${row.context_id}`);}
-  const card=row=><button type="button" className="communication-card" key={`${row.context_kind}-${row.context_id}`} aria-pressed={selected?.kind===row.context_kind&&selected?.id===row.context_id} onClick={()=>open(row)}><span>{statusLabels[row.status]||row.status}{row.created_at&&` · ${date(row.created_at)}`}</span><h3>{row.title}</h3><small>Öffnen →</small></button>;
+  // A card shows what it is about at a glance; hovering (or focusing) it shows
+  // the core message and the story it rests on, without opening the workspace.
+  const card=row=>{const key=`${row.context_kind}-${row.context_id}`,peek=`peek-${key}`,o=row.occasion;
+    return <button type="button" className="communication-card communication-card--peek" key={key} aria-describedby={row.summary||o?peek:undefined} aria-pressed={selected?.kind===row.context_kind&&selected?.id===row.context_id} onClick={()=>open(row)}>
+      <span>{originLabels[row.origin]||(row.context_kind==='detected'?'Anlass':'Impuls')} · {statusLabels[row.status]||row.status}{row.created_at&&` · ${date(row.created_at).split(',')[0]}`}</span>
+      <h3>{row.title}</h3>
+      {o&&<small className="communication-card__source">{o.source}{o.published_at&&` · ${date(o.published_at).split(',')[0]}`}</small>}
+      {(row.summary||o)&&<span className="communication-peek" id={peek} role="tooltip">
+        {row.summary&&<><b>Kernaussage</b><span>{row.summary}</span></>}
+        {o&&<><b>Anlass</b><span>{o.title}</span><em>{o.source}{o.published_at&&` · ${date(o.published_at).split(',')[0]}`}</em></>}
+      </span>}
+      <small>Öffnen →</small></button>;};
   const visible=(board?.opportunities||[]).filter(row=>row.status!=='closed');
-  const reactive=visible.filter(row=>row.context_kind==='detected');
-  const proactive=visible.filter(row=>row.context_kind==='developed');
+  // Market stories, detected or drafted by the radar, are Anlässe; what RAUTE
+  // developed on request or a plan hook opened is an Impuls.
+  const isAnlass=row=>(row.origin||(row.context_kind==='detected'?'anlass':'pitch'))==='anlass';
+  const reactive=visible.filter(isAnlass);
+  const proactive=visible.filter(row=>!isAnlass(row));
   return <section className="twin-page opportunities-page"><PageHeading eyebrow={board?.client.name} title="Aktivitäten" description="Issues und Krisen, Opportunities und eigene Impulse an einem Ort."/><ErrorMessage error={error}/>
     {!board&&!error&&<p role="status">Aktivitäten werden geladen…</p>}
     {board&&<><div className="communication-columns">

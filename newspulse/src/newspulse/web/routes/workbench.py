@@ -235,8 +235,23 @@ def today_news(session, client_id, *, now=None):
     total = session.scalar(select(func.count()).select_from(Analysis).join(Article).where(*where))
     rows = session.execute(select(Article, Analysis).join(Analysis, Analysis.article_id == Article.id).where(*where)
         .order_by(Article.published_at.desc(), Article.id.desc()))
-    return dict(date=day, total=total, items=[dict(id=a.id,title=a.title,url=a.url,source=a.source,
-        published_at=a.published_at,summary=v.summary or '',important=v.is_alert) for a,v in rows])
+    # The archive's newest rows before today, so a quiet morning still shows
+    # what the press wrote last; the Überblick tops today up to RECENT_SHOWN.
+    earlier = session.execute(select(Article, Analysis).join(Analysis, Analysis.article_id == Article.id)
+        .where(Analysis.client_id == client_id, visible_coverage(), Article.published_at < start)
+        .order_by(Article.published_at.desc(), Article.id.desc()).limit(RECENT_SHOWN))
+    return dict(date=day, total=total, items=[_news(a, v) for a, v in rows],
+                earlier=[_news(a, v) for a, v in earlier])
+
+
+#: How many articles the Überblick shows when today has fewer.
+RECENT_SHOWN = 5
+
+
+def _news(a, v):
+    return dict(id=a.id, analysis_id=v.id, title=a.title, url=a.url, source=a.source,
+                published_at=a.published_at, summary=v.summary or '', important=v.is_alert,
+                category=v.category.value, importance=v.importance_score)
 
 
 @router.get('/api/v1/workbench/clients/{client_id}/monitoring/social')

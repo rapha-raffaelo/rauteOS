@@ -95,3 +95,18 @@ it('saves a structured media contact independently of legacy statement ids',asyn
  const call=fetch.mock.calls.find(([,o])=>o?.method==='PUT');
  expect(JSON.parse(call[1].body)).toMatchObject({speaker_person_id:4,speaker_statement_id:null});
 });
+it('files radar impulses as occasions and shows their core message and story on hover',async()=>{
+ const occasion={title:'Etablierte Banken forcieren ihr Brokerage-Geschäft',source:'Handelsblatt',published_at:'2026-08-14T08:00:00Z',url:'https://x.example/a'};
+ vi.stubGlobal('fetch',vi.fn().mockResolvedValue(response({client:{name:'Freedom24'},development:null,reaction:{},opportunities:[
+  {context_kind:'developed',context_id:7,title:'Der Preis verliert an Trennschärfe',status:'draft',origin:'anlass',summary:'Der Preis hört auf, ein Unterscheidungsmerkmal zu sein.',occasion},
+  {context_kind:'developed',context_id:8,title:'Eigenes Thema',status:'draft',origin:'pitch',summary:'',occasion:null}]})));
+ render(<OpportunitiesPage clientId={1} params={new URLSearchParams()}/>);
+ const card=(await screen.findByText('Der Preis verliert an Trennschärfe')).closest('button');
+ expect(within(screen.getByRole('region',{name:'Opportunities'})).getByText('Der Preis verliert an Trennschärfe')).toBeTruthy();
+ expect(within(screen.getByRole('region',{name:'Impulse'})).getByText('Eigenes Thema')).toBeTruthy();
+ const peek=document.getElementById(card.getAttribute('aria-describedby'));
+ expect(peek.getAttribute('role')).toBe('tooltip');
+ expect(peek.textContent).toContain('Der Preis hört auf, ein Unterscheidungsmerkmal zu sein.');
+ expect(peek.textContent).toContain('Etablierte Banken forcieren ihr Brokerage-Geschäft');
+ expect(card.textContent).toMatch(/^Anlass · Entwurf/);
+});

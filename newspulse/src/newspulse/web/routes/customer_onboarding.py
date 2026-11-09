@@ -104,7 +104,7 @@ def demo_data():
         prefill=[customer_onboarding.with_english_label(dict(key=key, label=twin.CATALOG_BY_KEY[key]['label'], value=value,
             source_url='https://example.org', source_title='Fiktive Beispielquelle', researched_at='2026-10-13T12:00:00Z'))
             for key, value in [
-                ('R01.01', 'Nordlicht Studio ist ein fiktives Design- und Technologieunternehmen mit Sitz in Hamburg, gegründet 2014.'),
+                ('R01.01', '• Vision: Gestaltung, die Technik verständlich macht (Eigenangabe)\n• Mission: Digitale Produkte für Menschen statt für Handbücher bauen (Eigenangabe)'),
                 ('R05.01', 'Das Unternehmen entwickelt digitale Produkte und Markenauftritte für mittelständische Unternehmen.'),
                 ('R04.01', 'Geführt wird es von zwei Gründern aus Design und Softwareentwicklung.'),
                 ('R07.01', 'Kunden sind vor allem wachsende B2B-Unternehmen im deutschsprachigen Raum.'),
@@ -126,7 +126,7 @@ def page(request: Request):
 def read(request: Request, session: Session = Depends(get_db)):
     invite, client = invite_for(request, session)
     # Never return existing facts or other invites' answers to a link holder.
-    return result(dict(customer=client.name, logo_url=logo_src(client.logo_url) or None, questions=customer_onboarding.questions(),
+    return result(dict(customer=client.name, contact=(client.contact_name or '').strip(), logo_url=logo_src(client.logo_url) or None, questions=customer_onboarding.questions(),
         prefill=[customer_onboarding.with_english_label({**{k: v for k, v in item.items() if k not in {'fact_id', 'correction_fact_id'}}, 'confirmed': confirmed_item(session, client.id, item, prefill=True)})
                  for item in invite.prefill],
         prefill_confirmed=invite.prefill_confirmed,

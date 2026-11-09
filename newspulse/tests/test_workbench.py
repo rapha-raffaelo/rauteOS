@@ -276,6 +276,9 @@ def test_today_news_local_day_and_client_scope(db):
     result=today_news(db,1,now=now)
     assert result['total']==2
     assert [r['title'] for r in result['items']]==['today','midnight']
+    # A quiet morning still shows the latest coverage: the archive's rows before today.
+    assert [r['title'] for r in result['earlier']]==['yesterday']
+    assert result['earlier'][0]['importance']==3 and result['earlier'][0]['analysis_id']
 
 
 def test_today_redirect_and_kpi_placeholder(web):
