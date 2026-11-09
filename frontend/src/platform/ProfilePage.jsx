@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from "react";
+import { MediaShortlist } from "./MediaShortlist.jsx";
+import { ClientPeople } from "./ClientPeople.jsx";
+import { MonitoringKeywords } from "./MonitoringKeywords.jsx";
 import { OnboardingLinks } from "../components/OnboardingLinks.jsx";
 import { TwinPage } from "../components/TwinPage.jsx";
 import { PageHeading } from "../components/PageHeading.jsx";
@@ -13,140 +16,33 @@ import {
   t,
 } from "./shared.jsx";
 function Guide({ data: d, base }) {
-  const [guide, setGuide] = useState(d.guide_text);
-  return (
-    <Panel title="Kommunikations-Guide" id="guide">
-      <p>
-        Positionierung, Kernbotschaften, Tonalität und No-Gos für alle erzeugten
-        Texte.
-      </p>
-      <Notice>{d.saved ? "Guide gespeichert." : d.guide_error}</Notice>
-      {d.proposal && (
-        <section className="platform-proposal">
-          <h3>Vorschlag aus den Unterlagen — noch nicht gespeichert</h3>
-          <Action action={base + "/guide"} label="Übernehmen">
-            <Field
-              name="comms_guide"
-              type="textarea"
-              label="Vorschlag prüfen"
-              value={d.proposal}
-              maxLength={d.max_chars}
-              rows={12}
-            />
-          </Action>
-          <a href={base + "/twin#unternehmen"}>{t("Verwerfen")}</a>
-        </section>
-      )}
-      <div className="platform-columns">
-        <div>
-          <h3>{t("Quellen")}</h3>
-          {d.sources.length ? (
-            <ul>
-              {d.sources.map((s) => (
-                <li key={s.id}>
-                  {s.filename} · {s.characters} Zeichen · {date(s.uploaded_at)}
-                  <Action
-                    action={`${base}/guide/sources/${s.id}/remove`}
-                    label="entfernen"
-                  />
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p>
-              {t(
-                "Noch keine Unterlagen. Der Guide lässt sich auch einfach selbst schreiben.",
-              )}
-            </p>
-          )}
-          {!!d.sources.length && (
-            <Action
-              action={base + "/guide/distill"}
-              label="Vorschlag erzeugen"
-            />
-          )}
-          <form
-            method="post"
-            action={base + "/guide/upload"}
-            encType="multipart/form-data"
-          >
-            <Field
-              name="file"
-              label={`PDF, TXT oder Markdown · höchstens ${d.max_mb} MB`}
-              type="file"
-              accept=".pdf,.txt,.md,.markdown"
-              required
-            />
-            <button type="submit" className="btn btn--go">{t("Hochladen")}</button>
-            <p className="panel-hint">
-              Gespeichert wird der extrahierte Text, nicht die Datei.
-            </p>
-          </form>
-          <Action
-            action={base + "/guide/vorschlag"}
-            label="Entwurf aus Profil und Berichterstattung"
-          >
-            <p>
-              Liest die Recherche-Themen, die Antworten aus dem Kundenfragebogen
-              und die Berichterstattung.
-            </p>
-          </Action>
-        </div>
-        <form method="post" action={base + "/guide"}>
-          <label className="platform-field">
-            <span>
-              {t("Guide")} · {guide.length}/{d.max_chars} Zeichen
-            </span>
-            <textarea
-              name="comms_guide"
-              value={guide}
-              onChange={(e) => setGuide(e.target.value)}
-              maxLength={d.max_chars}
-              rows={16}
-            />
-          </label>
-          <button type="submit" className="btn btn--go">{t("Speichern")}</button>
-          <p>Wirkt auf Impulse, personalisierte Nachrichten und Ask RAUTE.</p>
+  const initial=d.proposal ?? d.guide_text;
+  const [guide,setGuide]=useState(initial);
+  const dirty=guide!==initial;
+  return <Panel title="Kommunikations-Guide" id="guide">
+    <p>Die verbindliche Grundlage für Positionierung, Botschaften, Tonalität und No-Gos.</p>
+    <Notice>{d.saved?'Guide gespeichert.':d.guide_error}</Notice>
+    <div className="guide-workflow">
+      <div className="guide-main">
+        <div className="guide-editor-head"><h3>{d.proposal?'KI-Entwurf prüfen':'Aktueller Guide'}</h3>
+          <Action action={base+'/guide/vorschlag'} label="KI-Entwurf erstellen" disabled={dirty}/></div>
+        {d.proposal&&<p className="platform-proposal">Dieser Entwurf ist noch nicht aktiv. Prüfe ihn und speichere ihn, um ihn zu übernehmen.</p>}
+        <form method="post" action={base+'/guide'}>
+          <label className="platform-field"><span>Guide bearbeiten · {guide.length}/{d.max_chars} Zeichen</span><textarea name="comms_guide" value={guide} onChange={e=>setGuide(e.target.value)} maxLength={d.max_chars} rows={16}/></label>
+          <div className="guide-save"><button type="submit" className="btn btn--go">{d.proposal?'Entwurf übernehmen':'Speichern'}</button>{d.proposal&&<a href={base+'/guide'}>Entwurf verwerfen</a>}{dirty&&<small>Ungespeicherte Änderungen</small>}</div>
         </form>
+        <p className="onb-meta">Die KI nutzt Profil, Kundenantworten und hinterlegte Unterlagen. Erst Speichern aktiviert deine Änderungen.</p>
       </div>
-      <h3>{t("Strategie-Coach")}</h3>
-      <Action action={base + "/guide/coach"} label="Jetzt prüfen">
-        <p>
-          Prüft den Guide gegen {d.coach_days} Tage Berichterstattung. Beratend:
-          ändert nichts am Guide.
-        </p>
-      </Action>
-      <Notice>{d.coach_error}</Notice>
-      {d.findings == null ? (
-        <p>Noch nicht geprüft.</p>
-      ) : d.findings.length ? (
-        d.findings.map((f, i) => (
-          <article className="feed-item" key={i}>
-            <span className="tag">{t(f.kind)}</span>
-            <h4>{f.headline}</h4>
-            <p>{f.detail}</p>
-            {f.suggestion && <p>→ {f.suggestion}</p>}
-            <ul>
-              {f.evidence.map((idx) => {
-                const r = d.coverage[idx];
-                return r ? (
-                  <li key={idx}>
-                    <Source url={r.url}>{r.headline}</Source> · {r.source}
-                  </li>
-                ) : null;
-              })}
-            </ul>
-          </article>
-        ))
-      ) : (
-        <p>
-          {t(
-            "Nichts gefunden, woran der Guide und die Berichterstattung auseinanderlaufen.",
-          )}
-        </p>
-      )}
-    </Panel>
-  );
+      <aside className="guide-material">
+        <h3>Unterlagen ergänzen</h3><p>Briefing oder Markenleitfaden hinzufügen. Danach den KI-Entwurf erstellen.</p>
+        <form method="post" action={base+'/guide/upload'} encType="multipart/form-data"><Field name="file" label={`PDF, TXT oder Markdown · bis ${d.max_mb} MB`} type="file" accept=".pdf,.txt,.md,.markdown" required/><button type="submit" className="btn" disabled={dirty}>Unterlage hinzufügen</button></form>
+        <details className="guide-details"><summary>Hinterlegte Quellen ({d.sources.length})</summary>
+          {d.sources.length?<ul>{d.sources.map(s=><li key={s.id}><span>{s.filename}<small>{date(s.uploaded_at)}</small></span><Action action={`${base}/guide/sources/${s.id}/remove`} label="Entfernen" disabled={dirty}/></li>)}</ul>:<p>Noch keine Unterlagen hinterlegt.</p>}
+        </details>
+        {dirty&&<p>Bitte zuerst deine Änderungen speichern, bevor du Unterlagen oder Entwürfe änderst.</p>}
+      </aside>
+    </div>
+  </Panel>;
 }
 // The four lines only the kick-off knows. Everything else the old company
 // form held (business, founding, seat, products, competitors) is now a topic of
@@ -159,7 +55,7 @@ function Company({ data, base }) {
   const filled = d.fields.filter((f) => d.facts[f.key]?.value).length;
   return (
     <>
-      <Panel title="Kontakte & Sprecher" id="profilebody">
+      <Panel title="Bisherige Kontaktangaben" id="profilebody">
         <dl className="profile-fact-sheet">{d.fields.filter(f => d.facts[f.key]?.value).map(f =>
           <div key={f.key}><dt>{t(f.label)}</dt><dd>{d.facts[f.key].value}</dd></div>)}</dl>
         {!filled && <p>Wer zitiert werden darf, wer abends erreichbar ist und welche Titel zählen, weiß nur der Kunde.</p>}
@@ -555,38 +451,7 @@ function Market({ data: d, base }) {
           ))}
         </>
       )}
-      <h3>{t("Wen ansprechen")}</h3>
-      {[
-        ["Medien im Themenfeld", d.market_outlets],
-        ["Medien über den Mandanten", d.own_outlets],
-        [
-          "Journalistinnen und Journalisten",
-          [...d.market_authors, ...d.own_authors],
-        ],
-      ].map(([label, rows]) => (
-        <section key={label}>
-          <h4>{t(label)}</h4>
-          {rows.length ? (
-            <ul>
-              {rows.map((r, i) => (
-                <li key={i}>
-                  {r.name} · {r.articles} · {date(r.last_seen)}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p>
-              {t(
-                label === "Journalistinnen und Journalisten"
-                  ? "Kein Feed in diesem Zeitraum hat einen Autor mitgeliefert."
-                  : label === "Medien über den Mandanten"
-                    ? "Noch keine Berichterstattung über den Mandanten."
-                    : "Noch keine Daten — das Radar hat nichts gefunden.",
-              )}
-            </p>
-          )}
-        </section>
-      ))}
+      <MediaShortlist data={d} />
     </Panel>
   );
 }
@@ -648,20 +513,26 @@ export function ProfilePage({ data: d, onData }) {
         description={d.client.legal_name ? `${t("Unternehmen dahinter")}: ${d.client.legal_name} · ${t(heading[1])}` : t(heading[1])}
       />
       {view === "profile" && <>
-        <OnboardingLinks key={d.client.id} clientId={d.client.id} />
+        {/* Onboarding and the contacts side by side: who to ask, next to the
+            link that asks them. */}
+        <div className="profile-top">
+          <OnboardingLinks key={d.client.id} clientId={d.client.id} />
+          <section id="unternehmen" className="profile-section" onChangeCapture={() => setDirty(true)}>
+            <Notice>{refreshError}</Notice>
+            {ready && (
+              <Notice>
+                Recherche abgeschlossen. Bitte ungespeicherte Eingaben sichern und
+                die Seite neu laden, um die Vorschläge zu sehen.
+              </Notice>
+            )}
+            <ClientPeople key={d.client.id} clientId={d.client.id}/>
+            <details className="profile-legacy-contacts"><summary>Bisherige Kontaktangaben und Recherche</summary><Company data={d.company} base={base} /></details>
+          </section>
+        </div>
         <section id="wissen" className="profile-knowledge" aria-label={t("Wissen & Aussagen")}>
           <TwinPage clientId={d.client.id} embedded />
         </section>
-        <section id="unternehmen" className="profile-section" onChangeCapture={() => setDirty(true)}>
-          <Notice>{refreshError}</Notice>
-          {ready && (
-            <Notice>
-              Recherche abgeschlossen. Bitte ungespeicherte Eingaben sichern und
-              die Seite neu laden, um die Vorschläge zu sehen.
-            </Notice>
-          )}
-          <Company data={d.company} base={base} />
-        </section>
+        <MonitoringKeywords key={`keywords-${d.client.id}`} clientId={d.client.id}/>
       </>}
       {view === "rivals" && <>
         <section id="wettbewerber" className="profile-section"><RivalManagement data={d.rivals} base={base}/></section>

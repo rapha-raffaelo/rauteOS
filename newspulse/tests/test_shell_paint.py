@@ -385,18 +385,18 @@ def test_the_primary_tabs_are_consolidated(web, mandate):
     """Spec 09: the prototype's six tabs."""
     strip = _strip(rendered(web.get(f"/client/{mandate.id}/heute")))
     assert re.findall(r'<a [^>]+>([^<]+)</a>', strip) == [
-        "Überblick", "Kundenprofil", "Strategie", "Chancen", "Umsetzung", "Wirkung"]
+        "Überblick", "Kundenprofil", "Strategie", "Aktivitäten", "Umsetzung", "Monitoring"]
     assert "subtabs-legacy" not in strip
-    for suffix in ("/overview", "/twin", "/guide", "/opportunities", "/plan", "/ki"):
+    for suffix in ("/overview", "/twin", "/guide", "/opportunities", "/plan", ""):
         assert f'href="/client/{mandate.id}{suffix}"' in strip
 
 
 @pytest.mark.parametrize("suffix,parent", [
     ("/overview", "/overview"), ("/twin", "/twin"), ("/profil", "/twin"),
     ("/guide", "/guide"), ("/wettbewerb", "/guide"), ("/market", "/guide"), ("/map", "/guide"),
-    ("/opportunities", "/opportunities"), ("/issues", "/opportunities"), ("/heute", "/opportunities"),
-    ("/plan", "/plan"), ("/advice", "/plan"),
-    ("/ki", "/ki"), ("/berichte", "/ki"), ("", "/ki"),
+    ("/opportunities", "/opportunities"), ("/issues", "/opportunities"), ("/heute", "/overview"),
+    ("/plan", "/plan"), ("/advice", "/opportunities"),
+    ("/ki", ""), ("/berichte", ""), ("", ""),
 ])
 def test_specialist_views_select_their_primary_workspace(web, mandate, suffix, parent):
     strip = _strip(rendered(web.get(f"/client/{mandate.id}{suffix}")))
@@ -406,9 +406,8 @@ def test_specialist_views_select_their_primary_workspace(web, mandate, suffix, p
 
 @pytest.mark.parametrize("suffix,options", [
     ("/guide", ["/guide", "/wettbewerb", "/map"]),
-    ("/opportunities", ["/opportunities", "/issues", "/heute"]),
-    ("/plan", ["/plan", "/advice"]),
-    ("/ki", ["/ki", "/berichte", ""]),
+    ("/plan", ["/plan"]),
+    ("/ki", ["", "/ki", "/monitoring/kpis"]),
 ])
 def test_each_workspace_keeps_its_tools_reachable(web, mandate, suffix, options):
     body = rendered(web.get(f"/client/{mandate.id}{suffix}"))

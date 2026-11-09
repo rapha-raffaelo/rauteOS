@@ -8,9 +8,11 @@
    the reader wants the list. #}
 {% macro item_row(story) %}
   {% set item = story.lead %}
-  <div class="item{% if item.is_alert %} item--alert{% endif %}">
+  {% set important = story.members | selectattr('is_alert') | list %}
+  <div class="item{% if important %} item--alert{% endif %}" id="meldung-{{ item.analysis_id }}">
     <div class="body">
       <div class="toprow">
+        {% if important %}<span class="intel-priority" title="{{ t('Hohe Relevanz oder ein hinterlegtes Alarm-Thema. Unabhängig von der Tonalität.') }}">{{ t('Wichtig') }}</span>{% endif %}
         <span class="clichip">{{ item.client_name }}</span>
         <span class="tag t-{{ item.category }}">{{ t(item.category) | capitalize }}</span>
         {% if item.tonality != 'unbekannt' %}
@@ -40,12 +42,12 @@
       {# One-click workflow. Clicking the state an item already has clears it,
          so each button both marks and un-marks. redirect_to carries the current
          URL so the day/filter the operator was looking at survives the POST. #}
-      <div class="triage">
+      <div class="triage" aria-label="{{ t('Meldung bearbeiten') }}">
         {% for state, label in [('gelesen', t('gelesen')), ('markiert', t('für Mandant')), ('erledigt', t('erledigt'))] %}
           <form method="post" action="/triage/{{ item.analysis_id }}">
             <input type="hidden" name="state" value="{{ state }}">
             <input type="hidden" name="redirect_to" value="{{ request.url.path }}?{{ request.url.query }}">
-            <button type="submit" class="triage-btn{% if item.triage_state == state %} triage-btn--on{% endif %}">{{ label }}</button>
+            <button type="submit" aria-pressed="{{ 'true' if item.triage_state == state else 'false' }}" class="triage-btn{% if item.triage_state == state %} triage-btn--on{% endif %}">{{ label }}</button>
           </form>
         {% endfor %}
         {# Not a triage state: those mean "dealt with" and still count. This means
@@ -92,6 +94,7 @@
   </div>
   {% include "partials/runmeta.html" %}
 </header>
+<section class="intel-filters" aria-label="{{ t('Filter') }}">
 <div class="today-toolbar">
   {# Category filter and date picker share one form so changing either keeps the
      other's value; the whole toolbar sits inside #today-root so an HTMX swap
@@ -111,7 +114,7 @@
       hx-swap="outerHTML"
       hx-push-url="true"
       onchange="if (!window.htmx) this.form.requestSubmit()">
-      <option value="">{{ t("Alle Kategorien") }}{% if categories %} ({{ categories | length }}){% endif %}</option>
+      <option value="">{{ t("Alle Kategorien") }}</option>
       {% for c in categories %}
         <option value="{{ c }}"{% if c == selected_category %} selected{% endif %}>{{ t(c) | capitalize }}</option>
       {% endfor %}
@@ -155,6 +158,11 @@
       hx-swap="outerHTML"
       hx-push-url="true"
       onchange="if (!window.htmx) this.form.requestSubmit()">
+    <nav class="intel-date-nav" aria-label="{{ t('Nachrichtentag wählen') }}">
+      {% if day.toordinal() > 1 %}<a class="intel-date-step" aria-label="{{ t('Vorheriger Tag') }}" href="/today?date={{ day.fromordinal(day.toordinal() - 1).isoformat() }}{% if selected_client %}&client={{ selected_client }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}{% if show_muted %}&show_muted=1{% endif %}">←</a>{% endif %}
+      <a href="/today?date={{ header_date.isoformat() }}{% if selected_client %}&client={{ selected_client }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}{% if show_muted %}&show_muted=1{% endif %}">{{ t('Heute') }}</a>
+      {% if day < header_date %}<a class="intel-date-step" aria-label="{{ t('Nächster Tag') }}" href="/today?date={{ day.fromordinal(day.toordinal() + 1).isoformat() }}{% if selected_client %}&client={{ selected_client }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}{% if show_muted %}&show_muted=1{% endif %}">→</a>{% endif %}
+    </nav>
     <noscript><button type="submit">{{ t("Anzeigen") }}</button></noscript>
   </form>
 </div>
@@ -168,7 +176,7 @@
       <a class="cfcard{% if not selected_client %} cfcard--on{% endif %}"
          href="/today?date={{ day_iso }}{% if selected_category %}&category={{ selected_category }}{% endif %}">
         <span class="cfall">{{ t("Alle") }}</span>
-        <span class="cfname">{{ total_today }} {{ t("Meldungen") }}</span>
+        <span class="cfn">{{ total_today }}</span>
       </a>
       {% for c in clients %}
         <a class="cfcard{% if selected_client == c.id %} cfcard--on{% endif %}"
@@ -179,7 +187,7 @@
             <span class="cflogo cflogo--mono" style="background: {{ c.name | brand_colour }}">{{ c.name | monogram }}</span>
           {% endif %}
           <span class="cfname">{{ c.name }}</span>
-          {% if client_counts.get(c.id) %}<span class="cfn">{{ client_counts[c.id] }}</span>{% endif %}
+          <span class="cfn">{{ client_counts.get(c.id, 0) }}</span>
         </a>
       {% endfor %}
     {% else %}
@@ -200,12 +208,10 @@
     {% endif %}
   </div>
 {% endif %}
+</section>
 
-{# The reputation band (RIS-01), above the day's coverage and above the fast
-   lane: "wie steht es um dieses Mandat" is the question in front of "was ist
-   heute passiert", and on the morning something is wrong this has to be the
-   first thing on the page. One line on an ordinary morning — see the partial. #}
-{% include "partials/reputation_band.html" %}
+{# The current reputation reading sits in the context rail, distinct from the
+   selected publication day. Declared crises remain above the day's feed. #}
 {% if shown_instead_of %}
   {# The sweep runs at 06:10 and brings in what was published overnight, which
      carries yesterday's date. Filtering by publication day therefore empties this
@@ -240,9 +246,9 @@
   </section>
 {% endif %}
 <div class="cols intel-layout">
-  {% if alerts or open_crises or crisis_offers %}
+  {% if open_crises or crisis_offers %}
   <aside class="alertcol" aria-label="{{ t('Warnungen') }}">
-    <div class="colhead">{{ t("Warnungen") }} <span class="n">{{ alerts | length }}</span></div>
+    <div class="colhead">{{ t("Krisen und Prüfbedarf") }} <span class="n">{{ (open_crises | length) + (crisis_offers | length) }}</span></div>
     {# A declared crisis sits above the day's alerts, because it is the one thing
        on this page that outranks all of them at once. The row is the state — the
        tighter cadence reads the same one — so this card disappears the moment
@@ -305,23 +311,6 @@
         </div>
       </div>
     {% endfor %}
-    {% for story in alerts %}
-      {% set item = story.lead %}
-      <div class="acard">
-        <div class="cli">{{ item.client_name }} <span>·</span> {{ t(item.category) | capitalize }}</div>
-        <div class="hl"><a href="{{ item.url | safe_url }}" target="_blank" rel="noopener noreferrer">{{ item.headline }}</a></div>
-        {% if item.summary %}<div class="sum">{{ item.summary }}</div>{% endif %}
-        <div class="meta">
-          {{ item.source }} <span>·</span> {{ item.published_at.strftime('%H:%M') }}
-          {% if story.is_syndicated %}<span>·</span> <strong>{{ story.pickup_count }}× {{ t("aufgegriffen") }}</strong>{% endif %}
-        </div>
-      </div>
-    {% else %}
-      <p class="rail__empty">
-        {% if day == header_date %}{{ t("Keine Warnungen heute.") }}
-        {% else %}{{ t("Keine Warnungen am") }} {{ day.strftime('%d.%m.%Y') }}.{% endif %}
-      </p>
-    {% endfor %}
   </aside>
 
   {% endif %}
@@ -330,7 +319,8 @@
     {# Counts stories, not articles: a syndicated event is one thing to read.
        The article count is shown alongside when the two differ. #}
     <div class="colhead">
-      {{ t("Gesamter Tag") }} <span class="n">{{ stories | length }}</span>
+      {{ t("Meldungen") }} <span class="n">{{ stories | length }}</span>
+      <span class="intel-feed-date">{{ day.strftime('%d.%m.%Y') }}</span>
       {% if items | length != stories | length %}
         <span class="colhead__note">{{ t("aus") }} {{ items | length }} {{ t("Artikeln") }}</span>
       {% endif %}
@@ -421,6 +411,7 @@
      coverage the mandate is not in. Advisory — nothing is sent from here. The
      reader copies, edits, decides. #}
   <aside class="anglecol" aria-label="{{ t('Chancen und Impulse') }}">
+    {% include "partials/reputation_band.html" %}
     {% if chances %}
     <section class="intel-chances" aria-label="{{ t('Offene Chancen') }}">
       <div class="intel-chances__h"><h2>{{ t("Entwickelte Chancen") }}</h2><span>{{ chances | length }}</span></div>

@@ -12,9 +12,10 @@ from sqlalchemy.orm import Session
 from sqlalchemy.orm.exc import StaleDataError
 
 from ... import customer_onboarding, twin, onboarding_audio
+from ...fact_values import has_missing
 from ...evidence import Confidentiality, ExternalUse, InputOwner, SourceType
 from ...models import Client, ClientFact, CustomerOnboardingInvite
-from ..app import get_db, templates
+from ..app import get_db, templates, logo_src
 from ..frontend import page_assets
 from ..mandates import mandate_or_404
 
@@ -36,6 +37,9 @@ def commit(session):
 
 
 def invite_for(request: Request, session: Session):
+    from ...onboarding_access import session_invite
+    if request.headers.get('X-Onboarding-Slug'):
+        return session_invite(request, session)
     token = request.headers.get('X-Onboarding-Token', '')
     if len(token) != 43:
         raise HTTPException(401, 'Dieser Link ist ungültig oder abgelaufen.')
@@ -108,6 +112,7 @@ def demo_data():
 
 
 @router.get('/onboarding/demo')
+@router.get('/onboarding/{slug}')
 @router.get('/onboarding')
 def page(request: Request):
     assets = page_assets('onboarding')
@@ -121,11 +126,11 @@ def page(request: Request):
 def read(request: Request, session: Session = Depends(get_db)):
     invite, client = invite_for(request, session)
     # Never return existing facts or other invites' answers to a link holder.
-    return result(dict(customer=client.name, questions=customer_onboarding.questions(),
-        prefill=[customer_onboarding.with_english_label({k: v for k, v in item.items() if k not in {'fact_id', 'correction_fact_id'}})
+    return result(dict(customer=client.name, logo_url=logo_src(client.logo_url) or None, questions=customer_onboarding.questions(),
+        prefill=[customer_onboarding.with_english_label({**{k: v for k, v in item.items() if k not in {'fact_id', 'correction_fact_id'}}, 'confirmed': confirmed_item(session, client.id, item, prefill=True)})
                  for item in invite.prefill],
         prefill_confirmed=invite.prefill_confirmed,
-        answers={k: public_answer(a) for k, a in invite.answers.items() if k in customer_onboarding.QUESTION_KEYS},
+        answers={k: public_answer({**a, 'confirmed': confirmed_item(session, client.id, a)}) for k, a in invite.answers.items() if k in customer_onboarding.QUESTION_KEYS},
         transcription_configured=onboarding_audio.configured(),
         completed=bool(invite.completed_at)))
 
@@ -134,6 +139,7 @@ class Answer(BaseModel):
     model_config = ConfigDict(extra='forbid', str_strip_whitespace=True)
     value: str = Field(default='', max_length=20000)
     skipped: bool = False
+    confirmed: bool = False
     audio_id: str | None = Field(default=None, pattern=r'^[a-f0-9]{32}$')
     mode: Literal['transcript', 'audio'] = 'transcript'
 
@@ -141,6 +147,7 @@ class Answer(BaseModel):
 class PrefillReview(BaseModel):
     model_config = ConfigDict(extra='forbid')
     corrections: dict[str, str] = Field(default_factory=dict, max_length=200)
+    confirmed_keys: list[str] | None = None
 
 
 @router.post('/api/onboarding/prefill')
@@ -150,25 +157,46 @@ def confirm_prefill(data: PrefillReview, request: Request, session: Session = De
     if any(key not in allowed or not value.strip() or len(value) > 20000
            for key, value in data.corrections.items()):
         raise HTTPException(422, 'Bitte nur die vorbereiteten Angaben korrigieren; leere Antworten sind nicht möglich.')
+    selected = allowed if data.confirmed_keys is None else set(data.confirmed_keys)
+    if not selected <= allowed or not set(data.corrections) <= selected:
+        raise HTTPException(422, 'Unbekannte Bestätigung.')
     updated = []
     for original in invite.prefill:
         item = dict(original)
+        if item['key'] not in selected:
+            updated.append(item)
+            continue
         value = data.corrections.get(item['key'], item.get('customer_value', item['value'])).strip()
+        prior_row = session.get(ClientFact, item.get('correction_fact_id') or item.get('fact_id'))
+        if not prior_row or prior_row.client_id != client.id or prior_row.key != item['key'] or prior_row.fact_status in twin.INACTIVE or prior_row.value != item.get('customer_value', item['value']):
+            raise HTTPException(409, 'Diese Angabe wurde inzwischen geändert. Bitte einen aktuellen Fragebogen anfordern.')
         if value != item.get('customer_value', item['value']):
             # Keep the web evidence intact; CEO corrections are separate statements.
             row = twin.apply(session, client.id, twin.StatementInput(key=item['key'], value=value,
                 source_title='Kunden-Onboarding · Korrektur', source_type=SourceType.CLIENT_INTERVIEW,
                 input_owner=InputOwner.CLIENT_MANAGEMENT), 'Kunde · Onboarding')
             item.update(customer_value=value, correction_fact_id=row.id)
+        row = session.get(ClientFact, item.get('correction_fact_id') or item['fact_id'])
+        twin.remember(session, row, 'Kunde · Bestätigung')
+        if has_missing(value) and data.confirmed_keys is not None:
+            raise HTTPException(422, 'Bitte die offenen Angaben vor der Bestätigung ergänzen.')
+        row.customer_confirmed_at = None if has_missing(value) else dt.datetime.now(dt.UTC)
+        item['confirmed'] = not has_missing(value)
         updated.append(item)
     invite.prefill = updated
-    invite.prefill_confirmed = True
+    invite.prefill_confirmed = data.confirmed_keys is None or all(item.get('confirmed') for item in updated)
     commit(session)
     return result({'ok': True})
 
 
+def confirmed_item(session, client_id, item, *, prefill=False):
+    row = session.get(ClientFact, item.get('correction_fact_id') or item.get('fact_id')) if (item.get('correction_fact_id') or item.get('fact_id')) else None
+    value = item.get('customer_value', item.get('value')) if prefill else item.get('value')
+    return bool(row and row.client_id == client_id and row.fact_status not in twin.INACTIVE and row.value == value and row.customer_confirmed_at and not has_missing(value))
+
+
 def public_answer(answer):
-    result = {'value': answer['value'], 'skipped': answer['skipped']}
+    result = {'value': answer['value'], 'skipped': answer['skipped'], 'confirmed': answer.get('confirmed', False)}
     if answer.get('audio_id'):
         result.update(audio_id=answer['audio_id'], mode=answer.get('mode', 'audio'))
     return result
@@ -194,7 +222,15 @@ def store_answer(session, invite, client, key, data):
             external_use=ExternalUse.INTERNAL_ONLY if key in customer_onboarding.RESTRICTED else ExternalUse.APPROVAL_REQUIRED)
         row = twin.apply(session, client.id, statement, 'Kunde · Onboarding', row=row)
         fact_id = row.id
-    answer = dict(value=data.value, skipped=data.skipped, fact_id=fact_id)
+    if data.confirmed and (data.skipped or has_missing(data.value)):
+        raise HTTPException(422, 'Nur eine vollständige Antwort kann bestätigt werden.')
+    row = session.get(ClientFact, fact_id) if fact_id else None
+    if data.confirmed:
+        if not row or row.client_id != client.id or row.key != key or row.fact_status in twin.INACTIVE or row.value != data.value:
+            raise HTTPException(409, 'Die Antwort wurde inzwischen geändert. Bitte erneut bearbeiten.')
+        twin.remember(session, row, 'Kunde · Bestätigung')
+        row.customer_confirmed_at = dt.datetime.now(dt.UTC)
+    answer = dict(value=data.value, skipped=data.skipped, fact_id=fact_id, confirmed=bool(row and row.value == data.value and row.customer_confirmed_at))
     if data.audio_id: answer.update(audio_id=data.audio_id, mode=data.mode)
     invite.answers = {**invite.answers, key: answer}
     return public_answer(answer)
@@ -292,3 +328,17 @@ def workflow_contact(client_id: int, data: ContactInput, session: Session = Depe
     for key, value in data.model_dump().items(): setattr(client, key, value)
     session.commit()
     return result(data.model_dump())
+
+
+class CustomerLogin(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    slug: str = Field(pattern=r'^[a-z0-9-]{1,100}$')
+    password: str = Field(min_length=1, max_length=100)
+
+
+@router.post('/api/onboarding/login')
+def customer_login(data: CustomerLogin, request: Request, session: Session = Depends(get_db)):
+    from ...onboarding_access import login
+    response = result({'ok': True})
+    login(data.slug, data.password, request, session, response)
+    return response

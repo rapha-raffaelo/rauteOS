@@ -4,15 +4,16 @@ import hashlib
 import json
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.orm import Session
-from ... import desk, profile as profiles, workspaces
+from ... import desk, profile as profiles, worklists, workspaces
+from ...assets import CRISIS_REGISTRY, REGISTRY
 from .desk_api import DecisionSummary
-from ...models import Client, Asset, Outreach, ClientAction, Report, OpportunityWorkspace, OpportunityEvent
+from ...models import Client, Asset, Outreach, ClientAction, Report, OpportunityWorkspace, OpportunityEvent, Article, Analysis, LinkedInPost, visible_coverage
 from .. import frontend
 from ..app import get_db, templates
 from ..mandates import mandate_or_404
-from .today import _fetch_last_run, _local_tz
+from .today import _fetch_last_run, _local_tz, _day_bounds_utc
 from .desk_api import MandateSummary
 router = APIRouter()
 
@@ -33,10 +34,12 @@ def global_page(request: Request, session: Session = Depends(get_db)):
     return render(request, session, request.url.path.strip('/'))
 
 
+@router.get('/client/{client_id}/monitoring/kpis')
+@router.get('/client/{client_id}/monitoring/social')
 @router.get('/client/{client_id}/overview')
 @router.get('/client/{client_id}/actions')
 def client_page(client_id: int, request: Request, session: Session = Depends(get_db)):
-    return render(request, session, request.url.path.rsplit('/', 1)[-1], mandate_or_404(session, client_id))
+    return render(request, session, 'monitoring_kpis' if request.url.path.endswith('/monitoring/kpis') else 'monitoring_social' if request.url.path.endswith('/monitoring/social') else request.url.path.rsplit('/', 1)[-1], mandate_or_404(session, client_id))
 
 
 def texts(session, client_id=None, released_only=False):
@@ -48,15 +51,16 @@ def texts(session, client_id=None, released_only=False):
         if client_id is not None:
             query = query.where(model.client_id == client_id)
         for row, name in session.execute(query.order_by(model.generated_at.desc()).limit(100)):
-            workspace = session.scalar(select(OpportunityWorkspace).where(
-                OpportunityWorkspace.client_id == row.client_id,
-                OpportunityWorkspace.angle_id == row.angle_id)) if row.angle_id else None
-            href = (f'/client/{row.client_id}/opportunities?kind={workspace.context_kind}&context={workspace.context_id}&view=assets&text={kind}-{row.id}'
-                if workspace else f'/client/{row.client_id}/advice?eintrag=anlass-{row.angle_id}'
-                if row.angle_id else f'/client/{row.client_id}/krise')
+            href = workspaces.text_href(session, row, kind)
+            fmt = row.kind if kind == 'asset' else 'pitch'
+            known = REGISTRY.get(fmt) or CRISIS_REGISTRY.get(fmt)
+            title = row.title if kind == 'asset' else row.subject
             items.append(dict(id=row.id, type=kind, client_id=row.client_id, client=name,
-                title=row.title if kind == 'asset' else row.subject,
-                format=row.kind if kind == 'asset' else 'pitch', generated_at=row.generated_at,
+                # Formats without a title of their own (LinkedIn, statement, Q&A)
+                # are named by their first line rather than "Ohne Titel".
+                title=title or worklists.first_line(row.body if kind == 'asset' else row.message),
+                format=fmt, format_name=known.name if known else 'Pitch' if fmt == 'pitch' else fmt,
+                generated_at=row.generated_at,
                 released_at=row.released_at,
                 href=href))
     return sorted(items, key=lambda r: r['generated_at'], reverse=True)[:100]
@@ -98,10 +102,25 @@ def overview(client_id: int, response: Response, session: Session = Depends(get_
             .order_by(OpportunityEvent.created_at.desc(), OpportunityEvent.id.desc()).limit(100))]
     return dict(client={'id': client.id, 'name': client.name},
         summary=MandateSummary.model_validate(summary) if summary else None,
-        opportunities=workspaces.listings(session, client_id)[:30], texts=items,
+        # Closed ones left out before the cut, so thirty closed ones cannot hide an open one.
+        opportunities=[r for r in workspaces.listings(session, client_id) if r['status'] != 'closed'][:30], texts=items,
         company=company(session, client),
-        next_steps=[DecisionSummary.model_validate(d) for d in board.decisions if d.client.id == client_id][:5],
+        today_news=today_news(session, client_id),
+        next_steps=next_steps(board, client_id),
         activity=activity, logged_actions=actions, released_reports=reports, released_texts=texts(session, client_id, released_only=True), limit=100)
+
+
+#: How many entries "Nächste Schritte" carries on a mandate's overview.
+NEXT_STEPS_SHOWN = 5
+
+
+def next_steps(board, client_id: int) -> list[dict]:
+    """The mandate's open tasks, due first, then its open decisions (spec 10)."""
+    tasks = [dict(kind='aufgabe', title=t.title, href=t.href,
+                  detail=f'fällig {t.due_on:%d.%m.%Y}' if t.due_on else '', since=None)
+             for t in board.all_tasks if t.client and t.client.id == client_id]
+    decisions = [DecisionSummary.model_validate(d).model_dump() for d in board.decisions if d.client.id == client_id]
+    return (tasks + decisions)[:NEXT_STEPS_SHOWN]
 
 
 #: How many running stories head "Stories & Content" (spec 09).
@@ -207,3 +226,24 @@ def delete_client(client_id: int, body: ClientDeleteInput, session: Session = De
         raise HTTPException(409, 'Der Mandantenname wurde inzwischen geändert. Bitte die Liste neu laden.')
     deactivate_client(session, client_id)
     return dict(id=client.id, deleted=True)
+
+
+def today_news(session, client_id, *, now=None):
+    day = (now or dt.datetime.now(_local_tz())).astimezone(_local_tz()).date()
+    start, end = _day_bounds_utc(day)
+    where = (Analysis.client_id == client_id, visible_coverage(), Article.published_at >= start, Article.published_at < end)
+    total = session.scalar(select(func.count()).select_from(Analysis).join(Article).where(*where))
+    rows = session.execute(select(Article, Analysis).join(Analysis, Analysis.article_id == Article.id).where(*where)
+        .order_by(Article.published_at.desc(), Article.id.desc()))
+    return dict(date=day, total=total, items=[dict(id=a.id,title=a.title,url=a.url,source=a.source,
+        published_at=a.published_at,summary=v.summary or '',important=v.is_alert) for a,v in rows])
+
+
+@router.get('/api/v1/workbench/clients/{client_id}/monitoring/social')
+def social_monitoring(client_id: int, response: Response, session: Session = Depends(get_db)):
+    client = mandate_or_404(session, client_id)
+    response.headers['Cache-Control'] = 'no-store'
+    rows = session.scalars(select(LinkedInPost).where(LinkedInPost.client_id == client_id,
+        LinkedInPost.status == 'veroeffentlicht').order_by(LinkedInPost.updated_at.desc()).limit(100)).all()
+    return dict(client=dict(id=client.id,name=client.name),metrics_connected=False,limit=100,
+        posts=[dict(id=r.id,title=r.title,author=r.author,url=r.published_url,recorded_at=r.updated_at) for r in rows])

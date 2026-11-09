@@ -248,6 +248,12 @@
 .new-client-page .platform-actions button { min-height: 44px; white-space: normal; }
 .new-client-page ol { padding-left: 22px; }
 @media (max-width: 1000px) { .new-client-page .platform-columns { grid-template-columns: minmax(0, 1fr); gap: 0; } }
+/* Profile head: onboarding on the left, contacts and speakers on the right;
+   one column once the page is too narrow for both. */
+.profile-top { display: grid; grid-template-columns: minmax(320px, 1fr) minmax(0, 1.2fr); gap: 24px; align-items: start; }
+.profile-top > * { min-width: 0; margin: 0; }
+.profile-top .onb { max-width: none; }
+@media (max-width: 1100px) { .profile-top { grid-template-columns: minmax(0, 1fr); } }
 /* Kunden-Onboarding: one card. Status top right, three figures, the link
    with its two actions on one line, and the rarer tasks as quiet text buttons. */
 .onb {
@@ -375,6 +381,7 @@
 .wl-badge{flex:none;border-radius:6px;padding:5px 7px;font-size:10px;font-weight:780;line-height:1;background:var(--fill-2);color:var(--muted)}
 .wl-badge--hoch{background:var(--alert-wash);color:var(--alert)}
 .wl-badge--mittel{background:var(--warn-wash);color:var(--warn)}
+.wl-badge--agentur{background:var(--tint-wash);color:var(--tint)}
 .wl-badge--late{background:var(--alert);color:var(--on-fill)}
 .wl-acts,.wl-item__acts,.wl-move{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .raute-ui .wl-del button{color:var(--alert)}
@@ -383,7 +390,7 @@
 .wl-form__grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 16px}
 .wl-form__grid .platform-field:last-child{grid-column:1/-1}
 .wl-form__acts{display:flex;gap:8px;margin-top:10px}
-.wl-board{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(220px,1fr);gap:14px;overflow-x:auto;padding-bottom:8px}
+.wl-board{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(190px,1fr);gap:12px;overflow-x:auto;padding-bottom:8px}
 .wl-col{background:var(--fill-2);border-radius:var(--radius);padding:12px;min-height:160px}
 .wl-col>header{display:flex;justify-content:space-between;align-items:baseline;padding:4px 4px 10px}
 .wl-col>header h2{font-size:13px;font-weight:750;margin:0}
@@ -395,4 +402,91 @@
 .wl-suggest{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:4px}
 .wl-card__h{font-size:12px;font-weight:750;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin:12px 0 2px}
 .wl-hint{color:var(--muted);font-size:13px;margin:0 0 16px}
+.wl-hint--bar{margin:0;max-width:60ch}
+.wl-account{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.wl-account p{margin:0}
+.wl-account strong{color:var(--ink)}
+.raute-ui .wl-quiet button{background:none;border:0;color:var(--muted);text-decoration:underline;padding:0;min-height:0}
+.wl-li{display:flex;flex-direction:column;gap:6px;margin:8px 0;padding-top:8px;border-top:1px solid var(--line)}
+/* Inside a card every action is a compact control on the card's width: the
+   arrows side by side, text buttons wrapping instead of spilling out. */
+.wl-item .platform-action{margin:0;gap:6px}
+.wl-item__acts{justify-content:space-between;margin-top:8px}
+.raute-ui .wl-item .btn--quiet{white-space:normal;text-align:left;padding:4px 0;font-size:12px}
+.raute-ui .wl-item .wl-move button{padding:5px 10px;font-size:12px;min-height:0}
+.wl-li__plan{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.wl-li__plan input{font:inherit;font-size:12px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);min-width:0}
+.wl-item .wl-error{color:var(--alert);font-size:11px;margin:0}
 @media(max-width:700px){.wl-form__grid,.wl-suggest{grid-template-columns:1fr}.wl-row{flex-wrap:wrap}}
+
+/* Direct questionnaire actions, sized for keyboard and touch. */
+.onb-access-controls { padding: 16px; border: 1px solid var(--line); border-radius: 12px; }
+.onb-short-url { flex: 1 1 190px; min-width: 0; overflow-wrap: anywhere; font-size: 14px; font-weight: 600; }
+.onb-icon-actions { display: flex; gap: 6px; }
+.raute-ui .onb-icon { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; min-width: 44px; padding: 0; border: 1px solid var(--line); border-radius: 10px; background: var(--card); color: var(--ink); text-decoration: none; cursor: pointer; }
+.raute-ui .onb-icon:hover { background: var(--fill-2); border-color: var(--tint); }
+.raute-ui .onb-icon:focus-visible { outline: 3px solid var(--tint); outline-offset: 3px; }
+.raute-ui .onb-icon--danger:hover { color: var(--alert); border-color: var(--alert); }
+.raute-ui .onb-icon:disabled { opacity: .45; cursor: wait; }
+.onb-password { margin-top: 12px; font-size: 13px; }
+.onb-password summary { cursor: pointer; color: var(--tint); }
+.onb-password p { margin: 8px 0; }
+.onb-password input { max-width: 100%; font-family: monospace; letter-spacing: .04em; }
+.onb-link--empty small { flex-basis: 100%; color: var(--muted); }
+
+.keyword-chips { display:flex; flex-wrap:wrap; gap:8px; margin:16px 0; }
+.raute-ui .keyword-chip { border:1px solid var(--line); border-radius:24px; padding:10px 14px; background:var(--card); color:var(--ink); min-height:44px; cursor:pointer; }
+.raute-ui .keyword-chip.is-active { border-color:var(--tint); background:var(--fill-2); color:var(--tint); }
+.keyword-chip small { display:block; font-size:11px; font-weight:400; margin-top:3px; }
+.keyword-add { display:flex; gap:8px; flex-wrap:wrap; }
+.keyword-add input { flex:1; min-width:180px; border:1px solid var(--line); border-radius:8px; padding:10px; font:inherit; }
+
+.onb-password-row { display:flex; gap:8px; align-items:center; margin-top:6px; }
+.onb-password-row input { flex:1; min-width:0; padding:10px; border:1px solid var(--line); border-radius:8px; background:var(--card); color:var(--ink); }
+
+.communication-targets form { display:flex; align-items:flex-end; gap:16px; flex-wrap:wrap; }
+.communication-targets input { max-width:240px; }
+.communication-targets a { padding-bottom:12px; }
+.guide-workflow { display:grid; grid-template-columns:minmax(0,2fr) minmax(240px,1fr); gap:32px; margin-top:24px; }
+.guide-main, .guide-material { min-width:0; }
+.guide-editor-head, .guide-save { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+.guide-material { padding:20px; border:1px solid var(--line); border-radius:12px; background:var(--fill-2); align-self:start; }
+.guide-material h3 { margin-top:0; }
+.guide-material input { max-width:100%; }
+.guide-details { border-top:1px solid var(--line); margin-top:24px; padding-top:16px; }
+.guide-details summary { cursor:pointer; font-weight:600; min-height:32px; }
+.guide-details ul { list-style:none; padding:0; }
+.guide-details li { display:flex; gap:8px; align-items:center; justify-content:space-between; padding:12px 0; border-bottom:1px solid var(--line); overflow-wrap:anywhere; }
+.guide-details small { display:block; color:var(--muted); }
+@media(max-width:900px) { .guide-workflow { grid-template-columns:minmax(0,1fr); } }
+
+.onb-audio-question { margin-block: 20px; }
+.onb-audio-question h3 { font-size: 1rem; line-height: 1.5; }
+.onb-audio-review { padding: 16px; margin-block: 12px; border: 1px solid var(--line); border-radius: 8px; min-width: 0; }
+.onb-audio-review-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.onb-audio-review-head strong { overflow-wrap: anywhere; }
+.onb-audio-review .onb-icon-actions { margin-block: 12px; }
+.onb-audio-review textarea { width: 100%; box-sizing: border-box; }
+.onb-audio-review form .btn { margin: 4px 8px 4px 0; }
+.onb-audio-archive { border-top: 1px solid var(--line); padding-top: 16px; margin-top: 20px; }
+.onb-audio-archive > summary { cursor: pointer; font-weight: 600; }
+
+/* Give the customer phone book the entire profile width. */
+.client-people { width: 100%; box-sizing: border-box; }
+.people-table-scroll { overflow-x: auto; }
+.people-table { width: 100%; min-width: 960px; border-collapse: collapse; text-align: left; }
+.people-table th:first-child { min-width: 140px; }
+.people-table th, .people-table td { padding: 14px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.people-table td { overflow-wrap: anywhere; min-width: 100px; }
+.people-table .people-topics { min-width: 180px; white-space: pre-wrap; }
+.people-news { display: inline-flex; gap: 8px; align-items: center; white-space: nowrap; }
+.people-news.is-active { color: var(--good-ink); background: var(--good-wash); border-color: var(--good-line); }
+.people-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 24px; }
+.people-fields input, .people-fields textarea { width: 100%; box-sizing: border-box; }
+.people-editor { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); }
+.people-editor-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+.profile-legacy-contacts { margin-top: 20px; }
+.profile-legacy-contacts > summary { cursor: pointer; }
+.profile-legacy-contacts .platform-fields { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 640px) { .people-fields { grid-template-columns: minmax(0, 1fr); } }
+.keyword-save { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 16px; }

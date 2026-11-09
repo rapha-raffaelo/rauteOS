@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
+import {FactValue,hasMissingFact} from './FactValue.jsx';
 import { TwinAIImport } from './TwinAIImport.jsx';
 import { twinRequest } from '../twin-api.js';
+import { OnboardingAudioList } from './OnboardingAudioList.jsx';
 
 const labels = {evidence_type: 'Herkunft', source_type: 'Quellentyp', confidence: 'Sicherheit der Aussage',
   confidentiality: 'Vertraulichkeit', external_use: 'Externe Nutzung', fact_status: 'Status', input_owner: 'Verantwortlich'};
@@ -72,12 +74,14 @@ export function TwinPage({clientId, embedded = false}) {
   const brief = data.fields.filter(f => f.key.startsWith('R'));
   const asked = data.fields.filter(f => f.key.startsWith('Q'));
   const has = field => statements(field.key).some(active);
+  const complete = field => {const row=current(field);return Boolean(row && !hasMissingFact(row.value));};
   const number = key => key.slice(1).split('.')[key.startsWith('Q') ? 1 : 0];
   const editor = item => editing?.field.key === item.key && <StatementEditor key={editing.row?.id ?? item.key} field={item} row={editing.row}
       options={data.options} busy={busy} onCancel={() => setEditing(null)} onSave={payload => mutate(
         editing.row ? `/statements/${editing.row.id}` : '/statements',
         {...payload, ...(editing.row ? {revision: editing.row.revision} : {})}, editing.row ? 'PUT' : 'POST')} />;
-  const answers = item => statements(item.key).map(row => <Statement key={row.id} row={row} busy={busy || Boolean(editing)}
+  const current = item => statements(item.key).filter(active).sort((a,b) => new Date(b.updated_at || 0)-new Date(a.updated_at || 0) || b.id-a.id)[0];
+  const answers = item => [current(item)].filter(Boolean).map(row => <Statement key={row.id} row={row} busy={busy || Boolean(editing)}
       onEdit={() => setEditing({field: item, row})} />);
   const add = (item, label = 'Antwort ergänzen') => <button className="btn btn--quiet" disabled={busy || Boolean(editing)} onClick={() => setEditing({field: item})}>{label}</button>;
   // A topic of the brief as a card: number, title, the short text, its source.
@@ -86,15 +90,15 @@ export function TwinPage({clientId, embedded = false}) {
     <header><span className="twin-number">{number(item.key)}</span><h3 title={item.hint || undefined}>{item.label}</h3>
       {!has(item) && add(item, 'Ergänzen')}</header>
     {editor(item)}{answers(item)}
-    {!has(item) && editing?.field.key !== item.key && <p className="twin-empty">Noch keine belegte Angabe.</p>}
+    {!has(item) && editing?.field.key !== item.key && <p className="twin-empty"><em>bitte ergänzen</em></p>}
   </article>;
   // A customer question as one row: the question, its state, the answer.
-  const question = item => <li className={`twin-ask${has(item) ? ' twin-ask--done' : ''}`} key={item.key} id={`feld-${item.key}`}>
+  const question = (item, audio) => <li className={`twin-ask${has(item) ? ' twin-ask--done' : ''}`} key={item.key} id={`feld-${item.key}`}>
     <div className="twin-ask-row"><span className="twin-number">{number(item.key)}</span>
       <div className="twin-ask-text"><h3>{item.label}</h3></div>
-      <span className={`twin-state${has(item) ? ' twin-state--ok' : ''}`}>{has(item) ? 'Beantwortet' : 'Offen'}</span>
       {!has(item) && add(item, 'Ergänzen')}</div>
     {editor(item)}{answers(item)}
+    {audio}
   </li>;
   // Short facts for the glance row; each is a one-sentence research answer.
   const glance = GLANCE.map(([key, label, icon]) => [label, icon, statements(key).find(active)?.value]).filter(([, , value]) => value);
@@ -111,28 +115,30 @@ export function TwinPage({clientId, embedded = false}) {
       <div className="twin-ring" style={{'--p': data.progress.percent}} role="progressbar" aria-label="Profilvollständigkeit"
         aria-valuenow={data.progress.percent} aria-valuemin={0} aria-valuemax={100}><strong>{data.progress.percent} %</strong><span>vollständig</span></div>
       <div className="twin-parts">
-        {part('Unternehmenssteckbrief', brief.filter(has).length, brief.length, 'recherchiert')}
-        {part('Kundenfragebogen', asked.filter(has).length, asked.length, 'beantwortet')}
+        {part('Unternehmenssteckbrief', brief.filter(complete).length, brief.length, 'recherchiert')}
+        {part('Kundenfragebogen', asked.filter(complete).length, asked.length, 'beantwortet')}
         <p className="twin-muted">{data.progress.verified} {data.progress.verified === 1 ? 'Aussage' : 'Aussagen'} unabhängig bestätigt. Vollständigkeit misst die 21 Recherche-Themen und 22 Kundenfragen, nicht ihre Richtigkeit.</p>
       </div>
     </section>
     {errors}{notice && <p role="status">{notice}</p>}
 
     {glance.length > 0 && <section className="twin-glance" aria-label="Auf einen Blick">
-      {glance.map(([label, icon, value]) => <div key={label}><span className="twin-glance-icon"><Icon name={icon}/></span><div><small>{label}</small><p title={value}>{value}</p></div></div>)}
+      {glance.map(([label, icon, value]) => <div key={label}><span className="twin-glance-icon"><Icon name={icon}/></span><div><small>{label}</small><p title={value}><FactValue text={value}/></p></div></div>)}
     </section>}
 
     <section className="twin-brief" aria-labelledby={`twin-brief-${clientId}`}>
       <header className="twin-section-head"><div><p className="twin-eyebrow">AUS DER RECHERCHE</p><h2 id={`twin-brief-${clientId}`}>Unternehmenssteckbrief</h2></div>
-        <p className="twin-muted">{brief.filter(has).length} von {brief.length} Themen recherchiert · Prüfung offen, bis jemand bestätigt</p></header>
+        <p className="twin-muted">{brief.filter(complete).length} von {brief.length} Themen recherchiert</p></header>
       <div className="twin-topics">{brief.map(topic)}</div>
     </section>
 
-    <section className="twin-questionnaire" aria-labelledby={`twin-asked-${clientId}`}>
+    <OnboardingAudioList clientId={clientId} onAnswered={refresh}>{({forQuestion,archive,error:audioError})=><section className="twin-questionnaire" aria-labelledby={`twin-asked-${clientId}`}>
       <header className="twin-section-head"><div><p className="twin-eyebrow">VOM KUNDEN · ÜBER DEN ONBOARDING-LINK</p><h2 id={`twin-asked-${clientId}`}>Kundenfragebogen</h2></div>
-        <p className="twin-muted">{asked.filter(has).length} von {asked.length} Fragen beantwortet</p></header>
-      <ol className="twin-asks">{asked.map(question)}</ol>
-    </section>
+        <p className="twin-muted">{asked.filter(complete).length} von {asked.length} Fragen beantwortet</p></header>
+      <ol className="twin-asks">{asked.map(item=>question(item,forQuestion(item.key)))}</ol>
+      {audioError&&<p role="alert">{audioError}</p>}
+      {archive}
+    </section>}</OnboardingAudioList>
 
   </div>;
 }
@@ -155,13 +161,13 @@ function Statement({row, busy, onEdit}) {
     .filter(url => host(url) && host(url) !== host(row.source_url));
   const long = (row.value || '').length > 280;
   return <article className={`twin-statement ${inactive ? 'twin-inactive' : ''}`}>
-    <p className={`twin-value ${long && !open ? 'twin-value--clipped' : ''}`}>{row.value}</p>
+    <div className={`twin-value ${long && !open ? 'twin-value--clipped' : ''}`}><FactValue text={row.value}/></div>
     {long && <button type="button" className="linkbtn twin-more" onClick={() => setOpen(!open)}>{open ? 'Weniger anzeigen' : 'Mehr anzeigen'}</button>}
     <div className="twin-statement-foot">
       <span className="twin-provenance">
         {/^https?:\/\//i.test(row.source_url) ? <SourceLink url={row.source_url} title={row.source_title} /> : <span>{row.source_title || 'Ohne Quelle'}</span>}
         {more.length > 0 && <span className="twin-more-sources" title={more.join('\n')}>+{more.length} {more.length === 1 ? 'Quelle' : 'Quellen'}</span>}
-        <span className={`twin-state ${row.verified_at && !inactive ? 'twin-state--ok' : ''}`}>{inactive ? readable(row.fact_status) : row.verified_at ? 'Bestätigt' : 'Prüfung offen'}</span>
+
       </span>
       <button className="btn btn--quiet" disabled={busy} onClick={onEdit}>Bearbeiten</button>
     </div>

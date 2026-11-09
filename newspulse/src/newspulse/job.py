@@ -2165,6 +2165,17 @@ def _run_real(
         # is trusted to be relevant because an API charged for it — the matcher
         # pre-filters and the analyzer judges, exactly as for a Google News hit.
         items.extend(_fetch_paid(clients, since, started, errors))
+        from . import daily_news_search
+        if daily_news_search.enabled():
+            try:
+                extra, search_errors = daily_news_search.harvest(
+                    clients, since, fetched_at=started)
+                items.extend(extra)
+                errors.extend(search_errors)
+            except Exception as exc:  # Supplemental research must not stop ingestion.
+                _log.exception("daily subscription news search failed")
+                errors.append(f"daily news search: {type(exc).__name__}")
+
         topic_pairs, topics_ok = _fetch_topics(radar, clients, since, fetch, started, errors)
         feeds_ok += topics_ok
         items_count = len(items) + len(topic_pairs)

@@ -4,6 +4,7 @@ TestClient cannot execute JavaScript. This adapter runs React's static renderer
 on the actual JSON boot payload, never the retired Jinja page templates. Tests
 for the raw response/JSON contract call response.text/json directly instead.
 """
+import atexit
 import functools
 import json
 import os
@@ -22,9 +23,14 @@ def _build():
         node = str(candidates[-1]) if candidates else None
     if not node:
         raise RuntimeError('Node is required for React UI regression tests')
-    env = dict(os.environ, PATH=str(Path(node).parent)+os.pathsep+os.environ['PATH'])
+    # One folder per process: a second test run (another terminal, another
+    # agent) rebuilding a shared folder mid-run made renders fail at random.
+    out = _FRONTEND / '.test-render' / str(os.getpid())
+    atexit.register(shutil.rmtree, out, True)
+    env = dict(os.environ, PATH=str(Path(node).parent)+os.pathsep+os.environ['PATH'],
+               RENDER_TEST_BUNDLE=(out / 'render-test.js').as_uri())
     build = subprocess.run([node, 'node_modules/vite/bin/vite.js', 'build', '--ssr',
-                            'src/platform/render-test.jsx', '--outDir', '.test-render'],
+                            'src/platform/render-test.jsx', '--outDir', str(out), '--emptyOutDir'],
                            cwd=_FRONTEND, env=env, text=True, capture_output=True)
     if build.returncode:
         raise RuntimeError('React test build failed. Use Node 22.22.3 and npm ci.\n'

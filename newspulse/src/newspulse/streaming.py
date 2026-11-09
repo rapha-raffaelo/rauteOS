@@ -157,6 +157,9 @@ def stream_claude(
     interface; a German "Zeitüberschreitung" in an English drawer is exactly the
     half-translated result the language work set out to avoid.
     """
+    from . import shared_guides
+
+    prompt = shared_guides.enrich_prompt(prompt, channel="claude_stream")
     argv = [
         "claude", "-p", prompt,
         "--output-format", "stream-json",

@@ -69,7 +69,7 @@ def shell_data(request):
                 path=request.url.path, query=request.url.query, language=language, timezone=str(config.local_zone()),
                 translations=i18n._EN if language == 'en' else {},
                 assistant=assistant_context(request),
-                login=google_auth.is_configured(), user=request.scope.get('user_email'),
+                login=google_auth.is_configured(), user=request.scope.get('user_email'), user_name=request.scope.get('user_name', ''),
                 tasks_open=_tasks_open(request))
 
 

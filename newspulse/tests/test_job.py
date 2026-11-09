@@ -1306,3 +1306,29 @@ def test_a_provider_refusal_is_recorded_rather_than_swallowed(session, monkeypat
 
     run_row = session.scalars(select(Run)).one()
     assert any("Invalid API key" in e for e in run_row.errors)
+
+
+def test_daily_subscription_search_enters_normal_matching_and_dedup(session, monkeypatch):
+    from newspulse import daily_news_search
+    _add_client(session, 'Alpha AG')
+    article = _item('Alpha AG eroeffnet Werk', 'https://hb.de/ai-found')
+    monkeypatch.setenv('NEWSPULSE_DAILY_AI_NEWS', '1')
+    monkeypatch.setattr(daily_news_search, 'harvest', lambda *a, **k: ([article, article], []))
+    first = job.run(session, analyzer=_FakeAnalyzer(), feeds=[], fetch=_fetch_from({}), now=lambda: _NOW)
+    second = job.run(session, analyzer=_FakeAnalyzer(), feeds=[], fetch=_fetch_from({}), now=lambda: _NOW)
+    assert first.new_articles == first.analyses_written == 1
+    assert second.new_articles == 0
+    assert _count(session, Article) == _count(session, Analysis) == 1
+
+
+def test_daily_subscription_failure_preserves_regular_news(session, monkeypatch):
+    from newspulse import daily_news_search
+    _add_client(session, 'Alpha AG')
+    monkeypatch.setenv('NEWSPULSE_DAILY_AI_NEWS', '1')
+    def fail(*a, **k):
+        raise OSError('ledger unavailable')
+    monkeypatch.setattr(daily_news_search, 'harvest', fail)
+    report = job.run(session, analyzer=_FakeAnalyzer(), feeds=[Feed(name='Paper', url='https://hb.de/rss')],
+                     fetch=_fetch_from({'https://hb.de/rss':[_item('Alpha AG eroeffnet Werk', 'https://hb.de/normal')]}), now=lambda: _NOW)
+    assert report.new_articles == report.analyses_written == 1
+    assert report.status is RunStatus.PARTIAL

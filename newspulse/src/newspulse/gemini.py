@@ -24,7 +24,7 @@ import urllib.parse
 import urllib.request
 from collections.abc import Callable, Iterator
 
-from . import config
+from . import config, shared_guides
 
 _log = logging.getLogger(__name__)
 
@@ -99,10 +99,13 @@ def generate(
     timeout: float = _TIMEOUT,
     model: str | None = None,
     api_key: str | None = None,
+    use_shared_knowledge: bool = True,
 ) -> str:
     """One prompt in, the model's text out. Raises ``BackendError`` on failure."""
     from .analyzer import BackendError
 
+    if use_shared_knowledge:
+        prompt = shared_guides.enrich_prompt(prompt, channel="gemini_generate")
     name = model or config.GEMINI_MODEL
     url = f"{_ENDPOINT}/{name}:generateContent"
     try:
@@ -169,6 +172,7 @@ def stream(
     """
     from .analyzer import BackendError
 
+    prompt = shared_guides.enrich_prompt(prompt, channel="gemini_stream")
     name = model or config.GEMINI_MODEL
     url = f"{_ENDPOINT}/{name}:streamGenerateContent?alt=sse"
     try:
@@ -213,6 +217,7 @@ def search(
     """
     from .analyzer import BackendError
 
+    prompt = shared_guides.enrich_prompt(prompt, channel="gemini_search")
     name = model or config.review_model()
     url = f"{_ENDPOINT}/{name}:generateContent"
     body = json.dumps(

@@ -58,7 +58,7 @@ from collections.abc import Callable
 
 from sqlalchemy import select
 
-from .. import clients, config, crisis, digest, job
+from .. import clients, config, crisis, digest, job, onboarding_workflow, worklists
 from ..db import get_session
 from ..models import Run, RunStatus
 from . import runlock
@@ -151,8 +151,28 @@ def _run_once() -> None:
                 clients.purge_archived(session)
             except Exception:  # noqa: BLE001 — never fails the sweep before it
                 _log.exception("purging archived mandates failed; retried tomorrow")
+            _condense_profiles(session)
     finally:
         runlock.guard.release()
+
+
+def _condense_profiles(session) -> None:
+    """Shorten profile answers a model left too long, so a glance tile shows a
+    value, not a sentence. A no-op once everything fits; never fails the caller."""
+    try:
+        changed = onboarding_workflow.condense_stored(session)
+        if changed:
+            _log.info("condensed %d overlong profile answer(s)", changed)
+    except Exception:  # noqa: BLE001
+        session.rollback()
+        _log.exception("condensing profile answers failed; retried with the next sweep")
+
+
+def _condense_at_start() -> None:
+    """Once after a start, so a release that tightens a rule applies to what is
+    stored without waiting for tomorrow's sweep."""
+    with get_session() as session:
+        _condense_profiles(session)
 
 
 def _loop(stop: threading.Event) -> None:
@@ -349,6 +369,26 @@ def _newsjack_loop(stop: threading.Event) -> None:
             _log.exception("a newsjack pass failed; the cadence stands")
 
 
+# --- The fourth clock: LinkedIn posts planned for a moment ----------------------
+
+
+def _linkedin_tick(now: dt.datetime) -> None:
+    """Post what is due. No run guard: it fetches no feed and calls no model."""
+    with get_session() as session:
+        sent = worklists.publish_due(session, now)
+    if sent:
+        _log.info("posted %d scheduled LinkedIn post(s)", sent)
+
+
+def _linkedin_loop(stop: threading.Event) -> None:
+    """Same posture as the other loops: it may fail, and it may never stop."""
+    while not stop.wait(_TICK_SECONDS):
+        try:
+            _linkedin_tick(dt.datetime.now(dt.UTC))
+        except Exception:  # noqa: BLE001 — this thread must outlive every failure
+            _log.exception("the LinkedIn tick failed; the cadence stands")
+
+
 def start() -> threading.Event | None:
     """Start all three clocks. Returns the stop event they share, or ``None``
     if off.
@@ -389,6 +429,10 @@ def start() -> threading.Event | None:
         "newsjack cadence armed: a light run every %d hour(s) (DEC-6)",
         config.newsjack_every_hours(),
     )
+    threading.Thread(
+        target=_linkedin_loop, args=(stop,), daemon=True, name="newspulse-linkedin"
+    ).start()
+    threading.Thread(target=_condense_at_start, daemon=True, name="newspulse-condense").start()
     return stop
 
 

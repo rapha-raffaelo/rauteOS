@@ -171,8 +171,8 @@ def test_outlets_on_the_subject_are_ranked_by_how_much_they_cover_it(factory, cl
         subject_id = subject.id
 
     body = rendered(client.get(f"/client/{subject_id}/market"))
-    ranking = body.split("Medien im Themenfeld", 1)[1]
-
+    data = client.get(f"/client/{subject_id}/wettbewerb", headers={"Accept":"application/json"}).json()
+    ranking = [row["name"] for row in data["market"]["market_outlets"]]
     assert ranking.index("CoinDesk") < ranking.index("yellow.com")
 
 
@@ -186,12 +186,9 @@ def test_outlets_on_the_client_are_a_separate_list(factory, client):
         subject_id = subject.id
 
     body = rendered(client.get(f"/client/{subject_id}/market"))
-    subject_block = body.split("Medien im Themenfeld", 1)[1].split("Medien über den Mandanten", 1)[0]
-    client_block = body.split("Medien über den Mandanten", 1)[1]
-
-    assert "CoinDesk" in subject_block
-    assert "Handelsblatt" not in subject_block
-    assert "Handelsblatt" in client_block
+    data = client.get(f"/client/{subject_id}/wettbewerb", headers={"Accept":"application/json"}).json()["market"]
+    assert [row["name"] for row in data["market_outlets"]] == ["CoinDesk"]
+    assert [row["name"] for row in data["own_outlets"]] == ["Handelsblatt"]
 
 
 def test_the_journalist_list_says_when_the_feeds_carried_no_author(factory, client):
@@ -206,7 +203,7 @@ def test_the_journalist_list_says_when_the_feeds_carried_no_author(factory, clie
 
     body = rendered(client.get(f"/client/{subject_id}/market"))
 
-    assert "Kein Feed in diesem Zeitraum hat einen Autor mitgeliefert." in body
+    assert "In diesem Zeitraum wurden keine Autorennamen von den Quellen mitgeliefert." in body
 
 
 def test_a_journalist_is_listed_when_the_feed_did_supply_one(factory, client):

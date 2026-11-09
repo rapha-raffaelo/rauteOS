@@ -35,7 +35,7 @@ from typing import Protocol, runtime_checkable
 
 from pydantic import ValidationError
 
-from . import brain, config, quoting
+from . import brain, config, quoting, shared_guides
 from .quota import is_quota_error
 from .models import Article, Category, Client
 from .schemas import Analysis, ArticleVerdict, BatchVerdict
@@ -340,7 +340,8 @@ def claude_env() -> dict[str, str]:
     return env
 
 
-def invoke_claude_cli(prompt: str, *, timeout: float = _SUBPROCESS_TIMEOUT_SECONDS) -> str:
+def invoke_claude_cli(prompt: str, *, timeout: float = _SUBPROCESS_TIMEOUT_SECONDS,
+                      use_shared_knowledge: bool = True) -> str:
     """Run one ``claude -p`` call and return the model's text.
 
     The single place the subscription CLI is invoked, shared by the analyzer and
@@ -348,6 +349,8 @@ def invoke_claude_cli(prompt: str, *, timeout: float = _SUBPROCESS_TIMEOUT_SECON
     string), a wall-clock ceiling, and no token or API endpoint touched here —
     the CLI subprocess owns authentication.
     """
+    if use_shared_knowledge:
+        prompt = shared_guides.enrich_prompt(prompt, channel="claude_cli")
     argv = ["claude", "-p", "--output-format", "json"]
     try:
         completed = subprocess.run(  # noqa: S603 - fixed argv, no shell, prompt uses stdin
@@ -385,7 +388,7 @@ _SEARCH_TIMEOUT_SECONDS = 300
 
 
 def invoke_claude_search(
-    prompt: str, *, timeout: float = _SEARCH_TIMEOUT_SECONDS
+    prompt: str, *, timeout: float = _SEARCH_TIMEOUT_SECONDS, require_web_search: bool = False
 ) -> tuple[str, list[tuple[str, str]]]:
     """One ``claude -p`` call with web search, shaped like ``gemini.search``.
 
@@ -395,6 +398,7 @@ def invoke_claude_search(
     those two tools exist in the session: the prompt carries page text from the
     open web, and nothing in it may run a command.
     """
+    prompt = shared_guides.enrich_prompt(prompt, channel="claude_search")
     argv = [
         "claude", "-p", "--output-format", "stream-json", "--verbose",
         "--tools", "WebSearch,WebFetch", "--allowedTools", "WebSearch,WebFetch",
@@ -415,6 +419,7 @@ def invoke_claude_search(
     except FileNotFoundError as exc:
         raise BackendError("claude CLI not found on PATH") from exc
     pages: dict[str, str] = {}
+    searched = False
     result: dict | None = None
     for line in (completed.stdout or "").splitlines():
         try:
@@ -423,6 +428,10 @@ def invoke_claude_search(
             continue
         if not isinstance(event, dict):
             continue
+        if event.get("type") == "assistant":
+            content = (event.get("message") or {}).get("content") or []
+            searched = searched or any(isinstance(block, dict) and block.get("type") == "tool_use"
+                                      and block.get("name") == "WebSearch" for block in content)
         if event.get("type") == "result":
             result = event
         found = event.get("tool_use_result") if event.get("type") == "user" else None
@@ -442,6 +451,8 @@ def invoke_claude_search(
         raise BackendError(
             f"claude -p exited {completed.returncode}: {detail} {stderr}".strip()
         )
+    if require_web_search and not searched:
+        raise BackendError("Claude completed without the required web search")
     text = str(result.get("result") or "")
     # Asked for JSON, the model sometimes says a sentence first. The object is
     # what the caller parses, so the prose around it is dropped here.
@@ -500,6 +511,7 @@ class ClaudeApiAnalyzer(_BaseClaudeAnalyzer):
                 "ClaudeApiAnalyzer requires the 'anthropic' package (metered backend)"
             ) from exc
         try:
+            prompt = shared_guides.enrich_prompt(prompt, channel="claude_api")
             client = anthropic.Anthropic()
             message = client.messages.create(
                 model=self.model,

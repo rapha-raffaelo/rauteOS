@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gelegenheit: Kommandozentrale · RAUTE OS</title>
+<style>
+:root{
+  --pur:#6246D6; --pur-d:#5438C9; --pur-s:#EEEBFB; --pur-l:#DDD6F8;
+  --navy:#202B45;
+  --bg:#F4F4F7; --panel:#fff; --side:#EFEFF3;
+  --ink:#1A1A22; --ink2:#33333D; --gray:#6B6B78; --lite:#9A9AA6; --faint:#B4B4BE;
+  --line:#E7E7ED; --line2:#DDDDE5;
+  --grn:#16A34A; --grn-t:#127C46; --grn-b:#E6F6EC;
+  --amb:#D97706; --amb-b:#FDF2E3;
+  --blu:#2563EB; --blu-b:#E8F0FE;
+  --ind:#6366F1; --ind-b:#ECECFE;
+  --vio:#8B5CF6; --vio-b:#F1EBFE;
+  --org:#F97316; --org-b:#FEEEE1;
+  --tea:#0D9488; --tea-b:#E2F5F3;
+  --red:#EF4444;
+  --r:12px; --r2:10px; --r3:8px; --r4:6px;
+  --sw:193px; --rw:360px;
+  color-scheme: light;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:-apple-system,BlinkMacSystemFont,"Inter","SF Pro Text","Segoe UI",Roboto,sans-serif;
+  background:var(--bg);color:var(--ink);font-size:13px;line-height:1.45;letter-spacing:-.008em;
+  -webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+button{font:inherit;cursor:pointer}
+.i{width:16px;height:16px;flex:none;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.i14{width:14px;height:14px} .i13{width:13px;height:13px} .i12{width:12px;height:12px}
+.i18{width:18px;height:18px} .i20{width:20px;height:20px}
+
+.app{display:grid;grid-template-columns:var(--sw) minmax(0,1fr);min-height:100vh}
+
+/* ================= Sidebar ================= */
+.sb{background:var(--side);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto}
+.sb__brand{display:flex;gap:9px;align-items:flex-start;padding:16px 14px 14px}
+.logo{width:30px;height:30px;border-radius:50%;flex:none;background:conic-gradient(from 210deg,#2B2350,#5B44C8,#8E6BF0,#2B2350);
+  display:grid;place-items:center}
+.logo:after{content:"";width:13px;height:13px;border-radius:50%;border:2.5px solid #fff;border-right-color:transparent;transform:rotate(-40deg)}
+.bn{font-size:15px;font-weight:800;letter-spacing:-.02em;line-height:1.1;color:#1B1B26}
+.bs{font-size:9.5px;color:var(--gray);line-height:1.25;margin-top:3px;max-width:120px}
+.sb__nav{padding:0 10px;display:flex;flex-direction:column}
+.cc{display:flex;align-items:center;gap:9px;background:var(--navy);color:#fff;padding:10px 12px;
+  border-radius:var(--r3);font-size:13px;font-weight:600;letter-spacing:-.01em}
+.lbl{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--lite);padding:16px 6px 6px}
+.sr{display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:var(--r4);color:#2C2C38;font-size:13px}
+.sr:hover{background:rgba(255,255,255,.55)}
+.sr--w{background:#fff;box-shadow:0 1px 2px rgba(25,25,45,.06)}
+.sr--sub{padding-left:22px;font-size:12.5px;color:#41414D}
+.sr--dim{color:var(--gray);font-size:12px}
+.sr--big{gap:11px;padding:9px 10px;font-size:13.5px;font-weight:500}
+.sr__ch{margin-left:auto;color:var(--lite)}
+.dt{width:7px;height:7px;border-radius:50%;flex:none}
+.sb__foot{margin-top:auto;padding:14px;border-top:1px solid #E2E2E9}
+.who{display:flex;align-items:center;gap:9px}
+.pf{width:30px;height:30px;border-radius:50%;flex:none;display:grid;place-items:center;color:#fff;font-size:10.5px;font-weight:700}
+.who__n{font-size:12.5px;font-weight:600;line-height:1.2}
+.who__r{font-size:10px;color:var(--gray)}
+.tray{display:flex;justify-content:space-between;margin-top:14px;color:var(--lite);padding:0 2px}
+
+/* ================= Chrome ================= */
+.main{display:flex;flex-direction:column;min-width:0;background:var(--bg)}
+.tb{display:flex;align-items:center;gap:16px;padding:0 20px;height:56px;background:#fff;flex:none}
+.crumb{display:flex;align-items:center;gap:7px;font-size:13.5px;color:var(--gray);white-space:nowrap}
+.crumb b{color:var(--ink);font-weight:600}
+.sfield{margin:0 auto;display:flex;align-items:center;gap:9px;width:min(410px,34vw);background:#F6F6F9;
+  border:1px solid var(--line);border-radius:var(--r3);padding:8px 12px;color:var(--lite);font-size:13px}
+.kk{margin-left:auto;display:flex;gap:3px}
+.kk b{font-size:10px;font-weight:600;color:var(--lite);background:#fff;border:1px solid var(--line2);
+  border-radius:4px;padding:1px 5px;line-height:1.4}
+.askb{display:flex;align-items:center;gap:7px;background:var(--pur);color:#fff;border:0;
+  font-size:13px;font-weight:600;padding:9px 15px;border-radius:var(--r3);white-space:nowrap}
+.tools{display:flex;align-items:center;gap:15px;color:#75757F;margin-left:4px}
+.bl{position:relative}
+.bl b{position:absolute;top:-5px;right:-5px;background:var(--org);color:#fff;font-size:9px;font-weight:700;
+  border-radius:999px;min-width:15px;height:15px;display:grid;place-items:center;padding:0 3px;border:1.5px solid #fff}
+
+.nav{display:flex;gap:26px;padding:0 20px;background:#fff;border-bottom:1px solid var(--line);overflow-x:auto;flex:none}
+.nv{display:flex;align-items:center;gap:7px;font-size:13px;color:#6C6C79;padding:11px 0 11px;
+  border-bottom:2px solid transparent;white-space:nowrap;margin-bottom:-1px}
+.nv:hover{color:var(--ink2)}
+.nv.on{color:var(--pur);font-weight:600;border-bottom-color:var(--pur)}
+
+/* ================= Layout ================= */
+.stage{padding:12px;display:grid;grid-template-columns:minmax(0,1fr) var(--rw);gap:12px;align-items:start}
+.panel{background:var(--panel);border-radius:var(--r);padding:18px 20px 20px}
+.rail{background:var(--panel);border-radius:var(--r);padding:16px 14px;position:sticky;top:12px}
+
+.back{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--pur);margin-bottom:14px}
+
+.hd{display:flex;align-items:flex-start;gap:12px}
+.hd__t{display:flex;align-items:center;gap:12px;flex-wrap:wrap;min-width:0}
+.bolt{color:var(--grn);flex:none;margin-top:2px}
+h1{font-size:25px;font-weight:700;letter-spacing:-.03em;line-height:1.15}
+.sc{display:inline-flex;align-items:baseline;gap:3px;background:var(--grn-b);color:var(--grn-t);
+  border-radius:var(--r4);padding:3px 10px;font-size:15px;font-weight:700;white-space:nowrap}
+.sc s{text-decoration:none;font-size:11px;font-weight:600;opacity:.7}
+.hd__r{margin-left:auto;display:flex;align-items:center;gap:9px;flex:none}
+.stat{border:1px solid var(--line2);border-radius:var(--r3);padding:5px 12px;min-width:104px;background:#fff}
+.stat s{display:block;text-decoration:none;font-size:9.5px;color:var(--lite);font-weight:500}
+.stat b{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600}
+.stat b svg{margin-left:auto;color:var(--lite)}
+.act{display:flex;align-items:center;gap:7px;background:var(--pur);color:#fff;border:0;font-size:13px;
+  font-weight:600;padding:10px 16px;border-radius:var(--r3);white-space:nowrap}
+.dots{border:1px solid var(--line2);background:#fff;border-radius:var(--r3);padding:10px 11px;color:#5A5A66;display:flex}
+
+.meta{display:flex;flex-wrap:wrap;align-items:center;gap:18px;margin:12px 0 14px;font-size:12px;color:var(--gray)}
+.meta span{display:inline-flex;align-items:center;gap:6px}
+
+.prov{display:flex;flex-wrap:wrap;align-items:center;gap:10px 30px;border:1px solid var(--line);
+  border-radius:var(--r2);padding:11px 16px;margin-bottom:16px}
+.prov u{text-decoration:none;font-size:11.5px;color:var(--gray)}
+.pc{display:inline-flex;align-items:center;gap:7px;background:#F5F5F8;border-radius:999px;
+  padding:4px 11px 4px 5px;font-size:11.5px;font-weight:600;color:var(--ink2);margin-left:9px}
+.mk{width:18px;height:18px;border-radius:5px;display:grid;place-items:center;flex:none}
+.mk--o{background:var(--org-b);color:var(--org)} .mk--i{background:var(--ind-b);color:var(--ind)}
+.mk--v{background:var(--vio-b);color:var(--vio)} .mk--b{background:var(--blu-b);color:var(--blu)}
+.mk--g{background:var(--grn-b);color:var(--grn)} .mk--a{background:var(--amb-b);color:var(--amb)}
+.mk--t{background:var(--tea-b);color:var(--tea)}
+
+.itabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:16px;overflow-x:auto}
+.it{font-size:13px;color:#6C6C79;padding:9px 14px;border-bottom:2px solid transparent;white-space:nowrap;
+  border-radius:var(--r4) var(--r4) 0 0;margin-bottom:-1px}
+.it:hover{color:var(--ink2)}
+.it.on{color:var(--ink);font-weight:600;background:#F5F5F8;border-bottom-color:var(--pur)}
+
+.row{display:grid;grid-template-columns:.95fr 1.1fr .97fr;gap:14px;align-items:start}
+.row+.row{margin-top:14px}
+.c{border:1px solid var(--line);border-radius:var(--r2);padding:15px 16px 16px;background:#fff}
+.ct{display:flex;align-items:baseline;gap:7px;margin-bottom:11px}
+.ct b{font-size:13.5px;font-weight:700;letter-spacing:-.01em}
+.ct s{text-decoration:none;font-size:11.5px;color:var(--lite)}
+.ct a{margin-left:auto;font-size:11.5px;font-weight:600;color:var(--pur)}
+.tx{font-size:12.5px;color:#43434F;line-height:1.6}
+.h4{font-size:12.5px;font-weight:700;margin:16px 0 8px}
+
+.q{list-style:none}
+.q li{display:flex;align-items:center;gap:9px;padding:8px 0;border-top:1px solid #F0F0F4;font-size:12px}
+.q li:first-child{border-top:0}
+.q b{font-weight:500;color:#2E2E39;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.q s{text-decoration:none;margin-left:auto;color:var(--lite);white-space:nowrap;font-size:11px}
+.wide{display:block;width:100%;margin-top:12px;padding:9px;border:1px solid var(--line2);border-radius:var(--r3);
+  background:#fff;font-size:12px;font-weight:500;color:#3C3C48;text-align:center}
+.wide:hover{background:#FAFAFC}
+
+.story{background:#EFF2FE;border:1px solid #DCE3FB;border-radius:var(--r3);padding:13px 14px;
+  font-size:12.5px;color:#25252F;line-height:1.6}
+.bul{list-style:none;display:flex;flex-direction:column;gap:7px}
+.bul li{font-size:12px;color:#43434F;padding-left:14px;position:relative;line-height:1.45}
+.bul li:before{content:"";position:absolute;left:2px;top:7px;width:4px;height:4px;border-radius:50%;background:#8E8E9C}
+.tags{display:flex;flex-wrap:wrap;gap:7px}
+.tg{font-size:11px;font-weight:500;border-radius:var(--r4);padding:3px 10px}
+.tg--g{background:var(--grn-b);color:var(--grn-t)} .tg--b{background:var(--blu-b);color:var(--blu)}
+.tg--v{background:var(--vio-b);color:#6D3FD4} .tg--o{background:var(--org-b);color:#C2560B}
+.tg--n{background:#F3F3F6;color:var(--gray)}
+
+.tl{list-style:none;position:relative;padding-left:22px}
+.tl:before{content:"";position:absolute;left:5px;top:10px;bottom:12px;width:1px;background:#E4E4EA}
+.tl li{position:relative;padding-bottom:20px}
+.tl li:last-child{padding-bottom:0}
+.tl li:before{content:"";position:absolute;left:-22px;top:3px;width:11px;height:11px;border-radius:50%;
+  background:#fff;border:1.5px solid #C9C9D4}
+.tl b{display:block;font-size:12.5px;font-weight:600}
+.tl s{display:block;text-decoration:none;font-size:11.5px;color:var(--gray);line-height:1.45;margin-top:1px}
+
+.st{list-style:none}
+.st li{display:flex;align-items:center;gap:11px;padding:9px 0;border-top:1px solid #F0F0F4}
+.st li:first-child{border-top:0;padding-top:2px}
+.st__n{width:20px;height:20px;border-radius:var(--r4);background:#F3F3F7;color:#63636F;font-size:10.5px;
+  font-weight:700;display:grid;place-items:center;flex:none}
+.st__t{font-size:12px;color:#2E2E39;line-height:1.35}
+.bg{margin-left:auto;flex:none;font-size:10.5px;font-weight:500;border-radius:var(--r4);padding:3px 9px;white-space:nowrap}
+.bg--hi{background:#EAEEFC;color:#3B5BC4}
+.bg--mi{background:#FDF0E1;color:#B4610C}
+
+.jr{list-style:none}
+.jr li{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid #F0F0F4}
+.jr li:first-child{border-top:0;padding-top:2px}
+.jr__i{font-size:11px;font-weight:600;color:var(--lite);width:8px;flex:none}
+.pf--s{width:28px;height:28px;font-size:10px}
+.jr__n{font-size:12.5px;font-weight:600;line-height:1.3}
+.jr__o{font-size:10.5px;color:var(--gray)}
+.jr__r{margin-left:auto;text-align:right;flex:none}
+.jr__s{font-size:12.5px;font-weight:700}
+.jr__s s{text-decoration:none;font-size:10.5px;font-weight:500;color:var(--lite)}
+.jr__b{font-size:10px;color:var(--lite);margin-top:1px}
+
+.ar{list-style:none}
+.ar li{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid #F0F0F4}
+.ar li:first-child{border-top:0;padding-top:2px}
+.mk--a2{width:22px;height:22px;border-radius:var(--r4)}
+.ar__n{font-size:12px;font-weight:600;line-height:1.3}
+.ar__v{font-size:10.5px;color:var(--lite)}
+.ar__c{margin-left:auto;color:#C2C2CC;flex:none}
+
+/* ================= Rail ================= */
+.rt{font-size:14.5px;font-weight:700;letter-spacing:-.015em;padding:2px 4px 0}
+.rs{font-size:11px;color:var(--gray);padding:2px 4px 14px;line-height:1.4}
+.eg{border:1px solid var(--line);border-radius:var(--r2);padding:13px;display:flex;gap:11px;background:#fff}
+.eg+.eg{margin-top:11px}
+.eg__i{width:26px;height:26px;border-radius:7px;display:grid;place-items:center;flex:none}
+.eg__m{min-width:0;flex:1}
+.eg__n{font-size:12.5px;font-weight:700;letter-spacing:-.01em;line-height:1.3}
+.eg__v{font-size:11.5px;font-weight:600;margin-top:4px;line-height:1.4}
+.eg__v.g{color:var(--grn-t)} .eg__v.b{color:var(--blu)} .eg__v.p{color:var(--pur)}
+.eg__d{font-size:11px;color:var(--gray);margin-top:3px;line-height:1.45}
+.ok{width:17px;height:17px;border-radius:50%;background:var(--grn);color:#fff;display:grid;place-items:center;flex:none}
+.ok svg{width:11px;height:11px;stroke-width:2.6}
+.chv{color:#C2C2CC;flex:none;align-self:center}
+.warn{width:9px;height:9px;border-radius:50%;background:var(--amb);flex:none;margin:3px 4px}
+
+/* ================= Stream ================= */
+.stream{margin:12px 12px 16px;background:var(--panel);border-radius:var(--r);padding:16px 18px 18px}
+.sh{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.sh b{font-size:13.5px;font-weight:700}
+.live{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:600;color:var(--grn-t);
+  background:var(--grn-b);border-radius:999px;padding:3px 9px}
+.live i{width:5px;height:5px;border-radius:50%;background:var(--grn);display:block}
+.sh__r{margin-left:auto;display:flex;gap:8px;align-items:center}
+.mb{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:500;color:#43434F;background:#fff;
+  border:1px solid var(--line2);border-radius:var(--r4);padding:5px 10px}
+.mb--i{padding:5px 7px;border:0;color:#6C6C79}
+.flow{display:flex;align-items:stretch;gap:6px;overflow-x:auto;padding-bottom:4px}
+.ev{flex:none;width:112px;border:1px solid var(--line);border-radius:var(--r3);padding:9px 10px;background:#fff}
+.ev__h{display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--gray)}
+.ed{width:15px;height:15px;border-radius:50%;display:grid;place-items:center;flex:none}
+.ed svg{width:9px;height:9px;stroke-width:2.4}
+.ev__t{font-size:10.5px;font-weight:600;margin-top:6px;line-height:1.3;color:#25252F}
+.ev__s{font-size:10px;color:var(--gray);line-height:1.35;margin-top:1px}
+.ag{display:grid;place-items:center;color:#C8C8D2;flex:none}
+
+@media (max-width:1280px){.stage{grid-template-columns:minmax(0,1fr)}.rail{position:static}}
+@media (max-width:1040px){.row{grid-template-columns:1fr 1fr}.sfield{display:none}}
+@media (max-width:800px){.app{grid-template-columns:1fr}.sb{display:none}.row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="s-grid" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="1.6"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.6"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.6"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.6"/></symbol>
+<symbol id="s-apps" viewBox="0 0 24 24"><circle cx="6" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="18" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="6" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="18" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="6" cy="18" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="18" r="1.5" fill="currentColor" stroke="none"/><circle cx="18" cy="18" r="1.5" fill="currentColor" stroke="none"/></symbol>
+<symbol id="s-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+<symbol id="s-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.8"/><path d="M19.5 19.5l-3.6-3.6"/></symbol>
+<symbol id="s-bell" viewBox="0 0 24 24"><path d="M18 15.5v-4.2a6 6 0 10-12 0v4.2L4.5 18h15z"/><path d="M10 21h4"/></symbol>
+<symbol id="s-mail" viewBox="0 0 24 24"><rect x="3" y="5.5" width="18" height="13" rx="2"/><path d="M3.6 7l8.4 5.6L20.4 7"/></symbol>
+<symbol id="s-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.6"/><path d="M9.7 9.6a2.4 2.4 0 113.4 2.2c-.7.3-1.1.9-1.1 1.7"/><path d="M12 17h.01"/></symbol>
+<symbol id="s-spark" viewBox="0 0 24 24"><path d="M12 3.2l1.7 4.6 4.6 1.7-4.6 1.7L12 15.8l-1.7-4.6L5.7 9.5l4.6-1.7z" fill="currentColor" stroke="none"/><path d="M18.5 15.5l.7 1.9 1.9.7-1.9.7-.7 1.9-.7-1.9-1.9-.7 1.9-.7z" fill="currentColor" stroke="none"/></symbol>
+<symbol id="s-bolt" viewBox="0 0 24 24"><path d="M13.5 2.5L5 13.2h5.6L10 21.5l8.6-10.8H13z" fill="currentColor" stroke="none"/></symbol>
+<symbol id="s-home" viewBox="0 0 24 24"><path d="M4 11.2L12 4.5l8 6.7V19a1 1 0 01-1 1h-4v-5.6H9V20H5a1 1 0 01-1-1z"/></symbol>
+<symbol id="s-brain" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.4"/><path d="M12 6.8v10.4M8 9.6h8M8.6 14.4h6.8"/></symbol>
+<symbol id="s-mega" viewBox="0 0 24 24"><path d="M4 10v4h3l6 4V6l-6 4z"/><path d="M17 9.2a4 4 0 010 5.6M19.6 6.8a7.5 7.5 0 010 10.4"/></symbol>
+<symbol id="s-paper" viewBox="0 0 24 24"><rect x="3" y="5.5" width="18" height="13.5" rx="1.8"/><path d="M6.5 9h6M6.5 12h6M6.5 15h4M16 9h2v6h-2z"/></symbol>
+<symbol id="s-pen" viewBox="0 0 24 24"><path d="M16.5 3.9l3.6 3.6L8.4 19.2l-4.5.9.9-4.5z"/></symbol>
+<symbol id="s-heart" viewBox="0 0 24 24"><path d="M12 20.2S4.5 15.4 4.5 10.4A3.9 3.9 0 0112 8.2a3.9 3.9 0 017.5 2.2c0 5-7.5 9.8-7.5 9.8z"/></symbol>
+<symbol id="s-eye" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.6"/><circle cx="12" cy="12" r="3.2"/></symbol>
+<symbol id="s-drop" viewBox="0 0 24 24"><path d="M12 3.5l5.5 8.2A5.9 5.9 0 1112 3.5z"/></symbol>
+<symbol id="s-trend" viewBox="0 0 24 24"><path d="M3.5 16.5L9 11l3.5 3.5L20 7"/><path d="M15.5 7H20v4.5"/></symbol>
+<symbol id="s-window" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><path d="M3.5 9h17"/></symbol>
+<symbol id="s-case" viewBox="0 0 24 24"><rect x="3" y="7.5" width="18" height="12.5" rx="2"/><path d="M8.5 7.5V5.8a1.3 1.3 0 011.3-1.3h4.4a1.3 1.3 0 011.3 1.3v1.7"/></symbol>
+<symbol id="s-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.4"/><circle cx="12" cy="12" r="3.4"/></symbol>
+<symbol id="s-chart" viewBox="0 0 24 24"><path d="M4.5 19.5V11M9.8 19.5V5M15.2 19.5v-6M20.5 19.5v-10"/></symbol>
+<symbol id="s-plus" viewBox="0 0 24 24"><path d="M12 5.5v13M5.5 12h13"/></symbol>
+<symbol id="s-chevu" viewBox="0 0 24 24"><path d="M6.5 14.5L12 9l5.5 5.5"/></symbol>
+<symbol id="s-chevd" viewBox="0 0 24 24"><path d="M6.5 9.5L12 15l5.5-5.5"/></symbol>
+<symbol id="s-chevr" viewBox="0 0 24 24"><path d="M9.5 5.5L16 12l-6.5 6.5"/></symbol>
+<symbol id="s-arrl" viewBox="0 0 24 24"><path d="M14.5 5.5L8 12l6.5 6.5"/></symbol>
+<symbol id="s-check" viewBox="0 0 24 24"><path d="M5.5 12.5l4.2 4.2 8.8-9.4"/></symbol>
+<symbol id="s-dots" viewBox="0 0 24 24"><circle cx="5.5" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="18.5" cy="12" r="1.6" fill="currentColor" stroke="none"/></symbol>
+<symbol id="s-doc" viewBox="0 0 24 24"><path d="M14 3.5H7.5a1.2 1.2 0 00-1.2 1.2v14.6a1.2 1.2 0 001.2 1.2h9a1.2 1.2 0 001.2-1.2V7.2z"/><path d="M14 3.5V7.2h3.7"/></symbol>
+<symbol id="s-list" viewBox="0 0 24 24"><path d="M8 7h11M8 12h11M8 17h11M4.5 7h.01M4.5 12h.01M4.5 17h.01"/></symbol>
+<symbol id="s-flag" viewBox="0 0 24 24"><path d="M6 20.5V4.5h11l-1.9 3.4 1.9 3.4H6"/></symbol>
+<symbol id="s-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.4"/><path d="M12 7.4V12l3 1.9"/></symbol>
+<symbol id="s-radar" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.4"/><circle cx="12" cy="12" r="3.6"/><path d="M12 12l5.6-5.6"/></symbol>
+<symbol id="s-bank" viewBox="0 0 24 24"><path d="M4 9.5L12 4l8 5.5"/><path d="M6 10.5v7M10 10.5v7M14 10.5v7M18 10.5v7M4 20h16"/></symbol>
+<symbol id="s-user" viewBox="0 0 24 24"><circle cx="12" cy="8.4" r="3.6"/><path d="M5 20a7 7 0 0114 0"/></symbol>
+<symbol id="s-users" viewBox="0 0 24 24"><circle cx="9" cy="8.4" r="3.2"/><path d="M3 20a6 6 0 0112 0"/><path d="M16.4 5.6a3 3 0 010 5.6M17.5 20a6.2 6.2 0 00-2-4.4"/></symbol>
+<symbol id="s-share" viewBox="0 0 24 24"><path d="M12 3.5v11"/><path d="M8.5 7L12 3.5 15.5 7"/><path d="M5 13v6.5a1 1 0 001 1h12a1 1 0 001-1V13"/></symbol>
+<symbol id="s-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3.6v2.2M12 18.2v2.2M3.6 12h2.2M18.2 12h2.2M6 6l1.6 1.6M16.4 16.4L18 18M18 6l-1.6 1.6M7.6 16.4L6 18"/></symbol>
+<symbol id="s-filter" viewBox="0 0 24 24"><path d="M4 6h16l-6.2 7.3v5.2l-3.6 1.8v-7z"/></symbol>
+<symbol id="s-expand" viewBox="0 0 24 24"><path d="M9.5 4H4v5.5M14.5 20H20v-5.5M20 9.5V4h-5.5M4 14.5V20h5.5"/></symbol>
+<symbol id="s-file" viewBox="0 0 24 24"><rect x="5" y="3.5" width="14" height="17" rx="1.6"/><path d="M8.5 8h7M8.5 11.5h7M8.5 15h4"/></symbol>
+<symbol id="s-quote" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="13" rx="2"/><path d="M8 20l2.5-2.5"/></symbol>
+</defs></svg>
+
+<div class="app">
+
+  <!-- ============================ SIDEBAR ============================ -->
+  <aside class="sb">
+    <div class="sb__brand">
+      <div class="logo"></div>
+      <div>
+        <div class="bn">RAUTE OS</div>
+        <div class="bs">Dein Kommunikations-Betriebssystem</div>
+      </div>
+    </div>
+
+    <div class="sb__nav">
+      <a class="cc" href="#"><svg class="i14"><use href="#s-grid"/></svg> Command Center</a>
+
+      <div class="lbl">Workspaces</div>
+      <a class="sr sr--w" href="#"><svg class="i14"><use href="#s-case"/></svg> Clients
+        <svg class="i14 sr__ch"><use href="#s-chevu"/></svg></a>
+      <a class="sr sr--sub sr--dim" href="#">Alle Clients</a>
+      <a class="sr sr--sub sr--w" href="#"><span class="dt" style="background:#22C55E"></span> Carbon Farming Germany</a>
+      <a class="sr sr--sub" href="#"><span class="dt" style="background:#EF4444"></span> Qonto</a>
+      <a class="sr sr--sub" href="#"><span class="dt" style="background:#EF4444"></span> Workflex</a>
+      <a class="sr sr--sub" href="#"><span class="dt" style="background:#F59E0B"></span> Testo</a>
+      <a class="sr sr--sub" href="#"><span class="dt" style="background:#B4B4BE"></span> DeepDrive</a>
+      <a class="sr sr--sub sr--dim" href="#"><svg class="i12"><use href="#s-plus"/></svg> Neuen Client hinzufügen</a>
+
+      <a class="sr sr--big" style="margin-top:10px" href="#"><svg class="i18"><use href="#s-case"/></svg> New Business</a>
+      <a class="sr sr--big" href="#"><svg class="i18"><use href="#s-target"/></svg> Operations</a>
+      <a class="sr sr--big" href="#"><svg class="i18"><use href="#s-chart"/></svg> Management</a>
+
+      <div class="lbl">Shortcuts</div>
+      <a class="sr" href="#"><svg class="i14"><use href="#s-bolt"/></svg> Neue Opportunity</a>
+      <a class="sr" href="#"><svg class="i14"><use href="#s-file"/></svg> Neues Asset</a>
+      <a class="sr" href="#"><svg class="i14"><use href="#s-user"/></svg> Journalist suchen</a>
+      <a class="sr" href="#"><svg class="i14"><use href="#s-flag"/></svg> Issue erfassen</a>
+      <a class="sr" href="#"><svg class="i14"><use href="#s-spark"/></svg> Ask RAUTE</a>
+    </div>
+
+    <div class="sb__foot">
+      <div class="who">
+        <div class="pf" style="background:#8A7B6B">LM</div>
+        <div><div class="who__n">Lucas M.</div><div class="who__r">Managing Partner</div></div>
+      </div>
+      <div class="tray">
+        <svg class="i14"><use href="#s-users"/></svg>
+        <svg class="i14"><use href="#s-mail"/></svg>
+        <svg class="i14"><use href="#s-share"/></svg>
+        <svg class="i14"><use href="#s-bell"/></svg>
+        <svg class="i14"><use href="#s-gear"/></svg>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ============================ MAIN ============================ -->
+  <main class="main">
+
+    <div class="tb">
+      <svg class="i20" style="color:#5A5A66"><use href="#s-menu"/></svg>
+      <div class="crumb">Client Workspace <span style="color:var(--faint)">/</span> <b>Carbon Farming Germany</b></div>
+      <div class="sfield">
+        <svg class="i14"><use href="#s-search"/></svg> Ask RAUTE oder suche&hellip;
+        <span class="kk"><b>&#8984;</b><b>K</b></span>
+      </div>
+      <button class="askb"><svg class="i14"><use href="#s-spark"/></svg> Ask RAUTE</button>
+      <div class="tools">
+        <span class="bl"><svg class="i18"><use href="#s-bell"/></svg><b>8</b></span>
+        <svg class="i18"><use href="#s-mail"/></svg>
+        <svg class="i18"><use href="#s-help"/></svg>
+        <svg class="i18"><use href="#s-apps"/></svg>
+      </div>
+    </div>
+
+    <nav class="nav">
+      <a class="nv" href="#"><svg class="i14"><use href="#s-home"/></svg> Overview</a>
+      <a class="nv" href="#"><svg class="i14"><use href="#s-brain"/></svg> Intelligence</a>
+      <a class="nv" href="#"><svg class="i14"><use href="#s-mega"/></svg> Positionierung</a>
+      <a class="nv on" href="#"><svg class="i14"><use href="#s-spark"/></svg> Opportunities</a>
+      <a class="nv" href="#"><svg class="i14"><use href="#s-paper"/></svg> Media</a>
+      <a class="nv" href="#"><svg class="i14"><use href="#s-pen"/></svg> Assets</a>
+      <a class="nv" href="#"><svg class="i14"><use href="#s-heart"/></svg> Reputation</a>
+      <a class="nv" href="#"><svg class="i14"><use href="#s-eye"/></svg> AI Visibility</a>
+      <a class="nv" href="#"><svg class="i14"><use href="#s-drop"/></svg> Performance</a>
+      <a class="nv" href="#"><svg class="i14"><use href="#s-trend"/></svg> Growth</a>
+      <a class="nv" href="#"><svg class="i14"><use href="#s-window"/></svg> Portal</a>
+    </nav>
+
+    <div class="stage">
+
+      <!-- ================= LEFT PANEL ================= -->
+      <section class="panel">
+        <a class="back" href="#"><svg class="i14"><use href="#s-arrl"/></svg> Zurück zu Opportunities</a>
+
+        <div class="hd">
+          <div class="hd__t">
+            <svg class="i20 bolt"><use href="#s-bolt"/></svg>
+            <h1>Seequote könnte kurzfristig neu geregelt werden</h1>
+            <span class="sc">92 <s>/100</s></span>
+          </div>
+          <div class="hd__r">
+            <div class="stat">
+              <s>Status</s>
+              <b>Aktiv <svg class="i13"><use href="#s-chevd"/></svg></b>
+            </div>
+            <button class="act"><svg class="i14"><use href="#s-spark"/></svg> Aktivieren</button>
+            <button class="dots"><svg class="i14"><use href="#s-dots"/></svg></button>
+          </div>
+        </div>
+
+        <div class="meta">
+          <span><svg class="i14"><use href="#s-bank"/></svg> Politik &amp; Regulierung</span>
+          <span>&#127465;&#127466; Deutschland</span>
+          <span><svg class="i14"><use href="#s-clock"/></svg> Zeitfenster: 48h - 7 Tage</span>
+          <span><svg class="i14"><use href="#s-radar"/></svg> Erkannt: Heute, 09:04</span>
+        </div>
+
+        <div class="prov">
+          <u>Erkannt durch
+            <span class="pc"><span class="mk mk--o"><svg class="i12"><use href="#s-radar"/></svg></span> Market &amp; Opportunity Engine</span>
+          </u>
+          <u>Score berechnet von
+            <span class="pc"><span class="mk mk--i"><svg class="i12"><use href="#s-chart"/></svg></span> AI Scoring Engine</span>
+          </u>
+          <u>Strategischer Fit
+            <span class="pc"><span class="mk mk--v"><svg class="i12"><use href="#s-target"/></svg></span> Positioning Engine</span>
+          </u>
+        </div>
+
+        <nav class="itabs">
+          <a class="it on" href="#">Situation</a>
+          <a class="it" href="#">Positionierung</a>
+          <a class="it" href="#">Medien</a>
+          <a class="it" href="#">Assets</a>
+          <a class="it" href="#">Quality</a>
+          <a class="it" href="#">GEO &amp; AI Visibility</a>
+          <a class="it" href="#">Performance</a>
+          <a class="it" href="#">Historie</a>
+        </nav>
+
+        <!-- ---- Reihe 1 ---- -->
+        <div class="row">
+
+          <div class="c">
+            <div class="ct"><b>Zusammenfassung</b></div>
+            <p class="tx">Die Bundesregierung prüft eine Anpassung der Seequote für nachhaltige Kraftstoffe ab
+              2026. Branchenverbände fordern eine Anhebung. Entscheidung könnte kurzfristig verkündet werden.</p>
+            <div class="h4">Quellen (4)</div>
+            <ul class="q">
+              <li><span class="mk mk--o"><svg class="i12"><use href="#s-doc"/></svg></span>
+                <b>Handelsblatt</b><s>Heute, 08:42</s></li>
+              <li><span class="mk mk--b"><svg class="i12"><use href="#s-paper"/></svg></span>
+                <b>DVZ &ndash; Deutsche Verkehrs-Zeitung</b><s>Heute, 07:15</s></li>
+              <li><span class="mk mk--v"><svg class="i12"><use href="#s-file"/></svg></span>
+                <b>BDI Positionspapier</b><s>Gestern, 18:30</s></li>
+              <li><span class="mk mk--g"><svg class="i12"><use href="#s-bank"/></svg></span>
+                <b>Bundesministerium Digital &amp; Verkehr</b><s>Gestern, 16:05</s></li>
+            </ul>
+            <button class="wide">Vollständige Analyse anzeigen</button>
+          </div>
+
+          <div class="c">
+            <div class="ct"><b>Key Storyline</b> <s>(vom System vorgeschlagen)</s></div>
+            <p class="story">Carbon Farming als Schlüssel, um zukünftige Seequote-Anforderungen
+              kosteneffizient und schnell zu erfüllen.</p>
+            <div class="h4">Warum jetzt?</div>
+            <ul class="bul">
+              <li>Entscheidung voraussichtlich im Q2 2025</li>
+              <li>Branchen unter hohem Erfüllungsdruck</li>
+              <li>Carbon Farming als sofort skalierbare Lösung</li>
+              <li>Deutschland kann Vorreiterrolle einnehmen</li>
+            </ul>
+            <div class="h4">Relevanz für Zielgruppen</div>
+            <div class="tags">
+              <span class="tg tg--g">Politik</span>
+              <span class="tg tg--b">Wirtschaft</span>
+              <span class="tg tg--v">Medien</span>
+              <span class="tg tg--o">Investoren</span>
+              <span class="tg tg--n">Öffentlichkeit</span>
+            </div>
+          </div>
+
+          <div class="c">
+            <div class="ct"><b>Timeline</b></div>
+            <ul class="tl">
+              <li><b>Heute</b><s>Prüfung Seequote-Anpassung<br>(Bundesregierung)</s></li>
+              <li><b>2&ndash;7 Tage</b><s>Verbände positionieren sich</s></li>
+              <li><b>1&ndash;2 Wochen</b><s>Entscheidung / Eckpunkte</s></li>
+              <li><b>Q2 2025</b><s>Gesetzgebungsprozess</s></li>
+            </ul>
+            <button class="wide">Timeline im Detail</button>
+          </div>
+        </div>
+
+        <!-- ---- Reihe 2 ---- -->
+        <div class="row">
+
+          <div class="c">
+            <div class="ct"><b>Empfohlene nächste Schritte</b></div>
+            <ul class="st">
+              <li><span class="st__n">1</span><span class="st__t">Pitch an Top 5 Journalisten versenden</span>
+                <span class="bg bg--hi">Hohe Priorität</span></li>
+              <li><span class="st__n">2</span><span class="st__t">CEO-Kommentar vorbereiten</span>
+                <span class="bg bg--hi">Hohe Priorität</span></li>
+              <li><span class="st__n">3</span><span class="st__t">Q&amp;A finalisieren</span>
+                <span class="bg bg--mi">Mittel</span></li>
+              <li><span class="st__n">4</span><span class="st__t">Hintergrundgespräch anbieten</span>
+                <span class="bg bg--mi">Mittel</span></li>
+            </ul>
+          </div>
+
+          <div class="c">
+            <div class="ct"><b>Top Medienempfehlungen</b> <a href="#">Alle 17 anzeigen</a></div>
+            <ul class="jr">
+              <li><span class="jr__i">1</span><span class="pf pf--s" style="background:#6B7A99">MB</span>
+                <span><span class="jr__n">Michael Bröcker</span><span class="jr__o">Handelsblatt</span></span>
+                <span class="jr__r"><span class="jr__s">94 <s>/100</s></span>
+                  <div class="jr__b">Politik, Energie, Regulierung</div></span></li>
+              <li><span class="jr__i">2</span><span class="pf pf--s" style="background:#A9756A">JW</span>
+                <span><span class="jr__n">Jana Wolf</span><span class="jr__o">Süddeutsche Zeitung</span></span>
+                <span class="jr__r"><span class="jr__s">91 <s>/100</s></span>
+                  <div class="jr__b">Wirtschaft, Energie</div></span></li>
+              <li><span class="jr__i">3</span><span class="pf pf--s" style="background:#5F7F73">CH</span>
+                <span><span class="jr__n">Christian von Hiller</span><span class="jr__o">FAZ</span></span>
+                <span class="jr__r"><span class="jr__s">89 <s>/100</s></span>
+                  <div class="jr__b">Wirtschaft, Energiepolitik</div></span></li>
+            </ul>
+          </div>
+
+          <div class="c">
+            <div class="ct"><b>Empfohlene Asset</b> <a href="#">Alle Assets</a></div>
+            <ul class="ar">
+              <li><span class="mk mk--a2 mk--b"><svg class="i13"><use href="#s-doc"/></svg></span>
+                <span><span class="ar__n">Pitch &ndash; Seequote &amp; Carbon Farming</span>
+                <span class="ar__v">v2 &middot; Heute, 09:16</span></span>
+                <svg class="i14 ar__c"><use href="#s-chevr"/></svg></li>
+              <li><span class="mk mk--a2 mk--g"><svg class="i13"><use href="#s-quote"/></svg></span>
+                <span><span class="ar__n">CEO Statement (Entwurf)</span>
+                <span class="ar__v">v1 &middot; Heute, 09:18</span></span>
+                <svg class="i14 ar__c"><use href="#s-chevr"/></svg></li>
+              <li><span class="mk mk--a2 mk--t"><svg class="i13"><use href="#s-list"/></svg></span>
+                <span><span class="ar__n">Q&amp;A &ndash; Seequote 2025</span>
+                <span class="ar__v">v1 &middot; Heute, 09:17</span></span>
+                <svg class="i14 ar__c"><use href="#s-chevr"/></svg></li>
+            </ul>
+            <button class="wide">Assets erstellen / bearbeiten</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= RIGHT RAIL ================= -->
+      <aside class="rail">
+        <div class="rt">RAUTE Intelligence</div>
+        <div class="rs">Ergebnisse der relevanten Engines für diese Opportunity</div>
+
+        <div class="eg">
+          <span class="eg__i mk--o"><svg class="i14"><use href="#s-target"/></svg></span>
+          <span class="eg__m">
+            <span class="eg__n">Positioning Engine</span>
+            <span class="eg__v g">Strategischer Fit: Sehr hoch</span>
+            <span class="eg__d">Passt zu Positionierung: „Führender Lösungsanbieter für regenerative Klimaprozesse“</span>
+          </span>
+          <span class="ok"><svg><use href="#s-check"/></svg></span>
+        </div>
+
+        <div class="eg">
+          <span class="eg__i mk--i"><svg class="i14"><use href="#s-users"/></svg></span>
+          <span class="eg__m">
+            <span class="eg__n">Media &amp; Relationship Engine</span>
+            <span class="eg__v b">17 relevante Journalisten gefunden</span>
+            <span class="eg__d">Top Match: Michael Bröcker (Handelsblatt) &ndash; 94/100</span>
+          </span>
+          <svg class="i14 chv"><use href="#s-chevr"/></svg>
+        </div>
+
+        <div class="eg">
+          <span class="eg__i mk--b"><svg class="i14"><use href="#s-file"/></svg></span>
+          <span class="eg__m">
+            <span class="eg__n">Communication Asset Engine</span>
+            <span class="eg__v b">Empfohlene Assets verfügbar</span>
+            <span class="eg__d">Pitch, CEO-Statement, Q&amp;A, Fact Sheet</span>
+          </span>
+          <svg class="i14 chv"><use href="#s-chevr"/></svg>
+        </div>
+
+        <div class="eg">
+          <span class="eg__i mk--a"><svg class="i14"><use href="#s-check"/></svg></span>
+          <span class="eg__m">
+            <span class="eg__n">Quality &amp; Verification Engine</span>
+            <span class="eg__v g">3 von 4 Kernbotschaften vollständig belegt</span>
+            <span class="eg__d">1 regulatorische Aussage benötigt Prüfung</span>
+          </span>
+          <span class="warn"></span>
+        </div>
+
+        <div class="eg">
+          <span class="eg__i mk--g"><svg class="i14"><use href="#s-eye"/></svg></span>
+          <span class="eg__m">
+            <span class="eg__n">AI Visibility &amp; GEO Engine</span>
+            <span class="eg__v g">Sehr hohe Relevanz für Topic Cluster</span>
+            <span class="eg__d">„THG Quote / Kraftstoffe / Regulierung“</span>
+          </span>
+          <span class="ok"><svg><use href="#s-check"/></svg></span>
+        </div>
+
+        <div class="eg">
+          <span class="eg__i mk--v"><svg class="i14"><use href="#s-brain"/></svg></span>
+          <span class="eg__m">
+            <span class="eg__n">Communication Intelligence Engine</span>
+            <span class="eg__v p">Ähnliche Angles erzielten &empty; hohe Media Impact</span>
+            <span class="eg__d">(&empty; 8,7/10 bei Politik-Themen)</span>
+          </span>
+          <span class="ok"><svg><use href="#s-check"/></svg></span>
+        </div>
+
+        <button class="wide" style="margin-top:16px">Alle Engine-Ergebnisse anzeigen</button>
+      </aside>
+    </div>
+
+    <!-- ================= STREAM ================= -->
+    <div class="stream">
+      <div class="sh">
+        <b>Activity &amp; Decision Stream</b>
+        <span class="live"><i></i> Live</span>
+        <span class="sh__r">
+          <button class="mb"><svg class="i13"><use href="#s-file"/></svg> Filter</button>
+          <button class="mb mb--i"><svg class="i16" style="width:16px;height:16px"><use href="#s-expand"/></svg></button>
+        </span>
+      </div>
+      <div class="flow">
+        <div class="ev"><div class="ev__h"><span class="ed mk--g"><svg><use href="#s-check"/></svg></span> 09:04</div>
+          <div class="ev__t">Market &amp; Opportunity</div><div class="ev__s">Opportunity erkannt</div></div>
+        <span class="ag"><svg class="i13"><use href="#s-chevr"/></svg></span>
+        <div class="ev"><div class="ev__h"><span class="ed mk--o"><svg><use href="#s-target"/></svg></span> 09:06</div>
+          <div class="ev__t">Positioning Engine</div><div class="ev__s">Strategischer Fit bestätigt</div></div>
+        <span class="ag"><svg class="i13"><use href="#s-chevr"/></svg></span>
+        <div class="ev"><div class="ev__h"><span class="ed mk--v"><svg><use href="#s-users"/></svg></span> 09:07</div>
+          <div class="ev__t">Media Engine</div><div class="ev__s">17 Journalisten gefunden</div></div>
+        <span class="ag"><svg class="i13"><use href="#s-chevr"/></svg></span>
+        <div class="ev"><div class="ev__h"><span class="ed mk--a"><svg><use href="#s-spark"/></svg></span> 09:08</div>
+          <div class="ev__t">System Empfehlung</div><div class="ev__s">Aktivierung empfehlen</div></div>
+        <span class="ag"><svg class="i13"><use href="#s-chevr"/></svg></span>
+        <div class="ev"><div class="ev__h"><span class="pf" style="width:15px;height:15px;font-size:7px;background:#8A7B6B">LM</span> 09:14</div>
+          <div class="ev__t">Lucas M.</div><div class="ev__s">Opportunity aktiviert</div></div>
+        <span class="ag"><svg class="i13"><use href="#s-chevr"/></svg></span>
+        <div class="ev"><div class="ev__h"><span class="ed mk--b"><svg><use href="#s-doc"/></svg></span> 09:16</div>
+          <div class="ev__t">Asset Engine</div><div class="ev__s">Pitch erstellt</div></div>
+        <span class="ag"><svg class="i13"><use href="#s-chevr"/></svg></span>
+        <div class="ev"><div class="ev__h"><span class="ed mk--v"><svg><use href="#s-check"/></svg></span> 09:18</div>
+          <div class="ev__t">Quality Engine</div><div class="ev__s">1 Claim prüfen</div></div>
+        <span class="ag"><svg class="i13"><use href="#s-chevr"/></svg></span>
+        <div class="ev"><div class="ev__h"><span class="pf" style="width:15px;height:15px;font-size:7px;background:#8A7B6B">LM</span> 09:21</div>
+          <div class="ev__t">Lucas M.</div><div class="ev__s">Claim korrigiert</div></div>
+        <span class="ag"><svg class="i13"><use href="#s-chevr"/></svg></span>
+        <div class="ev"><div class="ev__h"><span class="ed mk--g"><svg><use href="#s-check"/></svg></span> 09:26</div>
+          <div class="ev__t">Asset freigegeben</div><div class="ev__s">Bereit zum Versand</div></div>
+        <span class="ag"><svg class="i13"><use href="#s-chevr"/></svg></span>
+        <div class="ev"><div class="ev__h"><span class="ed mk--g"><svg><use href="#s-mail"/></svg></span> 11:14</div>
+          <div class="ev__t">Journalist antwortet</div><div class="ev__s">Michael Bröcker</div></div>
+        <span class="ag"><svg class="i13"><use href="#s-chevr"/></svg></span>
+        <div class="ev"><div class="ev__h"><span class="ed mk--b"><svg><use href="#s-clock"/></svg></span> 14:30</div>
+          <div class="ev__t">Interview vereinbart</div><div class="ev__s">Mi, 10:00 Uhr</div></div>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

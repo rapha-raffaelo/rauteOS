@@ -46,6 +46,7 @@ class StatementRead(BaseModel):
     verification_note: str
     verified_by: str | None
     verified_at: dt.datetime | None
+    customer_confirmed_at: dt.datetime | None
     model_config = ConfigDict(from_attributes=True)
 
 

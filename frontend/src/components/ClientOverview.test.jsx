@@ -1,7 +1,18 @@
 import React from 'react';
-import { it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import { ClientOverview } from './ClientOverview.jsx';
+import {it, expect, afterEach} from 'vitest';
+import {render, screen, cleanup} from '@testing-library/react';
+import {ClientOverview} from './ClientOverview.jsx';
+afterEach(cleanup);
+it('keeps the cockpit and integrates today company news',()=>{
+ render(<ClientOverview clientId={9} data={{client:{id:9,name:'Zenchef'},today_news:{total:1,items:[{id:1,title:'Heutige Unternehmensnews',url:'https://example.com/news',source:'Zeitung',published_at:'2026-11-09T09:00:00Z',summary:'Neue Meldung'}]},opportunities:[{title:'Alte Story'}],texts:[]}}/>);
+ expect(screen.getByText('Heutige Unternehmensnews ↗')).toBeTruthy();
+ for(const title of ['Laufende Stories','Nächste Schritte','Das Unternehmen','Aktuelle Texte','Alte Story','Leistungen · Quartal','Monitoring im Überblick','Letzte Aktivität'])expect(screen.getByText(title)).toBeTruthy();
+ expect(screen.getByRole('link',{name:'Zum Presse-Monitoring →'}).getAttribute('href')).toBe('/client/9');
+});
+it('shows an empty state when there are no news today',()=>{
+ render(<ClientOverview clientId={9} data={{client:{name:'Zenchef'},today_news:{total:0,items:[]}}}/>);
+ expect(screen.getByText('Heute wurden noch keine relevanten Kundenmeldungen erfasst.')).toBeTruthy();
+});
 
 it('dates each opportunity card, with the year only when it is not this one', () => {
  const year = new Date().getFullYear();

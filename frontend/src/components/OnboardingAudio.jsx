@@ -16,7 +16,7 @@ function IconButton({icon, label, ...props}) {
   return <button type="button" className={`onb-audio-icon${icon==='record'?' onb-audio-record':''}`} aria-label={label} title={label} {...props}><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">{icons[icon]}</svg></button>;
 }
 
-export function OnboardingAudio({questionKey, token, demoApi, state = {}, saved, configured, onChange, onText, onActivity, onDelete, children, language = 'de'}) {
+export function OnboardingAudio({slug,questionKey, token, demoApi, state = {}, saved, configured, onChange, onText, onActivity, onDelete, children, language = 'de'}) {
   const tr = text => say(language, text);
   const [recording, setRecording] = useState('idle'), [playing, setPlaying] = useState(false);
   const [seconds, setSeconds] = useState(0), [busy, setBusy] = useState(false), [error, setError] = useState('');
@@ -32,8 +32,8 @@ export function OnboardingAudio({questionKey, token, demoApi, state = {}, saved,
   const supportsRecording = !!(navigator.mediaDevices?.getUserMedia && window.MediaRecorder);
   async function api(path, method='GET', body) {
     if (demoApi) return demoApi(path, method, body);
-    const response = await fetch('/api/onboarding' + path, {method, credentials:'omit',
-      headers:{'X-Onboarding-Token':token, ...(body instanceof Blob ? {'Content-Type':body.type || 'application/octet-stream'} : {})}, body});
+    const response = await fetch('/api/onboarding' + path, {method, credentials:'same-origin',
+      headers:{...(slug ? {'X-Onboarding-Slug':slug} : {'X-Onboarding-Token':token}), ...(body instanceof Blob ? {'Content-Type':body.type || 'application/octet-stream'} : {})}, body});
     if (!response.ok) {const d=await response.json().catch(()=>({}));throw new Error(d.detail || tr('Audio konnte nicht verarbeitet werden. Bitte erneut versuchen.'));}
     return path.endsWith('/content') ? response.blob() : response.json();
   }
@@ -135,7 +135,6 @@ export function OnboardingAudio({questionKey, token, demoApi, state = {}, saved,
     <input ref={fileInput} className="onb-sr-only" type="file" accept="audio/*,.m4a,.mp3,.wav,.ogg,.webm,.flac" aria-label={tr("Audiodatei hochladen")} onChange={e=>{if(e.target.files[0])selectBlob(e.target.files[0],e.target.files[0].name);e.target.value='';}}/>
     <audio ref={player} src={url||undefined} onTimeUpdate={e=>setPosition(e.currentTarget.currentTime)} onLoadedMetadata={e=>{const d=e.currentTarget.duration;setDuration(Number.isFinite(d)?d:seconds);}} onCanPlay={()=>{if(autoplay.current){autoplay.current=false;play();}}} onEnded={()=>setPlaying(false)}/>
     {url&&recording==='idle'&&<input className="onb-audio-seek" type="range" aria-label={tr("Wiedergabeposition")} min="0" max={duration||0} step="0.1" value={position} onChange={e=>{player.current.currentTime=Number(e.target.value);setPosition(Number(e.target.value));}}/>}
-    <p className="onb-note">{mode==='audio'?tr('Original speichern · KI-Transkript zusätzlich'): tr('Nur Text speichern · Audio danach löschen')}{' · '+(demoApi?tr('Demo: nur lokal'):tr('Verarbeitung durch Deepgram'))}</p>
     {state.blob&&<p className="onb-audio-file">{state.name||tr('Aufnahme')} · {state.blob.size < 1024*1024 ? Math.max(1,Math.round(state.blob.size/1024))+' KB' : (state.blob.size/1024/1024).toFixed(1)+' MB'}</p>}
     {state.blob&&!uploaded&&<button type="button" className="onb-audio-submit" disabled={busy||recording!=='idle'||(mode==='transcript'&&(!configured||!!demoApi))} onClick={upload}>{busy?tr('Wird übertragen …'):mode==='audio'?tr('Audio übernehmen'):tr('Transkript erstellen')}</button>}
     {mode==='transcript'&&state.blob&&(!configured||demoApi)&&<p className="onb-note">{demoApi?tr('KI-Transkription über einen persönlichen Kundenlink testen.'):tr('Transkription wird eingerichtet. Audio kann bereits gespeichert werden.')}</p>}

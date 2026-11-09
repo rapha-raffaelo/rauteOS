@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { PageHeading } from "../components/PageHeading.jsx";
 import { Action, Field, Notice, t } from "./shared.jsx";
+import { clip } from "../text.js";
 
 // Spec 10: Aufgaben, LinkedIn and Sales CRM. Plain forms that post and come
 // back; the server checks every value (newspulse.worklists).
@@ -51,6 +52,35 @@ function taskFields(d, v = {}) {
 
 const NEXT = { offen: ["in_arbeit", "Beginnen"], in_arbeit: ["erledigt", "Erledigt"], erledigt: ["offen", "Wieder öffnen"] };
 
+// What the Desk counts as "Entscheidungen offen". They are settled where they
+// live (the letter, the impulse, the profile), so each row opens that place.
+const DECISION = {
+  kundenfreigabe: ["Kundenfreigabe", "mittel"], freigabe: ["Freigabe", "agentur"],
+  impuls: ["Impuls", "niedrig"], profil: ["Profil", "niedrig"],
+};
+
+function Decisions({ items }) {
+  if (!items?.length) return null;
+  return (
+    <div className="wl-card" id="entscheidungen">
+      <h2 className="wl-card__h">{t("Offene Entscheidungen")} · {items.length}</h2>
+      {items.map((x, i) => {
+        const [kind, tone] = DECISION[x.kind] || [x.kind, "mittel"];
+        return (
+          <article key={`${x.href}-${i}`} className="wl-row">
+            <div className="wl-row__b">
+              <h2><a href={x.href}>{x.title}</a></h2>
+              <p>{[x.client.name, x.since && `${t("seit")} ${day(x.since.slice(0, 10))}`, x.detail && t(x.detail)].filter(Boolean).join(" · ")}</p>
+            </div>
+            <span className={`wl-badge wl-badge--${tone}`}>{t(kind)}</span>
+            <div className="wl-acts"><a className="btn btn--quiet" href={x.href}>{t("Öffnen")} →</a></div>
+          </article>
+        );
+      })}
+    </div>
+  );
+}
+
 export function TasksPage({ data: d }) {
   const [adding, setAdding] = useState(!!d.error && !!Object.keys(d.draft || {}).length);
   const [editing, setEditing] = useState(null);
@@ -58,6 +88,9 @@ export function TasksPage({ data: d }) {
   const prio = Object.fromEntries(d.priorities);
   const now = today();
   const open = d.tasks.filter((x) => x.status !== "erledigt");
+  // The heading counts every open task, not the filtered view.
+  const total = d.open_total ?? open.length;
+  const dueCount = (d.due_on ?? open.map((x) => x.due_on).filter(Boolean)).filter((x) => x <= now).length;
   const filterHref = (status) => {
     const q = new URLSearchParams();
     if (status) q.set("status", status);
@@ -67,7 +100,7 @@ export function TasksPage({ data: d }) {
   return (
     <section className="worklist">
       <PageHeading eyebrow="ARBEITSPLATZ" title="Aufgaben"
-        description={`${open.length} ${t("offen")} · ${open.filter((x) => x.due_on && x.due_on <= now).length} ${t("heute fällig oder überfällig")}`} />
+        description={`${total} ${t("offen")} · ${dueCount} ${t("heute fällig oder überfällig")}${d.decisions?.length ? ` · ${d.decisions.length} ${t(d.decisions.length === 1 ? "Entscheidung offen" : "Entscheidungen offen")}` : ""}`} />
       <Notice>{d.error}</Notice>
       <div className="wl-bar">
         <nav className="workspace-links" aria-label={t("Status")}>
@@ -84,6 +117,7 @@ export function TasksPage({ data: d }) {
         <Toggle open={adding} onClick={() => setAdding(!adding)}>+ Neue Aufgabe</Toggle>
       </div>
       {adding && <div className="wl-card"><Form action="/aufgaben" fields={taskFields(d, d.draft)} submit="Aufgabe anlegen" onCancel={() => setAdding(false)} /></div>}
+      {d.filter.status !== "erledigt" && <Decisions items={d.decisions} />}
       <div className="wl-card">
         {d.tasks.map((x) => {
           const late = x.status !== "erledigt" && x.due_on && x.due_on < now;
@@ -123,7 +157,7 @@ function postFields(d, v = {}) {
       <Field name="status" label="Status" value={v.status || "idee"} options={d.states} />
       <Field name="planned_on" label="Geplant für" type="date" value={v.planned_on || ""} />
       <Field name="published_url" label="Link nach Veröffentlichung" value={v.published_url} maxLength={500} placeholder="https://www.linkedin.com/…" />
-      <Field name="body" label="Text" type="textarea" value={v.body} rows={6} maxLength={3000} />
+      <Field name="body" label="Text" type="textarea" value={v.body} rows={6} maxLength={3000} autoFocus={v.id != null && !v.body} />
     </>
   );
 }
@@ -138,12 +172,14 @@ function Board({ columns, render }) {
   ))}</div>;
 }
 
-function Move({ action, field, keys, current }) {
+// Each arrow names the column it moves to, when the board gives the names.
+function Move({ action, field, keys, current, names = {} }) {
   const i = keys.indexOf(current);
+  const to = (k) => names[k] ? ` ${t(names[k])}` : "";
   return (
     <div className="wl-move">
-      {i > 0 && <Action action={action} label="←" values={{ [field]: keys[i - 1] }} />}
-      {i < keys.length - 1 && <Action action={action} label="→" values={{ [field]: keys[i + 1] }} />}
+      {i > 0 && <Action action={action} label={`←${to(keys[i - 1])}`} values={{ [field]: keys[i - 1] }} />}
+      {i < keys.length - 1 && <Action action={action} label={`${to(keys[i + 1]).trim()} →`.trim()} values={{ [field]: keys[i + 1] }} />}
     </div>
   );
 }
@@ -181,26 +217,116 @@ function Suggestions({ texts = [], chances = [] }) {
   );
 }
 
+const moment = (iso) =>
+  iso ? new Date(iso).toLocaleString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
+
+// The signed-in person's own LinkedIn profile: RauteOS posts through it.
+function Account({ a = {} }) {
+  if (!a.configured) return <p className="wl-hint wl-hint--bar">{t("Gepostet wird in deinem eigenen LinkedIn: An jeder Karte mit Text öffnet „In LinkedIn öffnen“ den Beitrag fertig zum Posten.")}</p>;
+  const connect = (label) => <a className="btn btn--go" href="/linkedin/connect">{t(label)}</a>;
+  if (!a.connected) {
+    return (
+      <div className="wl-account">
+        <p>{t(a.lost || a.expired ? "Deine LinkedIn-Verbindung ist abgelaufen." : "Verbinde dein LinkedIn-Profil, dann postet RauteOS freigegebene Beiträge direkt oder zum geplanten Zeitpunkt.")}</p>
+        {connect(a.lost || a.expired ? "Neu verbinden" : "Mit LinkedIn verbinden")}
+      </div>
+    );
+  }
+  return (
+    <div className="wl-account">
+      <p>{t("Verbunden als")} <strong>{a.name || t("dein Profil")}</strong> · {t(a.expiring ? "läuft ab am" : "gültig bis")} {day(a.expires_at.slice(0, 10))}</p>
+      {a.expiring && connect("Neu verbinden")}
+      <Action action="/linkedin/disconnect" label="Trennen" className="wl-quiet" />
+    </div>
+  );
+}
+
+// Without a connected account: LinkedIn opens with the text, which is also on
+// the clipboard in case LinkedIn leaves the field empty. The person posts in
+// their own login and brings the link back.
+const composeUrl = (text) => `https://www.linkedin.com/feed/?shareActive=true&text=${encodeURIComponent(text)}`;
+
+function ByHand({ p }) {
+  const [opened, setOpened] = useState(false);
+  const [linking, setLinking] = useState(false);
+  if (p.published_url || !p.body) return null;
+  const open = () => {
+    try { navigator.clipboard?.writeText(p.body).catch(() => {}); } catch { /* the field may still be filled */ }
+    window.open(composeUrl(p.body), "_blank", "noopener");
+    setOpened(true);
+    setLinking(true);
+  };
+  return (
+    <div className="wl-li">
+      <button type="button" className="btn btn--go" onClick={open}>{t("In LinkedIn öffnen")}</button>
+      {opened && <p>{t("Der Text ist auch kopiert. Bleibt das Feld auf LinkedIn leer, einfach einfügen.")}</p>}
+      {linking
+        ? <form method="post" action={`/linkedin/${p.id}/published`} className="wl-li__plan">
+            <label><span className="sr-only">{t("Link zum Beitrag")}</span>
+              <input name="published_url" type="url" required maxLength={500} placeholder="https://www.linkedin.com/…" /></label>
+            <button type="submit" className="btn btn--quiet">{t("Als veröffentlicht speichern")}</button>
+          </form>
+        : <button type="button" className="btn btn--quiet" onClick={() => setLinking(true)}>{t("Schon gepostet? Link eintragen")}</button>}
+    </div>
+  );
+}
+
+// Posting one card: now, or at a moment the scheduler keeps.
+function OnLinkedIn({ p, a = {} }) {
+  if (p.on_linkedin) return null;
+  const error = p.post_error && <p className="wl-error" role="alert">{p.post_error}</p>;
+  if (p.post_at) {
+    return (
+      <div className="wl-li">
+        <p>{t("Geht am")} {moment(p.post_at)} {t("auf LinkedIn raus")}{p.post_as ? ` · ${p.post_as}` : ""}</p>
+        <Action action={`/linkedin/${p.id}/unschedule`} label="Nicht mehr einplanen" className="wl-quiet" />
+      </div>
+    );
+  }
+  if (!a.connected) return <ByHand p={p} />;
+  if (!p.body) return error || null;
+  return (
+    <div className="wl-li">
+      {error}
+      <form method="post" action={`/linkedin/${p.id}/publish`} className="platform-action"
+        onSubmit={(e) => { if (!window.confirm(t("Diesen Beitrag jetzt öffentlich auf deinem LinkedIn-Profil posten?"))) e.preventDefault(); }}>
+        <button type="submit">{t("Jetzt auf LinkedIn posten")}</button>
+      </form>
+      <form method="post" action={`/linkedin/${p.id}/schedule`} className="wl-li__plan">
+        <label><span className="sr-only">{t("Zeitpunkt")}</span>
+          <input type="datetime-local" name="post_at" required defaultValue={p.planned_on ? `${p.planned_on}T09:00` : ""} /></label>
+        <button type="submit" className="btn btn--quiet">{t("Einplanen")}</button>
+      </form>
+    </div>
+  );
+}
+
 export function LinkedInPage({ data: d }) {
   const [adding, setAdding] = useState(!!d.error && !!Object.keys(d.draft || {}).length);
   const [editing, setEditing] = useState(null);
   const keys = d.states.map(([k]) => k);
+  const names = Object.fromEntries(d.states);
   const columns = d.states.map(([key, label]) => ({ key, label: t(label), note: "", items: d.posts.filter((p) => p.status === key) }));
   return (
     <section className="worklist">
-      <PageHeading eyebrow="KOMMUNIKATION" title="LinkedIn" description="Redaktionsarbeit für die Sprecher der Mandanten. Geplant und freigegeben wird hier, veröffentlicht auf LinkedIn." />
-      <Notice>{d.error}</Notice>
-      <div className="wl-bar"><span /><Toggle open={adding} onClick={() => setAdding(!adding)}>+ Neuer Beitrag</Toggle></div>
+      <PageHeading eyebrow="KOMMUNIKATION" title="LinkedIn" description="Redaktionsarbeit für die Sprecher der Mandanten. Geplant und freigegeben wird hier, gepostet im eigenen LinkedIn." />
+      <Notice>{d.error || d.notice}</Notice>
+      <div className="wl-bar"><Account a={d.account} /><Toggle open={adding} onClick={() => setAdding(!adding)}>+ Neuer Beitrag</Toggle></div>
       {adding && <div className="wl-card"><Form action="/linkedin" fields={postFields(d, d.draft)} submit="Beitrag anlegen" onCancel={() => setAdding(false)} /></div>}
       <Suggestions {...(d.suggestions || {})} />
       <Board columns={columns} render={(p) => (
         <article key={p.id} id={`post-${p.id}`} className="wl-item">
           <h3>{p.source_href ? <a href={p.source_href}>{p.title}</a> : p.title}</h3>
           <p>{[p.client.name, p.author, p.planned_on && day(p.planned_on)].filter(Boolean).join(" · ")}</p>
-          {p.body && <p className="wl-note">{p.body.slice(0, 140)}{p.body.length > 140 ? " …" : ""}</p>}
+          {p.body ? <p className="wl-note">{clip(p.body, 140)}</p>
+            : editing !== p.id && <div className="wl-li">
+                <p>{t("Noch kein Text. Sobald er steht, öffnet die Karte ihn fertig in LinkedIn.")}</p>
+                <button type="button" className="btn btn--go" onClick={() => setEditing(p.id)}>{t("Text schreiben")}</button>
+              </div>}
           {p.published_url && <a href={p.published_url} target="_blank" rel="noreferrer">{t("Auf LinkedIn ansehen")}</a>}
+          <OnLinkedIn p={p} a={d.account} />
           <div className="wl-item__acts">
-            <Move action={`/linkedin/${p.id}`} field="status" keys={keys} current={p.status} />
+            <Move action={`/linkedin/${p.id}`} field="status" keys={keys} current={p.status} names={names} />
             <button type="button" className="btn btn--quiet" onClick={() => setEditing(editing === p.id ? null : p.id)}>{t("Bearbeiten")}</button>
           </div>
           {editing === p.id && <><Form action={`/linkedin/${p.id}`} fields={postFields(d, p)} submit="Speichern" onCancel={() => setEditing(null)} />

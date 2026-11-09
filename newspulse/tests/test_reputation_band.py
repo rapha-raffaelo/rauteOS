@@ -262,7 +262,7 @@ def test_a_mandate_above_the_lowest_rung_gets_a_tile_with_its_four_inputs(
     assert "Alpha AG" in body
     assert "band__tile--risiko" in body
     assert "3 Medien" in body
-    assert "4/6 negativ" in body
+    assert "4 von 6 Meldungen negativ" in body
     assert "überregional" in body
     assert "namentlich genannt" in body
     # And the rest of the portfolio is still the one line behind it.
@@ -458,8 +458,8 @@ def test_the_band_follows_the_client_filter(factory, client):
     assert "ruhig" not in body
 
 
-def test_the_band_stands_above_the_days_coverage(factory, client):
-    """"über der Tagesberichterstattung", literally: the band is read first."""
+def test_the_band_is_separate_from_the_selected_days_coverage(factory, client):
+    """The current assessment is contextual, not the selected day's article count."""
     with factory() as s:
         _reading(
             s, _mandate(s, "Alpha AG"),
@@ -470,7 +470,8 @@ def test_the_band_stands_above_the_days_coverage(factory, client):
 
     body = client.get("/today").text
 
-    assert body.index('class="band"') < body.index('class="feedcol"')
+    assert body.index('class="feedcol"') < body.index('class="anglecol"') < body.index('class="band"')
+    assert 'Aktuelle Bewertung, unabhängig vom gewählten Nachrichtentag.' in body
 
 
 # --- Both languages ---------------------------------------------------------------
@@ -629,7 +630,7 @@ def test_the_counts_on_the_tile_stay_the_ones_the_sweep_stored(factory, client):
 
     assert "band__tile--krise" in body
     assert "1 Medium" in body
-    assert "1/4 negativ" in body
+    assert "1 von 4 Meldungen negativ" in body
 
 
 def test_a_crisis_over_a_quiet_reading_does_not_count_zero_outlets(factory, client):

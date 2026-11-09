@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gelegenheit: Chronik · RauteOS</title>
+<style>
+:root{
+  --side-bg:#ebebf0; --ground:#f7f7fa; --card:#fff;
+  --fill:rgba(120,120,128,.12); --fill-2:rgba(120,120,128,.07);
+  --ink:#1d1d1f; --ink-2:rgba(29,29,31,.82); --muted:rgba(60,60,67,.58); --faint:rgba(60,60,67,.32);
+  --line:rgba(60,60,67,.12); --line-strong:rgba(60,60,67,.22);
+  --tint:#0071e3; --alert:#d70015; --good:#248a3d; --warn:#b25000; --neutral:#a1a1aa;
+  --t-caption2:10px; --t-caption:11px; --t-footnote:12px; --t-subhead:13px; --t-body:14px;
+  --t-title3:16px; --t-title2:20px; --t-title1:26px;
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:20px; --s6:24px; --s7:32px;
+  --radius:10px; --radius-s:6px; --side-w:232px;
+  color-scheme: light;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue","Segoe UI",Roboto,sans-serif;
+  background:var(--ground);color:var(--ink);font-size:var(--t-body);line-height:1.45;letter-spacing:-.006em;
+  -webkit-font-smoothing:antialiased}
+a{color:var(--tint);text-decoration:none} a:hover{text-decoration:underline}
+.app{display:grid;grid-template-columns:var(--side-w) minmax(0,1fr);min-height:100vh}
+.side{background:var(--side-bg);border-right:1px solid var(--line);padding:var(--s5) var(--s3) var(--s4);
+  display:flex;flex-direction:column;gap:var(--s5);position:sticky;top:0;align-self:start;height:100vh;overflow-y:auto}
+.side__brand{display:flex;align-items:center;gap:var(--s2);font-size:var(--t-title3);font-weight:700;
+  letter-spacing:-.02em;padding:0 var(--s2) 0 var(--s1)}
+.side__mark{color:var(--tint);font-weight:800}
+.side__nav{display:flex;flex-direction:column;gap:2px}
+.side__sect{font-size:var(--t-caption2);font-weight:700;text-transform:uppercase;letter-spacing:.05em;
+  color:var(--faint);padding:var(--s3) var(--s2) var(--s1)}
+.side__row{display:flex;align-items:center;gap:var(--s2);padding:6px var(--s2);border-radius:var(--radius-s);
+  color:var(--ink-2);font-size:var(--t-subhead)}
+.side__row:hover{background:rgba(255,255,255,.6);text-decoration:none}
+.side__row.is-on{background:var(--tint);color:#fff;font-weight:600}
+.side__dot{width:8px;height:8px;border-radius:50%;flex:none;background:var(--neutral)}
+.side__dot--on{background:var(--good)}
+.side__count{margin-left:auto;font-size:var(--t-caption2);font-weight:700;color:var(--faint)}
+.side__foot{margin-top:auto;border-top:1px solid var(--line-strong);padding-top:var(--s3);
+  font-size:var(--t-caption);color:var(--muted)}
+.main{display:flex;flex-direction:column;min-width:0}
+.tabs{display:flex;gap:var(--s4);padding:var(--s4) var(--s6) 0;border-bottom:1px solid var(--line);
+  background:rgba(247,247,250,.92);overflow-x:auto}
+.tabs a{font-size:var(--t-subhead);color:var(--muted);padding:0 0 10px;border-bottom:2px solid transparent;white-space:nowrap}
+.tabs a:hover{text-decoration:none;color:var(--ink-2)}
+.tabs a.is-on{color:var(--ink);font-weight:600;border-bottom-color:var(--tint)}
+.content{padding:var(--s5) var(--s6) var(--s7);max-width:940px;width:100%}
+.back{font-size:var(--t-footnote);color:var(--muted);display:inline-block;margin-bottom:var(--s4)}
+.btn{font:inherit;font-size:var(--t-subhead);font-weight:600;padding:8px 16px;border:0;
+  border-radius:var(--radius-s);background:var(--tint);color:#fff;cursor:pointer;white-space:nowrap}
+.btn--ghost{background:var(--fill);color:var(--ink-2)}
+.btn--s{font-size:var(--t-footnote);padding:6px 12px}
+.hd__t{font-size:var(--t-title1);font-weight:700;letter-spacing:-.025em;max-width:30ch}
+.chips{display:flex;flex-wrap:wrap;gap:var(--s2);margin:var(--s3) 0 var(--s4)}
+.chip{font-size:var(--t-caption);color:var(--muted);background:var(--fill-2);border:1px solid var(--line);
+  border-radius:999px;padding:3px 10px}
+.chip--warn{color:var(--warn);border-color:rgba(178,80,0,.25);background:rgba(178,80,0,.07)}
+.chip--good{color:var(--good);border-color:rgba(36,138,61,.25);background:rgba(36,138,61,.07)}
+.lede{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:var(--s4);
+  display:grid;grid-template-columns:minmax(0,1fr) 210px;gap:var(--s4);align-items:start}
+.lede__p{font-size:var(--t-body);color:var(--ink-2);line-height:1.55}
+.lede__k{font-size:var(--t-caption2);font-weight:700;text-transform:uppercase;letter-spacing:.05em;
+  color:var(--faint);margin-bottom:var(--s1)}
+.lede__s{border-left:1px solid var(--line);padding-left:var(--s4)}
+.lede__n{font-size:var(--t-title2);font-weight:700;letter-spacing:-.02em}
+.lede__n small{font-size:var(--t-footnote);font-weight:600;color:var(--faint)}
+.lede__w{font-size:var(--t-caption);color:var(--muted);line-height:1.4;margin-top:2px}
+.now{margin:var(--s4) 0;background:rgba(0,113,227,.05);border:1px solid rgba(0,113,227,.25);
+  border-radius:var(--radius);padding:var(--s4);display:flex;gap:var(--s4);align-items:center}
+.now__k{font-size:var(--t-caption2);font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--tint)}
+.now__t{font-size:var(--t-title3);font-weight:700;letter-spacing:-.015em;margin-top:2px}
+.now__b{font-size:var(--t-footnote);color:var(--ink-2);margin-top:2px;max-width:58ch}
+.now__r{margin-left:auto;display:flex;gap:var(--s2);flex:none}
+.sect{font-size:var(--t-caption2);font-weight:700;text-transform:uppercase;letter-spacing:.05em;
+  color:var(--faint);margin:var(--s6) 0 var(--s3)}
+.chron{list-style:none;position:relative;padding-left:96px}
+.chron:before{content:"";position:absolute;left:84px;top:10px;bottom:10px;width:1px;background:var(--line-strong)}
+.chron>li{position:relative;margin-bottom:var(--s3)}
+.chron__t{position:absolute;left:-96px;top:14px;width:76px;text-align:right;font-size:var(--t-caption);
+  color:var(--faint);font-variant-numeric:tabular-nums;line-height:1.3}
+.chron>li:before{content:"";position:absolute;left:-16px;top:18px;width:9px;height:9px;border-radius:50%;
+  background:var(--card);border:2px solid var(--line-strong)}
+.chron>li.is-us:before{border-color:var(--tint);background:var(--tint)}
+.chron>li.is-mark:before{border-color:var(--warn);background:var(--warn)}
+.item{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:var(--s3) var(--s4)}
+.item--us{background:rgba(0,113,227,.045);border-color:rgba(0,113,227,.18)}
+.item--mark{background:rgba(178,80,0,.05);border-color:rgba(178,80,0,.22)}
+.item__k{font-size:var(--t-caption2);font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--faint)}
+.item--us .item__k{color:var(--tint)}
+.item--mark .item__k{color:var(--warn)}
+.item__t{font-size:var(--t-subhead);font-weight:600;margin-top:2px}
+.item__b{font-size:var(--t-footnote);color:var(--muted);margin-top:3px}
+.item__q{font-size:var(--t-footnote);color:var(--ink-2);margin-top:var(--s2);padding-left:var(--s3);
+  border-left:2px solid var(--line-strong);line-height:1.5}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:var(--s4);align-items:start;margin-top:var(--s3)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:var(--s4)}
+.card__h{font-size:var(--t-subhead);font-weight:700;margin-bottom:var(--s3);display:flex;align-items:baseline;gap:var(--s2)}
+.card__h a{margin-left:auto;font-size:var(--t-caption);font-weight:600}
+.rows{list-style:none}
+.rows li{display:flex;align-items:flex-start;gap:var(--s3);padding:9px 0;border-top:1px solid var(--line)}
+.rows li:first-child{border-top:0}
+.rows__n{font-size:var(--t-footnote);font-weight:600}
+.rows__s{font-size:var(--t-caption);color:var(--muted);margin-top:1px}
+.rows__r{margin-left:auto;white-space:nowrap}
+.pill{font-size:var(--t-caption2);font-weight:700;padding:2px 7px;border-radius:999px;background:var(--fill);color:var(--muted)}
+.pill--good{background:rgba(36,138,61,.12);color:var(--good)}
+.pill--warn{background:rgba(178,80,0,.12);color:var(--warn)}
+.pill--none{background:transparent;color:var(--faint);border:1px dashed var(--line-strong)}
+.know{display:flex;flex-wrap:wrap;gap:var(--s2);margin-top:var(--s3)}
+.know__i{flex:1 1 210px;padding:var(--s3);border:1px solid var(--line);border-radius:var(--radius-s);background:var(--card)}
+.know__h{font-size:var(--t-caption2);font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--faint);margin-bottom:3px}
+.know__v{font-size:var(--t-footnote);color:var(--ink-2);line-height:1.45}
+.know__v b{font-weight:600}
+.know__l{font-size:var(--t-caption);margin-top:5px;display:inline-block}
+.note{margin-top:var(--s6);font-size:var(--t-caption);color:var(--faint);max-width:80ch;line-height:1.5}
+@media (max-width:860px){.app{grid-template-columns:1fr}.side{display:none}.grid2{grid-template-columns:1fr}
+  .lede{grid-template-columns:1fr}.lede__s{border-left:0;padding-left:0;border-top:1px solid var(--line);padding-top:var(--s3)}
+  .chron{padding-left:var(--s5)}.chron:before{left:4px}.chron>li:before{left:0}
+  .chron__t{position:static;width:auto;text-align:left;margin-bottom:2px}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="side__brand"><span class="side__mark">&#9670;</span> RauteOS</div>
+    <nav class="side__nav">
+      <div class="side__sect">Mandate</div>
+      <a class="side__row is-on" href="#"><span class="side__dot side__dot--on"></span> Carbon Farming Germany <span class="side__count">3</span></a>
+      <a class="side__row" href="#"><span class="side__dot"></span> Qonto</a>
+      <a class="side__row" href="#"><span class="side__dot"></span> Workflex</a>
+      <a class="side__row" href="#"><span class="side__dot"></span> Testo</a>
+      <a class="side__row" href="#"><span class="side__dot"></span> DeepDrive</a>
+      <div class="side__sect">Werkzeug</div>
+      <a class="side__row" href="#">Heute</a>
+      <a class="side__row" href="#">Kontaktbuch</a>
+      <a class="side__row" href="#">Archiv</a>
+      <a class="side__row" href="#">Einstellungen</a>
+    </nav>
+    <div class="side__foot">Lucas M. &middot; Managing Partner</div>
+  </aside>
+
+  <main class="main">
+    <nav class="tabs">
+      <a class="is-on" href="#">Heute</a>
+      <a href="#">Texte</a>
+      <a href="#">Markt</a>
+      <a href="#">Plan</a>
+      <a href="#">Profil</a>
+      <a href="#">KI-Sichtbarkeit</a>
+      <a href="#">Themen</a>
+      <a href="#">Wettbewerb</a>
+      <a href="#">Berichte</a>
+    </nav>
+
+    <div class="content">
+      <a class="back" href="#">&larr; Zur&uuml;ck zu Heute</a>
+      <h1 class="hd__t">Seequote k&ouml;nnte kurzfristig neu geregelt werden</h1>
+      <div class="chips">
+        <span class="chip">Carbon Farming Germany</span>
+        <span class="chip">Politik &amp; Regulierung</span>
+        <span class="chip chip--warn">Noch 27 Std im Fenster</span>
+        <span class="chip chip--good">Stehen belegt</span>
+      </div>
+
+      <div class="lede">
+        <div>
+          <div class="lede__k">Die Lage</div>
+          <p class="lede__p">Die Bundesregierung pr&uuml;ft eine Anpassung der Seequote f&uuml;r nachhaltige
+            Kraftstoffe ab 2026. Branchenverb&auml;nde fordern eine Anhebung. Eine Entscheidung
+            k&ouml;nnte kurzfristig verk&uuml;ndet werden. Das Mandat wird in keinem der vier
+            Beitr&auml;ge genannt.</p>
+        </div>
+        <div class="lede__s">
+          <div class="lede__k">Dringlichkeit</div>
+          <div class="lede__n">58<small> / 100</small></div>
+          <div class="lede__w">Verbreitung 20 &middot; Frist 18 &middot; Stehen 20<br>4 Medien, 27 von 48 Std &uuml;brig</div>
+        </div>
+      </div>
+
+      <div class="now">
+        <div>
+          <div class="now__k">Jetzt dran</div>
+          <div class="now__t">Pitch pr&uuml;fen lassen</div>
+          <div class="now__b">Der Entwurf v2 steht seit heute 09:16 und ist ungepr&uuml;ft.
+            Ohne Guide-Pr&uuml;fung kann er nicht freigegeben werden. Danach: an Michael Br&ouml;cker senden.</div>
+        </div>
+        <div class="now__r">
+          <button class="btn">Pr&uuml;fung starten</button>
+          <button class="btn btn--ghost">Verwerfen</button>
+        </div>
+      </div>
+
+      <div class="sect">Chronik &middot; die Story und was wir daraus gemacht haben</div>
+      <ul class="chron">
+        <li>
+          <div class="chron__t">gestern<br>16:05</div>
+          <div class="item">
+            <div class="item__k">Ursprung &middot; BMDV</div>
+            <div class="item__t">Bund pr&uuml;ft Anpassung der Seequote ab 2026</div>
+            <div class="item__b">Mitteilung &middot; erste bekannte Ver&ouml;ffentlichung</div>
+          </div>
+        </li>
+        <li class="is-us">
+          <div class="chron__t">gestern<br>16:20</div>
+          <div class="item item--us">
+            <div class="item__k">RauteOS</div>
+            <div class="item__t">Gelegenheit angelegt, Stehen belegt</div>
+            <div class="item__q">Das Mandat betreibt seit 2021 zertifizierte Humusaufbau-Projekte auf
+              14.000 Hektar und kann zur Kostenseite aus eigener Messreihe sprechen.</div>
+          </div>
+        </li>
+        <li>
+          <div class="chron__t">gestern<br>18:30</div>
+          <div class="item">
+            <div class="item__k">Aufgriff &middot; BDI</div>
+            <div class="item__t">Verband fordert Anhebung der Quote</div>
+            <div class="item__b">Positionspapier</div>
+          </div>
+        </li>
+        <li>
+          <div class="chron__t">heute<br>07:15</div>
+          <div class="item">
+            <div class="item__k">Aufgriff &middot; DVZ</div>
+            <div class="item__t">Seequote: Branche dr&auml;ngt auf schnelle Entscheidung</div>
+            <div class="item__b">Bericht &middot; Jana Wolf</div>
+          </div>
+        </li>
+        <li>
+          <div class="chron__t">heute<br>08:42</div>
+          <div class="item">
+            <div class="item__k">Aufgriff &middot; Handelsblatt</div>
+            <div class="item__t">Regierung erw&auml;gt h&ouml;here Seequote f&uuml;r 2026</div>
+            <div class="item__b">Bericht &middot; Michael Br&ouml;cker &middot; Kontakt hinterlegt</div>
+          </div>
+        </li>
+        <li class="is-us">
+          <div class="chron__t">heute<br>09:14</div>
+          <div class="item item--us">
+            <div class="item__k">Lucas M.</div>
+            <div class="item__t">Anlass ge&ouml;ffnet, Storyline &uuml;bernommen</div>
+            <div class="item__q">Carbon Farming als Weg, k&uuml;nftige Seequote-Anforderungen
+              kosteng&uuml;nstig und kurzfristig zu erf&uuml;llen.</div>
+          </div>
+        </li>
+        <li class="is-us">
+          <div class="chron__t">heute<br>09:16</div>
+          <div class="item item--us">
+            <div class="item__k">RauteOS &middot; Text</div>
+            <div class="item__t">Pitch v1 geschrieben, v2 von Lucas gek&uuml;rzt</div>
+            <div class="item__b">Q&amp;A v1 gepr&uuml;ft ohne Einwand &middot; Statement v1 als Entwurf</div>
+          </div>
+        </li>
+        <li class="is-mark">
+          <div class="chron__t">morgen<br>19:05</div>
+          <div class="item item--mark">
+            <div class="item__k">Fenster</div>
+            <div class="item__t">Die Gelegenheit l&auml;uft aus</div>
+            <div class="item__b">48 Stunden ab dem Ursprungsbeitrag. Danach bleibt sie im R&uuml;ckblick lesbar.</div>
+          </div>
+        </li>
+      </ul>
+
+      <div class="grid2">
+        <div class="card">
+          <div class="card__h">Wen ansprechen <a href="#">Alle 17 &rarr;</a></div>
+          <ul class="rows">
+            <li><div><div class="rows__n">Michael Br&ouml;cker</div><div class="rows__s">Handelsblatt &middot; schrieb heute 08:42</div></div>
+                <div class="rows__r"><span class="pill pill--good">Kontakt da</span></div></li>
+            <li><div><div class="rows__n">Jana Wolf</div><div class="rows__s">DVZ &middot; schrieb heute 07:15</div></div>
+                <div class="rows__r"><span class="pill pill--none">kein Kontakt</span></div></li>
+            <li><div><div class="rows__n">Christian von Hiller</div><div class="rows__s">FAZ &middot; schrieb am 12.03. zum Feld</div></div>
+                <div class="rows__r"><span class="pill pill--none">kein Kontakt</span></div></li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="card__h">Texte zu dieser Gelegenheit <a href="#">Alle &rarr;</a></div>
+          <ul class="rows">
+            <li><div><div class="rows__n">Pitch</div><div class="rows__s">v2 &middot; heute 09:16</div></div>
+                <div class="rows__r"><span class="pill pill--warn">ungepr&uuml;ft</span></div></li>
+            <li><div><div class="rows__n">Statement</div><div class="rows__s">v1 &middot; heute 09:18</div></div>
+                <div class="rows__r"><span class="pill pill--warn">ungepr&uuml;ft</span></div></li>
+            <li><div><div class="rows__n">Q&amp;A</div><div class="rows__s">v1 &middot; heute 09:17</div></div>
+                <div class="rows__r"><span class="pill pill--good">gepr&uuml;ft</span></div></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="sect">Was RauteOS zum Mandat wei&szlig;</div>
+      <div class="know">
+        <div class="know__i">
+          <div class="know__h">Positionierung</div>
+          <div class="know__v">&bdquo;F&uuml;hrender L&ouml;sungsanbieter f&uuml;r regenerative Klimaprozesse&ldquo;</div>
+          <a class="know__l" href="#">Profil &rarr;</a>
+        </div>
+        <div class="know__i">
+          <div class="know__h">Medien</div>
+          <div class="know__v"><b>3 von 17</b> Bylines im Feld haben einen Kontakt.</div>
+          <a class="know__l" href="#">Kontaktbuch &rarr;</a>
+        </div>
+        <div class="know__i">
+          <div class="know__h">Qualit&auml;t</div>
+          <div class="know__v"><b>3 von 4</b> Kernaussagen belegt, eine offen.</div>
+          <a class="know__l" href="#">Guide-Pr&uuml;fung &rarr;</a>
+        </div>
+        <div class="know__i">
+          <div class="know__h">KI-Sichtbarkeit</div>
+          <div class="know__v">Cluster THG-Quote: <b>Position 2 von 6</b>.</div>
+          <a class="know__l" href="#">Sichtbarkeit &rarr;</a>
+        </div>
+      </div>
+
+      <p class="note">Eine Spur statt mehrerer K&auml;sten: die Beitr&auml;ge der Story und unsere eigenen
+        Schritte stehen in derselben Reihenfolge, in der sie passiert sind. Wer sp&auml;ter fragt,
+        warum an diesem Tag so entschieden wurde, liest diese Seite von oben.</p>
+    </div>
+  </main>
+</div>
+</body>
+</html>

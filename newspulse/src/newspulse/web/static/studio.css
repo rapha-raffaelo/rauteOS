@@ -272,6 +272,29 @@
 .raute-ui .opportunity-workspace .workspace-overview{grid-template-columns:1fr;margin-bottom:20px;gap:10px}
 .raute-ui .workspace-overview>.twin-field{margin:0}
 .raute-ui .workspace-settings>.twin-field,.raute-ui .workspace-history>.twin-field{padding:16px 0;border:0;margin:0;background:transparent}
+.raute-ui .band__title{font-size:13px;font-weight:600;color:var(--muted);margin:24px 0 10px}
+.raute-ui .band__row{grid-template-columns:1fr;gap:12px}
+.raute-ui .band__tile{padding:20px 24px;gap:8px;border-radius:14px}
+.raute-ui .band__head{justify-content:space-between;align-items:center;gap:12px}
+.raute-ui .band__name{font-size:18px;line-height:1.3}
+.raute-ui .band__state{border:1px solid var(--line);border-radius:20px;padding:4px 10px;font-size:11px;text-transform:none;letter-spacing:0}
+.raute-ui .band__tile--issue .band__state{color:var(--purple);background:var(--fill-2)}
+.raute-ui .band__why{font-size:14px;color:var(--ink-2);margin-top:4px}
+.raute-ui .band__period{font-size:12px;color:var(--muted);margin:0}
+.raute-ui .band__trend{font-size:12px}
+.raute-ui .band__details{font-size:12px;color:var(--muted);margin:4px 0 0}
+.raute-ui .band__details summary{cursor:pointer;color:var(--ink-2)}
+.raute-ui .band__details p{margin:8px 0;line-height:1.6;max-width:80ch}
+.raute-ui .band__link{align-self:flex-start;font-size:13px;font-weight:600;margin-top:4px}
+@media(min-width:1000px){
+  .raute-ui .band__tile{display:grid;grid-template-columns:minmax(170px,.8fr) minmax(260px,1.4fr) minmax(160px,.8fr);column-gap:32px;align-items:start}
+  .raute-ui .band__head{grid-column:1;grid-row:1 / span 2;justify-content:flex-start;flex-wrap:wrap}
+  .raute-ui .band__why{grid-column:2;grid-row:1;margin:0}
+  .raute-ui .band__period{grid-column:2;grid-row:2}
+  .raute-ui .band__trend{grid-column:3;grid-row:1}
+  .raute-ui .band__link{grid-column:3;grid-row:2;margin:0}
+  .raute-ui .band__details,.raute-ui .band__stale{grid-column:1 / -1}
+}
 .raute-ui .workspace-writing{background: var(--card);border:1px solid var(--line);border-radius:14px;padding:24px;margin:22px 0}
 .raute-ui .writing-heading h2{font-size:21px;margin:4px 0 18px}
 .raute-ui .writing-heading .twin-eyebrow{font-size:10px;letter-spacing:.08em;margin:0}
@@ -374,18 +397,19 @@
 
 /* Intelligence: a reading column and a compact opportunity rail. */
 .intelligence{max-width:1320px;margin:0 auto;min-width:0}
-.intel-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;margin:0 0 28px}
+.intel-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;margin:0 0 20px}
 .intel-eyebrow{font-size:10px;letter-spacing:.1em;font-weight:650;color:var(--muted);margin:0 0 8px}
 .intel-heading h1{font-size:34px;line-height:1.15;letter-spacing:-.04em;margin:0 0 12px;color:var(--ink)}
 .intel-description{font-size:14px;color:var(--muted);margin:0}
 .intel-heading .datemeta{text-align:right;font-size:12px;line-height:1.8;max-width:340px;flex-shrink:0}
-.intelligence .today-toolbar{justify-content:flex-start;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 18px;margin-bottom:16px}
+.intel-filters{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:20px}
+.intelligence .today-toolbar{justify-content:flex-start;background:transparent;border:0;padding:0;margin:0}
 .intelligence .date-picker{flex-wrap:wrap;gap:10px;width:100%}
 .intelligence .date-picker input,.intelligence .date-picker select{min-height:38px;max-width:100%}
-.intelligence .clientfilter{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px}
+.intelligence .clientfilter{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 0;padding-top:12px;border-top:1px solid var(--line)}
 .intelligence .cfcard{min-height:36px;padding:6px 12px;border:1px solid var(--line);background:var(--card);border-radius:8px}
 .intelligence .cfcard--on{background:var(--fill-2);border-color:var(--accent);color:var(--ink)}
-.intelligence .intel-layout{grid-template-columns:minmax(0,1fr) minmax(280px,350px);gap:24px;margin-top:24px}
+.intelligence .intel-layout{grid-template-columns:minmax(0,1fr) minmax(280px,350px);gap:24px;margin-top:0;align-items:start}
 .intelligence .intel-layout>.alertcol{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;background:var(--card);padding:20px;border:1px solid var(--line);border-radius:12px}
 .intelligence .alertcol>.colhead{grid-column:1/-1;margin-bottom:0}
 .intelligence .intel-layout>.feedcol{min-width:0;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:24px}
@@ -396,6 +420,34 @@
 .intelligence .feedcol .hl{font-size:18px;line-height:1.4;margin:8px 0}
 .intelligence .feedcol .sum{font-size:14px;line-height:1.65;margin:0 0 12px}
 .intelligence .triage{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+.intelligence .triage .triage-btn{border:1px solid var(--line-strong);border-radius:7px;min-height:34px;padding:6px 10px;margin:0;background:var(--card);font-size:12px}
+.intelligence .triage .triage-btn--on{background:var(--tint-wash-soft);border-color:var(--accent);color:var(--ink)}
+.intelligence .triage .triage-btn--dismiss{border-color:transparent;color:var(--muted)}
+.intel-priority{background:var(--tint-wash-soft);border:1px solid var(--line-strong);border-radius:5px;padding:2px 7px;font-size:11px;font-weight:650;color:var(--ink-2)}
+.intelligence .feedcol .item--alert{border-left:0;color:var(--ink)}
+.intelligence .feedcol .item--alert .sum{color:var(--ink-2)}
+.intelligence .feedcol>.colhead + .item{padding-top:4px}
+.intel-feed-date{margin-left:auto;color:var(--muted);font-size:12px;font-weight:400;letter-spacing:0}
+.intelligence .feedcol>.colhead{display:flex;align-items:baseline;gap:8px}
+.intel-date-nav{display:flex;align-items:center;gap:4px;margin-left:6px}
+.intel-date-nav a{display:inline-flex;justify-content:center;align-items:center;min-height:36px;padding:4px 10px;border-radius:6px;font-size:12px;color:var(--ink-2)}
+.intel-date-nav a:hover{background:var(--fill-2);text-decoration:none}
+.intel-date-nav .intel-date-step{min-width:36px;border:1px solid var(--line)}
+.intelligence .anglecol .band{margin:0 0 24px}
+.intelligence .anglecol .band__title{margin:0 0 6px;font-size:17px;color:var(--ink);letter-spacing:-.025em}
+.intelligence .anglecol .band__scope{font-size:12px;line-height:1.5;color:var(--muted);margin:0 0 12px}
+.intelligence .anglecol .band__tile{display:flex;padding:16px;gap:8px;border-radius:12px}
+.intelligence .anglecol .band__head{justify-content:space-between;align-items:center}
+.intelligence .anglecol .band__name{font-size:15px}
+.intelligence .anglecol .band__why{font-size:13px;margin-top:2px}
+.intelligence .anglecol .band__period{font-size:11px;line-height:1.6}
+.intelligence .anglecol .band__foot{display:flex;flex-wrap:wrap;gap:4px;font-size:11px;line-height:1.6;margin-top:10px}
+.intelligence .anglecol .band:has(.band__tile) .band__stamp{display:none}
+.intelligence .band__details summary{display:flex;justify-content:space-between;gap:8px;list-style:none;min-height:32px;align-items:center}
+.intelligence .band__details summary::-webkit-details-marker{display:none}
+.intelligence .band__details summary::after{content:'+';font-size:18px;font-weight:500}
+.intelligence .band__details[open] summary::after{content:'−'}
+.intelligence .band__link{display:inline-flex;align-items:center;min-height:32px}
 .intelligence .intel-chances{margin:0 0 28px}
 .intelligence .intel-chances__grid{grid-template-columns:1fr;gap:10px}
 .intelligence .intel-chances__h{justify-content:space-between;margin-bottom:6px}
@@ -413,4 +465,4 @@
 .intelligence .feedcol .empty-state{min-height:240px;padding:32px 0}
 @media(max-width:1050px){.intelligence .intel-layout{grid-template-columns:minmax(0,1fr) 290px;gap:18px}.intel-heading .datemeta{max-width:240px}}
 @media(max-width:780px){.intel-heading{flex-direction:column;gap:14px}.intel-heading .datemeta{text-align:left;max-width:none}.intelligence .intel-layout{grid-template-columns:minmax(0,1fr)}.intelligence .intel-layout>.anglecol{grid-column:1}.intelligence .intel-layout>.alertcol{grid-template-columns:minmax(0,1fr)}.intelligence .intel-layout>.feedcol{padding:18px}.intelligence .feedcol .hl{font-size:17px}}
-@media(max-width:480px){.intel-heading h1{font-size:28px}.intelligence .today-toolbar{padding:12px}.intelligence .date-picker{display:grid;grid-template-columns:auto minmax(0,1fr)}.intelligence .filter-note{grid-column:1/-1}.intelligence .cfcard{font-size:11px}.intelligence .cfname{overflow-wrap:anywhere}.intelligence .intel-layout{gap:24px}}
+@media(max-width:480px){.intel-heading h1{font-size:28px}.intel-filters{padding:12px}.intelligence .date-picker{display:grid;grid-template-columns:auto minmax(0,1fr)}.intelligence .filter-note,.intel-date-nav{grid-column:1/-1}.intelligence .cfcard{font-size:11px}.intelligence .cfname{overflow-wrap:anywhere}.intelligence .intel-layout{gap:24px}.intel-date-nav{margin:0}}

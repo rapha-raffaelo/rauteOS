@@ -7,8 +7,8 @@ from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.orm.exc import StaleDataError
-from ... import opportunity_development, workspaces
-from ...models import Contact, JournalistProfile, OpportunityDevelopment, OpportunityEvent, OpportunityWorkspace
+from ... import opportunity_development, workspaces, crisis, issues
+from ...models import Contact, JournalistProfile, OpportunityDevelopment, OpportunityEvent, OpportunityWorkspace, Article
 from ..app import get_db
 from ..mandates import mandate_or_404
 from ..spawn import start_or_release
@@ -23,6 +23,7 @@ class Choices(BaseModel):
     revision:int=Field(ge=0)
     storyline:str=Field(default='',max_length=5000)
     speaker_statement_id:int|None=Field(default=None,gt=0)
+    speaker_person_id:int|None=Field(default=None,gt=0)
     contact_ids:list[int]=Field(default_factory=list,max_length=30)
 
 
@@ -41,7 +42,12 @@ def listing(client_id:int,response:Response,session:Session=Depends(get_db)):
     response.headers['Cache-Control']='no-store'
     job=session.scalar(select(OpportunityDevelopment).where(OpportunityDevelopment.client_id==client_id)
                        .order_by(OpportunityDevelopment.id.desc()).limit(1))
-    return dict(client=dict(id=client.id,name=client.name),opportunities=workspaces.listings(session,client_id),
+    active_crisis = crisis.open_crisis(session, client)
+    crisis_article = session.get(Article, active_crisis.article_id) if active_crisis else None
+    reaction = dict(crisis=dict(title=crisis_article.title if crisis_article else 'Aktive Krise',
+        href=f'/client/{client_id}/krise') if active_crisis else None,
+        issues=[dict(id=row.id,title=row.title,href=f'/client/{client_id}/issues') for row in issues.open_issues(session,client)])
+    return dict(reaction=reaction,client=dict(id=client.id,name=client.name),opportunities=workspaces.listings(session,client_id),
                 development=development_data(job) if job else None)
 
 
@@ -100,6 +106,10 @@ def save_choices(session,client_id,kind,identity,body,actor,activate=False):
         raise HTTPException(409,'Workspace wurde inzwischen geändert. Neu laden und vergleichen.')
     if body.speaker_statement_id and body.speaker_statement_id not in {r.id for r in workspaces.speakers(session,client_id)}:
         raise HTTPException(422,'Sprecher ist nicht im verwendbaren Profil hinterlegt.')
+    if body.speaker_person_id and body.speaker_statement_id:
+        raise HTTPException(422, 'Bitte genau einen Sprecher auswählen.')
+    if body.speaker_person_id and body.speaker_person_id not in {p.id for p in workspaces.speaker_people(session,client_id)}:
+        raise HTTPException(422, 'Der Kontakt ist für dieses Mandat nicht als Medienkontakt hinterlegt.')
     contacts=set(session.scalars(select(Contact.id).where(Contact.id.in_(body.contact_ids))))
     blocked=set(session.scalars(select(JournalistProfile.contact_id).where(JournalistProfile.contact_id.in_(body.contact_ids),
         JournalistProfile.relationship_status=='Nicht kontaktieren')))
@@ -121,13 +131,14 @@ def save_choices(session,client_id,kind,identity,body,actor,activate=False):
         session.add(row)
     row.storyline=body.storyline
     row.speaker_statement_id=body.speaker_statement_id
+    row.speaker_person_id=body.speaker_person_id
     row.contact_ids=list(dict.fromkeys(body.contact_ids))
     if angle:row.angle_id=angle.id
     if activate:row.status='active'
     try:
         session.flush()
         session.add(OpportunityEvent(workspace_id=row.id,kind='activated' if activate and not was_active else 'choices_saved',actor=actor,
-            detail=dict(storyline=row.storyline,speaker_statement_id=row.speaker_statement_id,contact_ids=row.contact_ids)))
+            detail=dict(storyline=row.storyline,speaker_statement_id=row.speaker_statement_id,speaker_person_id=row.speaker_person_id,contact_ids=row.contact_ids)))
         session.commit()
     except (IntegrityError,StaleDataError):
         session.rollback()

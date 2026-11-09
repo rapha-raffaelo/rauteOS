@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from .evidence import Confidence, Confidentiality, EvidenceType, ExternalUse, FactStatus, InputOwner, SourceType
 from .models import ClientFact, ClientFactHistory
+from .fact_values import has_missing
 
 CATALOG = json.loads(Path(__file__).with_name("twin_catalog.json").read_text())
 CATALOG_BY_KEY = {field["key"]: field for field in CATALOG}
@@ -90,6 +91,7 @@ def apply(session: Session, client_id: int, data: StatementInput, person: str,
     # A changed sentence is not verified merely because its predecessor was.
     row.verified_by = None
     row.verified_at = None
+    row.customer_confirmed_at = None
     row.filled_by = "mensch"
     row.updated_at = dt.datetime.now(dt.UTC)
     session.add(row)
@@ -117,7 +119,7 @@ PROFILE_PARTS = ("R", "Q")
 
 
 def completeness(rows: list[ClientFact]) -> dict:
-    answered = {row.key for row in rows if row.value.strip() and row.fact_status not in
+    answered = {row.key for row in rows if not has_missing(row.value) and row.fact_status not in
                 INACTIVE | {FactStatus.OUTDATED, FactStatus.CONTRADICTORY}}
     # Only exact equivalent legacy fields count; never infer a questionnaire
     # answer from a broad neighbouring topic.

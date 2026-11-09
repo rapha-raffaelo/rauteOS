@@ -85,7 +85,7 @@ class Proposal:
 
 
 def _themes_for(session, client: Client) -> dict[str, object]:
-    return {"probes": themes.probe(client, themes.suggest(client))}
+    return {"probes": themes.probe(client, themes.suggest(client, session=session))}
 
 
 def _rivals_for(session, client: Client) -> dict[str, object]:

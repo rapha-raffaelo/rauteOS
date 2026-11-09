@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import {FactValue,hasMissingFact} from './FactValue.jsx';
 import {OnboardingAudio} from './OnboardingAudio.jsx';
 import {LANGUAGES, initialLanguage, rememberLanguage, say} from '../onboardingText.js';
 
@@ -20,7 +21,7 @@ export function gist(text, limit = GIST_CHARS) {
   return out.slice(0, limit).replace(/\s+\S*$/, '') + ' …';
 }
 
-export function OnboardingPage({ token = window.location.hash.slice(1).split('/')[0], demoApi = null }) {
+export function OnboardingPage({ token = window.location.hash.slice(1).split('/')[0], demoApi = null, slug = null }) {
   const [data, setData] = useState(null), [error, setError] = useState('');
   const [screen, setScreen] = useState('welcome'), [index, setIndex] = useState(0);
   const [draft, setDraft] = useState(''), [busy, setBusy] = useState(false);
@@ -42,8 +43,8 @@ export function OnboardingPage({ token = window.location.hash.slice(1).split('/'
 
   async function api(path = '', method = 'GET', body) {
     if (demoApi) return demoApi(path, method, body);
-    const response = await fetch('/api/onboarding' + path, {method, credentials: 'omit',
-      headers: {'X-Onboarding-Token': token, 'Content-Type': 'application/json'},
+    const response = await fetch('/api/onboarding' + path, {method, credentials: 'same-origin',
+      headers: {...(slug ? {'X-Onboarding-Slug':slug} : {'X-Onboarding-Token': token}), 'Content-Type': 'application/json'},
       ...(body === undefined ? {} : {body: JSON.stringify(body)})});
     if (!response.ok) {
       const json = await response.json().catch(() => ({}));
@@ -53,11 +54,11 @@ export function OnboardingPage({ token = window.location.hash.slice(1).split('/'
   }
   useEffect(() => {
     let active = true;
-    if (!token && !demoApi) { setError(tr('Dieser Link ist unvollständig. Bitte öffnen Sie den persönlichen Link von raute+kopf.')); return; }
+    if (!token && !demoApi && !slug) { setError(tr('Dieser Link ist unvollständig. Bitte öffnen Sie den persönlichen Link von raute+kopf.')); return; }
     api().then(d => { if (active) {setData(d); if (d.completed) setScreen('done');} })
       .catch(e => {if (active) setError(e.message);});
     return () => { active = false; };
-  }, [token, demoApi]);
+  }, [token, demoApi, slug]);
   useEffect(() => { heading.current?.focus(); }, [screen, index]);
   useEffect(() => {
     const warn = e => { if (dirty || busy || listening) { e.preventDefault(); e.returnValue = ''; } };
@@ -79,18 +80,29 @@ export function OnboardingPage({ token = window.location.hash.slice(1).split('/'
     lock.current = true; setBusy(true); setError('');
     try {
       await api('/prefill', 'POST', {corrections: prefillEdits});
-      setData({...data, prefill_confirmed: true, prefill: data.prefill.map(p => ({...p, ...(prefillEdits[p.key] ? {customer_value: prefillEdits[p.key]} : {})}))});
+      setData({...data, prefill_confirmed: true, prefill: data.prefill.map(p => ({...p, confirmed:!hasMissingFact(prefillEdits[p.key] ?? p.customer_value ?? p.value), ...(prefillEdits[p.key] ? {customer_value: prefillEdits[p.key]} : {})}))});
       setPrefillEdits({}); setEditingPrefill(false); setRowEdits([]);
       if (prefillReturn.current !== null) {const target = prefillReturn.current; prefillReturn.current = null; openQuestion(target);} else resume();
     } catch(e) {setError(e.message);}
     finally {lock.current = false; setBusy(false);}
   }
-  async function saveAndMove(skip = false, target = index + 1) {
+  async function saveTopic(p) {
+    if (lock.current) return;
+    lock.current=true;setBusy(true);setError('');
+    try {
+      const value=prefillEdits[p.key] ?? p.customer_value ?? p.value;
+      await api('/prefill','POST',{corrections:{[p.key]:value},confirmed_keys:[p.key]});
+      setData(previous=>({...previous,prefill:previous.prefill.map(item=>item.key===p.key?{...item,customer_value:value,confirmed:true}:item)}));
+      setPrefillEdits(previous=>{const next={...previous};delete next[p.key];return next;});
+      setRowEdits(previous=>previous.filter(key=>key!==p.key));
+    } catch(e){setError(e.message);} finally{lock.current=false;setBusy(false);}
+  }
+  async function saveAndMove(skip = false, target = index + 1, confirmed = false) {
     if (lock.current || listening) return;
     if (!skip && !canSave) {setError(tr('Ein paar Worte genügen. Oder wählen Sie „Später beantworten“.')); return;}
     lock.current = true; setBusy(true); setError('');
     try {
-      const answer = await api('/answers/' + question.key, 'PUT', {value: skip || audioMode === 'audio' ? '' : draft, skipped: skip, ...(!skip && audioRef ? {audio_id:audioRef.id,mode:audioMode} : {})});
+      const answer = await api('/answers/' + question.key, 'PUT', {value: skip || audioMode === 'audio' ? '' : draft, skipped: skip, ...(confirmed ? {confirmed:true} : {}), ...(!skip && audioRef ? {audio_id:audioRef.id,mode:audioMode} : {})});
       const next = {...data, answers: {...data.answers, [question.key]: answer}};
       delete drafts.current[question.key];
       setData(next);
@@ -123,9 +135,10 @@ export function OnboardingPage({ token = window.location.hash.slice(1).split('/'
     const short = gist(text), open = openRows.includes(p.key), long = short !== text.trim();
     return <article key={p.key} className={`onb-prefill-row${editing ? ' onb-prefill-row--editing' : ''}`}>
       <div className="onb-prefill-head"><h2><span className="onb-num" aria-hidden="true">{p.key.slice(1, 3)}</span>{label}</h2>
+        {editing && <button type="button" className="onb-save-icon" aria-label={en ? `Save: ${label}` : `Speichern: ${label}`} title={en ? 'Save' : 'Speichern'} disabled={busy || hasMissingFact(prefillEdits[p.key] ?? text)} onClick={()=>saveTopic(p)}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12l4 4v12a2 2 0 0 1-2 2Z"/><path d="M7 3v6h10V3M7 21v-8h10v8"/></svg></button>}
         {!editing && <button type="button" className="onb-link" disabled={busy} onClick={() => setRowEdits([...rowEdits, p.key])}>{tr('Korrigieren')}</button>}</div>
       {editing ? <textarea aria-label={label} maxLength={20000} value={prefillEdits[p.key] ?? text} disabled={busy} onChange={e=>setPrefillEdits({...prefillEdits,[p.key]:e.target.value})}/>
-        : <><div className="onb-prefill-text"><RichText text={open ? text : short} /></div>
+        : <><div className="onb-prefill-text">{(hasMissingFact(text) || /^\s*[•*\-]\s+/m.test(text)) ? <FactValue text={open ? text : short}/> : <RichText text={open ? text : short}/>}</div>
           {long && <button type="button" className="onb-link" onClick={() => setOpenRows(open ? openRows.filter(k => k !== p.key) : [...openRows, p.key])}>{open ? tr('Weniger anzeigen') : tr('Mehr lesen')}</button>}</>}
     </article>;
   }
@@ -137,14 +150,13 @@ export function OnboardingPage({ token = window.location.hash.slice(1).split('/'
     <main lang={language}>
       {demoApi && <aside className="onb-demo"><span>{tr('Demo · nur in diesem Tab gespeichert')}</span><button onClick={async () => {await demoApi.reset(); window.location.reload();}}>{tr('Neustart')}</button></aside>}
       {!data ? <section className="onb-card"><h1>{tr('Ihr Start mit raute+kopf.')}</h1><p role={error ? 'alert' : 'status'}>{error || tr('Ihr Fragebogen wird geladen …')}</p>{token && error && <button onClick={() => window.location.reload()}>{tr('Erneut versuchen')}</button>}</section> : <>
-        <div className="onb-context"><span>{data.customer}</span><span>ONBOARDING</span></div>
+        <div className="onb-context"><div className="onb-customer-identity">{data.logo_url&&<img src={data.logo_url} alt="" onError={e=>{e.currentTarget.hidden=true;}}/>}<div><strong>{data.customer}</strong></div></div><span>ONBOARDING</span></div>
         {screen === 'welcome' && <section className="onb-card onb-welcome">
 
           <h1 ref={heading} tabIndex={-1}>{tr('Ihre Perspektive.')}</h1>
-          <p>{tr('Die Fakten stehen. Jetzt Ihre Perspektive.')}</p>
-          <p className="onb-meta">{data.questions.length} {tr('Fragen · jede ist freiwillig · in mehreren Etappen möglich')}</p>
+          <p>{tr('Dieser Fragebogen umfasst zu Beginn 22 Fragen sowie bereits recherchierte Daten, die durch Sie freigegeben werden können.')}</p>
+          <p>{tr('Wir nutzen diese Informationen zur Ausarbeitung Ihrer Kommunikationsstrategie. Wir freuen uns auf die Zusammenarbeit.')}</p>
           <button className="onb-primary" onClick={() => data.prefill_confirmed ? resume() : setScreen('prefill')}>{settled ? tr('Weiter, wo ich war') : tr('Los geht’s')}</button>
-          <p className="onb-note">{tr('Speichern & später weitermachen — jederzeit.')}</p>
         </section>}
         {screen === 'prefill' && <section className="onb-card">
 
@@ -166,7 +178,7 @@ export function OnboardingPage({ token = window.location.hash.slice(1).split('/'
 
             <h1 id="onb-question-title" ref={heading} tabIndex={-1}>{en ? question.text_en || question.text : question.text}</h1>
             {question.help && <p className="onb-help">{en ? question.help_en || question.help : question.help}</p>}
-            <OnboardingAudio language={language} questionKey={question.key} token={token} demoApi={demoApi} state={audioState} saved={savedAnswer}
+            <OnboardingAudio slug={slug} language={language} questionKey={question.key} token={token} demoApi={demoApi} state={audioState} saved={savedAnswer}
               configured={data.transcription_configured} onActivity={setListening}
               onDelete={answer=>setData(previous=>{const answers={...previous.answers};if(answer)answers[question.key]=answer;else delete answers[question.key];return {...previous,answers,completed:false};})}
               onChange={value=>setAudioDrafts(previous=>({...previous,[question.key]:value}))}

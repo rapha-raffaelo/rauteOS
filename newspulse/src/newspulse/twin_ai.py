@@ -190,7 +190,7 @@ Kontakte, Sprecherrechte, Verträge, Kundenmeinungen oder interne Strategien.
 Übertrage fremde Behauptungen als solche, nicht als unabhängig bestätigte Tatsachen.
 Bei Widersprüchen keine Antwort erzeugen. Bereits beantwortete Fragen stehen nicht zur Auswahl.
 Gib höchstens 25 belegbare Antworten zurück. Pro Antwort genau eine passende Frage.
-Antworte knapp, höchstens drei Sätze je Antwort.
+Antworte sehr kurz: höchstens drei Stichpunkte, je Zeile mit •, insgesamt maximal 320 Zeichen. Keine Einleitung oder Fließtext. Einzelwerte wie Mitarbeiterzahl oder Gründungsjahr nur als Fakt. Fehlende Angaben bleiben offen; keine Schätzungen.
 JSON: {"answers":[{"key":"A01.01","value":"Antwort","source_ids":["mandate"],"reason":"Was die Quelle hierzu belegt"}]}
 Nur aufgeführte Feldschlüssel und Quellen-IDs verwenden.
 DATEN:\n'''
@@ -216,6 +216,9 @@ DATEN:\n'''
         compact = [{key: field[key] for key in ('key', 'label', 'group')} for field in batch]
         try:
             found = parse_answers(call(prompt + json.dumps(dict(fields=compact, sources=sources), ensure_ascii=False)))
+            from .onboarding_crawler import condense, compact_value
+            candidates = [a for a in found if isinstance(a, dict) and isinstance(a.get('key'), str) and isinstance(a.get('value'), str)]
+            found = [dict(a, value=value) for a in condense(candidates, ask=call) if (value := compact_value(a['key'], a['value'])) is not None]
         except (AnalyzerError, ParseError) as exc:
             failures.append(index)
             last_error = exc

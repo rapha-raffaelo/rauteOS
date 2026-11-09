@@ -235,6 +235,14 @@ class FactCollection(dict):
     def __init__(self, rows):
         from .twin import CATALOG, INACTIVE
         super().__init__()
+        # R/Q are answers, not parallel versions. Retain other evidence fields.
+        latest = {}
+        for row in rows:
+            if row.key.startswith(('R', 'Q')) and row.fact_status not in INACTIVE:
+                stamp = (row.updated_at, row.id)
+                if row.key not in latest or stamp > (latest[row.key].updated_at, latest[row.key].id):
+                    latest[row.key] = row
+        rows = [row for row in rows if not row.key.startswith(('R', 'Q')) or latest.get(row.key) is row]
         self.statements = rows
         for row in rows:
             if row.fact_status not in INACTIVE:

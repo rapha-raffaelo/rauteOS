@@ -908,7 +908,8 @@ def _run_crisis_texts(client_id: int, crisis_id: int) -> None:
                 notes: list[str] = []
 
                 def _note(sentence: str) -> None:
-                    notes.append(sentence)
+                    if sentence not in notes:
+                        notes.append(sentence)
                     _last_note[client_id] = "\n".join(notes)
 
                 _last_note.pop(client_id, None)

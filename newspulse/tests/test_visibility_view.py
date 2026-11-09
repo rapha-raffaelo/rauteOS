@@ -190,7 +190,7 @@ def test_the_tab_strip_links_to_the_visibility_page(web, session, mandate):
 
 def test_the_visibility_tab_is_marked_active_on_its_own_page(web, session, mandate):
     assert re.search(
-        rf'href="/client/{mandate.id}/ki" class="active"', rendered(web.get(f"/client/{mandate.id}/ki"))
+        rf'href="/client/{mandate.id}/ki" aria-current="page"', rendered(web.get(f"/client/{mandate.id}/ki"))
     )
 
 

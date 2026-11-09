@@ -96,3 +96,13 @@ def test_a_slow_claude_is_retried_by_the_queue_rather_than_handed_to_gemini(monk
 
     with pytest.raises(analyzer.BackendError, match="timed out"):
         websearch.search("frage")
+
+
+def test_required_research_rejects_an_answer_without_using_web_search(monkeypatch):
+    result = {"type":"result","is_error":False,"result":'{"articles":[]}'}
+    monkeypatch.setattr(subprocess, 'run', lambda *a, **k: _completed(_stream(result)))
+    with pytest.raises(analyzer.BackendError, match='required web search'):
+        analyzer.invoke_claude_search('research', require_web_search=True)
+    tool={"type":"assistant","message":{"content":[{"type":"tool_use","name":"WebSearch"}]}}
+    monkeypatch.setattr(subprocess, 'run', lambda *a, **k: _completed(_stream(tool,result)))
+    assert analyzer.invoke_claude_search('research', require_web_search=True)==('{"articles":[]}',[])

@@ -77,7 +77,7 @@ export function NewClientPage({ data: d }) {
               "Das Profil wird von der Website gelesen und durch öffentliche Quellen ergänzt.",
               "Belegte Informationen werden mit Quelle im Kundenprofil gespeichert.",
               "Ein persönlicher Onboarding-Link wird automatisch vorbereitet.",
-              "Der CEO prüft die Angaben und beantwortet fünf kurze Fragen.",
+              "Der Kunde prüft die Angaben und beantwortet die Fragen zum Unternehmen.",
               "Antworten und Korrekturen fließen direkt in die Kundendatenbank.",
             ].map((text) => (
               <li key={text}>{t(text)}</li>

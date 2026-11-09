@@ -142,7 +142,8 @@ def test_create_research_link_customer_answer_end_to_end(setup):
     assert 'checkpoint' not in status and 'token' not in status
     path=status['path']
     assert path==web.get('/client/1/onboarding-workflow').json()['path']
-    header={'X-Onboarding-Token':path.split('#')[1].split('/')[0]}
+    with factory() as s:
+        header={'X-Onboarding-Token':flow.invite_token(s.get(CustomerOnboardingInvite,s.get(CustomerOnboardingJob,1).invite_id))}
     customer=web.get('/api/onboarding',headers=header).json()
     assert customer['customer']=='Example AG'
     assert 'alex@example.org' not in str(customer)
@@ -157,9 +158,11 @@ def test_create_research_link_customer_answer_end_to_end(setup):
         assert s.scalar(select(ClientFact.value).where(ClientFact.key=='Q01.01'))=='CEO ambition'
         assert len(list(s.scalars(select(CustomerOnboardingInvite))))==1
     renewed=web.post('/client/1/onboarding-workflow/link').json()['path']
-    assert renewed!=path
+    assert renewed==path
     assert web.get('/api/onboarding',headers=header).status_code==401
-    resumed=web.get('/api/onboarding',headers={'X-Onboarding-Token':renewed.split('#')[1].split('/')[0]}).json()
+    with factory() as s:
+        new_token=flow.invite_token(s.get(CustomerOnboardingInvite,s.get(CustomerOnboardingJob,1).invite_id))
+    resumed=web.get('/api/onboarding',headers={'X-Onboarding-Token':new_token}).json()
     assert resumed['answers']['Q01.01']['value']=='CEO ambition'
 
 
@@ -301,7 +304,7 @@ def test_research_accepts_only_requested_topics_and_real_source_urls():
             {'key':'R05.01','value':'Invented','source_url':'https://invented.example'}]}),[('https://press.example/story','Press')]
     fields=[crawler.PUBLIC_FIELDS[0],crawler.PUBLIC_FIELDS[4]]
     answers=crawler.research_batch(context,fields,[{'url':'https://example.org/about','text':'Source'}],search=search)
-    assert answers==[dict(key='R01.01',value='Example AG, gegründet 2010',source_url='https://example.org/about',
+    assert answers==[dict(key='R01.01',value='• Example AG, gegründet 2010',source_url='https://example.org/about',
                           note='Weitere Quellen: https://press.example/story')]
     assert 'Wer ist offiziell vertretungsberechtigt' not in prompts[0]
     assert 'Wann wurde das Unternehmen gegründet' in prompts[0]
@@ -379,7 +382,8 @@ def test_link_available_before_research_and_stable_after_research(setup):
     path=response.json()['path']
     assert path.endswith('/example-ag')
     assert web.post('/client/1/onboarding-workflow/link/ensure').json()['path']==path
-    header={'X-Onboarding-Token':path.split('#')[1].split('/')[0]}
+    with factory() as s:
+        header={'X-Onboarding-Token':flow.invite_token(s.get(CustomerOnboardingInvite,s.get(CustomerOnboardingJob,1).invite_id))}
     assert web.get('/api/onboarding',headers=header).status_code==200
     with factory() as s: claimed=flow.claim(s)
     flow.work(factory,*claimed,crawl=lambda _:[],research=researched)
@@ -390,7 +394,7 @@ def test_link_available_before_research_and_stable_after_research(setup):
         s.get(CustomerOnboardingInvite,1).expires_at=dt.datetime.now(dt.UTC)-dt.timedelta(seconds=1)
         s.commit()
     renewed=web.post('/client/1/onboarding-workflow/link/ensure').json()['path']
-    assert renewed!=path and renewed.endswith('/example-ag')
+    assert renewed==path and renewed.endswith('/example-ag')
 
 
 def test_customer_name_slug():
@@ -468,7 +472,7 @@ def test_a_new_mandate_gets_its_logo_first_and_a_missing_one_never_blocks(setup,
         assert s.get(Client,2).logo_url is None
 
 
-def test_a_long_profile_answer_is_condensed_and_a_topic_text_is_not():
+def test_long_profile_and_topic_answers_are_both_sent_for_condensing():
     long='Der offizielle Name lautet Zenchef SAS. '+'Weitere Registerangaben folgen hier. '*12
     seen={}
     def ask(prompt):
@@ -477,7 +481,7 @@ def test_a_long_profile_answer_is_condensed_and_a_topic_text_is_not():
     out=crawler.condense([dict(key='A01.01',value=long,source_url='u'),dict(key='R01.01',value=long,source_url='u')],ask=ask)
     assert out[0]=={'key':'A01.01','value':'Zenchef SAS, Sitz in Paris.','source_url':'u'}
     assert out[1]['value']==long
-    assert 'R01.01' not in seen['prompt']
+    assert 'R01.01' in seen['prompt']
 
 
 def test_a_glance_fact_is_cut_to_its_bare_value():
@@ -542,3 +546,20 @@ def test_an_unconfirmed_customer_link_shows_the_shortened_topic(setup):
         s.add(CustomerOnboardingJob(client_id=1,invite_id=invite.id,status='ready')); s.commit()
         flow.condense_stored(s,ask=lambda p: json.dumps({'answers':[{'key':'R01.01','value':'Kurz.'}]}))
         assert [p['value'] for p in s.get(CustomerOnboardingInvite,invite.id).prefill]==['Kurz.']
+
+
+def test_machine_answers_are_short_bullets_and_missing_values_stay_open():
+    assert crawler.compact_value('R03.01','Mitarbeitende: nicht veröffentlicht\nUmsatz: 2 Mio. Euro (2025)') == '• Mitarbeitende: bitte ergänzen\n• Umsatz: 2 Mio. Euro (2025)'
+    assert crawler.compact_value('Q01.02','• Expansion nach Frankreich') == '• Expansion nach Frankreich'
+    assert crawler.compact_value('R05.01','x'*321) is None
+    assert crawler.compact_value('R05.01','a\nb\nc\nd') is None
+    assert crawler.compact_value('A01.03','2008') == '2008'
+
+
+def test_questionnaire_origin_can_be_configured_for_local_installations(setup,monkeypatch):
+    web,factory=setup
+    create(web)
+    monkeypatch.setenv('NEWSPULSE_ONBOARDING_BASE_URL','http://127.0.0.1:8765/')
+    response=web.post('/client/1/onboarding-workflow/link/ensure')
+    assert response.status_code==200,response.text
+    assert response.json()['public_url']=='http://127.0.0.1:8765'+response.json()['path']

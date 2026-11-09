@@ -92,7 +92,7 @@ it('reads the protected token from links ending in a customer name',async()=>{
 it('shows each question with its explanation and lets the customer finish with open questions',async()=>{
   global.fetch=vi.fn().mockImplementationOnce(()=>ok(data)).mockImplementationOnce(()=>ok({value:'',skipped:true})).mockImplementationOnce(()=>ok({value:'',skipped:true})).mockImplementationOnce(()=>ok({ok:true}));
   render(<OnboardingPage token="test"/>);
-  expect(await screen.findByText(/2 Fragen · jede ist freiwillig/)).toBeTruthy();
+  expect(await screen.findByText(/Dieser Fragebogen umfasst zu Beginn 22 Fragen/)).toBeTruthy();
   fireEvent.click(screen.getByText('Los geht’s'));
   expect(screen.getByText('Offizieller Name')).toBeTruthy();
   fireEvent.click(screen.getByText('Später beantworten'));
@@ -146,4 +146,29 @@ describe('prefill gist', () => {
     expect(short.length).toBeLessThanOrEqual(180);
     expect(gist('Kurz und gut.')).toBe('Kurz und gut.');
   });
+});
+it('shows customer identity prominently and saves customer answers without an extra confirmation',async()=>{
+ global.fetch=vi.fn().mockImplementationOnce(()=>ok({...data,logo_url:'/static/logos/client.png'})).mockImplementationOnce(()=>ok({value:'Firma',skipped:false}));
+ render(<OnboardingPage token="test"/>);
+ expect(await screen.findByText('Testfirma')).toBeTruthy();
+ expect(document.querySelector('.onb-customer-identity img').getAttribute('src')).toBe('/static/logos/client.png');
+ fireEvent.click(screen.getByText('Los geht’s'));
+ expect(screen.queryByRole('button',{name:'Antwort bestätigen'})).toBeNull();
+ fireEvent.change(screen.getByLabelText('Ihre Antwort'),{target:{value:'Firma'}});
+ fireEvent.click(screen.getByText('Weiter'));
+ expect(await screen.findByText('Wohin geht es?')).toBeTruthy();
+});
+it('saves a corrected topic with an icon and shows no confirmation ticks',async()=>{
+ const prefill=[{key:'R03.01',label:'Unternehmensgröße',value:'20 Mitarbeitende',source_url:'https://example.org'}];
+ global.fetch=vi.fn().mockImplementationOnce(()=>ok({...data,prefill,prefill_confirmed:false})).mockImplementationOnce(()=>ok({ok:true}));
+ render(<OnboardingPage token="test"/>);
+ fireEvent.click(await screen.findByText('Los geht’s'));
+ expect(screen.queryByRole('button',{name:/Bestätigen:/})).toBeNull();
+ expect(screen.queryByRole('button',{name:'Speichern: Unternehmensgröße'})).toBeNull();
+ fireEvent.click(screen.getByText('Korrigieren'));
+ fireEvent.change(screen.getByRole('textbox',{name:'Unternehmensgröße'}),{target:{value:'25 Mitarbeitende'}});
+ fireEvent.click(screen.getByRole('button',{name:'Speichern: Unternehmensgröße'}));
+ await waitFor(()=>expect(screen.queryByRole('textbox',{name:'Unternehmensgröße'})).toBeNull());
+ expect(screen.getByText('25 Mitarbeitende')).toBeTruthy();
+ expect(JSON.parse(global.fetch.mock.calls[1][1].body)).toEqual({corrections:{'R03.01':'25 Mitarbeitende'},confirmed_keys:['R03.01']});
 });

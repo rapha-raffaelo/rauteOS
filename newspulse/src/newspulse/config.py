@@ -797,6 +797,42 @@ def gmail_client_secret() -> str:
     ).strip()
 
 
+# The LinkedIn app every person connects their own profile through ("Sign In
+# with LinkedIn using OpenID Connect" plus "Share on LinkedIn", both self-serve).
+# Empty means the LinkedIn page offers no connection at all. The access tokens
+# go to a 0600 file beside the database, like Gmail's (newspulse.linkedin_link).
+_ENV_LINKEDIN_CLIENT_ID = "NEWSPULSE_LINKEDIN_CLIENT_ID"
+_ENV_LINKEDIN_CLIENT_SECRET = "NEWSPULSE_LINKEDIN_CLIENT_SECRET"
+# LinkedIn's REST API is versioned by month and retires a version after about a
+# year, so the value has to move with it; the variable lets that happen
+# without a release.
+_ENV_LINKEDIN_VERSION = "NEWSPULSE_LINKEDIN_VERSION"
+_DEFAULT_LINKEDIN_VERSION = "202608"
+LINKEDIN_CALLBACK_PATH = "/linkedin/callback"
+
+
+def linkedin_client_id() -> str:
+    return os.environ.get(_ENV_LINKEDIN_CLIENT_ID, "").strip()
+
+
+def linkedin_client_secret() -> str:
+    return os.environ.get(_ENV_LINKEDIN_CLIENT_SECRET, "").strip()
+
+
+def linkedin_configured() -> bool:
+    """Whether a person can connect a LinkedIn profile at all; both halves needed."""
+    return bool(linkedin_client_id() and linkedin_client_secret())
+
+
+def linkedin_redirect_uri() -> str:
+    """Must match the redirect URL registered on the LinkedIn app verbatim."""
+    return f"{base_url()}{LINKEDIN_CALLBACK_PATH}"
+
+
+def linkedin_version() -> str:
+    return os.environ.get(_ENV_LINKEDIN_VERSION, "").strip() or _DEFAULT_LINKEDIN_VERSION
+
+
 def allowed_emails() -> str:
     return os.environ.get(_ENV_ALLOWED_EMAILS, ALLOWED_EMAILS).strip()
 

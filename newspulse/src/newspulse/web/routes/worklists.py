@@ -7,17 +7,23 @@ typed fields kept, rather than redirecting it away.
 
 from __future__ import annotations
 
+import logging
+import secrets
+
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse, Response
 from sqlalchemy.orm import Session
 
-from ... import worklists
+from ... import config, desk, linkedin_link, worklists, workspaces
 from ...models import DEAL_STAGES, POST_STATES, TASK_PRIORITIES, TASK_STATES, Asset, Deal, LinkedInPost, Task
+from .. import redirects
 from ..app import get_db
 from ..react_pages import render as render_react
 
 router = APIRouter()
+_log = logging.getLogger(__name__)
 _SEE_OTHER = 303
+_LINKEDIN_STATE_COOKIE = "newspulse_linkedin_state"
 
 
 def _clients(session: Session) -> list[dict]:
@@ -31,19 +37,19 @@ def _task(t: Task) -> dict:
                 created_at=t.created_at, done_at=t.done_at)
 
 
-def _post(p: LinkedInPost) -> dict:
+def _post(session: Session, p: LinkedInPost) -> dict:
     return dict(id=p.id, title=p.title, author=p.author, body=p.body, status=p.status,
                 planned_on=p.planned_on, published_url=p.published_url,
                 client=dict(id=p.client.id, name=p.client.name), updated_at=p.updated_at,
-                source_href=_source_href(p))
+                source_href=_source_href(session, p), post_at=p.post_at, post_as=p.post_as,
+                on_linkedin=bool(p.linkedin_urn), post_error=p.post_error)
 
 
-def _source_href(p: LinkedInPost) -> str:
+def _source_href(session: Session, p: LinkedInPost) -> str:
     """Where the card came from: the chance, or the text RauteOS wrote."""
     if p.context_href:
         return p.context_href
-    a = p.asset if p.asset_id else None
-    return f"/client/{a.client_id}/advice?eintrag=anlass-{a.angle_id}#asset-{a.id}" if a and a.angle_id else ""
+    return workspaces.text_href(session, p.asset) if p.asset_id and p.asset else ""
 
 
 def _deal(d: Deal) -> dict:
@@ -72,8 +78,17 @@ def _tasks_page(request: Request, session: Session, *, error: str = "", draft: d
     raw = request.query_params.get("client", "")
     client_id = int(raw) if raw.isdigit() else None
     rows = worklists.tasks(session, status=status, client_id=client_id)
+    # Over every open task, whatever the filter: the same number as the sidebar.
+    everything = worklists.open_tasks(session)
+    # What the Desk counts as "Entscheidungen offen": letters, impulses and
+    # profile conflicts that wait on a person. Listed here so the Desk's figure
+    # has a page to click through to.
+    decisions = [dict(kind=d.kind, title=d.title, detail=d.detail, since=d.since, href=d.href,
+                      client=dict(id=d.client.id, name=d.client.name))
+                 for d in desk.open_decisions(session, client_id)]
     return render_react(request, "tasks", dict(
-        tasks=[_task(t) for t in rows], clients=_clients(session),
+        tasks=[_task(t) for t in rows], clients=_clients(session), decisions=decisions,
+        open_total=len(everything), due_on=[t.due_on for t in everything if t.due_on],
         priorities=[[p, worklists.TASK_PRIORITY_LABELS[p]] for p in TASK_PRIORITIES],
         states=[[s, worklists.TASK_STATE_LABELS[s]] for s in TASK_STATES],
         filter=dict(status=status, client=client_id), error=error, draft=draft or {}))
@@ -99,6 +114,7 @@ async def create_task(request: Request, session: Session = Depends(get_db)) -> R
 async def update_task(task_id: int, request: Request, session: Session = Depends(get_db)) -> Response:
     task = _row_or_404(session, Task, task_id)
     form = await _form(request)
+    back = redirects.local_target(str(form.pop("redirect_to", "")), "/aufgaben")
     try:
         if set(form) <= {"status"}:  # the one-click status buttons
             worklists.set_task_status(task, str(form.get("status", "")))
@@ -108,7 +124,7 @@ async def update_task(task_id: int, request: Request, session: Session = Depends
     except worklists.Invalid as exc:
         session.rollback()
         return _tasks_page(request, session, error=str(exc))
-    return RedirectResponse("/aufgaben", status_code=_SEE_OTHER)
+    return RedirectResponse(back, status_code=_SEE_OTHER)
 
 
 @router.post("/aufgaben/{task_id}/delete")
@@ -121,13 +137,28 @@ def delete_task(task_id: int, session: Session = Depends(get_db)) -> Response:
 # --- LinkedIn -------------------------------------------------------------------
 
 
-def _posts_page(request: Request, session: Session, *, error: str = "", draft: dict | None = None) -> Response:
+def _owner(request: Request) -> str:
+    """Whose LinkedIn account: the RauteOS sign-in address (empty under basic auth)."""
+    return request.scope.get("user_email", "")
+
+
+def _account(request: Request) -> dict:
+    found = linkedin_link.connection(_owner(request))
+    return dict(configured=config.linkedin_configured(), connected=bool(found and found.usable()),
+                name=found.name if found else "", expires_at=found.expires_at if found else None,
+                expiring=bool(found and found.expiring()), lost=found.lost if found else "",
+                expired=bool(found and not found.lost and not found.usable()))
+
+
+def _posts_page(request: Request, session: Session, *, error: str = "", draft: dict | None = None,
+                notice: str = "") -> Response:
     rows = worklists.posts(session)
+    notice = notice or _LINKEDIN_NOTICES.get(request.query_params.get("konto", ""), "")
     return render_react(request, "linkedin", dict(
-        posts=[_post(p) for p in rows], clients=_clients(session),
+        posts=[_post(session, p) for p in rows], clients=_clients(session),
         states=[[s, worklists.POST_STATE_LABELS[s]] for s in POST_STATES],
-        suggestions=worklists.suggestions(session),
-        error=error, draft=draft or {}))
+        suggestions=worklists.suggestions(session), account=_account(request),
+        error=error, notice=notice, draft=draft or {}))
 
 
 @router.get("/linkedin")
@@ -165,6 +196,101 @@ async def post_from_chance(request: Request, session: Session = Depends(get_db))
     return RedirectResponse(f"/linkedin#post-{post.id}", status_code=_SEE_OTHER)
 
 
+# --- The person's own LinkedIn account -------------------------------------------
+
+_LINKEDIN_NOTICES = {
+    "verbunden": "LinkedIn ist verbunden.",
+    "getrennt": "LinkedIn ist getrennt.",
+    "abgebrochen": "Die Anmeldung bei LinkedIn wurde abgebrochen.",
+    "fehler": "Die Verbindung mit LinkedIn hat nicht geklappt. Bitte noch einmal versuchen.",
+}
+
+
+def _back(notice: str) -> RedirectResponse:
+    return RedirectResponse(f"/linkedin?konto={notice}", status_code=_SEE_OTHER)
+
+
+@router.get("/linkedin/connect")
+def linkedin_connect(request: Request) -> Response:
+    if not config.linkedin_configured():
+        return _back("fehler")
+    state = linkedin_link.new_state()
+    response = RedirectResponse(linkedin_link.authorize_url(state), status_code=_SEE_OTHER)
+    response.set_cookie(_LINKEDIN_STATE_COOKIE, state, max_age=600, httponly=True,
+                        secure=request.url.scheme == "https", samesite="lax", path="/linkedin")
+    return response
+
+
+@router.get("/linkedin/callback")
+def linkedin_callback(request: Request, code: str = "", state: str = "", error: str = "") -> Response:
+    """LinkedIn's answer. The state gate first: a callback without this
+    browser's state is not this browser's flow."""
+    expected = request.cookies.get(_LINKEDIN_STATE_COOKIE, "")
+    if not (state and expected and secrets.compare_digest(state.encode(), expected.encode())):
+        _log.warning("LinkedIn callback refused: state did not match")
+        response = _back("fehler")
+    elif error:
+        response = _back("abgebrochen" if error in ("user_cancelled_login", "user_cancelled_authorize")
+                         else "fehler")
+    elif not code:
+        response = _back("fehler")
+    else:
+        try:
+            linkedin_link.exchange(_owner(request), code)
+            response = _back("verbunden")
+        except linkedin_link.LinkedInError as exc:
+            _log.error("LinkedIn connection failed: %s", exc)
+            response = _back("fehler")
+    response.delete_cookie(_LINKEDIN_STATE_COOKIE, path="/linkedin")
+    return response
+
+
+@router.post("/linkedin/disconnect")
+def linkedin_disconnect(request: Request) -> Response:
+    linkedin_link.disconnect(_owner(request))
+    return _back("getrennt")
+
+
+@router.post("/linkedin/{post_id}/publish")
+def publish_post(post_id: int, request: Request, session: Session = Depends(get_db)) -> Response:
+    post = _row_or_404(session, LinkedInPost, post_id)
+    try:
+        worklists.publish_post(session, post, _owner(request))
+    except worklists.Invalid as exc:
+        session.rollback()
+        return _posts_page(request, session, error=str(exc))
+    return RedirectResponse(f"/linkedin#post-{post.id}", status_code=_SEE_OTHER)
+
+
+@router.post("/linkedin/{post_id}/schedule")
+async def schedule_post(post_id: int, request: Request, session: Session = Depends(get_db)) -> Response:
+    post = _row_or_404(session, LinkedInPost, post_id)
+    try:
+        worklists.schedule_post(session, post, _owner(request), await _form(request))
+    except worklists.Invalid as exc:
+        session.rollback()
+        return _posts_page(request, session, error=str(exc))
+    return RedirectResponse(f"/linkedin#post-{post.id}", status_code=_SEE_OTHER)
+
+
+@router.post("/linkedin/{post_id}/published")
+async def mark_published(post_id: int, request: Request, session: Session = Depends(get_db)) -> Response:
+    post = _row_or_404(session, LinkedInPost, post_id)
+    try:
+        worklists.mark_published(session, post, await _form(request))
+    except worklists.Invalid as exc:
+        session.rollback()
+        return _posts_page(request, session, error=str(exc))
+    return RedirectResponse(f"/linkedin#post-{post.id}", status_code=_SEE_OTHER)
+
+
+@router.post("/linkedin/{post_id}/unschedule")
+def unschedule_post(post_id: int, session: Session = Depends(get_db)) -> Response:
+    post = _row_or_404(session, LinkedInPost, post_id)
+    worklists.unschedule_post(session, post)
+    return RedirectResponse(f"/linkedin#post-{post.id}", status_code=_SEE_OTHER)
+
+
 @router.post("/linkedin/{post_id}")
 async def update_post(post_id: int, request: Request, session: Session = Depends(get_db)) -> Response:
     post = _row_or_404(session, LinkedInPost, post_id)
@@ -173,7 +299,7 @@ async def update_post(post_id: int, request: Request, session: Session = Depends
         if set(form) <= {"status"}:
             if form.get("status") not in POST_STATES:
                 raise worklists.Invalid("Unbekannter Wert.")
-            post.status = str(form["status"])
+            worklists.set_post_status(post, str(form["status"]))
             session.commit()
         else:
             worklists.save_post(session, form, post)

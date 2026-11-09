@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 import re
 from sqlalchemy import String, cast, or_, select
-from . import guide, models as m
+from . import guide, models as m, shared_guides
 from .matching import terms_matcher
 
 _STOP = set('wie was wer welche welcher welchen welches ist sind das die der den dem des ein eine einer einen einem und oder für von mit zum zur im in am an auf zu mir bitte über kann kannst du wir uns the a an of in is are what how who about please'.split())
@@ -54,7 +54,7 @@ def build(session, question, *, client_id=None, previous_question=''):
                       competitor=c.is_competitor, website=c.website)
                       for c in sorted(clients, key=lambda c: c.id not in focus)), 10000),
         guides=_bounded((dict(client_id=c.id, name=c.name, text=guide.for_prompt(c)[:4000])
-                for c in clients if c.id in focus), 12000), results=[])
+                for c in clients if c.id in focus), 12000), results=shared_guides.search(terms))
     budget = MAX_CHARS - len(json.dumps(data, ensure_ascii=False, default=str))
     # Search all these stores, including archived clients. No database writes,
     # settings, credentials or external lookup are involved.

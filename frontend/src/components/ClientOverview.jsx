@@ -1,5 +1,6 @@
 import React from 'react';
 import {ClientTitle} from './ClientLogo.jsx';
+import './communication.css';
 
 const statusNames={draft:'Entwurf',active:'Aktiviert',closed:'Abgeschlossen'};
 const eventNames={idea_developed:'Idee entwickelt',activated:'Opportunity aktiviert',choices_saved:'Auswahl gespeichert',text_created:'Text erstellt',text_checked:'Aussagen geprüft',text_edited:'Text bearbeitet'};
@@ -12,8 +13,8 @@ export function ClientOverview({data,clientId}){
  const base=`/client/${clientId}`;
  const summary=data.summary;
  const twin=summary?.twin;
- const opportunities=data.opportunities;
- const texts=data.texts.slice(0,4);
+ const opportunities=data.opportunities||[];
+ const texts=(data.texts||[]).slice(0,4);
  const parts=twin?.parts||{};
  const part=(label,p,note)=>p&&<div className="co-part"><div><span>{label}</span><strong>{p.filled}<small> / {p.total} {note}</small></strong></div><div className="co-bar"><span style={{width:`${p.total?Math.round(100*p.filled/p.total):0}%`}}/></div></div>;
  const open=[parts.R&&parts.R.total-parts.R.filled&&`${parts.R.total-parts.R.filled} Recherche-Themen ohne Angabe`,
@@ -25,11 +26,14 @@ export function ClientOverview({data,clientId}){
  const promised=summary?.promised_quarter;
  const bar=(label,value,of)=><div className="co-deliv" key={label}><span>{label}</span><span className="co-bar"><span style={{width:`${of?Math.min(100,Math.round(100*value/of)):0}%`}}/></span><strong>{value}{of!=null?`/${of}`:''}</strong></div>;
  const impact=[['Veröffentlichungen',data.released_texts?.length??0],['Berichte',data.released_reports?.length??0],['Offene Chancen',summary?.opportunities??0],['Profil',twin?`${twin.percent} %`:'–']];
- const stepNames={kundenfreigabe:'Kundenfreigabe',freigabe:'Freigabe',impuls:'Impuls',profil:'Profil'};
+ const stepNames={aufgabe:'Aufgabe',kundenfreigabe:'Kundenfreigabe',freigabe:'Freigabe',impuls:'Impuls',profil:'Profil'};
  return <section className="client-overview">
   <header className="co-header"><div><p className="co-eyebrow">CLIENT WORKSPACE</p><h1><ClientTitle client={data.client}/></h1><p className="co-subtitle">{company.legal_name&&<>Unternehmen dahinter: {company.legal_name}{company.tags?.length?' · ':''}</>}{company.tags?.length?company.tags.join(' · '):company.legal_name?'':'Chancen, Wissen und Ergebnisse für dieses Mandat.'}</p></div>
    <div className="co-actions"><a className="btn btn--ghost" href={`/ask?client_id=${clientId}`}>Zu {data.client.name} fragen</a><a className="btn btn--go" href={`${base}/opportunities?develop=1`}>+ Opportunity entwickeln</a></div></header>
   <div className="co-layout"><div className="co-main">
+   <section className="co-panel co-news" id="kundennews"><header className="co-panel-head"><h2>Heute · Kundennews <span className="co-count">{data.today_news?.total??0}</span></h2><a href={base}>Zum Presse-Monitoring →</a></header>
+    {data.today_news?.items?.length?<div>{data.today_news.items.map(item=><article className="co-news-item" key={item.id}><div className="co-card-meta"><span>{item.source} · {new Date(item.published_at).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Berlin'})}</span>{item.important&&<span className="badge">Wichtig</span>}</div><h3><a href={/^https?:\/\//i.test(item.url)?item.url:undefined} target="_blank" rel="noreferrer">{item.title} ↗</a></h3>{item.summary&&<p>{item.summary}</p>}</article>)}</div>:<p className="co-quiet">Heute wurden noch keine relevanten Kundenmeldungen erfasst.</p>}
+   </section>
    <section className="co-panel co-company"><header className="co-panel-head"><h2>Das Unternehmen</h2><span className="badge">Client Intelligence</span></header>
     <div className="co-company-body">
      {company.description?<p className="co-desc">{company.description}</p>:<p className="co-quiet">Noch keine Unternehmensbeschreibung recherchiert. <a href={`${base}/twin`}>Im Profil ergänzen →</a></p>}
@@ -41,13 +45,13 @@ export function ClientOverview({data,clientId}){
     <div className="co-opportunities">{running.length?running.slice(0,6).map(o=><a className="co-opportunity" key={`${o.context_kind}-${o.context_id}`} href={`${base}/opportunities?kind=${o.context_kind}&context=${o.context_id}`}><div className="co-card-meta"><span>{o.context_kind==='detected'?'Erkannte Chance':'Entwickelte Chance'}{o.created_at&&<> · <time dateTime={o.created_at}>{longDate(o.created_at)}</time></>}</span><span className={`co-status co-status--${o.status}`}>{statusNames[o.status]||o.status}</span></div><h3>{o.title}</h3></a>):<div className="co-empty"><span className="co-empty-icon" aria-hidden="true">↗</span><h3>Raum für die nächste gute Idee</h3><p>Entwickle eine Kommunikationschance aus dem Profil und aktueller Recherche.</p></div>}</div>
    </section>
    <section className="co-panel"><header className="co-panel-head"><h2>Aktuelle Texte</h2></header>
-    {texts.length?<div className="co-texts">{texts.map(t=><a className="co-text" key={`${t.type}-${t.id}`} href={t.href}><span className="co-document" aria-hidden="true">≡</span><div><small>{formatNames[t.format]||t.format} · {date(t.generated_at)}</small><h3>{t.title||'Ohne Titel'}</h3></div><span className="co-status">{t.released_at?'Freigegeben':'Entwurf'}</span><span aria-hidden="true">↗</span></a>)}</div>:<div className="co-empty co-empty--text"><span className="co-empty-icon" aria-hidden="true">≡</span><div><h3>Noch keine Texte erstellt</h3><p>Öffne eine Opportunity und beginne mit einem Vorschlag für den Kunden. Deine Entwürfe erscheinen anschließend hier.</p></div></div>}
+    {texts.length?<div className="co-texts">{texts.map(t=><a className="co-text" key={`${t.type}-${t.id}`} href={t.href}><span className="co-document" aria-hidden="true">≡</span><div><small>{t.format_name||formatNames[t.format]||t.format} · {date(t.generated_at)}</small><h3>{t.title||'Ohne Titel'}</h3></div><span className="co-status">{t.released_at?'Freigegeben':'Entwurf'}</span><span aria-hidden="true">↗</span></a>)}</div>:<div className="co-empty co-empty--text"><span className="co-empty-icon" aria-hidden="true">≡</span><div><h3>Noch keine Texte erstellt</h3><p>Öffne eine Opportunity und beginne mit einem Vorschlag für den Kunden. Deine Entwürfe erscheinen anschließend hier.</p></div></div>}
    </section>
   </div><aside className="co-aside">
-   <section className="co-panel co-delivery"><header className="co-panel-head"><h2>Leistungen · Quartal</h2><small>Vereinbart / erbracht</small></header>
+   <section className="co-panel co-delivery"><header className="co-panel-head"><h2>Leistungen · Quartal</h2><a href={`${base}/actions`}>Nachweis →</a></header>
     <div className="co-delivery-body">{quarter?<>{bar('Actions gesamt',quarter.total,promised)}{bar('Aus RauteOS',quarter.released,promised)}{bar('Nachgetragen',quarter.logged,promised)}</>:<p className="co-quiet">Noch keine Leistungen erfasst.</p>}
      {promised==null&&<p className="co-quiet">Noch keine Zusage hinterlegt.</p>}</div></section>
-   <section className="co-panel"><header className="co-panel-head"><h2>Wirkung im Überblick</h2><a href={`${base}/ki`}>Alle KPIs →</a></header>
+   <section className="co-panel"><header className="co-panel-head"><h2>Monitoring im Überblick</h2><a href={`${base}/kpis`}>Alle KPIs →</a></header>
     <div className="co-impact">{impact.map(([label,value])=><div className="co-tile" key={label}><small>{label}</small><strong>{value}</strong></div>)}</div></section>
    <section className="co-panel co-steps"><header className="co-panel-head"><h2>Nächste Schritte</h2></header>
     {steps.length?<div className="co-step-list">{steps.map((d,i)=><a className="co-step" href={d.href} key={`${d.href}-${i}`}><span className="co-step-box" aria-hidden="true"/><div><h3>{d.title}</h3><small>{d.detail||stepNames[d.kind]}</small></div><span className="badge">{stepNames[d.kind]||d.kind}</span></a>)}</div>:<p className="co-quiet">Gerade wartet nichts auf eine Entscheidung.</p>}</section>

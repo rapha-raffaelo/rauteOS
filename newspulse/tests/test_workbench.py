@@ -38,7 +38,11 @@ def test_primary_reads_are_scoped_and_drafts_are_not_delivery(web,db):
     assert data['texts'][0]['title']=='Draft' and not data['texts'][0]['released_at']
     assert not web.get('/api/v1/workbench/clients/2').json()['texts']
     assert web.get('/api/v1/workbench/clients/3').status_code==404
-    assert web.get('/api/v1/workbench/assets').headers['cache-control']=='no-store'
+    assets_response=web.get('/api/v1/workbench/assets')
+    assert assets_response.status_code==200,assets_response.text
+    assert assets_response.headers['cache-control']=='no-store'
+    assert assets_response.json()['texts'][0]['title']=='Draft'
+    assert assets_response.json()['texts'][0]['href']=='/client/1/advice?eintrag=anlass-1#asset-text-1'
     assert db.scalar(select(func.count()).select_from(ClientAction))==0
 
 
@@ -247,3 +251,51 @@ def test_stories_and_content_leads_with_the_running_stories(web, db):
     assert [s['title'] for s in data['stories']] == ['Hypothesis']
     assert data['stories'][0]['client']['name'] == 'Alpha'
     assert data['stories'][0]['href'].startswith('/client/1/opportunities?kind=developed&context=')
+
+
+def test_social_monitoring_scopes_published_posts(web, db):
+    from newspulse.models import LinkedInPost
+    db.add_all([LinkedInPost(client_id=1,title='Published',status='veroeffentlicht'),LinkedInPost(client_id=1,title='Draft',status='entwurf'),LinkedInPost(client_id=2,title='Other',status='veroeffentlicht')]);db.commit()
+    result=web.get('/api/v1/workbench/clients/1/monitoring/social')
+    assert result.status_code==200
+    assert [p['title'] for p in result.json()['posts']]==['Published']
+    assert result.json()['metrics_connected'] is False
+    assert web.get('/api/v1/workbench/clients/3/monitoring/social').status_code==404
+
+
+def test_today_news_local_day_and_client_scope(db):
+    from newspulse.models import Article, Analysis, Category
+    from newspulse.web.routes.workbench import today_news
+    now=dt.datetime(2026,11,6,12,tzinfo=dt.timezone.utc)
+    cases=[('today',1,now,True),('other',2,now,True),('irrelevant',1,now,False),('yesterday',1,now-dt.timedelta(days=1),True),('midnight',1,dt.datetime(2026,11,5,23,tzinfo=dt.timezone.utc),True),('tomorrow',1,dt.datetime(2026,11,6,23,tzinfo=dt.timezone.utc),True)]
+    for i,(title,cid,published,relevant) in enumerate(cases):
+        article=Article(title=title,url=f'https://example.org/{i}',source='Paper',title_hash=str(i),published_at=published)
+        db.add(article);db.flush()
+        db.add(Analysis(article_id=article.id,client_id=cid,is_relevant=relevant,category=next(iter(Category)),relevance_score=5,importance_score=3))
+    db.commit()
+    result=today_news(db,1,now=now)
+    assert result['total']==2
+    assert [r['title'] for r in result['items']]==['today','midnight']
+
+
+def test_today_redirect_and_kpi_placeholder(web):
+    response = web.get('/client/1/heute', follow_redirects=False)
+    assert response.headers['location'] == '/client/1/overview'
+    response = web.get('/client/1/monitoring/kpis')
+    assert response.status_code == 200
+    assert 'monitoring_kpis' in response.text
+    assert web.get('/client/999/monitoring/kpis').status_code == 404
+
+
+def test_daily_overview_includes_more_than_eight_news(db):
+    from newspulse.models import Article, Analysis, Category
+    from newspulse.web.routes.workbench import today_news
+    now = dt.datetime(2026, 11, 9, 12, tzinfo=dt.timezone.utc)
+    for i in range(12):
+        article = Article(title=f'News {i}', url=f'https://example.org/daily/{i}', source='Paper', title_hash=f'daily{i}', published_at=now)
+        db.add(article)
+        db.flush()
+        db.add(Analysis(article_id=article.id, client_id=1, is_relevant=True, category=next(iter(Category)), relevance_score=5, importance_score=3))
+    db.commit()
+    result = today_news(db, 1, now=now)
+    assert result['total'] == len(result['items']) == 12

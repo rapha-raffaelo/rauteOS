@@ -12,7 +12,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from newspulse import desk, worklists
-from newspulse.models import Base, Client, Deal, LinkedInPost, Task
+from newspulse.models import Angle, Base, Client, Deal, LinkedInPost, Outreach, OutreachState, Task
 from newspulse.web.app import create_app, get_db
 
 
@@ -111,6 +111,48 @@ def test_the_desk_counts_open_tasks_and_lists_them_before_decisions(session):
     assert board.tasks_open == 1
     assert [t.title for t in board.tasks] == ["heute"]
     assert board.tasks[0].href.startswith("/aufgaben#task-")
+
+
+def _client_letter(session, subject="Was beim Wechsel zum Depot nicht mitwandert"):
+    angle = Angle(client_id=1, generated_at=dt.datetime(2026, 9, 4, tzinfo=dt.UTC),
+                  subject="Impuls", message="m", context="k")
+    session.add(angle)
+    session.flush()
+    session.add(Outreach(angle_id=angle.id, client_id=1, subject=subject, message="x",
+                         generated_at=dt.datetime(2026, 9, 4, tzinfo=dt.UTC), state=OutreachState.ENTWURF))
+    session.commit()
+
+
+def test_the_desks_open_decisions_are_listed_on_the_tasks_page(web, session):
+    """"Entscheidungen offen" on the Desk has a page: the same rows, each linked."""
+    _client_letter(session)
+    board = desk.build(session)
+    assert board.decisions_open == len(desk.open_decisions(session))
+    body = rendered(web.get("/aufgaben"))
+    assert 'id="entscheidungen"' in body
+    assert "Was beim Wechsel zum Depot nicht mitwandert" in body
+    assert "Kundenfreigabe" in body
+    for decision in board.decisions:
+        assert decision.href.replace("&", "&amp;") in body or decision.href in body
+
+
+def test_the_decisions_follow_the_mandate_filter(web, session):
+    _client_letter(session)
+    assert len(desk.open_decisions(session, 1)) == len(desk.open_decisions(session))
+    assert desk.open_decisions(session, 999) == []
+
+
+def test_ticking_a_task_on_the_desk_goes_back_to_the_desk(web, session):
+    web.post("/aufgaben", data={"title": "abhaken"})
+    task = session.scalar(select(Task))
+    response = web.post(f"/aufgaben/{task.id}", data={"status": "erledigt", "redirect_to": "/desk"},
+                        follow_redirects=False)
+    assert response.headers["location"] == "/desk"
+    session.refresh(task)
+    assert task.status == "erledigt"
+    off_site = web.post(f"/aufgaben/{task.id}", data={"status": "offen", "redirect_to": "//evil.example"},
+                        follow_redirects=False)
+    assert off_site.headers["location"] == "/aufgaben"
 
 
 # --- LinkedIn -------------------------------------------------------------------
@@ -240,3 +282,38 @@ def test_a_chance_from_outside_rauteos_is_refused(web, session):
     body = rendered(web.post("/linkedin/from-chance", data={"client_id": "1", "title": "x", "context_href": "https://evil.example"}))
     assert "innerhalb von RauteOS" in body
     assert session.scalar(select(LinkedInPost)) is None
+
+
+# --- Links and counts that must agree (review 2026-11-06) ------------------------
+
+
+def test_every_open_task_counts_as_due_not_just_the_five_shown(session):
+    for i in range(7):
+        worklists.save_task(session, {"title": f"t{i}", "due_on": "2026-01-01"})
+    board = desk.build(session)
+    assert (len(board.tasks), board.tasks_open, board.tasks_due) == (5, 7, 7)
+
+
+def test_the_tasks_heading_counts_every_open_task_whatever_the_filter(web, session):
+    worklists.save_task(session, {"title": "offen", "client_id": "1"})
+    worklists.save_task(session, {"title": "fertig", "status": "erledigt"})
+    body = rendered(web.get("/aufgaben?status=erledigt"))
+    assert "1 offen" in body
+
+
+def test_a_mandates_next_steps_start_with_its_tasks(web, session):
+    worklists.save_task(session, {"title": "Statement abstimmen", "client_id": "1", "due_on": "2026-11-09"})
+    worklists.save_task(session, {"title": "Agenturarbeit"})
+    steps = web.get("/api/v1/workbench/clients/1").json()["next_steps"]
+    assert [(s["kind"], s["title"], s["detail"]) for s in steps] == [("aufgabe", "Statement abstimmen", "fällig 09.11.2026")]
+
+
+def test_a_text_link_names_its_occasion_and_an_anchor_that_exists(session):
+    from newspulse import workspaces
+    asset = _linkedin_text(session)
+    href = workspaces.text_href(session, asset)
+    assert href == f"/client/1/advice?eintrag=anlass-{asset.angle_id}#asset-text-{asset.id}"
+    from pathlib import Path
+    template = Path(workspaces.__file__).parent / "web/templates/advice.html"
+    assert 'id="asset-text-{{ asset.id }}"' in template.read_text()
+    assert 'id="letter-text-{{ msg.id }}"' in template.read_text()

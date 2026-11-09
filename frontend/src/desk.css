@@ -105,7 +105,8 @@
 .brief__go{flex:none;color:var(--banner-ink);background:var(--banner-btn);border:1px solid var(--banner-line);border-radius:9px;padding:10px 14px;font-size:12px;font-weight:700;white-space:nowrap}
 .brief__go:hover{filter:brightness(1.15);text-decoration:none}
 .stat-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:var(--s5)}
-.stat{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:17px 19px;box-shadow:var(--shadow)}
+.stat{display:block;color:inherit;background:var(--card);border:1px solid var(--line);border-radius:13px;padding:17px 19px;box-shadow:var(--shadow);transition:border-color .15s}
+.stat:hover{text-decoration:none;border-color:var(--tint)}
 .stat small{display:block;font-size:11px;color:var(--muted);margin-bottom:10px}
 .stat strong{display:block;font-size:27px;letter-spacing:-.03em;line-height:1.1}
 .stat__hint{display:block;font-size:10px;color:var(--faint);margin-top:6px}
@@ -120,7 +121,13 @@
 .task,.chance,.info-row,.mini-tile{display:flex;align-items:center;gap:12px;padding:14px 0;border-top:1px solid var(--line);color:inherit}
 .task:hover,.chance:hover,.info-row:hover,a.mini-tile:hover{text-decoration:none}
 .task:hover .task__t,.chance:hover .task__t,.info-row:hover .task__t,a.mini-tile:hover .task__t{color:var(--tint)}
-.task__box{width:17px;height:17px;border:1.5px solid var(--line-strong);border-radius:5px;flex:none}
+.task__box{width:17px;height:17px;border:1.5px solid var(--line-strong);border-radius:5px;flex:none;background:none;padding:0}
+.task__done{display:contents}
+button.task__box{cursor:pointer}
+button.task__box:hover{border-color:var(--tint);background:var(--tint-wash)}
+.task__link{color:inherit}
+.task__link:hover{text-decoration:none}
+.task__link:hover .task__t{color:var(--tint)}
 .task__b{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1}
 .task__t{font-size:13px;font-weight:650;overflow:hidden;text-overflow:ellipsis}
 .task__m{font-size:11px;color:var(--faint)}

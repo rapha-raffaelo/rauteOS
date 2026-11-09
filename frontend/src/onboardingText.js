@@ -1,6 +1,9 @@
 // The customer questionnaire in German and English. Keyed by the German
 // sentence, like the server's translator, so the page reads in its own words.
 const EN = {
+  'Vom Kunden bestätigt': 'Confirmed by the customer',
+  'Angabe bestätigen': 'Confirm this information',
+  'Antwort bestätigen': 'Confirm answer',
   'Speichern nicht möglich. Bitte erneut versuchen. Ihre Eingabe bleibt hier.': 'Could not save. Please try again. Your input stays here.',
   'Dieser Link ist unvollständig. Bitte öffnen Sie den persönlichen Link von raute+kopf.': 'This link is incomplete. Please open the personal link from raute+kopf.',
   'Ein paar Worte genügen. Oder wählen Sie „Später beantworten“.': 'A few words are enough. Or choose “Answer later”.',
@@ -10,11 +13,10 @@ const EN = {
   'Demo · nur in diesem Tab gespeichert': 'Demo · saved in this tab only',
   'Neustart': 'Restart',
   'Ihre Perspektive.': 'Your perspective.',
-  'Die Fakten stehen. Jetzt Ihre Perspektive.': 'The facts are in place. Now your perspective.',
-  'Fragen · jede ist freiwillig · in mehreren Etappen möglich': 'questions · each one optional · can be done in several sittings',
+  'Dieser Fragebogen umfasst zu Beginn 22 Fragen sowie bereits recherchierte Daten, die durch Sie freigegeben werden können.': 'This questionnaire initially includes 22 questions and previously researched information for you to approve.',
+  'Wir nutzen diese Informationen zur Ausarbeitung Ihrer Kommunikationsstrategie. Wir freuen uns auf die Zusammenarbeit.': 'We use this information to develop your communication strategy. We look forward to working with you.',
   'Weiter, wo ich war': 'Continue where I left off',
   'Los geht’s': 'Let’s start',
-  'Speichern & später weitermachen — jederzeit.': 'Save and continue later, at any time.',
   'Das wissen wir schon.': 'What we already know.',
   'Stimmt das so?': 'Is this correct?',
   'Bearbeitung abbrechen': 'Cancel editing',

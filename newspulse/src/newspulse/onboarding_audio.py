@@ -95,7 +95,7 @@ def work(factory, identity, token, invoke=None):
             for invite in session.scalars(select(CustomerOnboardingInvite).where(
                     CustomerOnboardingInvite.client_id == row.client_id, CustomerOnboardingInvite.revoked == False)):
                 prior = invite.answers.get(row.question_key, {})
-                if prior.get('audio_id') == row.id and prior.get('mode') == 'audio':
+                if row.review != 'archiviert' and prior.get('audio_id') == row.id and prior.get('mode') == 'audio':
                     store_answer(session, invite, client, row.question_key,
                         Answer(value=transcript, audio_id=row.id, mode='audio'))
             session.commit()

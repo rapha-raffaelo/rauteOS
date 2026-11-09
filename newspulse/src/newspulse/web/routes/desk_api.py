@@ -95,6 +95,7 @@ class DeskResponse(ReadModel):
     chances: list[ChanceSummary] = []
     tasks: list[TaskSummary] = []
     tasks_open: int = 0
+    tasks_due: int = 0
     #: Today's briefing in RAUTE's words, once somebody asked for it.
     briefing_ai: dict | None = None
     generated_at: dt.datetime

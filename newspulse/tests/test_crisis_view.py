@@ -52,6 +52,7 @@ from newspulse.models import (
 )
 from newspulse.web.app import create_app, get_db
 from newspulse.web.routes import crisis_view
+from newspulse.web.routes.crisis_view import _run_crisis_texts
 
 _BERLIN = ZoneInfo("Europe/Berlin")
 
@@ -280,7 +281,7 @@ def test_crisis_view_appears_in_opportunities_only_after_a_declaration(web, sess
 
     _declared(session, mandate)
     after = web.get(f"/client/{mandate.id}/plan")
-    assert crisis_link in rendered(after)
+    assert web.get(f'/api/v1/clients/{mandate.id}/opportunities').json()['reaction']['crisis']['href'] == f'/client/{mandate.id}/krise'
     assert "Krise offen" in rendered(after)
 
 
@@ -677,3 +678,15 @@ def test_the_page_renders_in_english_when_asked(web, session, mandate):
     page = web.get(f"/client/{mandate.id}/krise")
     assert "What is being said" in rendered(page)
     assert "Who is reachable" in rendered(page)
+
+
+def test_crisis_writer_reports_each_missing_requirement_once(factory, session, mandate, monkeypatch):
+    standing = _declared(session, mandate)
+    session.commit()
+    monkeypatch.setattr(crisis_view, "get_session", factory)
+    monkeypatch.setattr(crisis_view, "_writing", threading.Lock())
+    crisis_view._writing.acquire()
+    _run_crisis_texts(mandate.id, standing.id)
+    note = crisis_view._last_note.pop(mandate.id)
+    assert note.count("Holding Statement nicht geschrieben.") == 1
+    assert note.count("Q&A-Haltung nicht geschrieben.") == 1

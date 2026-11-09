@@ -552,14 +552,14 @@ def test_the_day_tab_keeps_the_workspace_around_it(factory, web):
     assert "/profil" not in everyones
 
 
-def test_the_client_day_tab_lands_on_the_filtered_day(factory, web):
+def test_the_client_day_link_lands_on_the_news_overview(factory, web):
     with factory() as session:
         client_id = _client(session).id
 
     resp = web.get(f"/client/{client_id}/heute", follow_redirects=False)
 
     assert resp.status_code == 303
-    assert resp.headers["location"] == f"/today?client={client_id}"
+    assert resp.headers["location"] == f"/client/{client_id}/overview"
 
 
 def test_the_fill_button_answers_and_gives_its_lock_back(web, session, monkeypatch):

@@ -1,5 +1,49 @@
 # Deploying NewsPulse
 
+## Shared guide sources
+
+Ask RAUTE searches shared reference documents for all current and future clients,
+alongside client-specific guide sources. Shared material is labelled as reference
+knowledge, with its Drive URL and passage number; it does not replace client
+guides or install instructions from imported files as system prompts.
+
+The 2026-11-06 Drive import contains 13 original files (475,732 bytes) beneath
+`/srv/rauteos/data/guide-originals/drive-1Mo3nCH5iBkvJxCw561hWt8J4v-alEX9g`,
+including the original `sources/` directory. `import-manifest.json` records Drive
+IDs, paths, sizes and SHA-256 hashes. All four source-document hashes match the
+supplied checksum list; that list's self-referential hash does not match itself.
+The original checksum file is preserved unchanged, and the import manifest
+records its actual hash.
+
+The derived full-text index lives beside the application database as
+`shared-guide-sources.db`. It includes full extracted text and overlapping
+passages; DOCX, Markdown, TXT, JSON and CSV are supported. Rebuild idempotently:
+
+```sh
+cd /srv/rauteos/repo/deploy
+docker compose run --rm --no-deps app uv run python -m newspulse.shared_guides \
+  /data/guide-originals/drive-1Mo3nCH5iBkvJxCw561hWt8J4v-alEX9g
+```
+
+Back up `data/guide-originals/` as well as the application database. The shared
+index can be regenerated from those originals and their manifest. Existing
+database-only backup jobs do not include the original documents.
+
+Shared knowledge is also retrieved immediately before outbound AI calls: Claude
+CLI/API, Claude web research and streaming, Gemini generation/review, streaming
+and grounded search. This covers scheduled daily analyses, crisis monitoring,
+newsjacking, impulse drafts, profile research and report findings through the same
+provider paths as interactive requests. Each call adds at most six matching
+passages within a 10,000-character result budget. Customer instructions and the
+requested output schema retain priority. Raw visibility measurement questions
+explicitly opt out so internal knowledge cannot bias the measurement.
+
+Provider logs contain `shared_knowledge`, a prompt fingerprint, transport name,
+status (`attached`, `no_matches`, `missing_index`) and selected Drive IDs,
+SHA-256 hashes and passage numbers, without logging customer prompts or source
+text. A missing index is logged; a corrupt index raises an error. The retrieval
+does not guarantee model compliance or replace current factual research.
+
 The tool was built to run on one machine (DEC-3). Putting it on a server is
 supported, but it changes one thing fundamentally: **the loopback bind was the
 entire security model.** Everything below follows from replacing it.

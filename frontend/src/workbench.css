@@ -58,7 +58,7 @@
 .co-part strong{color:var(--ink);font-variant-numeric:tabular-nums;font-size:14px}.co-part small{font-weight:400;color:var(--muted);font-size:11px}
 .co-bar{height:5px;border-radius:5px;background:var(--fill-2);margin-top:6px;overflow:hidden}.co-bar>span{display:block;height:100%;background:var(--tint);border-radius:5px}
 /* Spec 09, step 4: the overview as in the prototype's client workspace. */
-.co-actions{display:flex;gap:8px;flex-shrink:0}
+.co-actions{display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap;max-width:100%}
 .co-company-body{padding:20px 24px 24px}
 .co-desc{color:var(--muted);font-size:14px;line-height:1.65;margin:0 0 22px}
 .co-goal{font-size:16px;font-weight:700;line-height:1.5;margin:0 0 16px}

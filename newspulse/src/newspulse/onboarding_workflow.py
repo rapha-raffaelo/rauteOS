@@ -200,8 +200,9 @@ def backfill_legal_names(session, *, ask=None, dry_run=True):
 def condense_stored(session, *, ask=None):
     """Shorten researched profile answers stored before the length rule.
 
-    Only untouched research rows: a sentence someone edited stays theirs."""
-    rows = [row for row in session.scalars(select(ClientFact).where(ClientFact.filled_by == 'recherche'))
+    Only rows a model wrote, by research or by the AI import: a sentence
+    someone edited stays theirs."""
+    rows = [row for row in session.scalars(select(ClientFact).where(ClientFact.filled_by.in_(('recherche', 'ki'))))
             if onboarding_crawler.limit(row.key) and len(row.value) > onboarding_crawler.limit(row.key)]
     changed = 0
     # Topics are long; four of them already fill a reply.
@@ -290,7 +291,7 @@ def work(factory, identity, token, *, crawl=None, research=None):
             fill_legal_name(session, client)
             prefill, _ = customer_onboarding.prepare(session, client)
             invite = session.get(CustomerOnboardingInvite, job.invite_id) if job.invite_id else None
-            if not invite_path(invite):
+            if invite is None:
                 invite = issue_invite(session, identity, prefill)
             elif not invite.prefill_confirmed:
                 invite.prefill = prefill
@@ -333,11 +334,13 @@ def status(session, client):
     if not job: return dict(status='not_started', contact=contact)
     invite = session.get(CustomerOnboardingInvite, job.invite_id) if job.invite_id else None
     checkpoint = job.checkpoint
+    from .onboarding_access import short_path, password_for
+    path = short_path(client) if invite_path(invite, client.name) else None
     return dict(status=job.status, stage=job.stage, note=job.note, outdated=outdated(checkpoint),
         completed_batches=checkpoint.get('next_batch', 0), total_batches=len(onboarding_crawler.BATCHES),
         researched_fields=len(checkpoint.get('answered_keys', [])), total_fields=len(onboarding_crawler.RESEARCHED_FIELDS),
         sources=len(checkpoint.get('sources', [])), pages=len(checkpoint.get('pages', [])),
-        path=invite_path(invite, client.name), invite_id=job.invite_id, expires_at=invite.expires_at.isoformat() if invite else None,
+        path=path, public_url=(os.environ.get('NEWSPULSE_ONBOARDING_BASE_URL', 'https://raute-kopf.com').rstrip('/') + path) if path else None, password=password_for(invite) if path else None, invite_id=job.invite_id, expires_at=invite.expires_at.isoformat() if invite else None,
         answered=customer_onboarding.answered(invite.answers) if invite else 0,
         total_questions=len(customer_onboarding.QUESTION_KEYS),
         completed=bool(invite and invite.completed_at), contact=contact)

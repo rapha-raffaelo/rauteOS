@@ -143,11 +143,10 @@ def test_today_renders_items_in_importance_order_with_alerts_surfaced(factory, c
     pos_low = feed.index("LOWHEADLINE")
     assert pos_alert < pos_mid < pos_low
 
-    # The alert is surfaced in the left rail (an alert card), the others are not.
-    rail = body.split('class="feedcol"', 1)[0]
-    assert "acard" in rail
-    assert "ALERTHEADLINE" in rail
-    assert "MIDHEADLINE" not in rail
+    # Important coverage is marked where it is read, never duplicated in a rail.
+    assert body.count("ALERTHEADLINE") == 1
+    assert 'class="intel-priority"' in feed
+    assert 'class="acard"' not in body
 
 
 def test_today_item_shows_all_required_fields(factory, client):
@@ -471,9 +470,9 @@ def test_syndicated_coverage_occupies_one_slot_with_its_pickup_count(factory, cl
 
     body = rendered(client.get("/today", params={"date": _TEST_DAY.isoformat()}))
     assert "3× aufgegriffen" in body
-    # One card in the rail, not three.
-    rail = body.split('class="feedcol"', 1)[0]
-    assert rail.count('class="acard"') == 1
+    # No duplicate alert card: the important story is marked in the feed.
+    assert 'class="acard"' not in body
+    assert body.count('class="intel-priority"') == 1
     # And one row in the feed.
     feed = body.split('class="feedcol"', 1)[1]
     assert feed.count('class="item') == 1
@@ -1159,6 +1158,9 @@ def test_intelligence_date_filter_keeps_selected_mandate(factory, client):
     assert f'name="client" value="{identity}"' in toolbar
     assert 'hx-get="/today"' in toolbar
     assert 'hx-include="closest form"' in toolbar
+    previous_day = _TEST_DAY.fromordinal(_TEST_DAY.toordinal() - 1).isoformat()
+    assert f'/today?date={previous_day}&client={identity}' in toolbar.replace('&amp;', '&')
+    assert 'aria-label="Vorheriger Tag"' in toolbar
 
 
 def test_intelligence_does_not_duplicate_current_impulse_as_chance(factory, client):

@@ -8,11 +8,13 @@ than in the route, so the page and any later integration share one rule.
 from __future__ import annotations
 
 import datetime as dt
+import threading
 from collections.abc import Mapping
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from . import config, linkedin_link
 from .models import (
     DEAL_STAGES, POST_STATES, TASK_PRIORITIES, TASK_STATES,
     Asset, Client, Deal, LinkedInPost, Task,
@@ -146,8 +148,10 @@ def save_post(session: Session, form: Mapping, post: LinkedInPost | None = None)
     post.title = _text(form, "title", 200, required="Bitte einen Arbeitstitel.")
     post.author = _text(form, "author", 120)
     post.body = _text(form, "body", 3000)
-    post.status = _choice(form, "status", POST_STATES, post.status or "idee")
-    post.planned_on = _date(form, "planned_on")
+    status = _choice(form, "status", POST_STATES, post.status or "idee")
+    # An idea with its text written is a draft: the board's next column.
+    set_post_status(post, "entwurf" if status == "idee" and post.body else status)
+    post.planned_on = _date(form, "planned_on") if post.post_at is None else post.planned_on
     url = _text(form, "published_url", 500)
     if url and not url.startswith("https://"):
         raise Invalid("Der Link beginnt mit https://.")
@@ -162,7 +166,7 @@ def save_post(session: Session, form: Mapping, post: LinkedInPost | None = None)
 SUGGESTIONS_SHOWN = 6
 
 
-def _first_line(text: str, limit: int = 200) -> str:
+def first_line(text: str, limit: int = 200) -> str:
     line = next((l.strip() for l in (text or "").splitlines() if l.strip()), "")
     return line if len(line) <= limit else line[:limit].rsplit(" ", 1)[0] + " …"
 
@@ -175,7 +179,7 @@ def suggestions(session: Session) -> dict:
     the Desk's list. Taking one over is a click; nothing lands on the board
     by itself.
     """
-    from . import desk
+    from . import desk, workspaces
 
     clients = {c.id: c for c in mandates(session)}
     taken = set(session.scalars(select(LinkedInPost.asset_id).where(LinkedInPost.asset_id.is_not(None))))
@@ -189,9 +193,9 @@ def suggestions(session: Session) -> dict:
             if a.id in taken:
                 continue
             texts.append(dict(id=a.id, client=dict(id=a.client_id, name=clients[a.client_id].name),
-                              title=a.title or _first_line(a.body), excerpt=_first_line(a.body, 160) if a.title else "",
+                              title=a.title or first_line(a.body), excerpt=first_line(a.body, 160) if a.title else "",
                               speaker=a.speaker, released=a.released_at is not None, written_at=a.generated_at,
-                              href=f"/client/{a.client_id}/advice?eintrag=anlass-{a.angle_id}#asset-{a.id}"))
+                              href=workspaces.text_href(session, a)))
             if len(texts) == SUGGESTIONS_SHOWN:
                 break
     chances = [dict(client=dict(id=c.client.id, name=c.client.name), title=c.title, href=c.href, since=c.since)
@@ -205,7 +209,7 @@ def post_from_asset(session: Session, asset: Asset) -> LinkedInPost:
     post = session.scalar(select(LinkedInPost).where(LinkedInPost.asset_id == asset.id))
     if post:
         return post
-    post = LinkedInPost(client_id=asset.client_id, asset_id=asset.id, title=(asset.title or _first_line(asset.body))[:200],
+    post = LinkedInPost(client_id=asset.client_id, asset_id=asset.id, title=(asset.title or first_line(asset.body))[:200],
                         author=asset.speaker[:120], body=asset.body[:3000],
                         status="freigabe" if asset.released_at else "entwurf", updated_at=_now())
     session.add(post)
@@ -237,6 +241,116 @@ def posts(session: Session, *, client_id: int | None = None) -> list[LinkedInPos
     far = dt.date.max
     rows.sort(key=lambda p: (p.planned_on or far, -p.id))
     return rows
+
+
+def set_post_status(post: LinkedInPost, status: str) -> None:
+    """A post moved off "geplant" is no longer the scheduler's to send."""
+    post.status = status
+    if status != "geplant":
+        post.post_at = None
+
+
+# --- Posting to LinkedIn ----------------------------------------------------------
+
+#: One post goes out at a time in this process, so a double click or the
+#: scheduler racing a button cannot post the same text twice.
+_posting = threading.Lock()
+
+
+def publish_post(session: Session, post: LinkedInPost, owner: str, *, fetch=None) -> LinkedInPost:
+    """Post the text now through ``owner``'s LinkedIn account."""
+    with _posting:
+        session.refresh(post)
+        if post.linkedin_urn:
+            raise Invalid("Dieser Beitrag ist schon auf LinkedIn.")
+        if not post.body.strip():
+            raise Invalid("Ohne Text kann nichts auf LinkedIn erscheinen.")
+        try:
+            urn = linkedin_link.publish(owner, post.body, fetch=fetch)
+        except linkedin_link.LinkedInError as exc:
+            post.post_error = str(exc)[:300]
+            session.commit()
+            raise Invalid(str(exc)) from exc
+        post.linkedin_urn = urn[:120]
+        post.published_url = linkedin_link.post_url(urn)[:500]
+        post.status, post.post_at, post.post_as, post.post_error = "veroeffentlicht", None, owner, ""
+        post.planned_on = dt.datetime.now(config.local_zone()).date()
+        post.updated_at = _now()
+        session.commit()
+        return post
+
+
+def schedule_post(session: Session, post: LinkedInPost, owner: str, form: Mapping) -> LinkedInPost:
+    """Let the scheduler post it at the given local time, through ``owner``'s account."""
+    if post.linkedin_urn:
+        raise Invalid("Dieser Beitrag ist schon auf LinkedIn.")
+    if not post.body.strip():
+        raise Invalid("Ohne Text kann nichts auf LinkedIn erscheinen.")
+    raw = str(form.get("post_at") or "").strip()
+    try:
+        local = dt.datetime.fromisoformat(raw)
+    except ValueError:
+        raise Invalid("Bitte Datum und Uhrzeit angeben.") from None
+    zone = config.local_zone()
+    moment = (local if local.tzinfo else local.replace(tzinfo=zone)).astimezone(dt.UTC)
+    if moment < _now() - dt.timedelta(minutes=1):
+        raise Invalid("Der Zeitpunkt liegt in der Vergangenheit.")
+    linked = linkedin_link.connection(owner)
+    if linked is None or not linked.usable():
+        raise Invalid("Erst LinkedIn verbinden.")
+    if not linked.usable(moment):
+        raise Invalid(f"Deine LinkedIn-Verbindung läuft am {linked.expires_at.astimezone(zone):%d.%m.%Y} ab, "
+                      "vor diesem Termin. Bitte zuerst neu verbinden.")
+    post.post_at, post.post_as, post.post_error, post.status = moment, owner, "", "geplant"
+    post.planned_on = moment.astimezone(zone).date()
+    post.updated_at = _now()
+    session.commit()
+    return post
+
+
+#: Where a post someone published by hand lives.
+_LINKEDIN_HOSTS = ("https://www.linkedin.com/", "https://linkedin.com/", "https://lnkd.in/")
+
+
+def mark_published(session: Session, post: LinkedInPost, form: Mapping) -> LinkedInPost:
+    """A person posted it on LinkedIn themselves and brings back the link."""
+    url = _text(form, "published_url", 500, required="Bitte den Link zum Beitrag einfügen.")
+    if not url.startswith(_LINKEDIN_HOSTS):
+        raise Invalid("Das ist kein Link zu LinkedIn.")
+    post.published_url, post.status, post.post_at = url, "veroeffentlicht", None
+    post.planned_on = post.planned_on or dt.datetime.now(config.local_zone()).date()
+    post.updated_at = _now()
+    session.commit()
+    return post
+
+
+def unschedule_post(session: Session, post: LinkedInPost) -> None:
+    post.post_at = None
+    post.updated_at = _now()
+    session.commit()
+
+
+def publish_due(session: Session, now: dt.datetime | None = None, *, fetch=None) -> int:
+    """Post every scheduled post whose time has come. Returns how many went out.
+
+    Each is unscheduled before it is tried: a failure is written on the card
+    for a person to see, never retried by itself into a second post.
+    """
+    now = now or _now()
+    due = list(session.scalars(select(LinkedInPost).where(
+        LinkedInPost.post_at.is_not(None), LinkedInPost.post_at <= now, LinkedInPost.linkedin_urn == "")))
+    sent = 0
+    for post in due:
+        owner = post.post_as
+        post.post_at = None
+        session.commit()
+        try:
+            publish_post(session, post, owner, fetch=fetch)
+            sent += 1
+        except Invalid as exc:
+            post.post_error = f"Geplanter Beitrag ging nicht raus: {exc}"[:300]
+            session.commit()
+    return sent
 
 
 # --- Sales CRM ------------------------------------------------------------------

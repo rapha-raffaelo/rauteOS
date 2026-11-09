@@ -75,7 +75,7 @@ def test_revoked_link_cannot_read_audio(setup):
     assert web.get('/api/onboarding/audio/'+a['id']+'/content',headers=h).status_code==401
 
 def test_audio_survives_link_renewal_but_not_accessible_to_other_link(setup):
-    from newspulse.models import CustomerOnboardingJob
+    from newspulse.models import CustomerOnboardingJob, CustomerOnboardingInvite
     web,f=setup;link,h=invite(web);_,other=invite(web);a=upload(web,h)
     assert web.put('/api/onboarding/answers/Q01.02',headers=h,json={'audio_id':a['id'],'mode':'audio'}).status_code==200
     assert web.get('/api/onboarding/audio/'+a['id'],headers=other).status_code==404
@@ -83,7 +83,9 @@ def test_audio_survives_link_renewal_but_not_accessible_to_other_link(setup):
         s.add(CustomerOnboardingJob(client_id=1,status='ready',invite_id=link['id']));s.commit()
     response=web.post('/client/1/onboarding-workflow/link',auth=('agency','test-password'))
     assert response.status_code==200
-    renewed={'X-Onboarding-Token':response.json()['path'].split('#')[1].split('/')[0]}
+    from newspulse.onboarding_workflow import invite_token
+    with f() as s:
+        renewed={'X-Onboarding-Token':invite_token(s.get(CustomerOnboardingInvite,response.json()['invite_id']))}
     run(f)
     assert web.get('/api/onboarding/audio/'+a['id']+'/content',headers=renewed).content==WAV
     assert web.get('/api/onboarding',headers=renewed).json()['answers']['Q01.02']['value']=='Ein klares Ziel.'
@@ -108,3 +110,32 @@ def test_deleted_pending_audio_cannot_publish(setup):
     assert web.delete('/api/onboarding/audio/'+a['id'],headers=h).json()['answer'] is None
     audio.work(f,*job,invoke=lambda *a:('Should not appear',4))
     assert 'Q01.02' not in web.get('/api/onboarding',headers=h).json()['answers']
+
+
+def test_agency_answer_archives_atomically_and_delete_preserves_answer(setup):
+    web, factory = setup
+    _, headers = invite(web)
+    item = upload(web, headers)
+    path = '/client/1/onboarding-audio/' + item['id']
+    auth = ('agency', 'test-password')
+    assert web.post(path + '/answer', json={'value': 'Antwort'}).status_code == 401
+    assert web.post(path.replace('/client/1/', '/client/2/') + '/answer', auth=auth, json={'value': 'Antwort'}).status_code == 404
+    assert web.post(path + '/answer', auth=auth, json={'value': '   '}).status_code == 422
+    assert web.get('/client/1/onboarding-audio', auth=auth).json()[0]['review'] == ''
+    response = web.post(path + '/answer', auth=auth, json={'value': 'Unsere geprüfte Antwort.'})
+    assert response.status_code == 200, response.text
+    assert response.json()['review'] == 'archiviert'
+    assert response.json()['answer'] == 'Unsere geprüfte Antwort.'
+    assert response.json()['question'] != 'Q01.02'
+    assert web.get(path + '/content', auth=auth).content == WAV
+    assert web.post(path + '/answer', auth=auth, json={'value': 'Duplikat'}).status_code == 409
+    run(factory)
+    with factory() as session:
+        row = session.get(Audio, item['id'])
+        fact_id = row.answer_fact_id
+        assert session.get(ClientFact, fact_id).value == 'Unsere geprüfte Antwort.'
+    assert web.delete(path.replace('/client/1/', '/client/2/'), auth=auth).status_code == 404
+    assert web.delete(path, auth=auth).status_code == 200
+    assert web.get(path + '/content', auth=auth).status_code == 404
+    with factory() as session:
+        assert session.get(ClientFact, fact_id).value == 'Unsere geprüfte Antwort.'

@@ -12,13 +12,13 @@ const data = {client:{id:1,name:'Demo'},fields:[{key:'R02.01',label:'Rechtliche 
  statements:[row],progress:{percent:1,required_filled:1,required_total:43,verified:0,missing:[]},options};
 const response = (body, status=200) => ({ok:status<400,status,headers:new Headers({'content-type':'application/json'}),json:async()=>body});
 afterEach(()=>vi.unstubAllGlobals());
-const stubFetch=fetch=>vi.stubGlobal('fetch',(url,options)=>url.endsWith('/ai-import')?Promise.resolve(response({job:null,preview:null})):fetch(url,options));
+const stubFetch=fetch=>vi.stubGlobal('fetch',(url,options)=>url.endsWith('/onboarding-audio')?Promise.resolve(response([])):url.endsWith('/ai-import')?Promise.resolve(response({job:null,preview:null})):fetch(url,options));
 
 it('edits a statement by id and revision without flattening its evidence', async()=>{
  const fetch=vi.fn().mockResolvedValueOnce(response(data)).mockResolvedValueOnce(response({...row,value:'Revised',revision:5})).mockResolvedValue(response({...data,statements:[{...row,value:'Revised',revision:5}]}));
  stubFetch(fetch); render(<TwinPage clientId={1}/>);
  await screen.findByText(row.value);
- expect(screen.getByText('Prüfung offen')).toBeTruthy();
+ expect(screen.queryByRole('img',{name:'Vom Kunden noch nicht bestätigt'})).toBeNull();
  fireEvent.click(screen.getByRole('button',{name:'Bearbeiten'}));
  fireEvent.change(screen.getByLabelText('Aussage'),{target:{value:'Revised'}});
  fireEvent.click(screen.getByRole('button',{name:'Aussage speichern'}));
@@ -100,7 +100,7 @@ it('automatically reveals a saved AI preview on returning to the profile',async(
  fireEvent.click(screen.getByRole('button',{name:'Mit KI importieren'}));
  fireEvent.click(screen.getByRole('button',{name:'Mit KI importieren'}));
  expect(screen.getByText('Saved answer')).toBeTruthy();
- expect(fetch).toHaveBeenCalledTimes(2);
+ expect(fetch.mock.calls.filter(([url])=>!url.endsWith('/onboarding-audio'))).toHaveLength(2);
 });
 it('shows the brief as numbered cards and the customer questionnaire as its own panel',async()=>{
  const researched={...row,id:7,key:'R01.01',value:'Zalando SE',source_url:'https://www.corporate.zalando.com/de/impressum',
@@ -117,14 +117,14 @@ it('shows the brief as numbered cards and the customer questionnaire as its own 
  const asked=screen.getByRole('heading',{name:'Kundenfragebogen'}).closest('section');
  expect(within(brief).getByText('Zalando SE')).toBeTruthy();
  expect(within(brief).getByText('01')).toBeTruthy();
- expect(within(brief).getByText('Noch keine belegte Angabe.')).toBeTruthy();
- expect(within(brief).getByText('1 von 2 Themen recherchiert · Prüfung offen, bis jemand bestätigt')).toBeTruthy();
+ expect(within(brief).getByText('bitte ergänzen')).toBeTruthy();
+ expect(within(brief).getByText('1 von 2 Themen recherchiert')).toBeTruthy();
  // The guiding question is the card title's tooltip, not a paragraph.
  expect(within(brief).getByRole('heading',{name:'Unternehmensidentität'}).getAttribute('title')).toBe('Wie lautet der offizielle Firmenname?');
  // The question keeps its own number. The guiding text is the customer's,
  // on the customer page; the profile shows no "Leitfragen" at all.
  expect(within(asked).getByText('14')).toBeTruthy();
- expect(within(asked).getByText('Offen')).toBeTruthy();
+ expect(within(asked).queryByRole('img',{name:'Vom Kunden noch nicht bestätigt'})).toBeNull();
  expect(within(asked).queryByText('Bitte nennen Sie Partner.')).toBeNull();
  expect(within(asked).queryByRole('button',{name:'Leitfragen'})).toBeNull();
  // A researched company fact appears at a glance; the catalogue is not shown.
@@ -134,4 +134,12 @@ it('shows the brief as numbered cards and the customer questionnaire as its own 
  expect(within(brief).getByText('+2 Quellen')).toBeTruthy();
  expect(screen.queryByText('Wo befindet sich der Hauptsitz?')).toBeNull();
  expect(screen.queryByRole('button',{name:/Katalog/})).toBeNull();
+});
+it('shows only the latest answer without acknowledgement icons',async()=>{
+ stubFetch(vi.fn().mockResolvedValue(response({...data,statements:[{...row,value:'Old research',verified_at:'2026-01-01',id:1},{...row,value:'Current correction',id:8,customer_confirmed_at:'2026-11-07T12:00:00Z'}]})));
+ render(<TwinPage clientId={1}/>);
+ await screen.findByText('Current correction');
+ expect(screen.queryByText('Old research')).toBeNull();
+ expect(screen.queryByRole('img',{name:'Vom Kunden bestätigt'})).toBeNull();
+ expect(screen.getAllByRole('button',{name:'Bearbeiten'})).toHaveLength(1);
 });

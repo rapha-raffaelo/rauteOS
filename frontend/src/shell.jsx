@@ -40,12 +40,12 @@ export function ClientTabs({ data, path = window.location.pathname }) {
   // Spec 09: the prototype's six tabs. Each groups pages that already exist;
   // a group with more than one page shows them as views under the tabs.
   const groups = {
-    client_overview: ["client_overview"],
+    client_overview: ["client_overview", "heute"],
     wissen: ["twin", "profile"],
     strategie: ["guide", "rivals", "market", "map"],
-    chancen: ["opportunities", "issues", "heute"],
-    umsetzung: ["plan", "texte", "krise"],
-    wirkung: ["visibility", "berichte", "overview"],
+    chancen: ["opportunities", "issues", "krise", "texte"],
+    umsetzung: ["plan"],
+    wirkung: ["visibility", "berichte", "overview", "monitoring_social", "monitoring_kpis"],
   };
   const group =
     Object.keys(groups).find((key) => groups[key].includes(active)) || active;
@@ -53,9 +53,9 @@ export function ClientTabs({ data, path = window.location.pathname }) {
     ["client_overview", "/overview", "Überblick"],
     ["wissen", "/twin", "Kundenprofil"],
     ["strategie", "/guide", "Strategie"],
-    ["chancen", "/opportunities", "Chancen"],
+    ["chancen", "/opportunities", "Aktivitäten"],
     ["umsetzung", "/plan", "Umsetzung"],
-    ["wirkung", "/ki", "Wirkung"],
+    ["wirkung", "", "Monitoring"],
   ];
   const views = {
     strategie: [
@@ -63,23 +63,16 @@ export function ClientTabs({ data, path = window.location.pathname }) {
       ["rivals", "/wettbewerb", "Wettbewerb & Markt"],
       ["map", "/map", "Medienkarte"],
     ],
-    chancen: [
-      ["opportunities", "/opportunities", "Chancen"],
-      ["issues", "/issues", "Issues"],
-      ["heute", "/heute", "Heute"],
-    ],
     umsetzung: [
       ["plan", "/plan", "Plan"],
-      ["texte", "/advice", "Impulse"],
-      ...(crisis?.has_history || active === "krise" ? [["krise", "/krise", "Krise"]] : []),
     ],
     wirkung: [
+      ["overview", "", "News"],
       ["visibility", "/ki", "KI-Sichtbarkeit"],
-      ["berichte", "/berichte", "Berichte"],
-      ["overview", "", "Archiv"],
+      ["monitoring_kpis", "/monitoring/kpis", "KPIs"],
     ],
   }[group];
-  const current = active === "market" ? "rivals" : active;
+  const current = active === "market" ? "rivals" : active === "berichte" ? "overview" : active;
   return (
     <>
       <nav className="subtabs" aria-label={t("Mandant")}>
@@ -91,7 +84,7 @@ export function ClientTabs({ data, path = window.location.pathname }) {
             aria-current={key === group ? "page" : undefined}
           >
             {t(label)}
-            {key === "umsetzung" && crisis?.open_id && (
+            {key === "chancen" && crisis?.open_id && (
               <span className="workspace-crisis">{t("Krise offen")}</span>
             )}
           </a>

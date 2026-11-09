@@ -6,5 +6,8 @@ globalThis.document = {
       ? { textContent: JSON.stringify(input.shell) }
       : null,
 };
-const { render } = await import("./.test-render/render-test.js");
+// Each pytest process builds into its own folder (RENDER_TEST_BUNDLE), so two
+// test runs at once never read each other's half-written bundle.
+const bundle = process.env.RENDER_TEST_BUNDLE || "./.test-render/render-test.js";
+const { render } = await import(new URL(bundle, import.meta.url).href);
 process.stdout.write(render(input));

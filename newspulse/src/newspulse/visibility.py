@@ -901,11 +901,11 @@ def _read(
 
 
 def _ask_claude(question: str) -> str:
-    return invoke_claude_cli(question, timeout=config.ANALYZER_TIMEOUT)
+    return invoke_claude_cli(question, timeout=config.ANALYZER_TIMEOUT, use_shared_knowledge=False)
 
 
 def _ask_gemini(question: str) -> str:
-    return gemini.generate(question, timeout=config.ANALYZER_TIMEOUT)
+    return gemini.generate(question, timeout=config.ANALYZER_TIMEOUT, use_shared_knowledge=False)
 
 
 def askers() -> dict[str, Callable[[str], str]]:

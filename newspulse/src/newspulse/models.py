@@ -1032,6 +1032,9 @@ class OpportunityWorkspace(Base):
     data: Mapped[dict] = mapped_column(JSON, default=dict)
     storyline: Mapped[str] = mapped_column(Text, default="")
     speaker_statement_id: Mapped[int | None] = mapped_column(ForeignKey("client_facts.id", ondelete="SET NULL"), nullable=True)
+    #: A media contact from the profile's phone book, chosen instead of a
+    #: profile statement as the speaker.
+    speaker_person_id: Mapped[int | None] = mapped_column(ForeignKey("client_people.id", ondelete="SET NULL"), nullable=True)
     contact_ids: Mapped[list] = mapped_column(JSON, default=list)
     status: Mapped[str] = mapped_column(String(16), default="draft")
     revision: Mapped[int] = mapped_column(Integer, default=1)
@@ -1629,6 +1632,7 @@ class ClientFact(Base):
     verification_note: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
     verified_by: Mapped[str | None] = mapped_column(String(200), nullable=True)
     verified_at: Mapped[dt.datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+    customer_confirmed_at: Mapped[dt.datetime | None] = mapped_column(UTCDateTime(), nullable=True)
     import_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     __mapper_args__ = {"version_id_col": revision}
@@ -4622,6 +4626,11 @@ class CustomerOnboardingAudio(Base):
     duration: Mapped[int | None] = mapped_column(Integer, nullable=True)
     token: Mapped[str] = mapped_column(String(64), default='')
     lease_until: Mapped[dt.datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+    #: '' while it waits under its question in RauteOS, 'archiviert' once
+    #: put away. Discarding deletes the row.
+    review: Mapped[str] = mapped_column(String(20), nullable=False, default='', server_default='')
+    #: The statement a consultant wrote from it, the question's answer.
+    answer_fact_id: Mapped[int | None] = mapped_column(ForeignKey('client_facts.id', ondelete='SET NULL'), nullable=True)
     created_at: Mapped[dt.datetime] = mapped_column(UTCDateTime(), default=_utcnow)
     updated_at: Mapped[dt.datetime] = mapped_column(UTCDateTime(), default=_utcnow)
 
@@ -4668,8 +4677,10 @@ class Task(Base):
 class LinkedInPost(Base):
     """A LinkedIn post for a mandate's speaker, from idea to published (spec 10).
 
-    Planning only: nothing here posts to LinkedIn. ``published_url`` is where
-    a person records the post once it is live.
+    A person records ``published_url`` by hand, or RauteOS posts the text
+    itself through the LinkedIn account of whoever pressed the button
+    (``newspulse.linkedin_link``). Then ``linkedin_urn`` is what LinkedIn
+    answered, and a post that is never sent twice is one with a urn.
     """
 
     __tablename__ = "linkedin_posts"
@@ -4693,6 +4704,13 @@ class LinkedInPost(Base):
         ForeignKey("assets.id", ondelete="SET NULL"), nullable=True, index=True)
     #: The chance this post picks up. A path on this site, like a task's.
     context_href: Mapped[str] = mapped_column(String(300), nullable=False, default="")
+    #: When the scheduler posts it, and through whose connected account (the
+    #: RauteOS sign-in address). Cleared the moment the scheduler tries, so a
+    #: failed attempt is shown rather than repeated.
+    post_at: Mapped[dt.datetime | None] = mapped_column(UTCDateTime(), nullable=True, index=True)
+    post_as: Mapped[str] = mapped_column(String(254), nullable=False, default="")
+    linkedin_urn: Mapped[str] = mapped_column(String(120), nullable=False, default="")
+    post_error: Mapped[str] = mapped_column(String(300), nullable=False, default="")
     created_at: Mapped[dt.datetime] = mapped_column(UTCDateTime(), nullable=False, default=_utcnow)
     updated_at: Mapped[dt.datetime] = mapped_column(UTCDateTime(), nullable=False, default=_utcnow)
 
@@ -4727,3 +4745,29 @@ class Deal(Base):
     created_at: Mapped[dt.datetime] = mapped_column(UTCDateTime(), nullable=False, default=_utcnow)
     updated_at: Mapped[dt.datetime] = mapped_column(UTCDateTime(), nullable=False, default=_utcnow)
     closed_at: Mapped[dt.datetime | None] = mapped_column(UTCDateTime(), nullable=True)
+
+
+class ClientPerson(Base):
+    """A person at the mandate: the profile's phone book.
+
+    Who may speak to the press is ``media_contact``. Those are the people
+    RauteOS offers, and proposes by ``topics``, as the speaker of a chance's
+    texts; everyone else is in the book to be reached, not quoted.
+    """
+
+    __tablename__ = "client_people"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    client_id: Mapped[int] = mapped_column(
+        ForeignKey("clients.id", ondelete="CASCADE"), nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    position: Mapped[str] = mapped_column(String(200), nullable=False, default="")
+    phone: Mapped[str] = mapped_column(String(80), nullable=False, default="")
+    email: Mapped[str] = mapped_column(String(320), nullable=False, default="")
+    linkedin_url: Mapped[str] = mapped_column(String(500), nullable=False, default="")
+    #: Themenverantwortung, in the client's own words.
+    topics: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    media_contact: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("0"))
+    created_at: Mapped[dt.datetime] = mapped_column(UTCDateTime(), nullable=False, default=_utcnow)
+    updated_at: Mapped[dt.datetime] = mapped_column(UTCDateTime(), nullable=False, default=_utcnow)

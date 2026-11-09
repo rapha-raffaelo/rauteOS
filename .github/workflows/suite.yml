@@ -1,15 +1,5 @@
-# Run the suite on every push to main, and on every pull request.
-#
-# This does not gate the deploy and does not pretend to: Railway builds from
-# main on push, so by the time this job goes red the release is already out.
-# What it buys is the two minutes between "that was wrong" and knowing it —
-# which is the difference between a rollback and a morning of Lucas looking at
-# a broken page. The previous workflow here shipped over SSH to a host that no
-# longer exists and had failed on every run for weeks; a check that is always
-# red teaches people to stop reading checks, which is worse than none.
-#
-# If a real gate is wanted later, it is a Railway setting rather than a step
-# here: turn off deploy-on-push and have this job trigger the deploy on green.
+# Validate the application on pushes to main and pull requests.
+# Deployment is configured separately.
 name: Suite
 
 on:

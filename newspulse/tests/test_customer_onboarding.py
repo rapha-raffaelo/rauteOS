@@ -253,3 +253,133 @@ def test_every_question_and_topic_title_exists_in_german_and_english(setup):
     _,header=invite(web)
     prefill=web.get('/api/onboarding',headers=header).json()['prefill']
     assert prefill[0]['label']=='Unternehmensbeschreibung' and prefill[0]['label_en']=='Company description'
+
+
+def test_per_topic_customer_confirmation_is_separate_from_verification(setup):
+    web,factory=setup
+    with factory() as s:
+        s.add(topic(1,'12 employees',key='R03.01'));s.commit()
+    _,header=invite(web)
+    assert web.post('/api/onboarding/prefill',headers=header,json={'confirmed_keys':['R03.01']}).status_code==200
+    data=web.get('/api/onboarding',headers=header).json()
+    assert {p['key']:p['confirmed'] for p in data['prefill']}=={'R03.01':True,'R05.01':False}
+    assert not data['prefill_confirmed']
+    with factory() as s:
+        row=s.scalar(select(ClientFact).where(ClientFact.client_id==1,ClientFact.key=='R03.01'))
+        assert row.customer_confirmed_at and row.verified_at is None
+    assert web.post('/api/onboarding/prefill',headers=header,json={'confirmed_keys':['R99.01']}).status_code==422
+
+
+def test_changed_answer_requires_new_customer_confirmation(setup):
+    from newspulse import twin
+    web,factory=setup
+    _,header=invite(web)
+    path='/api/onboarding/answers/Q01.02'
+    assert web.put(path,headers=header,json={'value':'Grow','confirmed':True}).json()['confirmed']
+    assert not web.put(path,headers=header,json={'value':'Grow internationally'}).json()['confirmed']
+    assert web.put(path,headers=header,json={'value':'Grow internationally','confirmed':True}).json()['confirmed']
+    with factory() as s:
+        row=s.scalar(select(ClientFact).where(ClientFact.key=='Q01.02'))
+        twin.apply(s,1,twin.StatementInput(key=row.key,value='Agency edit'),'Agency',row=row);s.commit()
+        assert row.customer_confirmed_at is None
+    assert not web.get('/api/onboarding',headers=header).json()['answers']['Q01.02']['confirmed']
+    assert web.put(path,headers=header,json={'value':'Grow internationally','confirmed':True}).status_code==409
+
+
+def test_stale_prefill_cannot_confirm_changed_profile(setup):
+    web,factory=setup
+    _,header=invite(web)
+    with factory() as s:
+        row=s.scalar(select(ClientFact).where(ClientFact.client_id==1));row.value='Changed';s.commit()
+    assert web.post('/api/onboarding/prefill',headers=header,json={}).status_code==409
+
+
+def test_latest_questionnaire_answer_is_used_in_profile_context(setup):
+    from newspulse import profile
+    web,factory=setup
+    with factory() as s:
+        s.add(ClientFact(client_id=1,key='Q01.02',value='Earlier',is_primary=True));s.commit()
+    _,header=invite(web)
+    web.put('/api/onboarding/answers/Q01.02',headers=header,json={'value':'Current answer'})
+    with factory() as s:
+        facts=profile.stored(s,1)
+        assert facts['Q01.02'].value=='Current answer'
+        assert [r.value for r in facts.statements if r.key=='Q01.02']==['Current answer']
+
+
+def test_missing_research_remains_open_and_cannot_be_confirmed(setup):
+    from newspulse import twin
+    web,factory=setup
+    with factory() as s:
+        row=s.scalar(select(ClientFact).where(ClientFact.client_id==1))
+        row.value='Mitarbeitende: nicht veröffentlicht\nUmsatz: bitte ergänzen\nStandort: Berlin';s.commit()
+        assert row.key in twin.completeness([row])['missing']
+    _,header=invite(web)
+    assert web.post('/api/onboarding/prefill',headers=header,json={'confirmed_keys':['R05.01']}).status_code==422
+    assert web.post('/api/onboarding/prefill',headers=header,json={}).status_code==200
+    assert not web.get('/api/onboarding',headers=header).json()['prefill'][0]['confirmed']
+    with factory() as s:
+        assert s.scalar(select(ClientFact).where(ClientFact.client_id==1)).customer_confirmed_at is None
+
+
+def test_short_link_password_scope_rotation_and_revoke(setup, monkeypatch):
+    from newspulse import onboarding_workflow as flow, onboarding_access as access
+    from newspulse.models import CustomerOnboardingJob
+    web,factory=setup
+    web.base_url='https://testserver'
+    monkeypatch.setattr(flow,'signing_key',lambda:b'x'*32)
+    access._ATTEMPTS.clear()
+    with factory() as s:
+        row=flow.issue_invite(s,1,[])
+        s.add(CustomerOnboardingJob(client_id=1,status='ready',invite_id=row.id));s.commit()
+    auth=('agency','test-password')
+    state=web.get('/client/1/onboarding-workflow',auth=auth).json()
+    assert state['path']=='/onboarding/first'
+    h={'X-Onboarding-Slug':'first'}
+    assert web.get('/api/onboarding',headers=h).status_code==401
+    assert web.get('/client/1/onboarding-workflow').status_code==401
+    assert web.post('/api/onboarding/login',json={'slug':'first','password':'wrong'}).status_code==401
+    assert web.post('/api/onboarding/login',json={'slug':'missing','password':state['password']}).status_code==401
+    body={'slug':'first','password':state['password']}
+    assert web.post('/api/onboarding/login',json=body,headers={'Origin':'https://evil.example'}).status_code==403
+    response=web.post('/api/onboarding/login',json=body)
+    assert response.status_code==200
+    assert all(flag in response.headers['set-cookie'] for flag in ['HttpOnly','Secure','SameSite=strict','Path=/api/onboarding'])
+    assert web.get('/api/onboarding',headers=h).json()['customer']=='First'
+    assert web.get('/api/onboarding',headers={'X-Onboarding-Slug':'second'}).status_code==401
+    assert web.get('/client/1/twin',headers=h).status_code==401
+    assert web.put('/api/onboarding/answers/Q01.02',headers=h,json={'value':'Customer answer'}).status_code==200
+    renewed=web.post('/client/1/onboarding-workflow/link',auth=auth).json()
+    assert renewed['path']==state['path'] and renewed['password']!=state['password']
+    assert web.get('/api/onboarding',headers=h).status_code==401
+    assert web.post('/api/onboarding/login',json=body).status_code==401
+    assert web.post('/api/onboarding/login',json={**body,'password':renewed['password']}).status_code==200
+    assert web.get('/api/onboarding',headers=h).json()['answers']['Q01.02']['value']=='Customer answer'
+    assert web.post(f"/client/1/onboarding-invites/{renewed['invite_id']}/revoke",auth=auth).status_code==200
+    assert web.get('/api/onboarding',headers=h).status_code==401
+    assert web.post('/api/onboarding/login',json={**body,'password':renewed['password']}).status_code==401
+
+
+def test_short_link_login_throttle(setup):
+    from newspulse import onboarding_access as access
+    web,_=setup
+    access._ATTEMPTS.clear()
+    for _ in range(10):
+        assert web.post('/api/onboarding/login',json={'slug':'absent','password':'guess'}).status_code==401
+    response=web.post('/api/onboarding/login',json={'slug':'absent','password':'guess'})
+    assert response.status_code==429 and response.headers['retry-after']=='60'
+    access._ATTEMPTS.clear()
+
+
+def test_keywords_are_scoped_and_save_only_with_current_revision(setup):
+    web,factory=setup
+    auth=('agency','test-password')
+    path='/api/v1/clients/1/keywords'
+    assert web.get(path).status_code==401
+    state=web.get(path,auth=auth).json()
+    assert web.put(path,auth=auth,json={'keywords':['CBD Spray'],'revision':'stale'}).status_code==409
+    response=web.put(path,auth=auth,json={'keywords':['CBD Spray'],'revision':state['revision']})
+    assert response.status_code==200 and response.json()['keywords']==['CBD Spray']
+    with factory() as s:
+        assert s.get(Client,1).keywords==['CBD Spray']
+        assert s.get(Client,2).keywords==[]

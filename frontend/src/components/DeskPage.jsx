@@ -7,10 +7,13 @@ const KIND_TAG = {kundenfreigabe: 'kunde', freigabe: 'agentur'};
 const WAITS = {kundenfreigabe: 'wartet auf eine Kundenfreigabe', freigabe: 'wartet auf die Freigabe',
   impuls: 'hat einen neuen Impuls', profil: 'braucht eine Profil-Entscheidung'};
 
-// A first name only when the address starts with one ("lucas@…"), never a
-// guess from initials ("r.mankopf@…").
+// Explicit first names for the team's account handles, including handles where
+// first and last name are joined. Initials remain unnamed rather than guessed.
+const FIRST_NAMES = {raphaelmankopf: 'Raphael', 'lucas.neurauter': 'Lucas'};
 export function firstName(email) {
-  const head = (email || '').split('@')[0].split(/[._-]/)[0];
+  const account = (email || '').trim().toLowerCase().split('@')[0];
+  if (Object.hasOwn(FIRST_NAMES, account)) return FIRST_NAMES[account];
+  const head = account.split(/[._-]/)[0];
   return head.length > 1 && /^[a-zäöüß]+$/i.test(head) ? head[0].toUpperCase() + head.slice(1) : '';
 }
 
@@ -86,13 +89,16 @@ export function DeskPage({ translations = {}, language = 'de' }) {
   }
   const tasks = board.tasks || [];
   const isoToday = new Intl.DateTimeFormat('en-CA', {timeZone: zone}).format(now);
-  const due = tasks.filter((x) => x.due_on && x.due_on <= isoToday);
+  // Counted on the server over every open task; the list shows only the first few.
+  const due = board.tasks_due ?? tasks.filter((x) => x.due_on && x.due_on <= isoToday).length;
+  // Every figure opens the list it counts.
   const stats = [
-    ['Offene Aufgaben', board.tasks_open || 0, `${due.length} ${t('heute fällig')}`, due.length > 0],
+    ['Offene Aufgaben', board.tasks_open || 0, `${due} ${t('heute fällig')}`, due > 0, '/aufgaben'],
     ['Entscheidungen offen', board.decisions_open,
-      customer.length ? `${customer.length} ${t('davon beim Kunden')}` : t('Nichts blockiert'), customer.length > 0],
-    ['Offene Chancen', board.opportunities, t('Fenster noch offen'), false],
-    ['Actions diesen Monat', board.actions_month, t('abgeliefert und nachgetragen'), false],
+      customer.length ? `${customer.length} ${t('davon beim Kunden')}` : t('Nichts blockiert'), customer.length > 0,
+      '/aufgaben#entscheidungen'],
+    ['Offene Chancen', board.opportunities, t('Fenster noch offen'), false, '/today'],
+    ['Actions diesen Monat', board.actions_month, t('abgeliefert und nachgetragen'), false, '#mandanten'],
   ];
 
   return <>
@@ -123,20 +129,24 @@ export function DeskPage({ translations = {}, language = 'de' }) {
       </div>
     </section>
 
-    <div className="stat-row">{stats.map(([label, value, hint, bad]) => <div className="stat" key={label}>
+    <div className="stat-row">{stats.map(([label, value, hint, bad, href]) => <a className="stat" href={href} key={label}>
       <small>{t(label)}</small><strong>{value}</strong>
       <span className={`stat__hint${bad ? ' stat__hint--bad' : ''}`}>{hint}</span>
-    </div>)}</div>
+    </a>)}</div>
 
     <div className="desk-grid">
       <div className="desk-col">
         <Card title={t('Heute priorisiert')} link={['/aufgaben', t('Alle Aufgaben')]}>
-          {tasks.map((x) => <a className="task" href={x.href} key={`task-${x.id}`}>
-            <span className="task__box" aria-hidden="true" />
-            <span className="task__b"><span className="task__t">{x.title.slice(0, 80)}</span>
-              <span className="task__m">{x.client?.name || t('Agentur')}{x.due_on ? ` · ${t('fällig')} ${date(x.due_on + 'T12:00:00Z')}` : ''} · {t('Aufgabe')}</span></span>
+          {tasks.map((x) => <div className="task" key={`task-${x.id}`}>
+            <form method="post" action={`/aufgaben/${x.id}`} className="task__done">
+              <input type="hidden" name="status" value="erledigt" />
+              <input type="hidden" name="redirect_to" value="/desk" />
+              <button type="submit" className="task__box" aria-label={`${t('Erledigt')}: ${x.title}`} title={t('Als erledigt abhaken')} />
+            </form>
+            <a className="task__b task__link" href={x.href}><span className="task__t">{x.title.slice(0, 80)}</span>
+              <span className="task__m">{x.client?.name || t('Agentur')}{x.due_on ? ` · ${t('fällig')} ${date(x.due_on + 'T12:00:00Z')}` : ''} · {t('Aufgabe')}</span></a>
             <span className={`badge badge--${x.due_on && x.due_on < isoToday ? 'late' : x.priority}`}>{t(x.due_on && x.due_on < isoToday ? 'Überfällig' : ({hoch: 'Hoch', mittel: 'Mittel', niedrig: 'Niedrig'})[x.priority])}</span>
-          </a>)}
+          </div>)}
           {board.decisions.slice(0, Math.max(0, 6 - tasks.length)).map((item, index) => <a className="task" href={item.href} key={`${item.href}-${index}`}>
             <span className="task__box" aria-hidden="true" />
             <span className="task__b"><span className="task__t">{item.title.slice(0, 80)}</span>
@@ -166,7 +176,7 @@ export function DeskPage({ translations = {}, language = 'de' }) {
           {!board.in_flight.length && <p className="pane__empty">{t('Nichts unterwegs.')}</p>}
         </Card>
         <Tile icon="profil" title={t('Kundenfreigaben')} note={t('Warten auf Abstimmungen')}
-          count={customer.length} unit={t('offen')} href={customer[0]?.href} />
+          count={customer.length} unit={t('offen')} href="/aufgaben#entscheidungen" />
         <Tile icon="clients" title={t('Profile mit Wissenslücken')} note={`${t('Schnitt')} ${board.twin_average} %`}
           count={board.twins_with_gaps} unit={t('Profile')} href="/clients" />
         <Tile icon="media" title={t('Warten auf Antwort')} note={t('Offene Rückmeldungen')}

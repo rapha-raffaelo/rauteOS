@@ -122,7 +122,7 @@ class BasicAuthMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next) -> Response:
         # These endpoints authenticate a scoped customer bearer link themselves.
-        if request.url.path in {"/onboarding", "/onboarding/demo", "/api/onboarding", "/api/onboarding/complete", "/api/onboarding/prefill"} or request.url.path.startswith(("/api/onboarding/answers/", "/api/onboarding/audio/")):
+        if request.url.path in {"/onboarding", "/onboarding/demo", "/api/onboarding", "/api/onboarding/complete", "/api/onboarding/prefill", "/api/onboarding/login"} or request.url.path.startswith(("/onboarding/", "/api/onboarding/answers/", "/api/onboarding/audio/")):
             return await call_next(request)
         if request.url.path.startswith(_PUBLIC_PREFIXES):
             return await call_next(request)
@@ -137,6 +137,8 @@ class BasicAuthMiddleware(BaseHTTPMiddleware):
             )
             if email:
                 request.scope["user_email"] = email
+                request.scope["user_name"] = google_auth.session_name(
+                    request.cookies.get(google_auth.SESSION_COOKIE))
                 return await call_next(request)
             return _sign_in_required(request)
 

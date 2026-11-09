@@ -1,0 +1,43 @@
+import React from 'react';
+import {render,screen,fireEvent,waitFor,cleanup} from '@testing-library/react';
+import {it,expect,vi,afterEach} from 'vitest';
+import {MonitoringKeywords} from './MonitoringKeywords.jsx';
+afterEach(()=>{cleanup();vi.restoreAllMocks();});
+it('only persists keyword changes on save and removes deselected tags',async()=>{
+ let keywords=['CBD Spray'];
+ global.fetch=vi.fn(async(url,o)=>{if(o.method==='PUT')keywords=JSON.parse(o.body).keywords;return {ok:true,json:async()=>({keywords,revision:'v1',suggestions:[{term:'Transdermales Cannabis',reason:'Produktfeld',external:3}]})};});
+ render(<MonitoringKeywords clientId={16}/>);
+ const selected=await screen.findByRole('button',{name:'✓ CBD Spray'});
+ expect(screen.queryByRole('button',{name:'Keywords speichern'})).toBeNull();
+ fireEvent.click(selected);
+ expect(keywords).toEqual(['CBD Spray']);
+ expect(selected.getAttribute('aria-pressed')).toBe('false');
+ fireEvent.click(screen.getByRole('button',{name:/Transdermales Cannabis/}));
+ fireEvent.click(screen.getByRole('button',{name:'Keywords speichern'}));
+ await screen.findByText('Gespeichert. Gilt ab der nächsten Suche.');
+ expect(keywords).toEqual(['Transdermales Cannabis']);
+ expect(screen.queryByRole('button',{name:/CBD Spray/})).toBeNull();
+ expect(screen.queryByRole('button',{name:'Keywords speichern'})).toBeNull();
+});
+it('keeps the draft on failure and allows discarding changes',async()=>{
+ global.fetch=vi.fn(async(url,o)=>({ok:o.method!=='PUT',json:async()=>o.method==='PUT'?{detail:'Speichern fehlgeschlagen'}:{keywords:['CBD'],revision:'v1',suggestions:[]}}));
+ render(<MonitoringKeywords clientId={16}/>);
+ fireEvent.click(await screen.findByRole('button',{name:'✓ CBD'}));
+ fireEvent.click(screen.getByRole('button',{name:'Keywords speichern'}));
+ await screen.findByText('Speichern fehlgeschlagen');
+ expect(screen.getByRole('button',{name:'+ CBD'}).getAttribute('aria-pressed')).toBe('false');
+ fireEvent.click(screen.getByRole('button',{name:'Verwerfen'}));
+ expect(screen.getByRole('button',{name:'✓ CBD'}).getAttribute('aria-pressed')).toBe('true');
+ expect(screen.queryByRole('button',{name:'Keywords speichern'})).toBeNull();
+});
+it('shows a newly added custom keyword before saving',async()=>{
+ global.fetch=vi.fn(async()=>({ok:true,json:async()=>({keywords:['CBD'],revision:'v1',suggestions:[]})}));
+ render(<MonitoringKeywords clientId={16}/>);
+ await screen.findByRole('button',{name:'✓ CBD'});
+ fireEvent.change(screen.getByRole('textbox',{name:'Eigenes Keyword'}),{target:{value:'Eigener Begriff'}});
+ fireEvent.click(screen.getByRole('button',{name:'Keyword hinzufügen'}));
+ expect(screen.getByRole('button',{name:'✓ Eigener Begriff'}).getAttribute('aria-pressed')).toBe('true');
+ expect(fetch).toHaveBeenCalledTimes(1);
+ fireEvent.click(screen.getByRole('button',{name:'✓ Eigener Begriff'}));
+ expect(screen.queryByRole('button',{name:'Keywords speichern'})).toBeNull();
+});

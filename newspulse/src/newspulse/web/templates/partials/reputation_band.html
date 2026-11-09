@@ -18,23 +18,21 @@
 {% if not band.is_empty %}
 <section class="band" aria-label="{{ t('Reputationslage') }}">
   {% if band.entries %}
+    <h2 class="band__title">{{ t('Reputationslage') }}</h2>
+    <p class="band__scope">{{ t('Aktuelle Bewertung, unabhängig vom gewählten Nachrichtentag.') }}</p>
     <div class="band__row">
       {% for entry in band.entries %}
         <article class="band__tile band__tile--{{ entry.state }}">
           <div class="band__head">
-            <span class="band__state">{{ t(entry.state) | capitalize }}</span>
             <span class="band__name">{{ entry.client_name }}</span>
+            <span class="band__state">{{ t(entry.state) | capitalize }}</span>
           </div>
           {# The four inputs the rung was counted from, beside the rung. A
              consultant asked "why is this Risiko" gets the numbers in the hour
              they ask, which is the whole of DEC-2 option A. #}
           <div class="band__why">
             {% if entry.negative %}
-              {% if entry.outlets == 1 %}{{ t("1 Medium") }}{% else %}{{ entry.outlets }} {{ t("Medien") }}{% endif %}
-              <span class="dot">·</span>
-              {{ entry.negative }}/{{ entry.articles }} {{ t("negativ") }}
-              {% if entry.national %}<span class="dot">·</span> {{ t("überregional") }}{% endif %}
-              {% if entry.named %}<span class="dot">·</span> {{ t("namentlich genannt") }}{% endif %}
+              <strong>{{ entry.negative }} {{ t("von") }} {{ entry.articles }} {{ t("Meldungen negativ") }}</strong>
             {% elif entry.articles %}
               {# Coverage, none of it negative. Only the crisis floor can put
                  this tile on the band - the arithmetic leaves such a reading on
@@ -52,6 +50,7 @@
               {{ t("noch nicht abgelesen") }}
             {% endif %}
           </div>
+          {% if entry.day and reputation_window_hours %}<p class="band__period">{{ t('Auswertungsfenster') }}: {{ reputation_window_hours }} {{ t('Stunden') }} · {{ t('Bewertet am') }} {{ entry.day.strftime("%d.%m.%Y") }}</p>{% endif %}
           <div class="band__trend">
             {{ t("Richtung") }}: <strong>{{ t(entry.direction) }}</strong>
             {% if entry.deviates %}
@@ -59,6 +58,12 @@
               <span class="band__dev">{{ t("über dem eigenen Median der letzten 30 Ablesungen") }}</span>
             {% endif %}
           </div>
+          <details class="band__details"><summary>{{ t('Einordnung und Details') }}</summary>
+            {% if entry.state == 'issue' %}<p>{{ t('Ein offenes Issue oder wiederholte negative Berichterstattung führt zu dieser Einstufung.') }}</p>{% endif %}
+            {% if entry.negative %}<p>{% if entry.outlets == 1 %}{{ t("1 Medium") }}{% else %}{{ entry.outlets }} {{ t("Medien") }}{% endif %} {{ t('zum stärksten negativen Thema') }}{% if entry.national %} · {{ t("überregional") }}{% endif %}{% if entry.named %} · {{ t("namentlich genannt") }}{% endif %}</p>{% endif %}
+            <p>{{ t('Die Richtung vergleicht die aktuelle Bewertung mit den vorherigen Ablesungen.') }}</p>
+          </details>
+          <a class="band__link" href="/client/{{ entry.client_id }}/issues">{{ t('Issues prüfen') }} <span aria-hidden="true">→</span></a>
           {# A tile whose reading is older than the band's own stamp says so on
              itself. The sweep skips a mandate it cannot count and carries on, so
              this tile can be the last reading that succeeded — and its four

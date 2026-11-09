@@ -13,7 +13,7 @@
 	}
 }
 
-# The company website: static files, no app behind it.
+# The company website plus the isolated, password-protected customer questionnaire.
 {$WEBSITE_HOSTS} {
 	root * /srv/website
 	encode zstd gzip
@@ -22,5 +22,14 @@
 		Referrer-Policy strict-origin-when-cross-origin
 		-Server
 	}
-	file_server
+	@onboarding path /onboarding /onboarding/* /api/onboarding /api/onboarding/* /static/react/* /static/brand/*
+	handle @onboarding {
+		reverse_proxy app:8000 {
+			lb_try_duration 60s
+			lb_try_interval 500ms
+		}
+	}
+	handle {
+		file_server
+	}
 }
