@@ -6,7 +6,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { ArchivePage } from "./ArchivePage.jsx";
 import { SettingsPage } from "./SettingsPage.jsx";
 import { ProfilePage } from "./ProfilePage.jsx";
-import { TasksPage, LinkedInPage, SalesPage } from "./WorklistPages.jsx";
+import { LinkedInPage, SalesPage } from "./WorklistPages.jsx";
+import { TasksPage } from "./TaskManager.jsx";
 import { Shell, ClientTabs } from "../shell.jsx";
 export function render({ page, data, shell, tabs }) {
   const Page = {

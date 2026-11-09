@@ -110,7 +110,7 @@ def test_the_desk_counts_open_tasks_and_lists_them_before_decisions(session):
     board = desk.build(session)
     assert board.tasks_open == 1
     assert [t.title for t in board.tasks] == ["heute"]
-    assert board.tasks[0].href.startswith("/aufgaben#task-")
+    assert board.tasks[0].href.startswith("/aufgaben?aufgabe=")
 
 
 def _client_letter(session, subject="Was beim Wechsel zum Depot nicht mitwandert"):
@@ -294,11 +294,46 @@ def test_every_open_task_counts_as_due_not_just_the_five_shown(session):
     assert (len(board.tasks), board.tasks_open, board.tasks_due) == (5, 7, 7)
 
 
-def test_the_tasks_heading_counts_every_open_task_whatever_the_filter(web, session):
-    worklists.save_task(session, {"title": "offen", "client_id": "1"})
+def test_the_task_manager_lists_by_person_client_and_internal(web, session):
+    worklists.save_task(session, {"title": "Pitch Qonto", "client_id": "1", "assignees": ["lucas"]})
+    worklists.save_task(session, {"title": "Medienliste", "assignees": ["raphael", "lucas"]})
     worklists.save_task(session, {"title": "fertig", "status": "erledigt"})
-    body = rendered(web.get("/aufgaben?status=erledigt"))
-    assert "1 offen" in body
+    body = rendered(web.get("/aufgaben"))
+    for list_link in ('href="/aufgaben?liste=heute"', 'href="/aufgaben?liste=person%3Alucas"',
+                      'href="/aufgaben?liste=person%3Araphael"', 'href="/aufgaben?liste=intern"',
+                      'href="/aufgaben?liste=kunde%3A1"'):
+        assert list_link in body
+    assert "@Lucas" in body and "@Raphael" in body
+    assert "Pitch Qonto" in body and "Medienliste" in body
+
+
+def test_tags_are_saved_and_an_unknown_person_is_refused(web, session):
+    web.post("/aufgaben", data={"title": "Zwei Leute", "assignees": ["raphael", "lucas"]})
+    assert session.scalar(select(Task)).assignees == ["raphael", "lucas"]
+    assert "Unbekannte Person." in rendered(web.post("/aufgaben", data={"title": "x", "assignees": "eve"}))
+
+
+def test_a_task_added_in_a_list_lands_in_it_and_comes_back_there(web, session):
+    response = web.post("/aufgaben", data={"title": "Für Qonto", "client_id": "1",
+                                           "redirect_to": "/aufgaben?liste=kunde%3A1"}, follow_redirects=False)
+    assert response.headers["location"] == "/aufgaben?liste=kunde%3A1"
+    assert session.scalar(select(Task)).client_id == 1
+
+
+def test_the_star_changes_only_the_priority(web, session):
+    worklists.save_task(session, {"title": "Behalten", "client_id": "1", "note": "Notiz",
+                                  "due_on": "2026-12-01", "assignees": ["lucas"]})
+    task = session.scalar(select(Task))
+    web.post(f"/aufgaben/{task.id}", data={"priority": "hoch", "redirect_to": "/aufgaben?liste=wichtig"})
+    session.refresh(task)
+    assert (task.priority, task.client_id, task.note, task.assignees) == ("hoch", 1, "Notiz", ["lucas"])
+    assert task.due_on == dt.date(2026, 12, 1)
+
+
+def test_the_signed_in_person_is_known_by_either_address():
+    assert worklists.member_for("L.Neurauter@raute-kopf.com") == "lucas"
+    assert worklists.member_for("raphaelmankopf@gmail.com") == "raphael"
+    assert worklists.member_for("someone@else.example") is None
 
 
 def test_a_mandates_next_steps_start_with_its_tasks(web, session):

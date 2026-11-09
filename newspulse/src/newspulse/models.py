@@ -4666,6 +4666,8 @@ class Task(Base):
     status: Mapped[str] = mapped_column(String(10), nullable=False, default="offen", index=True)
     due_on: Mapped[dt.date | None] = mapped_column(Date(), nullable=True, index=True)
     owner: Mapped[str] = mapped_column(String(120), nullable=False, default="")
+    #: Who does it: team member keys (``worklists.TEAM``), any number of them.
+    assignees: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list, server_default="[]")
     #: Where it came from: a story, a text, a contact. A path on this site.
     context_href: Mapped[str] = mapped_column(String(300), nullable=False, default="")
     created_at: Mapped[dt.datetime] = mapped_column(UTCDateTime(), nullable=False, default=_utcnow)

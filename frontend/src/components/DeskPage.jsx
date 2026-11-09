@@ -144,7 +144,7 @@ export function DeskPage({ translations = {}, language = 'de' }) {
               <button type="submit" className="task__box" aria-label={`${t('Erledigt')}: ${x.title}`} title={t('Als erledigt abhaken')} />
             </form>
             <a className="task__b task__link" href={x.href}><span className="task__t" title={x.title}>{x.title}</span>
-              <span className="task__m">{x.client?.name || t('Agentur')}{x.due_on ? ` · ${t('fällig')} ${date(x.due_on + 'T12:00:00Z')}` : ''} · {t('Aufgabe')}</span></a>
+              <span className="task__m">{x.client?.name || t('Intern')}{(x.assignees || []).length ? ` · ${x.assignees.map((a) => '@' + a).join(', ')}` : ''}{x.due_on ? ` · ${t('fällig')} ${date(x.due_on + 'T12:00:00Z')}` : ''} · {t('Aufgabe')}</span></a>
             <span className={`badge badge--${x.due_on && x.due_on < isoToday ? 'late' : x.priority}`}>{t(x.due_on && x.due_on < isoToday ? 'Überfällig' : ({hoch: 'Hoch', mittel: 'Mittel', niedrig: 'Niedrig'})[x.priority])}</span>
           </div>)}
           {board.decisions.slice(0, Math.max(0, 6 - tasks.length)).map((item, index) => <a className="task" href={item.href} key={`${item.href}-${index}`}>

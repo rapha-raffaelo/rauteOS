@@ -95,8 +95,48 @@ def mandates(session: Session) -> list[Client]:
 # --- Aufgaben -------------------------------------------------------------------
 
 
+#: The people who work in RauteOS, as tags on a task. Each has the addresses
+#: they sign in with, so "Mir zugewiesen" knows who is looking.
+TEAM: tuple[tuple[str, str, tuple[str, ...]], ...] = (
+    ("raphael", "Raphael", ("raphaelmankopf@gmail.com", "r.mankopf@raute-kopf.com")),
+    ("lucas", "Lucas", ("lucas.neurauter@gmail.com", "l.neurauter@raute-kopf.com")),
+)
+TEAM_KEYS = tuple(key for key, _, _ in TEAM)
+
+
+def member_for(email: str | None) -> str | None:
+    """The team key of a signed-in address, or None."""
+    address = (email or "").strip().casefold()
+    return next((key for key, _, emails in TEAM if address in emails), None)
+
+
+def _assignees(form: Mapping) -> list[str]:
+    raw = form.get("assignees", [])
+    values = raw if isinstance(raw, (list, tuple)) else [raw]
+    picked = [str(v).strip() for v in values if str(v).strip()]
+    if any(v not in TEAM_KEYS for v in picked):
+        raise Invalid("Unbekannte Person.")
+    return list(dict.fromkeys(picked))
+
+
+#: The fields a one-click change may carry: ticking off and the star. Anything
+#: else is the full form, which rewrites every field it holds.
+QUICK_FIELDS = frozenset({"status", "priority"})
+
+
+def quick_update(session: Session, task: Task, form: Mapping) -> Task:
+    """Change only what the click carried, leaving every other field alone."""
+    if "priority" in form:
+        task.priority = _choice(form, "priority", TASK_PRIORITIES, task.priority)
+    if "status" in form:
+        set_task_status(task, str(form.get("status", "")))
+    session.commit()
+    return task
+
+
 def save_task(session: Session, form: Mapping, task: Task | None = None) -> Task:
     task = task or Task()
+    task.assignees = _assignees(form)
     task.title = _text(form, "title", 200, required="Was ist zu tun?")
     task.note = _text(form, "note", 5000)
     task.priority = _choice(form, "priority", TASK_PRIORITIES, task.priority or "mittel")

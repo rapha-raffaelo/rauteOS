@@ -199,6 +199,8 @@ class TaskItem:
     priority: str
     due_on: dt.date | None
     href: str
+    #: Who does it, as team member names ("Lucas").
+    assignees: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -568,8 +570,10 @@ def _open_tasks(session: Session) -> list[TaskItem]:
     """Open tasks, due first (spec 10): the same order as the Aufgaben page."""
     from . import worklists
 
+    names = {key: name for key, name, _ in worklists.TEAM}
     return [TaskItem(id=t.id, client=t.client, title=t.title, priority=t.priority, due_on=t.due_on,
-                     href=t.context_href or f"/aufgaben#task-{t.id}")
+                     href=t.context_href or f"/aufgaben?aufgabe={t.id}",
+                     assignees=tuple(names.get(a, a) for a in (t.assignees or [])))
             for t in worklists.open_tasks(session)]
 
 

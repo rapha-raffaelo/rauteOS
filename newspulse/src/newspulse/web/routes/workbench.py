@@ -117,7 +117,9 @@ NEXT_STEPS_SHOWN = 5
 def next_steps(board, client_id: int) -> list[dict]:
     """The mandate's open tasks, due first, then its open decisions (spec 10)."""
     tasks = [dict(kind='aufgabe', title=t.title, href=t.href,
-                  detail=f'fällig {t.due_on:%d.%m.%Y}' if t.due_on else '', since=None)
+                  detail=' · '.join(filter(None, [', '.join(f'@{a}' for a in t.assignees),
+                                                  f'fällig {t.due_on:%d.%m.%Y}' if t.due_on else ''])),
+                  since=None)
              for t in board.all_tasks if t.client and t.client.id == client_id]
     decisions = [DecisionSummary.model_validate(d).model_dump() for d in board.decisions if d.client.id == client_id]
     return (tasks + decisions)[:NEXT_STEPS_SHOWN]

@@ -69,6 +69,7 @@ class TaskSummary(ReadModel):
     priority: str
     due_on: dt.date | None
     href: str
+    assignees: list[str] = []
 
 
 class ChanceSummary(ReadModel):

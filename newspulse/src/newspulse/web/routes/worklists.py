@@ -32,7 +32,7 @@ def _clients(session: Session) -> list[dict]:
 
 def _task(t: Task) -> dict:
     return dict(id=t.id, title=t.title, note=t.note, priority=t.priority, status=t.status,
-                due_on=t.due_on, owner=t.owner, context_href=t.context_href,
+                due_on=t.due_on, owner=t.owner, context_href=t.context_href, assignees=list(t.assignees or []),
                 client=dict(id=t.client.id, name=t.client.name) if t.client else None,
                 created_at=t.created_at, done_at=t.done_at)
 
@@ -66,7 +66,17 @@ def _row_or_404(session: Session, model, row_id: int):
 
 
 async def _form(request: Request) -> dict:
-    return {k: v for k, v in (await request.form()).items()}
+    """The posted fields; ``assignees`` keeps every ticked person, not the last."""
+    form = await request.form()
+    values = {k: v for k, v in form.items()}
+    if "assignees" in form:
+        values["assignees"] = form.getlist("assignees")
+    return values
+
+
+def _task_back(form: dict, fallback: str = "/aufgaben") -> str:
+    """Where a task form returns: the list it was sent from, on this site only."""
+    return redirects.local_target(str(form.pop("redirect_to", "") or ""), fallback)
 
 
 # --- Aufgaben -------------------------------------------------------------------
@@ -80,6 +90,7 @@ def _tasks_page(request: Request, session: Session, *, error: str = "", draft: d
     rows = worklists.tasks(session, status=status, client_id=client_id)
     # Over every open task, whatever the filter: the same number as the sidebar.
     everything = worklists.open_tasks(session)
+    me = worklists.member_for(request.scope.get("user_email"))
     # What the Desk counts as "Entscheidungen offen": letters, impulses and
     # profile conflicts that wait on a person. Listed here so the Desk's figure
     # has a page to click through to.
@@ -88,6 +99,7 @@ def _tasks_page(request: Request, session: Session, *, error: str = "", draft: d
                  for d in desk.open_decisions(session, client_id)]
     return render_react(request, "tasks", dict(
         tasks=[_task(t) for t in rows], clients=_clients(session), decisions=decisions,
+        team=[dict(key=key, name=name) for key, name, _ in worklists.TEAM], me=me,
         open_total=len(everything), due_on=[t.due_on for t in everything if t.due_on],
         priorities=[[p, worklists.TASK_PRIORITY_LABELS[p]] for p in TASK_PRIORITIES],
         states=[[s, worklists.TASK_STATE_LABELS[s]] for s in TASK_STATES],
@@ -102,23 +114,23 @@ def tasks_view(request: Request, session: Session = Depends(get_db)) -> Response
 @router.post("/aufgaben")
 async def create_task(request: Request, session: Session = Depends(get_db)) -> Response:
     form = await _form(request)
+    back = _task_back(form)
     try:
         worklists.save_task(session, form)
     except worklists.Invalid as exc:
         session.rollback()
         return _tasks_page(request, session, error=str(exc), draft=form)
-    return RedirectResponse("/aufgaben", status_code=_SEE_OTHER)
+    return RedirectResponse(back, status_code=_SEE_OTHER)
 
 
 @router.post("/aufgaben/{task_id}")
 async def update_task(task_id: int, request: Request, session: Session = Depends(get_db)) -> Response:
     task = _row_or_404(session, Task, task_id)
     form = await _form(request)
-    back = redirects.local_target(str(form.pop("redirect_to", "")), "/aufgaben")
+    back = _task_back(form)
     try:
-        if set(form) <= {"status"}:  # the one-click status buttons
-            worklists.set_task_status(task, str(form.get("status", "")))
-            session.commit()
+        if form and set(form) <= worklists.QUICK_FIELDS:  # ticking off, the star
+            worklists.quick_update(session, task, form)
         else:
             worklists.save_task(session, form, task)
     except worklists.Invalid as exc:
@@ -128,10 +140,11 @@ async def update_task(task_id: int, request: Request, session: Session = Depends
 
 
 @router.post("/aufgaben/{task_id}/delete")
-def delete_task(task_id: int, session: Session = Depends(get_db)) -> Response:
+async def delete_task(task_id: int, request: Request, session: Session = Depends(get_db)) -> Response:
+    back = _task_back(await _form(request))
     session.delete(_row_or_404(session, Task, task_id))
     session.commit()
-    return RedirectResponse("/aufgaben", status_code=_SEE_OTHER)
+    return RedirectResponse(back, status_code=_SEE_OTHER)
 
 
 # --- LinkedIn -------------------------------------------------------------------
