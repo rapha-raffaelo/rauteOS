@@ -414,7 +414,9 @@ def check_guide(
     # that lists a breach and still says ok would clear a text nobody cleared.
     if verdict.breaches:
         verdict = verdict.model_copy(update={"ok": False})
-    return verdict, config.review_model()
+    from . import ai_models
+
+    return verdict, ai_models.reviewer_model()
 
 
 def for_prompt(client: Client) -> str:

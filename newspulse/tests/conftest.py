@@ -412,3 +412,18 @@ def no_default_starter(monkeypatch):
     real = assets_view.start_default
     monkeypatch.setattr(assets_view, 'start_default', lambda *args, **kwargs: None)
     return real
+
+
+@pytest.fixture(autouse=True)
+def ai_settings_from_environment_only(monkeypatch):
+    """Model roles are read from the settings table; in tests there is none to
+    read, so the defaults and the environment apply (never the developer's DB)."""
+    from contextlib import contextmanager
+
+    from newspulse import ai_models
+
+    @contextmanager
+    def _none():
+        yield ai_models._NoSettings()
+
+    monkeypatch.setattr(ai_models, "_open", _none)

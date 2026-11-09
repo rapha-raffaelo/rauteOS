@@ -593,7 +593,7 @@ def _coerce_verdict_list(data: object) -> object:
 
 
 def invoke_with_fallback(prompt: str, *, timeout: float = _SUBPROCESS_TIMEOUT_SECONDS) -> str:
-    """``invoke_claude_cli``, degrading to Gemini when the subscription is spent.
+    """The Designer's answer: its providers in order, the next when one is spent.
 
     The one-shot counterpart to :class:`FallbackAnalyzer`, used by the advisor.
     Unlike the analyzer there is no batching here — a brief is a single call — so
@@ -603,15 +603,11 @@ def invoke_with_fallback(prompt: str, *, timeout: float = _SUBPROCESS_TIMEOUT_SE
     Any non-quota failure propagates untouched, so a broken prompt still fails
     loudly instead of being re-run on a metered account.
     """
-    try:
-        return invoke_claude_cli(prompt, timeout=timeout)
-    except AnalyzerError as exc:
-        if not (is_quota_error(exc) and config.gemini_configured()):
-            raise
-        from . import gemini
+    # The order is the Designer's from the settings (Claude, then Gemini unless
+    # changed there); see newspulse.ai_models.
+    from . import ai_models
 
-        _log.warning("subscription is out of quota (%s); generating this one with Gemini", exc)
-        return gemini.generate(prompt, timeout=timeout)
+    return ai_models.ask("designer", prompt, timeout=timeout)
 
 
 class GeminiAnalyzer(_BaseClaudeAnalyzer):

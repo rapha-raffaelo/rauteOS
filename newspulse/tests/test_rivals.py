@@ -184,35 +184,39 @@ def test_accepting_a_company_that_already_exists_reuses_it(factory, client):
         assert rows[0] in session.get(Client, subject_id).competitors
 
 
-def test_the_proposal_lives_in_the_clients_own_edit_row(factory, client):
-    """Competitors are configuration, so the proposal sits beside the aliases,
-    search terms and alert topics — everything else about a mandate is set in
-    that row, and a panel floating above the table was a second place to look."""
+def test_the_proposal_lives_on_the_mandates_competitor_page(factory, client, monkeypatch):
+    """Competitors are managed per mandate under Strategie › Wettbewerb & Markt,
+    not in the settings."""
     with factory() as session:
         subject_id = _client(session).id
 
-    closed = rendered(client.get("/settings"))
-    open_row = rendered(client.get(f"/settings?edit={subject_id}"))
+    settings_row = rendered(client.get(f"/settings?edit={subject_id}"))
+    page = rendered(client.get(f"/client/{subject_id}/wettbewerb"))
 
-    assert f'action="/settings/clients/{subject_id}/rivals"' not in closed
-    assert f'action="/settings/clients/{subject_id}/rivals"' in open_row
+    assert f'action="/settings/clients/{subject_id}/rivals"' not in settings_row
+    assert f'action="/settings/clients/{subject_id}/rivals"' in page
+    from newspulse.web import themework
+
+    started_for = []
+    monkeypatch.setattr(themework.rivals_job, "start", lambda session, cid: started_for.append(cid) or True)
+    started = client.post(f"/settings/clients/{subject_id}/rivals", follow_redirects=False)
+    assert started_for == [subject_id]
+    assert started.headers["location"] == f"/client/{subject_id}/wettbewerb#wettbewerber"
 
 
-def test_an_accepted_competitor_is_visible_in_the_table(factory, client):
-    """It was saved all along and nothing showed it: the panel closed, the table
-    had no column for it, and "gespeichert" was indistinguishable from
-    "verworfen"."""
+def test_an_accepted_competitor_is_visible_on_the_competitor_page(factory, client):
+    """It was saved all along and nothing showed it: "gespeichert" was
+    indistinguishable from "verworfen"."""
     with factory() as session:
         subject_id = _client(session).id
 
     client.post(
         f"/client/{subject_id}/competitors/accept",
-        data={"name": "About You", "redirect_to": "/settings"},
+        data={"name": "About You", "redirect_to": f"/client/{subject_id}/wettbewerb"},
     )
-    body = rendered(client.get("/settings"))
+    body = rendered(client.get(f"/client/{subject_id}/wettbewerb"))
 
     assert "About You" in body
-    assert "tag--rival" in body
 
 
 def test_the_proposals_render_as_buttons_that_create_nothing_by_themselves(
@@ -232,7 +236,7 @@ def test_the_proposals_render_as_buttons_that_create_nothing_by_themselves(
         "rivals": rivals._parse(_reply("About You")).rivals,
     }
     try:
-        body = rendered(client.get(f"/settings?edit={subject_id}"))
+        body = rendered(client.get(f"/client/{subject_id}/wettbewerb"))
     finally:
         themework.rivals_job.state.clear()
 
@@ -253,7 +257,7 @@ def test_a_running_proposal_says_so_and_fetches_its_own_result(factory, client):
 
     themework.rivals_job.state[subject_id] = {"state": "läuft", "client": "Zalando"}
     try:
-        body = rendered(client.get(f"/settings?edit={subject_id}"))
+        body = rendered(client.get(f"/client/{subject_id}/wettbewerb"))
     finally:
         themework.rivals_job.state.clear()
 
@@ -277,7 +281,7 @@ def test_an_empty_proposal_says_so_rather_than_looking_broken(
         "rivals": [],
     }
     try:
-        body = rendered(client.get(f"/settings?edit={subject_id}"))
+        body = rendered(client.get(f"/client/{subject_id}/wettbewerb"))
     finally:
         themework.rivals_job.state.clear()
 
@@ -563,9 +567,17 @@ def test_the_proposal_form_carries_the_two_fields_into_the_accept(factory, clien
         ],
     }
     try:
-        body = rendered(client.get(f"/settings?edit={subject_id}"))
+        body = rendered(client.get(f"/client/{subject_id}/wettbewerb"))
     finally:
         themework.rivals_job.state.pop(subject_id, None)
 
     assert 'name="website" value="g20.group"' in body
     assert 'name="industry" value="Krypto-Market-Making"' in body
+
+
+def test_the_background_proposals_can_actually_start():
+    """themework used ``spawn`` without importing it: every "vorschlagen" button
+    died with a NameError on the server."""
+    from newspulse.web import themework
+
+    assert themework.spawn.start_or_release

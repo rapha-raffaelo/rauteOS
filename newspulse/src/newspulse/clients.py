@@ -485,20 +485,22 @@ def deactivate_client(session: Session, client_id: int) -> Client:
     return client
 
 
-def purge_archived(session: Session, now: dt.datetime | None = None) -> list[str]:
+def purge_archived(session: Session, now: dt.datetime | None = None, *, everything: bool = False) -> list[str]:
     """Delete every mandate archived longer than ``ARCHIVE_DAYS``, with its data.
 
     A core DELETE rather than ``session.delete``: every table that holds a
     mandate's data cascades on the database side, and the ORM would instead try
     to null out the client_id of relationships it has no cascade for. Competitors
     are never purged; they are shared yardsticks, not a customer's data.
+
+    ``everything`` deletes the whole archive at once, whatever its age: the
+    "Alle löschen" button in the settings.
     """
     cutoff = (now or dt.datetime.now(dt.UTC)) - dt.timedelta(days=ARCHIVE_DAYS)
+    archived = (Client.active.is_(False), Client.is_competitor.is_(False))
     expired = session.execute(
         select(Client.id, Client.name).where(
-            Client.active.is_(False),
-            Client.is_competitor.is_(False),
-            Client.deactivated_at < cutoff,
+            *archived, *(() if everything else (Client.deactivated_at < cutoff,))
         )
     ).all()
     if expired:

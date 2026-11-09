@@ -149,8 +149,12 @@ def condense(answers, *, ask=None):
     question in one or two sentences, a topic as concise facts.
 
     Keeps every original the model does not return shorter, so a failed call
-    never costs a researched fact."""
-    ask = ask or analyzer.invoke_with_fallback
+    never costs a researched fact. Shortening is the Lektor's job when one is
+    set up under Einstellungen › KI-Modelle, else the Designer's."""
+    if ask is None:
+        from . import ai_models
+
+        ask = ai_models.caller("lektor") if ai_models.has_role("lektor") else analyzer.invoke_with_fallback
     long = {a['key']: a['value'] for a in answers if limit(a['key']) and len(a['value']) > limit(a['key'])}
     if not long:
         return answers

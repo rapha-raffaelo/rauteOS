@@ -60,60 +60,127 @@ function Job({
     children
   );
 }
-// Live mandates, then competitors, then the archive: a deactivated mandate is
-// on its way out and should not sit between the ones Lucas works on.
+// Live mandates, then the archive: a deactivated mandate is on its way out
+// and should not sit between the ones Lucas works on. Competitors are not kept
+// here; each mandate manages its own under Strategie › Wettbewerb & Markt.
 const clientGroups = [
   ["Mandanten gesamt", (c) => !c.is_competitor && c.active],
-  ["Wettbewerber", (c) => c.is_competitor],
   ["im Archiv", (c) => !c.is_competitor && !c.active],
 ];
+const PENCIL = "M4 20h4L19 9l-4-4L4 16v4zM14 6l4 4";
+const CLOSE = "M6 6l12 12M18 6 6 18";
+const POWER = "M12 3v9M6.3 6.3a8 8 0 1 0 11.4 0";
+const Glyph = ({ d }) => (
+  <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>
+);
+// KI-Modelle: connect each provider, then give each role its order. The first
+// connected provider of a role answers; the next steps in when it is spent.
+function AiModels({ data: ai }) {
+  if (!ai) return null;
+  const labels = Object.fromEntries(ai.providers.map((p) => [p.key, p.label]));
+  return (
+    <Panel title="KI-Modelle" id="ki-modelle">
+      <p>
+        {t("Erst die Anbieter verbinden, dann je Rolle festlegen, welches Modell zuerst antwortet. Fällt eines aus oder ist sein Kontingent erschöpft, springt das nächste ein.")}
+      </p>
+      <Notice>{ai.error}</Notice>
+      {ai.notice && <p className="ai-notice" role="status">{ai.notice}</p>}
+      {!ai.secret_ready && (
+        <Notice>{t("Auf dem Server fehlt NEWSPULSE_SESSION_SECRET. Ohne ihn werden keine Schlüssel gespeichert.")}</Notice>
+      )}
+      <div className="ai-providers">
+        {ai.providers.map((p) => (
+          <section className={`ai-provider${p.connected ? " ai-provider--on" : ""}`} key={p.key} aria-label={p.label}>
+            <header>
+              <h3>{p.label} <small>{p.vendor}</small></h3>
+              <span className="ai-state">{p.connected ? `${t("Verbunden")} · ${t(p.how)}${p.hint ? ` · …${p.hint}` : ""}` : t("Nicht verbunden")}</span>
+            </header>
+            <form method="post" action="/settings/ai/key" className="ai-key">
+              <input type="hidden" name="provider" value={p.key} />
+              <label className="platform-field"><span>{t("API-Schlüssel")}</span>
+                <input type="password" name="api_key" autoComplete="off" placeholder={p.hint ? `…${p.hint}` : ""} maxLength={500} />
+              </label>
+              <label className="platform-field"><span>{t("Modell")}</span>
+                <input type="text" name="model" defaultValue={p.model} placeholder={p.default_model} maxLength={100} />
+              </label>
+              <button type="submit" className="btn btn--go">{t(p.connected ? "Speichern" : "Verbinden")}</button>
+            </form>
+            <div className="ai-provider__acts">
+              <form method="post" action="/settings/ai/test">
+                <input type="hidden" name="provider" value={p.key} />
+                <button type="submit" className="btn btn--quiet" disabled={!p.connected}>{t("Verbindung testen")}</button>
+              </form>
+              {p.hint && (
+                <form method="post" action="/settings/ai/forget">
+                  <input type="hidden" name="provider" value={p.key} />
+                  <button type="submit" className="btn btn--quiet">{t("Schlüssel entfernen")}</button>
+                </form>
+              )}
+            </div>
+          </section>
+        ))}
+      </div>
+      <form method="post" action="/settings/ai/order" className="ai-roles">
+        <h3>{t("Rollen und Reihenfolge")}</h3>
+        {ai.roles.map((r) => (
+          <fieldset key={r.key} className="ai-role">
+            <legend>{t(r.label)}</legend>
+            <p>{t(r.description)}</p>
+            <div className="ai-role__order">
+              {[0, 1, 2].map((i) => (
+                <label key={i} className="platform-field"><span>{i + 1}.</span>
+                  <select name={`${r.key}_${i + 1}`} defaultValue={r.order[i] || ""} aria-label={`${t(r.label)} ${i + 1}.`}>
+                    <option value="">—</option>
+                    {ai.providers.map((p) => (
+                      <option key={p.key} value={p.key}>{labels[p.key]}{p.connected ? "" : ` (${t("nicht verbunden")})`}</option>
+                    ))}
+                  </select>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+        ))}
+        <button type="submit" className="btn btn--go">{t("Reihenfolge speichern")}</button>
+      </form>
+    </Panel>
+  );
+}
 function ClientSettings({ client: c, data: d }) {
   const base = `/settings/clients/${c.id}`,
     edit = Number(d.edit_id) === c.id;
+  const label = t(edit ? "Schließen" : "Bearbeiten");
   return (
-    <article className="platform-client" id={`client-${c.id}`}>
+    <article className="platform-client platform-client--row" id={`client-${c.id}`}>
       <header>
-        <div>
+        <div className="platform-client__who">
           <h3>
             <a href={`/client/${c.id}/overview`}>{c.name}</a>
           </h3>
-          <p>
+          <p title={c.industry || ""}>
             {c.industry || "—"} · {c.country} ·{" "}
             {t(c.active ? "aktiv" : "inaktiv")}
             {c.purge_on &&
               ` · ${t("Löschung am")} ${date(c.purge_on)}`}
           </p>
-          {d.onboarding[c.id] && <p role="status">{d.onboarding[c.id]}</p>}
-          <p>
-            {c.is_competitor ? "Maßstab für" : "Wettbewerber"}:{" "}
-            {c.is_competitor && !c.benchmark_for.length && (
-              <span>keinem Mandanten</span>
-            )}
-            {(c.is_competitor ? c.benchmark_for : c.competitors).map((x) => (
-              <span className="tag tag--rival" key={x.id}>
-                {x.name}
-              </span>
-            ))}
-          </p>
         </div>
-        <div className="platform-actions">
-          <a
-            href={edit ? "/settings" : `/settings?edit=${c.id}#client-${c.id}`}
-          >
-            {t(edit ? "Schließen" : "Bearbeiten")}
-          </a>
-          <Action
-            action={base + "/competitor"}
-            label={c.is_competitor ? "Wettbewerb" : "Mandant"}
-          />
-          <Action
-            action={base + (c.active ? "/deactivate" : "/reactivate")}
-            label={c.active ? "Deaktivieren" : "Reaktivieren"}
-          />
-        </div>
+        <a className="platform-icon" aria-label={`${label}: ${c.name}`} title={label}
+          href={edit ? "/settings" : `/settings?edit=${c.id}#client-${c.id}`}>
+          <Glyph d={edit ? CLOSE : PENCIL} />
+        </a>
       </header>
+      {d.onboarding[c.id] && <p className="platform-client__status" role="status">{d.onboarding[c.id]}</p>}
       {edit && (
         <div className="platform-edit">
+          <div className="platform-edit__bar">
+            <a href={`/client/${c.id}/wettbewerb`}>{t("Wettbewerber verwalten")} →</a>
+            <form method="post" action={base + (c.active ? "/deactivate" : "/reactivate")}>
+              <button type="submit" className={`platform-icon${c.active ? " platform-icon--danger" : ""}`}
+                aria-label={`${t(c.active ? "Deaktivieren" : "Reaktivieren")}: ${c.name}`}
+                title={t(c.active ? "Deaktivieren" : "Reaktivieren")}>
+                <Glyph d={POWER} /><span>{t(c.active ? "Deaktivieren" : "Reaktivieren")}</span>
+              </button>
+            </form>
+          </div>
           <form method="post" action={base}>
             <ClientFields client={c} />
             <fieldset>
@@ -159,50 +226,6 @@ function ClientSettings({ client: c, data: d }) {
             disabled={d.industry_work[c.id]?.state === "läuft"}
             label="Branche vorschlagen"
           />
-          <h4>{t("Wettbewerber")}</h4>
-          {c.competitors.map((r) => (
-            <Action
-              key={r.id}
-              action={`/client/${c.id}/competitors/${r.id}/remove`}
-              label="Verknüpfung lösen"
-              values={{ redirect_to: `/settings?edit=${c.id}` }}
-            >
-              <span>{r.name}</span>
-            </Action>
-          ))}
-          <Job
-            label="Wettbewerber werden vorgeschlagen — das dauert einen Moment."
-            job={d.rival_work[c.id]}
-          >
-            {d.rival_work[c.id]?.state === "fertig" &&
-              !d.rival_work[c.id]?.rivals?.length && (
-                <p>
-                  Keine Wettbewerber vorgeschlagen — das Modell kennt dieses
-                  Unternehmen nicht sicher genug.
-                </p>
-              )}
-            {d.rival_work[c.id]?.rivals?.map((r) => (
-              <Action
-                key={r.name}
-                action={`/client/${c.id}/competitors/accept`}
-                label={"Hinzufügen: " + r.name}
-                values={{
-                  name: r.name,
-                  website: r.website,
-                  industry: r.industry,
-                  aliases: (r.aliases || []).join("\n"),
-                  redirect_to: `/settings?edit=${c.id}`,
-                }}
-              >
-                <p>{r.reason}</p>
-              </Action>
-            ))}
-          </Job>
-          <Action
-            action={base + "/rivals"}
-            disabled={d.rival_work[c.id]?.state === "läuft"}
-            label="Wettbewerber vorschlagen"
-          />
           <Action
             action={base + "/themes"}
             disabled={d.themes[c.id]?.state === "läuft"}
@@ -211,105 +234,6 @@ function ClientSettings({ client: c, data: d }) {
         </div>
       )}
     </article>
-  );
-}
-function ImportClients({ data: d, onData }) {
-  const [busy, setBusy] = useState(false),
-    [error, setError] = useState("");
-  async function preview(event) {
-    const form = event.currentTarget.form;
-    setBusy(true);
-    setError("");
-    try {
-      const res = await fetch("/settings/import/preview", {
-        method: "POST",
-        headers: { Accept: "application/json" },
-        body: new FormData(form),
-      });
-      if (!res.ok)
-        throw Error(
-          "Die Vorschau konnte nicht geladen werden. Bitte Datei und Zuordnung prüfen.",
-        );
-      onData(await res.json());
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setBusy(false);
-    }
-  }
-  return (
-    <Panel title="Import (Excel / CSV)">
-      <Notice>
-        {d.import_success != null
-          ? `${d.import_success} Client(s) importiert.`
-          : ""}
-      </Notice>
-      <form
-        method="post"
-        action="/settings/import/commit"
-        encType="multipart/form-data"
-      >
-        <Field
-          name="file"
-          label="Datei (.xlsx / .csv)"
-          type="file"
-          accept=".csv,.xlsx"
-        />
-        <p>
-          Spaltenzuordnung — Spaltenüberschrift je Feld eintragen (Name ist
-          Pflicht).
-        </p>
-        <div className="platform-fields">
-          {d.map_fields.map((key) => (
-            <Field
-              key={key}
-              name={"map_" + key}
-              label={key}
-              value={d.map_values[key]}
-            />
-          ))}
-        </div>
-        <div className="platform-actions">
-          <button type="button" onClick={preview} disabled={busy}>
-            {busy ? "Vorschau wird geladen…" : t("Vorschau")}
-          </button>
-          <button type="submit" disabled={busy}>
-            {t("Importieren")}
-          </button>
-        </div>
-      </form>
-      <Notice>{error || d.import_error}</Notice>
-      {d.import_rows && (
-        <>
-          <p>
-            {d.import_row_total} Zeile(n) — noch nicht importiert. Vorschau:{" "}
-            {d.import_rows.length} Zeilen.
-          </p>
-          <div className="table-scroll">
-            <table className="data">
-              <thead>
-                <tr>
-                  {d.map_fields.map((f) => (
-                    <th key={f}>{f}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {d.import_rows.map((row, i) => (
-                  <tr key={i}>
-                    {d.map_fields.map((f) => (
-                      <td key={f}>
-                        {Array.isArray(row[f]) ? row[f].join(", ") : row[f]}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </>
-      )}
-    </Panel>
   );
 }
 function Feeds({ data: d }) {
@@ -541,33 +465,23 @@ export function SettingsPage({ data: d, onData }) {
                 {members.length} {t(label)}
               </h3>
               {label === "im Archiv" && (
-                <p>
-                  {t(
-                    "Deaktivierte Mandanten bleiben 90 Tage im Archiv und werden danach mit allen Daten gelöscht.",
-                  )}
-                </p>
+                <div className="platform-archive-head">
+                  <p>
+                    {t(
+                      "Deaktivierte Mandanten bleiben 90 Tage im Archiv und werden danach mit allen Daten gelöscht.",
+                    )}
+                  </p>
+                  <form method="post" action="/settings/archive/purge"
+                    onSubmit={(e) => { if (!window.confirm(t("Alle Mandanten im Archiv jetzt mit allen Daten löschen? Das lässt sich nicht rückgängig machen."))) e.preventDefault(); }}>
+                    <button type="submit" className="platform-icon platform-icon--danger">{t("Alle löschen")}</button>
+                  </form>
+                </div>
               )}
               {members.map((c) => (
                 <ClientSettings key={c.id} client={c} data={d} />
               ))}
             </section>
           ))}
-      </Panel>
-      <ImportClients data={d} onData={onData} />
-      <Panel title="Alarm-Schwellenwert">
-        <p>
-          Wirkt auf künftige Läufe. Alarm-Themen lösen unabhängig vom
-          Schwellenwert eine Warnung aus.
-        </p>
-        <Notice>{d.threshold_error}</Notice>
-        <Action action="/settings/threshold" label="Speichern">
-          <Field
-            name="alert_threshold"
-            label="Schwellenwert"
-            value={d.alert_threshold}
-            options={d.score_range}
-          />
-        </Action>
       </Panel>
       <Panel title={`Maßstäbe · Fassung ${d.brain_version}`} id="brain">
         <p>
@@ -671,18 +585,8 @@ export function SettingsPage({ data: d, onData }) {
           </article>
         ))}
       </Panel>
+      <AiModels data={d.ai} />
       <div className="platform-columns">
-        <Panel title="KI-Ausweichmodell">
-          <p>
-            {d.fallback_ready
-              ? `${t("Aktiv")} — ${d.fallback_model}`
-              : t("Nicht eingerichtet")}
-          </p>
-          <p>
-            Wird verwendet, wenn das primäre Modell sein Nutzungslimit erreicht.
-            Der Schlüssel wird über die Server-Konfiguration gesetzt.
-          </p>
-        </Panel>
         <Panel title="Postfach" id="gmail">
           <Notice>{gmailNotices[d.gmail_notice]}</Notice>
           {d.gmail?.is_connected ? (
@@ -739,43 +643,6 @@ export function SettingsPage({ data: d, onData }) {
         </Panel>
       </div>
       <Feeds data={d} />
-      <Panel title="Themen-Radar">
-        {d.radar_stale == null ? (
-          <>
-            <p>
-              Prüft gespeicherte Zuordnungen zum Themenfeld, ohne sie zu ändern.
-            </p>
-            <a className="btn" href="/settings?radar=1">
-              {t("Radar-Treffer prüfen")}
-            </a>
-          </>
-        ) : d.radar_stale.length ? (
-          <form method="post" action="/settings/radar/cleanup">
-            <p>
-              {d.radar_stale.length} Treffer ohne passendes Thema. Die Artikel
-              bleiben im Archiv; nur diese Zuordnungen werden gelöst.
-            </p>
-            {d.radar_stale.map((row) => (
-              <p key={`${row.client_id}:${row.article_id}`}>
-                <Hidden
-                  values={{ hit: `${row.client_id}:${row.article_id}` }}
-                />
-                {row.client} · {row.outlet} · {dateTime(row.published_at)} ·{" "}
-                <Source url={row.url}>{row.headline}</Source>
-              </p>
-            ))}
-            <button type="submit">
-              Diese {d.radar_stale.length} Zuordnungen entfernen
-            </button>
-          </form>
-        ) : (
-          <p>
-            {t(
-              "Alle gespeicherten Radar-Treffer tragen ein Thema ihres Mandanten.",
-            )}
-          </p>
-        )}
-      </Panel>
       <Panel title="Letzte Läufe">
         <div className="table-scroll">
           <table className="data">

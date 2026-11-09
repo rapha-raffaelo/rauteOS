@@ -307,6 +307,13 @@ function Rivals({ data: d, base }) {
 const companyName = (name) => name.replace(/^https?:\/\/(www\.)?/i, "").replace(/\/$/, "");
 function RivalManagement({data: d, base}) {
   const redirect_to = base + "/wettbewerb#wettbewerber";
+  const work = d.rival_work;
+  // A proposal runs on a worker thread for tens of seconds; look again until it is done.
+  useEffect(() => {
+    if (work?.state !== "läuft") return undefined;
+    const timer = setTimeout(() => window.location.reload(), 4000);
+    return () => clearTimeout(timer);
+  }, [work?.state]);
   return <Panel title="Vergleichsgruppe">
     <p className="panel-hint">Gegen diese Unternehmen misst RauteOS Berichterstattung und Pitch-Lücken. Verknüpfte Wettbewerber zählen nur für diesen Mandanten.</p>
     <ul className="rival-chips">
@@ -329,6 +336,21 @@ function RivalManagement({data: d, base}) {
             options={d.candidates.map((c) => [c.id, c.name])} />
         </Action>
       )}
+    </div>
+    <div className="rival-proposals">
+      <Action action={`/settings/clients/${d.client.id}/rivals`} label="Wettbewerber vorschlagen" values={{ redirect_to }}
+        disabled={work?.state === "läuft"} />
+      {work?.state === "läuft" && <p role="status">{t("Wettbewerber werden vorgeschlagen — das dauert einen Moment.")}</p>}
+      {work?.state === "fehler" && <Notice>{`${t("Vorschlag fehlgeschlagen")}: ${work.error || ""}`}</Notice>}
+      {work?.state === "fertig" && !work.rivals?.length && (
+        <p>{t("Keine Wettbewerber vorgeschlagen — das Modell kennt dieses Unternehmen nicht sicher genug.")}</p>
+      )}
+      {work?.state === "fertig" && work.rivals?.map((r) => (
+        <Action key={r.name} action={`${base}/competitors/accept`} label={"Hinzufügen: " + r.name}
+          values={{ name: r.name, website: r.website, industry: r.industry, aliases: (r.aliases || []).join("\n"), redirect_to }}>
+          <p>{r.reason}</p>
+        </Action>
+      ))}
     </div>
   </Panel>;
 }

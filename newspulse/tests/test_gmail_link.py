@@ -539,7 +539,7 @@ def test_the_panel_says_it_is_not_set_up_and_offers_no_connect_button(
     unconfigured, web
 ):
     body = rendered(web.get("/settings"))
-    assert "Nicht eingerichtet" in body
+    assert "OAuth-Client nicht eingerichtet" in body
     # It never renders a button that would fail at Google with invalid_client.
     assert "/settings/gmail/start" not in body
     # And it points at the note that says how to set it up.

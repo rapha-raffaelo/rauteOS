@@ -143,22 +143,17 @@ def reviewer() -> Callable[..., str]:
     happen is worse than no check: the page shows a text with no objections and
     the reader takes that for a verdict.
     """
-    if not config.review_configured():
+    # Which provider reads is set under Einstellungen › KI-Modelle (Reviewer);
+    # by default this is Gemini, as before.
+    from . import ai_models
+
+    if not ai_models.has_role("reviewer"):
         raise RuntimeError(
-            "Kein Zweitmodell hinterlegt: GEMINI_API_KEY (oder "
-            "NEWSPULSE_GEMINI_API_KEY) in der .env setzen, damit ein anderes "
+            "Kein Zweitmodell verbunden: unter Einstellungen › KI-Modelle einen "
+            "Anbieter verbinden und als Reviewer einsetzen, damit ein anderes "
             "Modell den Text gegenliest."
         )
-
-    def _generate(prompt: str, **kwargs) -> str:
-        return generate(
-            prompt,
-            model=config.review_model(),
-            api_key=config.review_api_key(),
-            **kwargs,
-        )
-
-    return _generate
+    return ai_models.caller("reviewer")
 
 
 def stream(

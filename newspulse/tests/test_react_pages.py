@@ -57,16 +57,6 @@ def test_settings_contract_excludes_secrets_and_serializes_proposals(web,monkeyp
     with pytest.raises(TypeError):view_data(object())
 
 
-def test_settings_import_preview_never_commits_and_reports_validation(web,db):
-    before=db.scalar(select(func.count()).select_from(Client))
-    response=web.post('/settings/import/preview',files={'file':('clients.csv',b'Name,Industry\nNew Client,Tech\n','text/csv')},data={'map_name':'Name','map_industry':'Industry'},headers=JSON)
-    assert response.status_code==200,response.text
-    assert response.json()['import_rows'][0]['name']=='New Client'
-    assert db.scalar(select(func.count()).select_from(Client))==before
-    refused=web.post('/settings/threshold',data={'alert_threshold':'invalid'},headers=JSON)
-    assert refused.status_code==200 and refused.json()['threshold_error']
-
-
 def test_brain_version_arrival_and_coach_findings_are_serializable(web,db):
     from newspulse import brain
     from newspulse.schemas import CoachFinding

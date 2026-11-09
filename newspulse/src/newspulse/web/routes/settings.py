@@ -1,15 +1,9 @@
-"""The Settings view: client CRUD, Excel/CSV import, feeds, threshold, run status.
+"""The Settings view: client CRUD, feeds, run status.
 
 One page (``/settings``) that is the operator's whole control surface:
 
 * **Clients** — add, edit and (soft-)deactivate portfolio companies through the
   NP-02 CRUD service; deactivation never touches the client's archive.
-* **Import** — an Excel/CSV import driven by an explicit column mapping, with a
-  *preview* step (``preview_import``) that parses and validates the sheet and
-  surfaces any NP-02 validation error inline **before** anything is written.
-* **Threshold** — the alert importance threshold, persisted to the ``settings``
-  table. It is the source of truth a *future* run reads, so changing it changes
-  which future articles are flagged; it never rewrites stored analyses.
 * **Feeds** — the registered feed list (``feeds_default.toml``) with a per-feed
   active toggle, the active set persisted to the ``settings`` table.
 * **Runs** — the most recent ``runs`` rows (status, articles_found, errors) so the
@@ -17,7 +11,7 @@ One page (``/settings``) that is the operator's whole control surface:
 
 Settings persistence lives here as small ``get_*``/``set_*`` helpers over the
 key/value ``settings`` table; they are the read/write seam the daily job (NP-06)
-uses for the effective alert threshold and active feeds.
+uses for the active feeds.
 """
 
 from __future__ import annotations
@@ -25,16 +19,12 @@ from __future__ import annotations
 import datetime as dt
 import json
 import logging
-import os
 import re
 import secrets
-import tempfile
 import threading
-from collections.abc import Iterable, Iterator
-from contextlib import contextmanager
+from collections.abc import Iterable
 from dataclasses import dataclass
 from enum import StrEnum
-from pathlib import Path
 from urllib.parse import quote, urlparse
 
 from ..react_pages import render as render_react
@@ -43,8 +33,6 @@ from fastapi import APIRouter, Depends, Form, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
-from starlette.datastructures import FormData
-from starlette.datastructures import UploadFile as StarletteUploadFile
 
 from ... import (
     angles,
@@ -57,7 +45,6 @@ from ... import (
     outreach,
     pitch,
     profile_refresh,
-    radar_cleanup,
     rivals,
     themes,
     visibility,
@@ -65,12 +52,9 @@ from ... import (
 from ...analyzer import get_analyzer
 from ...db import get_session
 from ...clients import (
-    ImportValidationError,
     create_client,
     deactivate_client,
-    import_clients,
     list_clients,
-    preview_import,
     update_client,
 )
 from ...feeds import load_feeds
@@ -78,8 +62,6 @@ from ...outlets import tier_for
 from ...logos import fetch_logo, normalize_website
 from ...models import (
     DEFAULT_COUNTRY,
-    SCORE_MAX,
-    SCORE_MIN,
     BrainOverride,
     Category,
     Client,
@@ -96,7 +78,6 @@ router = APIRouter()
 
 # settings-table keys. Kept here so the read/write helpers and any future consumer
 # name a setting by constant, never by a bare string spread across the package.
-_ALERT_THRESHOLD_KEY = "alert_threshold"
 # Feeds are persisted as the *deactivated* set (a deny-list), not the active set:
 # storing which feeds the operator switched OFF means a feed later added to the
 # registry is active by default — the operator never deselected it — instead of
@@ -450,17 +431,6 @@ def _execute_run(since_days: int | None) -> None:
 # form enforces the width the same way the import does, since SQLite ignores it.
 _COUNTRY_CODE_LEN = 2
 
-# The client fields an import mapping may populate, in display order. Mirrors the
-# importable set NP-02 accepts; ``name`` is the only required one.
-_MAP_FIELDS: tuple[str, ...] = (
-    "name",
-    "aliases",
-    "industry",
-    "country",
-    "keywords",
-    "alert_topics",
-)
-
 # A delimited CRUD-form cell (aliases/keywords/alert_topics) splits on comma or
 # semicolon — the same rule the sheet importer uses — so the agent types whichever.
 _LIST_DELIMITER = re.compile(r"[;,]")
@@ -469,9 +439,7 @@ _LIST_DELIMITER = re.compile(r"[;,]")
 # --- settings-table service ----------------------------------------------------
 #
 # Small helpers over the key/value ``settings`` table. Writing a setting touches
-# only that table, never any ``analyses`` row — which is exactly why changing the
-# threshold affects *future* flagging without retroactively rewriting stored
-# analyses.
+# only that table, never any ``analyses`` row.
 
 
 def _upsert_setting(session: Session, key: str, value: str) -> None:
@@ -481,29 +449,6 @@ def _upsert_setting(session: Session, key: str, value: str) -> None:
         session.add(Setting(key=key, value=value))
     else:
         setting.value = value
-
-
-def get_alert_threshold(session: Session) -> int:
-    """The effective alert threshold: the stored value, else the config default.
-
-    This is the read seam the daily job uses to flag future articles; a missing or
-    corrupt stored value falls back to ``config.ALERT_THRESHOLD`` so the sweep is
-    never blocked by a bad settings row.
-    """
-    setting = session.get(Setting, _ALERT_THRESHOLD_KEY)
-    if setting is None or setting.value is None:
-        return config.ALERT_THRESHOLD
-    try:
-        return int(setting.value)
-    except ValueError:
-        return config.ALERT_THRESHOLD
-
-
-def set_alert_threshold(session: Session, value: int) -> None:
-    """Persist the alert threshold, clamped to the 0..10 importance scale."""
-    clamped = max(SCORE_MIN, min(SCORE_MAX, value))
-    _upsert_setting(session, _ALERT_THRESHOLD_KEY, str(clamped))
-    session.commit()
 
 
 def get_active_feed_names(session: Session, all_feeds: Iterable) -> set[str]:
@@ -865,102 +810,6 @@ def _parse_client_form(
     }
 
 
-def _mapping_from_form(form: FormData) -> dict[str, str]:
-    """Build the NP-02 ``{source_column: target_field}`` mapping from ``map_*``
-    fields, dropping the ones left blank (an unmapped required ``name`` is then
-    rejected by ``preview_import`` with a clear error).
-
-    Raises ``ImportValidationError`` if the operator points two fields at the same
-    source column: the mapping is keyed by source, so the second would silently
-    overwrite the first (e.g. dropping ``name``) and mis-report it as "not mapped".
-    """
-    mapping: dict[str, str] = {}
-    for field in _MAP_FIELDS:
-        source = (form.get(f"map_{field}") or "").strip()
-        if not source:
-            continue
-        if source in mapping:
-            raise ImportValidationError(
-                f"Column {source!r} is mapped to two fields "
-                f"({mapping[source]!r} and {field!r}); map each column to one field"
-            )
-        mapping[source] = field
-    return mapping
-
-
-def _echoed_map_values(form: FormData) -> dict[str, str]:
-    """The operator's raw ``{field: source}`` entries read straight from the form,
-    to re-fill the mapping inputs after any error so the mapping needn't be retyped.
-
-    Read from the form (not from a successfully-built mapping) so the echo survives
-    a duplicate-source error, where no valid mapping exists to invert.
-    """
-    return {
-        field: source
-        for field in _MAP_FIELDS
-        if (source := (form.get(f"map_{field}") or "").strip())
-    }
-
-
-@contextmanager
-def _staged_file(filename: str, data: bytes) -> Iterator[Path]:
-    """Write an uploaded blob to a temp file (keeping its suffix) for the path-based
-    NP-02 importer, and delete it deterministically at scope exit.
-
-    The suffix is preserved from the upload name so the importer's ``.xlsx``/``.csv``
-    detection works; an unknown suffix flows through to a clear NP-02 error.
-    """
-    suffix = Path(filename).suffix
-    fd, tmp_name = tempfile.mkstemp(suffix=suffix)
-    os.close(fd)
-    tmp = Path(tmp_name)
-    try:
-        tmp.write_bytes(data)
-        yield tmp
-    finally:
-        tmp.unlink(missing_ok=True)
-
-
-async def _read_upload(form: FormData) -> tuple[str, bytes]:
-    """Return ``(filename, data)`` for the form's ``file`` part, or ``("", b"")``
-    when no file was actually selected (empty part with a blank filename)."""
-    upload = form.get("file")
-    if isinstance(upload, StarletteUploadFile) and upload.filename:
-        data = await upload.read(guide.MAX_UPLOAD_BYTES + 1)
-        if len(data) > guide.MAX_UPLOAD_BYTES:
-            raise HTTPException(
-                status_code=413,
-                detail=(
-                    f"Die Datei ist größer als "
-                    f"{guide.MAX_UPLOAD_BYTES // (1024 * 1024)} MB."
-                ),
-            )
-        return upload.filename, data
-    return "", b""
-
-
-@router.post("/settings/radar/cleanup")
-def clean_radar_route(
-    hit: list[str] = Form(default_factory=list),
-    session: Session = Depends(get_db),
-) -> RedirectResponse:
-    """Remove exactly the links the operator was shown.
-
-    The rows travel with the form as ``client_id:article_id`` rather than being
-    re-derived here. Re-deriving them meant the page could render forty rows and
-    the button delete eight hundred, and that a hit added by the night's sweep
-    between reading and pressing was deleted unseen.
-    """
-    pairs: list[tuple[int, int]] = []
-    for raw in hit:
-        client_id, _, article_id = (raw or "").partition(":")
-        if client_id.isdigit() and article_id.isdigit():
-            pairs.append((int(client_id), int(article_id)))
-    removed = radar_cleanup.remove(session, pairs)
-    _log.info("radar cleanup removed %d hit(s) on request", removed)
-    return RedirectResponse("/settings?radar=1", status_code=_SEE_OTHER)
-
-
 # --- Rendering -----------------------------------------------------------------
 
 
@@ -981,7 +830,6 @@ def _page_context(session: Session) -> dict[str, object]:
         "runs": runs,
         # None means "not asked for". The one route that offers the survey
         # overrides it; every other render leaves the panel as an invitation.
-        "radar_stale": None,
         "last_run": _header_from_runs(runs),
         # The shared header dates every page; this view has no viewed-day of its
         # own, so it shows today — in the reader's zone, like every other page.
@@ -989,13 +837,11 @@ def _page_context(session: Session) -> dict[str, object]:
         "backfill_days": BACKFILL_DAYS,
         "run_error": None,
         "run_started": None,
-        "alert_threshold": get_alert_threshold(session),
         # Whether a backup provider is armed. Shown rather than assumed: a
         # fallback nobody can see is one nobody knows has stopped working, and
         # its absence only becomes visible on the morning the subscription runs
         # out — which is the morning it mattered.
-        "fallback_ready": config.gemini_configured(),
-        "fallback_model": config.GEMINI_MODEL,
+        "ai": _ai_context(session),
         # The mailbox. Three separable facts, because the panel has three states
         # and conflating them is how a person ends up pressing a button that
         # cannot work: whether an OAuth client exists at all, what is connected
@@ -1007,7 +853,6 @@ def _page_context(session: Session) -> dict[str, object]:
         "gmail_notice": None,
         "gmail_doc_url": DEPLOYMENT_DOC_URL,
         "gmail_doc_path": DEPLOYMENT_DOC_PATH,
-        "score_range": list(range(SCORE_MIN, SCORE_MAX + 1)),
         "default_country": DEFAULT_COUNTRY,
         # Per-client setup status, so a mandate created a minute ago says so on
         # its own row instead of leaving the reader to infer it from a global
@@ -1032,14 +877,7 @@ def _page_context(session: Session) -> dict[str, object]:
         "brain_open": None,
         "brain_history": [],
         "brain_error": None,
-        "map_fields": _MAP_FIELDS,
-        "map_values": {},
         "client_error": None,
-        "threshold_error": None,
-        "import_error": None,
-        "import_rows": None,
-        "import_row_total": None,
-        "import_success": None,
     }
 
 
@@ -1062,6 +900,34 @@ def _feeds_by_tier(feeds) -> list[tuple[str, list]]:
     ]
 
 
+def _ai_context(session: Session) -> dict[str, object]:
+    """KI-Modelle: which providers are connected and which answers in each role."""
+    from ... import ai_models
+
+    return {
+        "providers": [
+            {"key": key, "label": meta["label"], "vendor": meta["vendor"],
+             "default_model": meta["model"] or config.GEMINI_MODEL,
+             **{k: v for k, v in vars(ai_models.status(session, key)).items() if k != "provider"}}
+            for key, meta in ai_models.PROVIDERS.items()
+        ],
+        "roles": [
+            {"key": key, "label": label, "description": text, "order": ai_models.order(session)[key]}
+            for key, (label, text) in ai_models.ROLES.items()
+        ],
+        "secret_ready": bool(config.session_secret()),
+        "error": None,
+        "notice": None,
+    }
+
+
+def _render_ai(request: Request, session: Session, *, error: str | None = None,
+               notice: str | None = None) -> HTMLResponse:
+    context = _ai_context(session)
+    context.update(error=error, notice=notice)
+    return _render_settings(request, session, ai=context)
+
+
 def _render_settings(
     request: Request, session: Session, **extra: object
 ) -> HTMLResponse:
@@ -1077,17 +943,13 @@ def _render_settings(
 @router.get("/settings", response_class=HTMLResponse)
 def settings_view(
     request: Request,
-    imported: int | None = None,
     edit: int | None = None,
     started: int | None = None,
-    radar: int | None = None,
     gmail: str | None = None,
     session: Session = Depends(get_db),
 ) -> HTMLResponse:
-    """Render the settings page. ``?imported=N`` shows a post-import success note;
-    ``?edit=<client_id>`` opens that one client's row as an edit form;
-    ``?radar=1`` runs the radar survey, which walks every stored hit and is
-    therefore not something to do on a page this often opened.
+    """Render the settings page. ``?edit=<client_id>`` opens that one client's
+    row as an edit form.
 
     Editing is opt-in per row so the portfolio reads as a scannable table: a
     30-client portfolio is 30 rows to skim, not 180 always-open input boxes.
@@ -1095,14 +957,10 @@ def settings_view(
     validation-error re-render below without any client-side state.
     """
     extra: dict[str, object] = {}
-    if imported is not None:
-        extra["import_success"] = imported
     if edit is not None:
         extra["edit_id"] = edit
     if started is not None:
         extra["run_started"] = started
-    if radar:
-        extra["radar_stale"] = radar_cleanup.survey(session)
     if gmail is not None:
         # Only a value this module issued is honoured; anything else is dropped
         # rather than rendered, so the query string cannot put words on the page.
@@ -1469,7 +1327,7 @@ def accept_industry_route(
 
 @router.post("/settings/clients/{client_id}/rivals")
 def suggest_rivals_route(
-    client_id: int, session: Session = Depends(get_db)
+    client_id: int, redirect_to: str = Form(""), session: Session = Depends(get_db)
 ) -> RedirectResponse:
     """Propose competitors for one client, on a worker thread.
 
@@ -1477,12 +1335,12 @@ def suggest_rivals_route(
     of seconds of a page doing nothing, and the operator's verdict was that it
     "funktioniert im Grunde gar nicht". The panel polls itself instead.
 
-    The proposal opens beside the client's own edit row, because that is where
-    everything else about a mandate is set — aliases, search terms, alert topics —
-    and a competitor is configuration like the rest of them.
+    Competitors are managed per mandate under Strategie › Wettbewerb & Markt,
+    so that is where the proposal opens and where the button returns to.
     """
     themework.rivals_job.start(session, client_id)
-    return RedirectResponse(f"/settings?edit={client_id}", status_code=_SEE_OTHER)
+    back = redirects.local_target(redirect_to, f"/client/{client_id}/wettbewerb#wettbewerber")
+    return RedirectResponse(back, status_code=_SEE_OTHER)
 
 
 @router.post("/client/{client_id}/competitors/accept")
@@ -1826,6 +1684,80 @@ def deactivate_client_route(
     return RedirectResponse("/settings", status_code=_SEE_OTHER)
 
 
+@router.post("/settings/archive/purge")
+def purge_archive_route(session: Session = Depends(get_db)) -> RedirectResponse:
+    """Delete every archived mandate now, with all its data ("Alle löschen").
+
+    The daily sweep does this after ``ARCHIVE_DAYS``; this is the same delete
+    without the wait. Competitors are not touched.
+    """
+    from ...clients import purge_archived
+    purge_archived(session, everything=True)
+    return RedirectResponse("/settings", status_code=_SEE_OTHER)
+
+
+@router.post("/settings/ai/key")
+def save_ai_key_route(
+    request: Request,
+    provider: str = Form(...),
+    api_key: str = Form(""),
+    model: str = Form(""),
+    session: Session = Depends(get_db),
+) -> Response:
+    """Connect a provider: the key is stored encrypted and never shown again."""
+    from ... import ai_models
+
+    if provider not in ai_models.PROVIDERS:
+        return _render_ai(request, session, error="Unbekannter Anbieter.")
+    try:
+        ai_models.save_key(session, provider, api_key[:500], model[:100])
+    except ai_models.NoSecret as exc:
+        session.rollback()
+        return _render_ai(request, session, error=str(exc))
+    return RedirectResponse("/settings#ki-modelle", status_code=_SEE_OTHER)
+
+
+@router.post("/settings/ai/forget")
+def forget_ai_key_route(provider: str = Form(...), session: Session = Depends(get_db)) -> Response:
+    from ... import ai_models
+
+    if provider in ai_models.PROVIDERS:
+        ai_models.forget_key(session, provider)
+    return RedirectResponse("/settings#ki-modelle", status_code=_SEE_OTHER)
+
+
+@router.post("/settings/ai/test")
+def test_ai_route(request: Request, provider: str = Form(...), session: Session = Depends(get_db)) -> Response:
+    """One tiny call, so "verbunden" means it answered, not that a key is on file."""
+    from ... import ai_models
+    from ...analyzer import AnalyzerError
+
+    if provider not in ai_models.PROVIDERS:
+        return _render_ai(request, session, error="Unbekannter Anbieter.")
+    label = ai_models.PROVIDERS[provider]["label"]
+    try:
+        ai_models.test(session, provider)
+    except (ai_models.NotConnected, AnalyzerError) as exc:
+        _log.info("ai test %s failed: %s", provider, exc)
+        return _render_ai(request, session, error=f"{label} antwortet nicht: {str(exc)[:200]}")
+    return _render_ai(request, session, notice=f"{label} antwortet.")
+
+
+@router.post("/settings/ai/order")
+async def save_ai_order_route(request: Request, session: Session = Depends(get_db)) -> Response:
+    """Each role's providers, from the 1./2./3. choice fields (``designer_1`` …)."""
+    from ... import ai_models
+
+    form = await request.form()
+    roles = {role: [str(form.get(f"{role}_{n}") or "") for n in (1, 2, 3)] for role in ai_models.ROLES}
+    try:
+        ai_models.save_order(session, roles)
+    except ValueError as exc:
+        session.rollback()
+        return _render_ai(request, session, error=str(exc))
+    return RedirectResponse("/settings#ki-modelle", status_code=_SEE_OTHER)
+
+
 @router.post("/settings/clients/{client_id}/reactivate")
 def reactivate_client_route(
     client_id: int, request: Request, session: Session = Depends(get_db)
@@ -1846,23 +1778,6 @@ def reactivate_client_route(
     return RedirectResponse("/settings", status_code=_SEE_OTHER)
 
 
-@router.post("/settings/threshold")
-def set_threshold_route(
-    request: Request,
-    alert_threshold: str = Form(...),
-    session: Session = Depends(get_db),
-) -> Response:
-    """Persist the alert threshold to the settings table (future flagging only)."""
-    try:
-        value = int(alert_threshold)
-    except ValueError:
-        return _render_settings(
-            request, session, threshold_error="Schwellenwert muss eine Zahl sein."
-        )
-    set_alert_threshold(session, value)
-    return RedirectResponse("/settings", status_code=_SEE_OTHER)
-
-
 @router.post("/settings/feeds")
 async def set_feeds_route(
     request: Request, session: Session = Depends(get_db)
@@ -1876,79 +1791,6 @@ async def set_feeds_route(
     all_names = [feed.name for feed in load_feeds()]
     set_active_feed_names(session, form.getlist("feed"), all_names)
     return RedirectResponse("/settings", status_code=_SEE_OTHER)
-
-
-@router.post("/settings/import/preview", response_class=HTMLResponse)
-async def import_preview_route(
-    request: Request, session: Session = Depends(get_db)
-) -> HTMLResponse:
-    """Parse and validate the uploaded sheet, showing the rows (or an inline NP-02
-    validation error) **without** writing anything."""
-    form = await request.form()
-    filename, data = await _read_upload(form)
-    map_values = _echoed_map_values(form)
-    if not data:
-        return _render_settings(
-            request,
-            session,
-            import_error="Bitte zuerst eine Datei auswählen.",
-            map_values=map_values,
-        )
-    try:
-        mapping = _mapping_from_form(form)
-        with _staged_file(filename, data) as path:
-            rows = preview_import(path, mapping)
-    except ImportValidationError as exc:
-        return _render_settings(
-            request, session, import_error=str(exc), map_values=map_values
-        )
-    return _render_settings(
-        request,
-        session,
-        import_rows=rows[:_PREVIEW_ROW_LIMIT],
-        import_row_total=len(rows),
-        map_values=map_values,
-    )
-
-
-@router.post("/settings/import/commit")
-async def import_commit_route(
-    request: Request, session: Session = Depends(get_db)
-) -> Response:
-    """Commit the uploaded sheet through the NP-02 importer (create/update)."""
-    form = await request.form()
-    filename, data = await _read_upload(form)
-    map_values = _echoed_map_values(form)
-    if not data:
-        return _render_settings(
-            request,
-            session,
-            import_error="Bitte zuerst eine Datei auswählen.",
-            map_values=map_values,
-        )
-    try:
-        mapping = _mapping_from_form(form)
-        with _staged_file(filename, data) as path:
-            result = import_clients(path, mapping, session)
-    except ImportValidationError as exc:
-        return _render_settings(
-            request, session, import_error=str(exc), map_values=map_values
-        )
-    return RedirectResponse(
-        f"/settings?imported={result.total}", status_code=_SEE_OTHER
-    )
-
-
-# --- The mailbox (OUT-03) -------------------------------------------------------
-#
-# One mailbox, connected once. Nothing here reads mail: the round trip ends at a
-# panel that can say "verbunden als lucas@raute.example" and prove it, because
-# the address it shows came back from Gmail's own profile call.
-#
-# The ``state`` parameter is the whole CSRF story for this flow. It is minted on
-# the way out, parked in a cookie, and compared on the way back; a callback that
-# does not carry the value this browser was issued connects nothing at all,
-# whatever else it carries.
 
 
 def _state_matches(given: str, expected: str) -> bool:
@@ -2104,8 +1946,6 @@ def gmail_disconnect_route(request: Request) -> Response:
 __all__ = [
     "GmailNotice",
     "get_active_feed_names",
-    "get_alert_threshold",
     "router",
     "set_active_feed_names",
-    "set_alert_threshold",
 ]

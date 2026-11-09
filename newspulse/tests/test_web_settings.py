@@ -6,10 +6,7 @@ in-memory SQLite database — interface-level, not the whole app stack. The
 fixture engine (StaticPool keeps them all on one connection), so no real database
 file, daily job, or ``claude`` subprocess is ever involved.
 
-The three story-mandated behaviors are covered explicitly:
-* adding a client through the NP-02 CRUD service,
-* editing the alert threshold (persisted to the settings table and reloaded),
-* an import preview that reports a validation error without committing.
+Covered: adding, editing, archiving and purging mandates, feeds and runs.
 """
 
 from __future__ import annotations
@@ -21,7 +18,7 @@ from types import SimpleNamespace
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -120,12 +117,6 @@ def test_settings_page_renders_with_empty_database(client):
     assert "Einstellungen" in rendered(resp)
     # The registered feeds are listed even before anything is configured.
     assert "Spiegel" in rendered(resp)
-
-
-def test_threshold_defaults_to_config_when_unset(client):
-    """With no stored threshold the page shows the config default as selected."""
-    body = rendered(client.get("/settings"))
-    assert f'value="{config.ALERT_THRESHOLD}" selected' in body
 
 
 # --- Client CRUD ---------------------------------------------------------------
@@ -237,58 +228,6 @@ def test_reactivate_into_duplicate_name_shows_inline_error(factory, client):
         assert session.query(Client).filter_by(name="Alpha AG", active=True).count() == 1
 
 
-# --- Alert threshold -----------------------------------------------------------
-
-
-def test_editing_alert_threshold_persists_and_reloads(factory, client):
-    """Editing the threshold persists it to the settings table and reloads it."""
-    resp = client.post(
-        "/settings/threshold", data={"alert_threshold": "9"}, follow_redirects=True
-    )
-    assert resp.status_code == 200
-
-    # Persisted to the settings table.
-    with factory() as session:
-        stored = session.get(Setting, _ALERT_THRESHOLD_KEY)
-        assert stored is not None
-        assert stored.value == "9"
-
-    # Reloaded and shown as the selected option on the page.
-    body = rendered(client.get("/settings"))
-    assert 'value="9" selected' in body
-
-
-def test_threshold_is_clamped_to_the_score_scale(factory, client):
-    """An out-of-range threshold is clamped to the 0..10 importance scale."""
-    client.post("/settings/threshold", data={"alert_threshold": "42"}, follow_redirects=True)
-    with factory() as session:
-        assert session.get(Setting, _ALERT_THRESHOLD_KEY).value == "10"
-
-
-def test_non_numeric_threshold_shows_inline_error(factory, client):
-    """A non-numeric threshold is rejected inline and nothing is persisted."""
-    resp = client.post("/settings/threshold", data={"alert_threshold": "hoch"})
-    assert resp.status_code == 200
-    assert "muss eine Zahl sein" in rendered(resp)
-    with factory() as session:
-        assert session.get(Setting, _ALERT_THRESHOLD_KEY) is None
-
-
-def test_changing_threshold_does_not_rewrite_stored_analyses(factory, client):
-    """Changing the threshold affects only future flagging, never stored analyses.
-
-    An analysis stored with is_alert=False and importance 5 must stay is_alert=False
-    after the threshold drops to 3 — writing the setting touches no analyses row.
-    """
-    with factory() as session:
-        analysis_id = _seed_analysis(session, importance=5, is_alert=False)
-
-    client.post("/settings/threshold", data={"alert_threshold": "3"}, follow_redirects=True)
-
-    with factory() as session:
-        assert session.get(Analysis, analysis_id).is_alert is False
-
-
 # --- Feeds ---------------------------------------------------------------------
 
 
@@ -316,82 +255,6 @@ def test_feed_added_after_save_defaults_active(factory):
     with factory() as session:
         active = get_active_feed_names(session, registry_v2)
     assert active == {"A", "C"}  # B stays off (deselected); C defaults on
-
-
-# --- Import: preview before commit ---------------------------------------------
-
-
-def test_import_preview_reports_validation_error_without_committing(factory, client):
-    """A sheet with no name column surfaces the NP-02 error inline, writes nothing."""
-    csv_bytes = b"Branche,Land\nAutomotive,DE\n"
-    resp = client.post(
-        "/settings/import/preview",
-        data={"map_name": "Firmenname", "map_industry": "Branche"},
-        files={"file": ("clients.csv", csv_bytes, "text/csv")},
-    )
-    assert resp.status_code == 200
-    # The NP-02 validation error names the missing source column inline.
-    assert "Firmenname" in rendered(resp)
-    # Nothing was written.
-    with factory() as session:
-        assert session.query(Client).count() == 0
-
-
-def test_import_preview_shows_parsed_rows_without_committing(factory, client):
-    """A valid sheet previews its parsed rows but commits nothing."""
-    csv_bytes = b"Firmenname,Branche\nBeispiel AG,Automotive\n"
-    resp = client.post(
-        "/settings/import/preview",
-        data={"map_name": "Firmenname", "map_industry": "Branche"},
-        files={"file": ("clients.csv", csv_bytes, "text/csv")},
-    )
-    assert resp.status_code == 200
-    assert "Beispiel AG" in rendered(resp)
-    with factory() as session:
-        assert session.query(Client).count() == 0
-
-
-def test_import_preview_rejects_two_fields_mapped_to_one_column(factory, client):
-    """Mapping two fields to the same source column is an inline error, not a silent
-    drop of the earlier field (which would mis-report 'name' as unmapped)."""
-    csv_bytes = b"Firma,Land\nAlpha AG,DE\n"
-    resp = client.post(
-        "/settings/import/preview",
-        data={"map_name": "Firma", "map_industry": "Firma"},
-        files={"file": ("clients.csv", csv_bytes, "text/csv")},
-    )
-    assert resp.status_code == 200
-    assert "Firma" in rendered(resp)
-    assert "map each column" in rendered(resp)
-    with factory() as session:
-        assert session.query(Client).count() == 0
-
-
-def test_import_commit_creates_clients(factory, client):
-    """Committing the import writes the clients through the NP-02 importer."""
-    csv_bytes = b"Firmenname,Branche\nCommit AG,Handel\n"
-    resp = client.post(
-        "/settings/import/commit",
-        data={"map_name": "Firmenname", "map_industry": "Branche"},
-        files={"file": ("clients.csv", csv_bytes, "text/csv")},
-        follow_redirects=True,
-    )
-    assert resp.status_code == 200
-    with factory() as session:
-        created = session.query(Client).filter(Client.name == "Commit AG").one()
-        assert created.industry == "Handel"
-
-
-def test_import_without_a_file_shows_inline_error(factory, client):
-    """Previewing with no file selected is a clean inline error, not a crash."""
-    resp = client.post(
-        "/settings/import/preview",
-        data={"map_name": "Firmenname"},
-    )
-    assert resp.status_code == 200
-    assert "Datei auswählen" in rendered(resp)
-    with factory() as session:
-        assert session.query(Client).count() == 0
 
 
 # --- Run history ---------------------------------------------------------------
@@ -552,70 +415,43 @@ def test_an_offsite_run_redirect_is_refused(client, monkeypatch):
 # --- Mandates and yardsticks are different kinds of thing ------------------------
 
 
-def test_the_portfolio_separates_mandates_from_yardsticks(factory, client):
-    """"Die Wettbewerber sollten zwischen den Mandanten getrennt sein."
+# --- Mandates only; the archive can be emptied ----------------------------------
 
-    They were rows of the same table, so a portfolio of one client and four
-    competitors read as five clients — and that flat reading is the same habit
-    that had a finance platform offered fashion brands as peers.
-    """
+
+def test_settings_list_mandates_compactly_and_keep_competitors_out(factory, client):
+    """Competitors are managed per mandate under Strategie, not in the settings."""
     with factory() as session:
-        mandate = Client(name="Zalando", aliases=[], industry="Modehandel",
-                         keywords=[], alert_topics=[])
-        rival = Client(name="H&M", aliases=[], industry="Modehandel",
-                       keywords=[], alert_topics=[], is_competitor=True)
+        mandate = Client(name="Zalando", aliases=[], industry="Modehandel", keywords=[], alert_topics=[])
+        rival = Client(name="H&M", aliases=[], keywords=[], alert_topics=[], is_competitor=True)
         session.add_all([mandate, rival])
         session.flush()
         mandate.competitors.append(rival)
         session.commit()
+        mandate_id = mandate.id
 
     body = rendered(client.get("/settings"))
-
-    assert "Mandanten gesamt" in body
-    assert "Maßstab für" in body
-    # Two tables, so the mandate's own list of competitors and the yardstick's
-    # list of owners are different columns rather than one ambiguous one.
-    assert body.count('class="platform-client-group"') == 2
-
-
-def test_a_yardstick_row_says_whose_yardstick_it_is(factory, client):
-    with factory() as session:
-        mandate = Client(name="Zalando", aliases=[], keywords=[], alert_topics=[])
-        rival = Client(name="H&M", aliases=[], keywords=[], alert_topics=[],
-                       is_competitor=True)
-        session.add_all([mandate, rival])
-        session.flush()
-        mandate.competitors.append(rival)
-        session.commit()
-
-    body = rendered(client.get("/settings"))
-    yardsticks = body.split("Maßstab für", 1)[1]
-
-    assert "Zalando" in yardsticks
-
-
-def test_a_yardstick_linked_to_nobody_is_flagged(factory, client):
-    """Monitored and attached to no one: its coverage is fetched, analysed and
-    counted towards nothing. That is worth saying out loud, because it is the
-    state an accidental role toggle leaves behind."""
-    with factory() as session:
-        session.add(
-            Client(name="Verwaist AG", aliases=[], keywords=[], alert_topics=[],
-                   is_competitor=True)
-        )
-        session.commit()
-
-    body = rendered(client.get("/settings"))
-
-    assert "keinem Mandanten" in body
-
-
-def test_a_portfolio_of_only_mandates_shows_no_yardstick_table(factory, client):
-    with factory() as session:
-        session.add(Client(name="Zalando", aliases=[], keywords=[], alert_topics=[]))
-        session.commit()
-
-    body = rendered(client.get("/settings"))
-
+    assert "Mandanten gesamt" in body and "Zalando" in body
+    assert "H&amp;M" not in body and "H&M" not in body
     assert "Maßstab für" not in body
-    assert body.count('class="platform-client-group"') == 1
+    assert f'aria-label="Bearbeiten: Zalando"' in body
+    assert "Deaktivieren" not in body  # only behind the edit icon
+    opened = rendered(client.get(f"/settings?edit={mandate_id}"))
+    assert f'action="/settings/clients/{mandate_id}/deactivate"' in opened
+    assert f'href="/client/{mandate_id}/wettbewerb"' in opened
+
+
+def test_all_archived_mandates_can_be_deleted_at_once(factory, client):
+    with factory() as session:
+        live = Client(name="Live", aliases=[], keywords=[], alert_topics=[])
+        gone = Client(name="Gone", aliases=[], keywords=[], alert_topics=[], active=False)
+        rival = Client(name="Rival", aliases=[], keywords=[], alert_topics=[], active=False, is_competitor=True)
+        session.add_all([live, gone, rival])
+        session.commit()
+
+    page = rendered(client.get("/settings"))
+    assert 'action="/settings/archive/purge"' in page and "Alle löschen" in page
+    resp = client.post("/settings/archive/purge", follow_redirects=False)
+    assert resp.status_code == 303 and resp.headers["location"] == "/settings"
+    with factory() as session:
+        names = {c.name for c in session.scalars(select(Client))}
+    assert names == {"Live", "Rival"}

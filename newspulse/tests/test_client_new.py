@@ -61,13 +61,12 @@ def test_the_mask_asks_for_what_the_tool_cannot_find_out(web):
         assert asked_before not in body, f"{asked_before} is onboarding's job now"
 
 
-def test_the_mask_says_what_will_happen_next(web):
-    """The answer to "what am I signing up for", which a settings row could
-    never give."""
+def test_the_mask_is_just_the_form(web):
+    """The explanation panel beside the form was removed on request."""
     body = rendered(web.get("/mandant/neu"))
 
-    assert "Was danach von selbst passiert" in body
-    assert "Das Profil wird von der Website gelesen" in body
+    assert "Was danach von selbst passiert" not in body
+    assert 'action="/mandant/neu"' in body
 
 
 def test_the_buttons_point_at_the_mask_and_not_at_settings(web):

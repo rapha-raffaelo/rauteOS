@@ -70,24 +70,6 @@ export function NewClientPage({ data: d }) {
             </div>
           </form>
         </Panel>
-        <Panel title="Was danach von selbst passiert">
-          <ol>
-            {[
-              "Das Profil wird von der Website gelesen und durch öffentliche Quellen ergänzt.",
-              "Belegte Informationen werden mit Quelle im Kundenprofil gespeichert.",
-              "Ein persönlicher Onboarding-Link wird automatisch vorbereitet.",
-              "Der Ansprechpartner beim Kunden prüft die Angaben und beantwortet fünf kurze Fragen.",
-              "Antworten und Korrekturen fließen direkt in die Kundendatenbank.",
-            ].map((text) => (
-              <li key={text}>{t(text)}</li>
-            ))}
-          </ol>
-          <p>
-            {t(
-              "Die Recherche läuft im Hintergrund. Den Fortschritt und den Kundenlink finden Sie im Profil. Unbekannte Angaben bleiben offen; vorhandene Kundenangaben werden nicht überschrieben.",
-            )}
-          </p>
-        </Panel>
       </div>
     </div>
   );

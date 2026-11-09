@@ -19,6 +19,7 @@ import logging
 import threading
 
 from .. import industry, rivals, themes
+from . import spawn
 from ..db import get_session
 from ..models import Client
 
