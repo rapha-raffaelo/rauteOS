@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { MediaShortlist } from "./MediaShortlist.jsx";
-import { ClientPeople } from "./ClientPeople.jsx";
+import { PeopleBook } from "./PeopleBook.jsx";
 import { MonitoringKeywords } from "./MonitoringKeywords.jsx";
 import { OnboardingLinks } from "../components/OnboardingLinks.jsx";
 import { TwinPage } from "../components/TwinPage.jsx";
@@ -15,11 +15,34 @@ import {
   date,
   t,
 } from "./shared.jsx";
+// The guide's slow forms: an upload is read and a proposal is written by a
+// model, both before the page comes back. Until then a dialog says so.
+const GUIDE_WORK = [
+  ["/guide/upload", "Dokument wird hochgeladen und gelesen …", "Der Text wird aus der Datei gezogen. Bei langen PDFs dauert das einen Moment."],
+  ["/guide/distill", "RAUTE schreibt einen Guide-Vorschlag …", "Aus den Unterlagen. Das dauert bis zu einer Minute."],
+  ["/guide/vorschlag", "RAUTE schreibt einen Guide-Vorschlag …", "Aus Profil, Kundenfragebogen und Berichterstattung. Das dauert bis zu einer Minute."],
+];
+function Working({ work }) {
+  if (!work) return null;
+  return (
+    <div className="guide-busy" role="dialog" aria-modal="true" aria-labelledby="guide-busy-t">
+      <div className="guide-busy__card" role="status" aria-live="polite">
+        <h3 id="guide-busy-t">{t(work[1])}</h3>
+        <div className="guide-busy__bar" aria-hidden="true"><span /></div>
+        <p>{t(work[2])}</p>
+      </div>
+    </div>
+  );
+}
 function Guide({ data: d, base }) {
   const initial=d.proposal ?? d.guide_text;
   const [guide,setGuide]=useState(initial);
   const dirty=guide!==initial;
-  return <Panel title="Kommunikations-Guide" id="guide">
+  const [work,setWork]=useState(null);
+  // Back from the browser's cache, the page must not still say it is loading.
+  useEffect(()=>{const reset=()=>setWork(null);window.addEventListener('pageshow',reset);return()=>window.removeEventListener('pageshow',reset);},[]);
+  const started=e=>{const action=e.target.getAttribute?.('action')||'';const found=GUIDE_WORK.find(([path])=>action.endsWith(path));if(found)setWork(found);};
+  return <Panel title="Kommunikations-Guide" id="guide"><div onSubmitCapture={started}><Working work={work}/>
     <p>Die verbindliche Grundlage für Positionierung, Botschaften, Tonalität und No-Gos.</p>
     <Notice>{d.saved?'Guide gespeichert.':d.guide_error}</Notice>
     <div className="guide-workflow">
@@ -42,12 +65,13 @@ function Guide({ data: d, base }) {
         {dirty&&<p>Bitte zuerst deine Änderungen speichern, bevor du Unterlagen oder Entwürfe änderst.</p>}
       </aside>
     </div>
-  </Panel>;
+  </div></Panel>;
 }
-// The four lines only the kick-off knows. Everything else the old company
-// form held (business, founding, seat, products, competitors) is now a topic of
-// the brief or a glance fact above, filled by the onboarding research.
-const CONTACTS = ["pressekontakt", "sprecher", "zielmedien", "krisenkontakt"];
+// The lines only the kick-off knows, beside the phone book. Who speaks is the
+// book's (PeopleBook); everything else the old company form held (business,
+// founding, seat, products, competitors) is a topic of the brief or a glance
+// fact above, filled by the onboarding research.
+const CONTACTS = ["pressekontakt", "krisenkontakt", "zielmedien"];
 function Company({ data, base }) {
   const shown = (p) => CONTACTS.includes(p.key);
   const d = {...data, fields: data.fields.filter(shown), proposals: data.proposals.filter(shown),
@@ -55,12 +79,12 @@ function Company({ data, base }) {
   const filled = d.fields.filter((f) => d.facts[f.key]?.value).length;
   return (
     <>
-      <Panel title="Bisherige Kontaktangaben" id="profilebody">
+      <Panel title="Presse, Krise & Zielmedien" id="profilebody">
         <dl className="profile-fact-sheet">{d.fields.filter(f => d.facts[f.key]?.value).map(f =>
           <div key={f.key}><dt>{t(f.label)}</dt><dd>{d.facts[f.key].value}</dd></div>)}</dl>
-        {!filled && <p>Wer zitiert werden darf, wer abends erreichbar ist und welche Titel zählen, weiß nur der Kunde.</p>}
+        {!filled && <p>Wer Presseanfragen annimmt, wer abends erreichbar ist und welche Titel zählen, weiß nur der Kunde.</p>}
         <details className="profile-edit" open={Boolean(d.proposals.length || d.contradictions.length)}>
-        <summary>Kontakte bearbeiten <span>{filled}/{d.fields.length} ausgefüllt</span></summary>
+        <summary>Bearbeiten <span>{filled}/{d.fields.length} ausgefüllt</span></summary>
         <Notice>{d.research_error}</Notice>
         {!!d.proposals.length && (
           <>
@@ -525,10 +549,10 @@ export function ProfilePage({ data: d, onData }) {
                 die Seite neu laden, um die Vorschläge zu sehen.
               </Notice>
             )}
-            <ClientPeople key={d.client.id} clientId={d.client.id}/>
-            <details className="profile-legacy-contacts"><summary>Bisherige Kontaktangaben und Recherche</summary><Company data={d.company} base={base} /></details>
+            <Company data={d.company} base={base} />
           </section>
         </div>
+        <PeopleBook people={d.people} error={d.people_error} draft={d.people_draft} base={base} />
         <section id="wissen" className="profile-knowledge" aria-label={t("Wissen & Aussagen")}>
           <TwinPage clientId={d.client.id} embedded />
         </section>

@@ -386,6 +386,34 @@ ordinary day rather than on the morning it was needed.
 
 ---
 
+## LinkedIn (each person's own profile)
+
+The LinkedIn page lets every signed-in person connect their own profile and
+post or schedule posts from RauteOS. Without these two variables the page
+says the connection is not set up and stays a planning board.
+
+1. At <https://www.linkedin.com/developers/apps> create an app. It must be
+   linked to a LinkedIn company page (the agency's own page will do).
+2. Under **Products** add "Sign In with LinkedIn using OpenID Connect" and
+   "Share on LinkedIn". Both are self-serve.
+3. Under **Auth** add the redirect URL `https://<your host>/linkedin/callback`
+   (on this deployment `https://os.raute-kopf.com/linkedin/callback`).
+4. Put the app's credentials into the server's env file and restart:
+
+```
+NEWSPULSE_LINKEDIN_CLIENT_ID=<Client ID>
+NEWSPULSE_LINKEDIN_CLIENT_SECRET=<Primary Client Secret>
+```
+
+`NEWSPULSE_LINKEDIN_VERSION` (default `202608`) is the monthly API version
+sent with every post. LinkedIn retires a version after about a year; when
+posts start failing with a version error, set a newer month here.
+
+A connection lasts 60 days (LinkedIn issues no refresh token to self-serve
+apps), then the person connects again from the same page. Tokens live in
+`linkedin_tokens.json` beside the database, mode 0600. Scheduled posts are
+sent by the in-app scheduler, so `NEWSPULSE_SCHEDULER=0` also stops them.
+
 ## The mailbox (Gmail)
 
 Optional, and off until both variables below are set: with no client id the

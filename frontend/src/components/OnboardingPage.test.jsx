@@ -25,7 +25,7 @@ it('resumes saved answers, accepts tap choices and allows reviewing skipped answ
   fireEvent.click(screen.getByText('Premium'));
   expect(screen.getByLabelText('Ihre Antwort').value).toBe('Premium');
   fireEvent.click(screen.getByText('Antworten ansehen'));
-  expect(await screen.findByText('So klingt Ihr Unternehmen.')).toBeTruthy();
+  expect(await screen.findByText('Ihre Antworten')).toBeTruthy();
   expect(screen.getByText('Firma')).toBeTruthy();
 });
 it('shows sourced public prefills once and moves straight to the CEO questions after confirmation',async()=>{
@@ -92,7 +92,8 @@ it('reads the protected token from links ending in a customer name',async()=>{
 it('shows each question with its explanation and lets the customer finish with open questions',async()=>{
   global.fetch=vi.fn().mockImplementationOnce(()=>ok(data)).mockImplementationOnce(()=>ok({value:'',skipped:true})).mockImplementationOnce(()=>ok({value:'',skipped:true})).mockImplementationOnce(()=>ok({ok:true}));
   render(<OnboardingPage token="test"/>);
-  expect(await screen.findByText(/Dieser Fragebogen umfasst zu Beginn 22 Fragen/)).toBeTruthy();
+  expect(await screen.findByText('Guten Tag.')).toBeTruthy();
+  expect(screen.queryByText(/freiwillig/)).toBeNull();
   fireEvent.click(screen.getByText('Los geht’s'));
   expect(screen.getByText('Offizieller Name')).toBeTruthy();
   fireEvent.click(screen.getByText('Später beantworten'));
@@ -116,7 +117,10 @@ it('switches questions, explanations, topic titles and labels to English and bac
   expect(await screen.findByText('EN Wie heißen Sie?')).toBeTruthy();
   expect(screen.getByText('EN Offizieller Name')).toBeTruthy();
   expect(screen.getByLabelText('Your answer')).toBeTruthy();
+  fireEvent.click(screen.getByRole('button',{name:'Audio'}));
   expect(screen.getByRole('button',{name:'Start recording'})).toBeTruthy();
+  expect(screen.queryByLabelText('Your answer')).toBeNull();
+  fireEvent.click(screen.getByRole('button',{name:'Type'}));
   fireEvent.click(screen.getByRole('button',{name:'DE'}));
   expect(screen.getByText('Wie heißen Sie?')).toBeTruthy();
   expect(screen.getByText('Später beantworten')).toBeTruthy();
@@ -148,10 +152,10 @@ describe('prefill gist', () => {
   });
 });
 it('shows customer identity prominently and saves customer answers without an extra confirmation',async()=>{
- global.fetch=vi.fn().mockImplementationOnce(()=>ok({...data,logo_url:'/static/logos/client.png'})).mockImplementationOnce(()=>ok({value:'Firma',skipped:false}));
+ global.fetch=vi.fn().mockImplementationOnce(()=>ok({...data,logo:'/static/logos/client.png'})).mockImplementationOnce(()=>ok({value:'Firma',skipped:false}));
  render(<OnboardingPage token="test"/>);
  expect(await screen.findByText('Testfirma')).toBeTruthy();
- expect(document.querySelector('.onb-customer-identity img').getAttribute('src')).toBe('/static/logos/client.png');
+ expect(document.querySelector('.onb-client-logo').getAttribute('src')).toBe('/static/logos/client.png');
  fireEvent.click(screen.getByText('Los geht’s'));
  expect(screen.queryByRole('button',{name:'Antwort bestätigen'})).toBeNull();
  fireEvent.change(screen.getByLabelText('Ihre Antwort'),{target:{value:'Firma'}});
@@ -171,14 +175,4 @@ it('saves a corrected topic with an icon and shows no confirmation ticks',async(
  await waitFor(()=>expect(screen.queryByRole('textbox',{name:'Unternehmensgröße'})).toBeNull());
  expect(screen.getByText('25 Mitarbeitende')).toBeTruthy();
  expect(JSON.parse(global.fetch.mock.calls[1][1].body)).toEqual({corrections:{'R03.01':'25 Mitarbeitende'},confirmed_keys:['R03.01']});
-});
-it('greets the contact person from the client profile by full name, and no one when none is set',async()=>{
-  global.fetch=vi.fn().mockImplementationOnce(()=>ok({...data,contact:'Michael Rohrmair'}));
-  render(<OnboardingPage token="test"/>);
-  expect((await screen.findByText(/Guten Tag Michael Rohrmair,/)).textContent).toContain('für Testfirma erarbeiten.');
-  cleanup();
-  global.fetch=vi.fn().mockImplementationOnce(()=>ok(data));
-  render(<OnboardingPage token="test"/>);
-  await screen.findByText('Los geht’s');
-  expect(screen.queryByText(/Guten Tag/)).toBeNull();
 });

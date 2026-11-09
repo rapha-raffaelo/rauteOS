@@ -2,13 +2,13 @@
 import datetime as dt
 import secrets
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import Response
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import func, select, update
+from fastapi.responses import Response
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 from ... import customer_onboarding, onboarding_audio as audio, twin
-from ...evidence import Confidentiality, ExternalUse, SourceType
-from ...models import CustomerOnboardingAudio as Audio, CustomerOnboardingInvite as Invite, ClientFact
+from ...evidence import Confidentiality, ExternalUse, InputOwner, SourceType
+from ...models import ClientFact, CustomerOnboardingAudio as Audio, CustomerOnboardingInvite as Invite
 from ..app import get_db
 from ..mandates import mandate_or_404
 from .customer_onboarding import HEADERS, invite_for, result, commit
@@ -60,13 +60,13 @@ async def upload(key: str, request: Request, mode: str = 'transcript', filename:
         question_key=key, mode=mode, filename=filename.replace('\\', '/').split('/')[-1][:200] or 'Audio',
         mime=mime, size=len(body), content=bytes(body))
     session.add(row); commit(session)
-    return result(audio.describe(row))
+    return result(audio.for_customer(row))
 
 
 @router.get('/api/onboarding/audio/{identity}')
 def status(identity: str, request: Request, session: Session = Depends(get_db)):
     invite, _ = invite_for(request, session)
-    return result(audio.describe(media_for(session, invite, identity)))
+    return result(audio.for_customer(media_for(session, invite, identity)))
 
 
 @router.get('/api/onboarding/audio/{identity}/content')
@@ -75,17 +75,9 @@ def content(identity: str, request: Request, session: Session = Depends(get_db))
     return audio_response(media_for(session, invite, identity))
 
 
-@router.delete('/api/onboarding/audio/{identity}')
-def delete(identity: str, request: Request, session: Session = Depends(get_db)):
-    invite, _ = invite_for(request, session)
-    row = media_for(session, invite, identity)
-    remove_audio(session, row)
-    commit(session)
-    answer = invite.answers.get(row.question_key)
-    return result({'answer': {k:v for k,v in answer.items() if k != 'fact_id'} if answer else None})
-
-
-def remove_audio(session, row):
+def forget(session, row):
+    """Delete a recording and take it out of every link's answers. An answer
+    with text keeps its text; one that was only this recording is gone."""
     identity = row.id
     for link in session.scalars(select(Invite).where(Invite.client_id == row.client_id)):
         answers = dict(link.answers)
@@ -100,13 +92,23 @@ def remove_audio(session, row):
     session.delete(row)
 
 
+@router.delete('/api/onboarding/audio/{identity}')
+def delete(identity: str, request: Request, session: Session = Depends(get_db)):
+    invite, _ = invite_for(request, session)
+    row = media_for(session, invite, identity)
+    forget(session, row)
+    commit(session)
+    answer = invite.answers.get(row.question_key)
+    return result({'answer': {k:v for k,v in answer.items() if k != 'fact_id'} if answer else None})
+
+
 def retry_row(row, session):
     if row.status not in {'failed', 'expired'}: raise HTTPException(409, 'Transkription läuft bereits oder ist abgeschlossen.')
     if row.content is None: raise HTTPException(409, 'Bitte die Aufnahme erneut hochladen.')
     row.status = 'queued'; row.note = ''; row.token = ''; row.lease_until = None
     row.updated_at = dt.datetime.now(dt.UTC)
     session.commit()
-    return result(audio.describe(row))
+    return result(audio.for_customer(row))
 
 
 @router.post('/api/onboarding/audio/{identity}/retry')
@@ -118,7 +120,7 @@ def retry(identity: str, request: Request, session: Session = Depends(get_db)):
 @router.get('/client/{client_id}/onboarding-audio')
 def agency_list(client_id: int, session: Session = Depends(get_db)):
     mandate_or_404(session, client_id)
-    return result([agency_description(row, session) for row in session.scalars(select(Audio).where(Audio.client_id == client_id).order_by(Audio.created_at.desc()))])
+    return result([audio.describe(row) for row in session.scalars(select(Audio).where(Audio.client_id == client_id).order_by(Audio.created_at.desc()))])
 
 
 def agency_row(client_id, identity, session):
@@ -138,44 +140,46 @@ def agency_retry(client_id: int, identity: str, session: Session = Depends(get_d
     return retry_row(agency_row(client_id, identity, session), session)
 
 
-def agency_description(row, session):
-    fact = session.get(ClientFact, row.answer_fact_id) if row.answer_fact_id else None
-    return {**audio.describe(row), 'review': row.review,
-            'question': twin.CATALOG_BY_KEY.get(row.question_key, {}).get('label', row.question_key),
-            'answer': fact.value if fact and fact.client_id == row.client_id else '',
-            'created_at': row.created_at.isoformat()}
+# --- In RauteOS: a recording under its question --------------------------------
 
-
-class ReviewedAnswer(BaseModel):
+class AnswerInput(BaseModel):
     model_config = ConfigDict(extra='forbid', str_strip_whitespace=True)
     value: str = Field(min_length=1, max_length=20000)
 
 
 @router.post('/client/{client_id}/onboarding-audio/{identity}/answer')
-def agency_answer(client_id: int, identity: str, data: ReviewedAnswer, session: Session = Depends(get_db)):
+def agency_answer(client_id: int, identity: str, body: AnswerInput, request: Request, session: Session = Depends(get_db)):
+    """What the consultant took from the recording, saved as the question's
+    answer. Saving again revises that same statement."""
     row = agency_row(client_id, identity, session)
-    # Claim the review in the same transaction as the answer: retries cannot
-    # create duplicate statements, and a failed save cannot archive the audio.
-    changed = session.execute(update(Audio).where(Audio.id == identity, Audio.review == '').values(review='archiviert')).rowcount
-    if not changed:
-        raise HTTPException(409, 'Diese Aufnahme wurde bereits archiviert. Bitte die Liste aktualisieren.')
+    field = twin.CATALOG_BY_KEY[row.question_key]
     restricted = row.question_key in customer_onboarding.RESTRICTED
-    fact = twin.apply(session, client_id, twin.StatementInput(
-        key=row.question_key, value=data.value,
-        source_title='Kunden-Onboarding · geprüfte Audioantwort',
-        source_type=SourceType.CLIENT_INTERVIEW,
+    statement = twin.StatementInput(key=row.question_key, value=body.value,
+        source_title='Kunden-Onboarding · Audio, zusammengefasst von raute+kopf', source_type=SourceType.CLIENT_INTERVIEW,
+        input_owner=InputOwner(field['input_owner']),
         confidentiality=Confidentiality.HIGHLY_RESTRICTED if restricted else Confidentiality.CLIENT_CONFIDENTIAL,
-        external_use=ExternalUse.INTERNAL_ONLY if restricted else ExternalUse.APPROVAL_REQUIRED,
-    ), 'Agentur · Audioantwort')
+        external_use=ExternalUse.INTERNAL_ONLY if restricted else ExternalUse.APPROVAL_REQUIRED)
+    fact = session.get(ClientFact, row.answer_fact_id) if row.answer_fact_id else None
+    if fact is not None and (fact.client_id != client_id or fact.key != row.question_key):
+        fact = None
+    fact = twin.apply(session, client_id, statement, str(request.scope.get('user_email') or 'RAUTE')[:200], row=fact)
     row.answer_fact_id = fact.id
     row.updated_at = dt.datetime.now(dt.UTC)
     commit(session)
-    return result(agency_description(row, session))
+    return result(audio.describe(row))
+
+
+@router.post('/client/{client_id}/onboarding-audio/{identity}/archive')
+def agency_archive(client_id: int, identity: str, session: Session = Depends(get_db)):
+    row = agency_row(client_id, identity, session)
+    row.review = 'archiviert'
+    row.updated_at = dt.datetime.now(dt.UTC)
+    commit(session)
+    return result(audio.describe(row))
 
 
 @router.delete('/client/{client_id}/onboarding-audio/{identity}')
 def agency_delete(client_id: int, identity: str, session: Session = Depends(get_db)):
-    row = agency_row(client_id, identity, session)
-    remove_audio(session, row)
+    forget(session, agency_row(client_id, identity, session))
     commit(session)
     return result({'ok': True})

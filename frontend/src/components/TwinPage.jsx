@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import {FactValue,hasMissingFact} from './FactValue.jsx';
 import { twinRequest } from '../twin-api.js';
-import { OnboardingAudioList } from './OnboardingAudioList.jsx';
+import { QuestionAudio } from './QuestionAudio.jsx';
 
 const labels = {evidence_type: 'Herkunft', source_type: 'Quellentyp', confidence: 'Sicherheit der Aussage',
   confidentiality: 'Vertraulichkeit', external_use: 'Externe Nutzung', fact_status: 'Status', input_owner: 'Verantwortlich'};
@@ -21,6 +21,11 @@ const readable = value => ({'Client Statement':'Kundenaussage','Fact':'Fakt','Ma
 // The company facts the glance row shows when research has them.
 const GLANCE = [['A01.03', 'Gegründet', 'calendar'], ['A01.04', 'Hauptsitz', 'pin'], ['A01.07', 'Mitarbeitende', 'people'],
   ['A01.06', 'Märkte', 'globe'], ['A01.09', 'Eigentümer', 'building']];
+// Mirrors newspulse.onboarding_crawler.glance_value: one value, at most 30 characters.
+export const glanceValue = (value) => {
+  const v = (value || '').trim();
+  return v.length > 0 && v.length <= 30 && !v.includes('\n') && !v.endsWith('.');
+};
 const ICONS = {
   calendar: 'M7 3v3M17 3v3M4 9h16M5 6h14a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z',
   pin: 'M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21zM12 12a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z',
@@ -40,13 +45,30 @@ export function TwinPage({clientId, embedded = false}) {
   const [importing, setImporting] = useState(false);
   useEffect(()=>{if(importing)filePanel.current?.scrollIntoView?.({behavior:'smooth',block:'start'});},[importing]);
   const load = async () => setData(await twinRequest(clientId));
+  // The customer's recordings, each under the question it answers until it is
+  // archived or deleted; looked at again while one is still being transcribed.
+  const [audios, setAudios] = useState([]);
+  const loadAudio = async () => {
+    try {
+      const response = await fetch(`/client/${clientId}/onboarding-audio`, {credentials: 'same-origin', headers: {Accept: 'application/json'}});
+      const rows = response.ok ? await response.json() : null;
+      if (Array.isArray(rows)) setAudios(rows);
+    } catch { /* the questionnaire stands without them */ }
+  };
   useEffect(() => {
     const controller = new AbortController();
     twinRequest(clientId, '', {signal: controller.signal}).then(setData).catch(err => {
       if (!controller.signal.aborted) setError(err.message);
     });
+    loadAudio();
     return () => controller.abort();
   }, [clientId]);
+  const transcribing = audios.some(a => !a.review && ['queued', 'processing'].includes(a.status));
+  useEffect(() => {
+    if (!transcribing) return;
+    const timer = setInterval(loadAudio, 5000);
+    return () => clearInterval(timer);
+  }, [transcribing, clientId]);
   async function mutate(path, payload, method = 'POST') {
     setBusy(true); setError(''); setNotice('');
     try {
@@ -89,15 +111,18 @@ export function TwinPage({clientId, embedded = false}) {
     {!has(item) && editing?.field.key !== item.key && <p className="twin-empty"><em>bitte ergänzen</em></p>}
   </article>;
   // A customer question as one row: the question, its state, the answer.
-  const question = (item, audio) => <li className={`twin-ask${has(item) ? ' twin-ask--done' : ''}`} key={item.key} id={`feld-${item.key}`}>
+  const recordings = item => audios.filter(a => a.question_key === item.key && !a.review);
+  const question = item => <li className={`twin-ask${has(item) ? ' twin-ask--done' : ''}`} key={item.key} id={`feld-${item.key}`}>
     <div className="twin-ask-row"><span className="twin-number">{number(item.key)}</span>
       <div className="twin-ask-text"><h3>{item.label}</h3></div>
+      <span className={`twin-state${has(item) ? ' twin-state--ok' : ''}`}>{has(item) ? 'Beantwortet' : recordings(item).length ? 'Audio liegt vor' : 'Offen'}</span>
       {!has(item) && add(item, 'Ergänzen')}</div>
     {editor(item)}{answers(item)}
-    {audio}
+    <QuestionAudio clientId={clientId} items={recordings(item)} onChanged={async () => {await loadAudio(); await load();}} />
   </li>;
-  // Short facts for the glance row; each is a one-sentence research answer.
-  const glance = GLANCE.map(([key, label, icon]) => [label, icon, statements(key).find(active)?.value]).filter(([, , value]) => value);
+  // Short facts for the glance row. Only a bare value gets a tile; a sentence
+  // stays in the Steckbrief below until the model has shortened it.
+  const glance = GLANCE.map(([key, label, icon]) => [label, icon, statements(key).filter(active).map(s => s.value).find(glanceValue)]).filter(([, , value]) => value);
   const part = (label, done, total, note) => <div className="twin-part"><div><span>{label}</span><strong>{done}<small> / {total} {note}</small></strong></div>
     <div className="twin-bar"><span style={{width: `${total ? Math.round(100 * done / total) : 0}%`}}/></div></div>;
   return <div className="twin-page">
@@ -127,13 +152,11 @@ export function TwinPage({clientId, embedded = false}) {
       <div className="twin-topics">{brief.map(topic)}</div>
     </section>
 
-    <OnboardingAudioList clientId={clientId} onAnswered={refresh}>{({forQuestion,archive,error:audioError})=><section className="twin-questionnaire" aria-labelledby={`twin-asked-${clientId}`}>
+    <section className="twin-questionnaire" aria-labelledby={`twin-asked-${clientId}`}>
       <header className="twin-section-head"><div><p className="twin-eyebrow">VOM KUNDEN · ÜBER DEN ONBOARDING-LINK</p><h2 id={`twin-asked-${clientId}`}>Kundenfragebogen</h2></div>
         <p className="twin-muted">{asked.filter(complete).length} von {asked.length} Fragen beantwortet</p></header>
-      <ol className="twin-asks">{asked.map(item=>question(item,forQuestion(item.key)))}</ol>
-      {audioError&&<p role="alert">{audioError}</p>}
-      {archive}
-    </section>}</OnboardingAudioList>
+      <ol className="twin-asks">{asked.map(question)}</ol>
+    </section>
 
   </div>;
 }
@@ -176,8 +199,20 @@ function StatementEditor({field, row, options, busy, onCancel, onSave}) {
     source_url: row?.source_url || '', as_of: row?.as_of?.slice(0, 10) || '', note: row?.note || '',
     verification_note: row?.verification_note || '', ...Object.fromEntries(Object.keys(labels).map(key => [key, row?.[key] || (key === 'input_owner' ? field.input_owner : key === 'evidence_type' && field.key.startsWith('C') ? 'RAUTE Hypothesis' : key === 'evidence_type' && field.key.startsWith('D') ? 'External Observation' : defaults[key])]))}));
   const input = (key) => ({'aria-label': labels[key] || ({value:'Aussage',source_title:'Quelle / Dokument',source_url:'Quellen-URL',as_of:'Stand der Aussage',note:'Notizen'})[key], value: values[key], onChange: e => setValues({...values, [key]: e.target.value})});
+  // Typed text is only in this form until it is saved: leaving the page asks first.
+  const initial = useRef(values);
+  const dirty = Object.keys(values).some(key => values[key] !== initial.current[key]);
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = e => {e.preventDefault(); e.returnValue = '';};
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [dirty]);
   return <form className="twin-editor" aria-label="Aussage bearbeiten" onSubmit={e => {e.preventDefault(); onSave({...values, as_of: values.as_of || null});}}>
-    <h3>{row ? 'Aussage bearbeiten' : 'Antwort ergänzen'}</h3>
+    <div className="twin-editor-head"><h3>{row ? 'Aussage bearbeiten' : 'Antwort ergänzen'}</h3>
+      <button type="submit" className="twin-save" disabled={busy || !values.value.trim()} aria-label="Speichern" title="Speichern">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M5 3h11l3 3v13a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2zM8 3v5h7V3M8 21v-7h8v7"/></svg></button></div>
     {row?.verified_at && <p>Ändern hebt die bisherige Bestätigung auf. Danach die Aussage erneut prüfen.</p>}
     <label>Aussage<textarea autoFocus required maxLength={20000} {...input('value')} /></label>
     <div className="twin-form-grid">

@@ -31,7 +31,7 @@
   .board td { padding: var(--s3) var(--s4); border-bottom: 1px solid var(--line); vertical-align: middle; }
   .board tr:last-child td { border-bottom: 0; }
   .board__nm { font-weight: 600; }
-  .board__sec { font-size: var(--t-caption2); color: var(--muted); }
+  .board__sec { font-size: var(--t-caption2); color: var(--muted); max-width: 22ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .num { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
 
   /* The Twin bar. A number and a bar, because the number is the fact and the bar
@@ -129,7 +129,8 @@ button.task__box:hover{border-color:var(--tint);background:var(--tint-wash)}
 .task__link:hover{text-decoration:none}
 .task__link:hover .task__t{color:var(--tint)}
 .task__b{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1}
-.task__t{font-size:13px;font-weight:650;overflow:hidden;text-overflow:ellipsis}
+/* Two lines at most, ended at a word with an ellipsis; the whole title is the tooltip. */
+.task__t{font-size:13px;font-weight:650;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow-wrap:anywhere}
 .task__m{font-size:11px;color:var(--faint)}
 .badge{flex:none;border-radius:6px;padding:5px 7px;font-size:10px;font-weight:780;line-height:1;background:var(--fill-2);color:var(--muted);white-space:nowrap}
 .badge--kunde{background:var(--warn-wash);color:var(--warn)}

@@ -7,19 +7,18 @@ const KIND_TAG = {kundenfreigabe: 'kunde', freigabe: 'agentur'};
 const WAITS = {kundenfreigabe: 'wartet auf eine Kundenfreigabe', freigabe: 'wartet auf die Freigabe',
   impuls: 'hat einen neuen Impuls', profil: 'braucht eine Profil-Entscheidung'};
 
-// Explicit first names for the team's account handles, including handles where
-// first and last name are joined. Initials remain unnamed rather than guessed.
-const FIRST_NAMES = {raphaelmankopf: 'Raphael', 'lucas.neurauter': 'Lucas'};
-export function firstName(email) {
-  const account = (email || '').trim().toLowerCase().split('@')[0];
-  if (Object.hasOwn(FIRST_NAMES, account)) return FIRST_NAMES[account];
-  const head = account.split(/[._-]/)[0];
-  return head.length > 1 && /^[a-zäöüß]+$/i.test(head) ? head[0].toUpperCase() + head.slice(1) : '';
+// The first name Google gave at sign-in. Failing that, one read off the
+// address only when it starts with one ("lucas@…"): never initials
+// ("r.mankopf@…") and never a run-on full name ("raphaelmankopf@…").
+export function firstName(email, given = '') {
+  if (given) return given;
+  const head = (email || '').split('@')[0].split(/[._-]/)[0];
+  return head.length > 1 && head.length <= 12 && /^[a-zäöüß]+$/i.test(head) ? head[0].toUpperCase() + head.slice(1) : '';
 }
 
 function shellUser() {
-  try { return JSON.parse(document.getElementById('react-shell-data')?.textContent || '{}').user; }
-  catch { return null; }
+  try { return JSON.parse(document.getElementById('react-shell-data')?.textContent || '{}'); }
+  catch { return {}; }
 }
 
 function greeting(hour) {
@@ -77,7 +76,8 @@ export function DeskPage({ translations = {}, language = 'de' }) {
   const now = new Date();
   const hour = Number(new Intl.DateTimeFormat('en-GB', {hour: 'numeric', hourCycle: 'h23', timeZone: zone}).format(now));
   const today = new Intl.DateTimeFormat(language, {weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: zone}).format(now);
-  const name = firstName(shellUser());
+  const shell = shellUser();
+  const name = firstName(shell.user, shell.user_name);
   const customer = board.decisions.filter((d) => d.kind === 'kundenfreigabe');
   const waiting = board.in_flight.filter((item) => item.state === 'raus');
   const chances = board.chances || [];
@@ -143,13 +143,13 @@ export function DeskPage({ translations = {}, language = 'de' }) {
               <input type="hidden" name="redirect_to" value="/desk" />
               <button type="submit" className="task__box" aria-label={`${t('Erledigt')}: ${x.title}`} title={t('Als erledigt abhaken')} />
             </form>
-            <a className="task__b task__link" href={x.href}><span className="task__t">{x.title.slice(0, 80)}</span>
+            <a className="task__b task__link" href={x.href}><span className="task__t" title={x.title}>{x.title}</span>
               <span className="task__m">{x.client?.name || t('Agentur')}{x.due_on ? ` · ${t('fällig')} ${date(x.due_on + 'T12:00:00Z')}` : ''} · {t('Aufgabe')}</span></a>
             <span className={`badge badge--${x.due_on && x.due_on < isoToday ? 'late' : x.priority}`}>{t(x.due_on && x.due_on < isoToday ? 'Überfällig' : ({hoch: 'Hoch', mittel: 'Mittel', niedrig: 'Niedrig'})[x.priority])}</span>
           </div>)}
           {board.decisions.slice(0, Math.max(0, 6 - tasks.length)).map((item, index) => <a className="task" href={item.href} key={`${item.href}-${index}`}>
             <span className="task__box" aria-hidden="true" />
-            <span className="task__b"><span className="task__t">{item.title.slice(0, 80)}</span>
+            <span className="task__b"><span className="task__t" title={item.title}>{item.title}</span>
               <span className="task__m">{item.client.name} · {item.since ? `${t('seit')} ${date(item.since)}` : t(KIND[item.kind])}{item.detail ? ` · ${item.detail}` : ''}</span></span>
             <span className={`badge badge--${KIND_TAG[item.kind] ?? item.kind}`}>{t(KIND[item.kind])}</span>
           </a>)}
@@ -158,7 +158,7 @@ export function DeskPage({ translations = {}, language = 'de' }) {
         <Card title={t('Relevante Chancen')} link={['/today', t('Intelligence öffnen')]}>
           {chances.map((c) => <a className="chance" href={c.href} key={c.href}>
             <span className="chance__ico" aria-hidden="true"><svg className="ico"><use href="#ico-intel" /></svg></span>
-            <span className="task__b"><span className="task__t">{c.title.slice(0, 90)}</span>
+            <span className="task__b"><span className="task__t" title={c.title}>{c.title}</span>
               <span className="task__m">{c.client.name} · {t(c.kind === 'detected' ? 'Erkannte Chance' : 'Entwickelte Chance')}{c.since ? ` · ${date(c.since)}` : ''}</span></span>
             <span className="chance__go" aria-hidden="true">›</span>
           </a>)}
@@ -169,7 +169,7 @@ export function DeskPage({ translations = {}, language = 'de' }) {
         <Card title={t('Das braucht Deine Aufmerksamkeit')}>
           {board.in_flight.slice(0, 5).map((item, index) => <a className="info-row" href={item.href} key={`${item.href}-${index}`}>
             <span className="info-row__ico" aria-hidden="true"><svg className="ico"><use href={item.state === 'raus' ? '#ico-media' : '#ico-texte'} /></svg></span>
-            <span className="task__b"><span className="task__t">{item.title.slice(0, 70)}</span>
+            <span className="task__b"><span className="task__t" title={item.title}>{item.title}</span>
               <span className="task__m">{item.client.name} · {t(item.state === 'raus' ? 'Raus, wartet auf Antwort' : 'Entwurf')}</span></span>
             <span className="info-row__age">{date(item.since)}</span>
           </a>)}
@@ -193,7 +193,7 @@ export function DeskPage({ translations = {}, language = 'de' }) {
             <th scope="col" key={label}>{t(label)}</th>)}
         </tr></thead><tbody>{board.rows.map((row) => <tr key={row.client.id}>
           <td><a className="board__nm" href={`/client/${row.client.id}/overview`}>{row.client.name}</a>
-            {row.client.industry && <div className="board__sec">{row.client.industry.slice(0, 44)}</div>}</td>
+            {row.client.industry && <div className="board__sec" title={row.client.industry}>{row.client.industry}</div>}</td>
           <td><div className="twin" title={row.twin.required_total != null ? `${row.twin.required_filled}/${row.twin.required_total} Pflichtfelder beantwortet` : `${t('Profil')} ${row.twin.profile_filled}/${row.twin.profile_total}`}>
             <span className="twin__n">{row.twin.percent} %</span>
             <span className="twin__bar" aria-hidden="true"><span className="twin__fill" style={{width: `${row.twin.percent}%`}} /></span>

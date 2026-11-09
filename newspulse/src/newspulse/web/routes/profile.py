@@ -17,7 +17,7 @@ from ... import profile as profiles
 from ... import profile_refresh, stakeholders
 from ...clients import list_clients
 from ...db import get_session
-from ...models import Client, ClientFact, ProfileProposal, ClientPerson
+from ...models import Client, ClientFact, ProfileProposal
 from .. import spawn
 from ..mandates import mandate_or_404
 from ..app import get_db, templates
@@ -674,45 +674,3 @@ def keywords_suggest(client_id: int, session: Session = Depends(get_db)):
         raise HTTPException(409, 'Es läuft bereits eine Keyword-Recherche. Bitte kurz warten.')
     return dict(state='läuft')
 
-
-class PersonInput(BaseModel):
-    model_config = ConfigDict(extra='forbid', str_strip_whitespace=True)
-    name: str = Field(min_length=1, max_length=200)
-    email: str = Field(default='', max_length=320)
-    phone: str = Field(default='', max_length=80)
-    position: str = Field(default='', max_length=200)
-    topics: str = Field(default='', max_length=20000)
-    media_contact: bool = False
-
-
-def person_data(row):
-    return dict(id=row.id, **{key: getattr(row, key) for key in PersonInput.model_fields})
-
-
-@router.get('/client/{client_id}/people')
-def people_list(client_id: int, session: Session = Depends(get_db)):
-    mandate_or_404(session, client_id)
-    return [person_data(row) for row in session.scalars(select(ClientPerson).where(
-        ClientPerson.client_id == client_id).order_by(ClientPerson.name, ClientPerson.id))]
-
-
-@router.post('/client/{client_id}/people')
-def people_create(client_id: int, data: PersonInput, session: Session = Depends(get_db)):
-    mandate_or_404(session, client_id)
-    row = ClientPerson(client_id=client_id, **data.model_dump())
-    session.add(row)
-    session.commit()
-    return person_data(row)
-
-
-@router.put('/client/{client_id}/people/{person_id}')
-def people_update(client_id: int, person_id: int, data: PersonInput, session: Session = Depends(get_db)):
-    mandate_or_404(session, client_id)
-    row = session.get(ClientPerson, person_id)
-    if not row or row.client_id != client_id:
-        raise HTTPException(404, 'Kontakt nicht gefunden.')
-    for key, value in data.model_dump().items():
-        setattr(row, key, value)
-    row.updated_at = dt.datetime.now(dt.UTC)
-    session.commit()
-    return person_data(row)

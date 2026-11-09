@@ -46,7 +46,7 @@ it('opens the workspace without activation and sends explicit choices',async()=>
  const fetch=vi.fn().mockImplementation((url,options)=>Promise.resolve(response(url.includes('journalist-research')?{context:{title:'Data story'},research:null}:options?.method?{...data,revision:1,status:'active'}:data)));
  vi.stubGlobal('fetch',fetch);render(<OpportunityWorkspace clientId={1} kind="developed" identity={1}/>);
  await screen.findByText('A study idea');expect(fetch.mock.calls.every(([,options])=>!options?.method)).toBe(true);
- fireEvent.change(screen.getByLabelText('Sprecher aus dem Profil'),{target:{value:'7'}});
+ fireEvent.change(screen.getByLabelText('Sprecher aus dem Profil'),{target:{value:'f:7'}});
  fireEvent.click(screen.getByRole('checkbox',{name:'A Journalist · Paper'}));
  fireEvent.click(screen.getByRole('button',{name:'Opportunity aktivieren'}));
  await screen.findByText('Gelegenheit aktiviert. Wählen Sie den nächsten Arbeitsschritt.');
@@ -86,10 +86,10 @@ it('separates reactive occasions and proactive pitches on one board',async()=>{
  expect(within(screen.getByRole('region',{name:'Opportunities'})).queryByText('Our topic pitch')).toBeNull();
 });
 it('saves a structured media contact independently of legacy statement ids',async()=>{
- const fetch=vi.fn().mockImplementation((url,options)=>Promise.resolve(response(url.includes('journalist-research')?{context:{title:'Data story'},research:null}:{...data,speaker_people:[{id:4,name:'Anna Test',position:'Leitung'}],...(options?.method?{revision:1,speaker_person_id:4}:{})})));
+ const fetch=vi.fn().mockImplementation((url,options)=>Promise.resolve(response(url.includes('journalist-research')?{context:{title:'Data story'},research:null}:{...data,people:[{id:4,label:'Anna Test · Leitung',topics:''}],...(options?.method?{revision:1,speaker_person_id:4}:{})})));
  vi.stubGlobal('fetch',fetch);render(<OpportunityWorkspace clientId={1} kind="developed" identity={1}/>);
- await screen.findByRole('option',{name:'Anna Test · Leitung · Medienkontakt'});
- fireEvent.change(screen.getByLabelText('Sprecher aus dem Profil'),{target:{value:'person:4'}});
+ await screen.findByRole('option',{name:'Anna Test · Leitung'});
+ fireEvent.change(screen.getByLabelText('Sprecher aus dem Profil'),{target:{value:'p:4'}});
  fireEvent.click(screen.getByRole('button',{name:'Auswahl speichern'}));
  await screen.findByText('Auswahl gespeichert.');
  const call=fetch.mock.calls.find(([,o])=>o?.method==='PUT');

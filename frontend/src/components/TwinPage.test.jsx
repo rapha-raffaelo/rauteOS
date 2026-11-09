@@ -12,7 +12,7 @@ const data = {client:{id:1,name:'Demo'},fields:[{key:'R02.01',label:'Rechtliche 
  statements:[row],progress:{percent:1,required_filled:1,required_total:43,verified:0,missing:[]},options};
 const response = (body, status=200) => ({ok:status<400,status,headers:new Headers({'content-type':'application/json'}),json:async()=>body});
 afterEach(()=>vi.unstubAllGlobals());
-const stubFetch=fetch=>vi.stubGlobal('fetch',(url,options)=>url.endsWith('/onboarding-audio')?Promise.resolve(response([])):url.endsWith('/ai-import')?Promise.resolve(response({job:null,preview:null})):fetch(url,options));
+const stubFetch=fetch=>vi.stubGlobal('fetch',(url,options)=>url.endsWith('/ai-import')?Promise.resolve(response({job:null,preview:null})):url.endsWith('/onboarding-audio')?Promise.resolve(response([])):fetch(url,options));
 
 it('edits a statement by id and revision without flattening its evidence', async()=>{
  const fetch=vi.fn().mockResolvedValueOnce(response(data)).mockResolvedValueOnce(response({...row,value:'Revised',revision:5})).mockResolvedValue(response({...data,statements:[{...row,value:'Revised',revision:5}]}));
@@ -92,13 +92,14 @@ it('edits in the field and keeps permission values when using the compact form',
 it('shows the brief as numbered cards and the customer questionnaire as its own panel',async()=>{
  const researched={...row,id:7,key:'R01.01',value:'Zalando SE',source_url:'https://www.corporate.zalando.com/de/impressum',
   source_title:'Öffentliche Onboarding-Recherche',note:'Weitere Quellen: https://handelsregister.de/x, https://de.wikipedia.org/wiki/Zalando'};
- const founded={...row,id:8,key:'A01.03',value:'2008 in Berlin.'};
+ const founded={...row,id:8,key:'A01.03',value:'2008'};
+ const seat={...row,id:9,key:'A01.04',value:'Laut Impressum hat Zalando seinen Sitz in Berlin.'};
  const fields=[{key:'R01.01',label:'Unternehmensidentität',section:'R',group:'R01 Öffentliches Unternehmensbild',requirement:'Optional',hint:'Wie lautet der offizielle Firmenname?'},
   {key:'R02.01',label:'Rechtliche Unternehmensdaten',section:'R',group:'R01 Öffentliches Unternehmensbild',requirement:'Optional',hint:''},
   {key:'Q01.14',label:'Von welchen externen Akteuren hängt Ihr Geschäft ab?',section:'Q',group:'Q01 Strategie',requirement:'Optional',hint:'Bitte nennen Sie Partner.'},
   {key:'A01.03',label:'Wann wurde das Unternehmen gegründet?',section:'A. Client Facts',group:'A01 Unternehmen',requirement:'Empfohlen'},
   {key:'A01.04',label:'Wo befindet sich der Hauptsitz?',section:'A. Client Facts',group:'A01 Unternehmen',requirement:'Pflicht'}];
- stubFetch(vi.fn().mockResolvedValue(response({...data,fields,statements:[researched,founded]})));
+ stubFetch(vi.fn().mockResolvedValue(response({...data,fields,statements:[researched,founded,seat]})));
  render(<TwinPage clientId={1}/>);
  const brief=(await screen.findByRole('heading',{name:'Unternehmenssteckbrief'})).closest('section');
  const asked=screen.getByRole('heading',{name:'Kundenfragebogen'}).closest('section');
@@ -115,7 +116,11 @@ it('shows the brief as numbered cards and the customer questionnaire as its own 
  expect(within(asked).queryByText('Bitte nennen Sie Partner.')).toBeNull();
  expect(within(asked).queryByRole('button',{name:'Leitfragen'})).toBeNull();
  // A researched company fact appears at a glance; the catalogue is not shown.
- expect(within(screen.getByLabelText('Auf einen Blick')).getByText('2008 in Berlin.')).toBeTruthy();
+ // A sentence never fills a tile: it waits for the model to shorten it.
+ const glance=screen.getByLabelText('Auf einen Blick');
+ expect(within(glance).getByText('2008')).toBeTruthy();
+ expect(within(glance).queryByText(/Impressum/)).toBeNull();
+ expect(within(glance).queryByText('Hauptsitz')).toBeNull();
  expect(screen.getByRole('progressbar',{name:'Profilvollständigkeit'})).toBeTruthy();
  expect(within(brief).getByRole('link',{name:'corporate.zalando.com'}).getAttribute('href')).toBe(researched.source_url);
  expect(within(brief).getByText('+2 Quellen')).toBeTruthy();
@@ -129,4 +134,19 @@ it('shows only the latest answer without acknowledgement icons',async()=>{
  expect(screen.queryByText('Old research')).toBeNull();
  expect(screen.queryByRole('img',{name:'Vom Kunden bestätigt'})).toBeNull();
  expect(screen.getAllByRole('button',{name:'Bearbeiten'})).toHaveLength(1);
+});
+
+it('saves a new answer from the icon top right and warns before leaving unsaved text',async()=>{
+ const empty={...data,statements:[]};
+ const fetch=vi.fn().mockResolvedValueOnce(response(empty)).mockResolvedValueOnce(response({...row,value:'Neu'})).mockResolvedValue(response(data));
+ stubFetch(fetch); render(<TwinPage clientId={1}/>);
+ fireEvent.click(await screen.findByRole('button',{name:'Ergänzen'}));
+ const save=screen.getByRole('button',{name:'Speichern'});
+ expect(save.disabled).toBe(true);
+ fireEvent.change(screen.getByLabelText('Aussage'),{target:{value:'Neu'}});
+ const leave=new Event('beforeunload',{cancelable:true});window.dispatchEvent(leave);
+ expect(leave.defaultPrevented).toBe(true);
+ fireEvent.click(save);
+ await waitFor(()=>expect(fetch.mock.calls[1][0]).toBe('/api/v1/clients/1/twin/statements'));
+ expect(JSON.parse(fetch.mock.calls[1][1].body)).toMatchObject({key:'R02.01',value:'Neu'});
 });

@@ -30,7 +30,7 @@ def test_profile_sources_and_disagreements_remain_scoped(web,db):
     assert data['company']['facts']['ceo']['source_title']=='Register'
     assert data['company']['facts']['ceo']['filled_by']=='research'
     assert 'Other mandate' not in json.dumps(data)
-    assert set(data)=={'client','view','company'}
+    assert set(data)=={'client','view','company','people','people_error','people_draft'}
     assert set(web.get('/client/1/wettbewerb',headers=JSON).json())=={'client','view','rivals','market'}
     assert web.get('/client/3/twin',headers=JSON).status_code==404
 

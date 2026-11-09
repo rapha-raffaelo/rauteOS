@@ -99,7 +99,8 @@ def revoke(client_id: int, invite_id: int, session: Session = Depends(get_db)):
 
 
 def demo_data():
-    return dict(customer='Nordlicht Studio · Beispielkunde', questions=customer_onboarding.questions(),
+    return dict(customer='Nordlicht Studio · Beispielkunde', contact='Lena Hansen', logo='',
+        questions=customer_onboarding.questions(),
         answers={}, completed=False, prefill_confirmed=False,
         prefill=[customer_onboarding.with_english_label(dict(key=key, label=twin.CATALOG_BY_KEY[key]['label'], value=value,
             source_url='https://example.org', source_title='Fiktive Beispielquelle', researched_at='2026-10-13T12:00:00Z'))
@@ -126,7 +127,9 @@ def page(request: Request):
 def read(request: Request, session: Session = Depends(get_db)):
     invite, client = invite_for(request, session)
     # Never return existing facts or other invites' answers to a link holder.
-    return result(dict(customer=client.name, contact=(client.contact_name or '').strip(), logo_url=logo_src(client.logo_url) or None, questions=customer_onboarding.questions(),
+    # The first page greets the person the profile names, under their own logo.
+    return result(dict(customer=client.name, contact=(client.contact_name or '').strip(), logo=logo_src(client.logo_url),
+        questions=customer_onboarding.questions(),
         prefill=[customer_onboarding.with_english_label({**{k: v for k, v in item.items() if k not in {'fact_id', 'correction_fact_id'}}, 'confirmed': confirmed_item(session, client.id, item, prefill=True)})
                  for item in invite.prefill],
         prefill_confirmed=invite.prefill_confirmed,
@@ -196,7 +199,10 @@ def confirmed_item(session, client_id, item, *, prefill=False):
 
 
 def public_answer(answer):
-    result = {'value': answer['value'], 'skipped': answer['skipped'], 'confirmed': answer.get('confirmed', False)}
+    """An answer as the link holder sees it. A spoken answer is its recording;
+    the transcript stored as its value is for RauteOS only."""
+    spoken = answer.get('audio_id') and answer.get('mode', 'audio') == 'audio'
+    result = {'value': '' if spoken else answer['value'], 'skipped': answer['skipped'], 'confirmed': answer.get('confirmed', False)}
     if answer.get('audio_id'):
         result.update(audio_id=answer['audio_id'], mode=answer.get('mode', 'audio'))
     return result
@@ -216,7 +222,7 @@ def store_answer(session, invite, client, key, data):
             row = None
         field = twin.CATALOG_BY_KEY[key]
         statement = twin.StatementInput(key=key, value=data.value,
-            source_title='Kunden-Onboarding · KI-Transkript (Deepgram Nova-3)' if data.audio_id and data.mode == 'audio' else 'Kunden-Onboarding', source_type=SourceType.CLIENT_INTERVIEW,
+            source_title='Kunden-Onboarding', source_type=SourceType.CLIENT_INTERVIEW,
             input_owner=InputOwner(field['input_owner']),
             confidentiality=Confidentiality.HIGHLY_RESTRICTED if key in customer_onboarding.RESTRICTED else Confidentiality.CLIENT_CONFIDENTIAL,
             external_use=ExternalUse.INTERNAL_ONLY if key in customer_onboarding.RESTRICTED else ExternalUse.APPROVAL_REQUIRED)
@@ -247,7 +253,8 @@ def save(key: str, data: Answer, request: Request, session: Session = Depends(ge
         if media.question_key != key or media.mode != data.mode or data.skipped:
             raise HTTPException(422, 'Audio gehört nicht zu dieser Antwort.')
         if data.mode == 'audio':
-            data.value = media.transcript if media.status == 'ready' else ''
+            # The recording is the answer; RauteOS makes it a statement.
+            data.value = ''
         elif media.status != 'ready':
             raise HTTPException(409, 'Bitte auf das Transkript warten.')
     if data.skipped and data.value or not data.skipped and not data.value and not (data.audio_id and data.mode == 'audio'):

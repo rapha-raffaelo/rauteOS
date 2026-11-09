@@ -106,10 +106,9 @@ def save_choices(session,client_id,kind,identity,body,actor,activate=False):
         raise HTTPException(409,'Workspace wurde inzwischen geändert. Neu laden und vergleichen.')
     if body.speaker_statement_id and body.speaker_statement_id not in {r.id for r in workspaces.speakers(session,client_id)}:
         raise HTTPException(422,'Sprecher ist nicht im verwendbaren Profil hinterlegt.')
-    if body.speaker_person_id and body.speaker_statement_id:
-        raise HTTPException(422, 'Bitte genau einen Sprecher auswählen.')
-    if body.speaker_person_id and body.speaker_person_id not in {p.id for p in workspaces.speaker_people(session,client_id)}:
-        raise HTTPException(422, 'Der Kontakt ist für dieses Mandat nicht als Medienkontakt hinterlegt.')
+    from ... import people
+    if body.speaker_person_id and body.speaker_person_id not in {p.id for p in people.media(session,client_id)}:
+        raise HTTPException(422,'Diese Person ist kein Medienansprechpartner im Profil.')
     contacts=set(session.scalars(select(Contact.id).where(Contact.id.in_(body.contact_ids))))
     blocked=set(session.scalars(select(JournalistProfile.contact_id).where(JournalistProfile.contact_id.in_(body.contact_ids),
         JournalistProfile.relationship_status=='Nicht kontaktieren')))
@@ -130,15 +129,17 @@ def save_choices(session,client_id,kind,identity,body,actor,activate=False):
         row=OpportunityWorkspace(client_id=client_id,context_kind=kind,context_id=identity)
         session.add(row)
     row.storyline=body.storyline
-    row.speaker_statement_id=body.speaker_statement_id
+    # One speaker: a person from the phone book replaces a profile statement.
     row.speaker_person_id=body.speaker_person_id
+    row.speaker_statement_id=None if body.speaker_person_id else body.speaker_statement_id
     row.contact_ids=list(dict.fromkeys(body.contact_ids))
     if angle:row.angle_id=angle.id
     if activate:row.status='active'
     try:
         session.flush()
         session.add(OpportunityEvent(workspace_id=row.id,kind='activated' if activate and not was_active else 'choices_saved',actor=actor,
-            detail=dict(storyline=row.storyline,speaker_statement_id=row.speaker_statement_id,speaker_person_id=row.speaker_person_id,contact_ids=row.contact_ids)))
+            detail=dict(storyline=row.storyline,speaker_statement_id=row.speaker_statement_id,
+                speaker_person_id=row.speaker_person_id,contact_ids=row.contact_ids)))
         session.commit()
     except (IntegrityError,StaleDataError):
         session.rollback()

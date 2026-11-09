@@ -394,3 +394,14 @@ def test_the_questionnaire_names_the_contact_person_from_the_client_profile(setu
     _,other=invite(web,2)
     assert web.get('/api/onboarding',headers=header).json()['contact']=='Michael Rohrmair'
     assert web.get('/api/onboarding',headers=other).json()['contact']==''
+def test_the_first_page_greets_the_profiles_contact_under_the_clients_logo(setup):
+    web,factory=setup
+    logo='data:image/png;base64,iVBORw0KGgo='
+    with factory() as s:
+        client=s.get(Client,1);client.contact_name='Anna Berg';client.logo_url=logo;s.commit()
+    _,header=invite(web)
+    snapshot=web.get('/api/onboarding',headers=header).json()
+    assert (snapshot['contact'],snapshot['logo'])==('Anna Berg',logo)
+    with factory() as s:
+        s.get(Client,1).logo_url='javascript:alert(1)';s.commit()
+    assert web.get('/api/onboarding',headers=header).json()['logo']==''

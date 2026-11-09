@@ -3,7 +3,7 @@ import {render,screen,fireEvent,waitFor,cleanup} from '@testing-library/react';
 import {afterEach,beforeEach,it,expect,vi} from 'vitest';
 import {OnboardingAudio} from './OnboardingAudio.jsx';
 let track, recorder;
-function Harness({initial={}}){const [state,setState]=useState(initial);return <OnboardingAudio questionKey="B01.01" token="test" state={state} configured onChange={setState} onText={()=>{}} onActivity={()=>{}}/>;}
+function Harness({initial={mode:'audio'}}){const [state,setState]=useState(initial);return <OnboardingAudio questionKey="B01.01" token="test" state={state} configured onChange={setState} onText={()=>{}} onActivity={()=>{}}/>;}
 beforeEach(()=>{
   track={stop:vi.fn()};
   vi.stubGlobal('MediaRecorder',class {
@@ -26,7 +26,7 @@ it('records, pauses, resumes and releases the microphone on stop',async()=>{
   fireEvent.click(screen.getByRole('button',{name:'Aufnahme fortsetzen'}));expect(recorder.state).toBe('recording');
   fireEvent.click(screen.getByRole('button',{name:'Stopp'}));
   expect(track.stop).toHaveBeenCalled();
-  expect(await screen.findByRole('button',{name:'Transkript erstellen'})).toBeTruthy();
+  expect(await screen.findByRole('button',{name:'Audio übernehmen'})).toBeTruthy();
   expect(screen.getByRole('button',{name:'Audio abspielen'}).disabled).toBe(false);
 });
 it('retains a failed upload for retry and sends the scoped token',async()=>{
@@ -55,5 +55,16 @@ it('plays a paused take instead of resuming recording, and deletes the take',asy
   fireEvent.click(screen.getByRole('button',{name:'Wiedergabe pausieren'}));expect(audio.currentTime).toBe(25);
   fireEvent.click(screen.getByRole('button',{name:'Stopp'}));expect(audio.currentTime).toBe(0);
   fireEvent.click(screen.getByRole('button',{name:'Aufnahme löschen'}));
-  await waitFor(()=>expect(screen.queryByRole('button',{name:'Transkript erstellen'})).toBeNull());
+  await waitFor(()=>expect(screen.queryByRole('button',{name:'Audio übernehmen'})).toBeNull());
+});
+it('typing shows no recorder, and a saved recording shows no transcript',async()=>{
+  render(<Harness initial={{mode:'transcript'}}/>);
+  expect(screen.getByRole('button',{name:'Tippen'}).getAttribute('aria-pressed')).toBe('true');
+  expect(screen.queryByRole('button',{name:'Aufnahme starten'})).toBeNull();
+  cleanup();
+  global.fetch=vi.fn().mockResolvedValue({ok:true,json:async()=>({id:'a'.repeat(32),mode:'audio',status:'ready',transcript:'Geheimes Transkript'})});
+  render(<Harness initial={{mode:'audio',blob:new Blob(['audio']),name:'test.wav'}}/>);
+  fireEvent.click(screen.getByRole('button',{name:'Audio übernehmen'}));
+  expect(await screen.findByText('Audio gespeichert')).toBeTruthy();
+  expect(screen.queryByText(/Geheimes Transkript/)).toBeNull();
 });

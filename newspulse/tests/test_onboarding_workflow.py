@@ -575,3 +575,19 @@ def test_a_sentence_reporting_a_gap_is_stored_as_an_open_field_not_prose():
     assert has_missing(value)
     assert not has_missing('Die behauptete Wirkung ist nicht unabhängig belegt.')
     assert not has_missing('• Ein bislang unbekannter Hersteller übernahm 2021.')
+def test_a_glance_fact_is_only_taken_as_a_bare_value():
+    sentence='Zenchef wurde im Jahr 2010 in Paris von Bertrand Crétin und weiteren gegründet.'
+    still=lambda p: json.dumps({'answers':[{'key':'A01.03','value':'Zenchef wurde 2010 gegründet.'}]})
+    assert crawler.condense([dict(key='A01.03',value=sentence)],ask=still)[0]['value']==sentence
+    bare=lambda p: json.dumps({'answers':[{'key':'A01.03','value':'2010'}]})
+    assert crawler.condense([dict(key='A01.03',value=sentence)],ask=bare)[0]['value']=='2010'
+
+
+def test_an_ai_imported_glance_sentence_is_condensed_too(setup):
+    _,factory=setup
+    with factory() as s:
+        s.add(Client(id=1,name='Zenchef',website='zenchef.com',country='FR'))
+        s.add(ClientFact(client_id=1,key='A01.04',value='Laut Impressum hat Zenchef seinen Sitz in Paris.',filled_by='ki'))
+        s.commit()
+        assert flow.condense_stored(s,ask=lambda p: json.dumps({'answers':[{'key':'A01.04','value':'Paris'}]}))==1
+        assert s.scalar(select(ClientFact.value).where(ClientFact.key=='A01.04'))=='Paris'
