@@ -733,3 +733,44 @@ def test_default_draft_ledger_upgrade_retains_existing_impulses(tmp_path, monkey
         assert state['words'] == 3 and state['stage'] == 'writing'
         assert session.get(DefaultDraftJob, identity).attempts == 1
     engine.dispose()
+
+
+@pytest.mark.parametrize("previous", ["0074_task_assignees", "0075_client_strategy", "0076_ensure_task_assignees"])
+@pytest.mark.parametrize("placeholder", [False, True])
+def test_strategy_migration_repairs_both_histories_without_losing_data(tmp_path, monkeypatch, previous, placeholder):
+    db_path = tmp_path / "strategy-upgrade.db"
+    monkeypatch.setattr(config, "DATABASE_PATH", db_path)
+    cfg = _alembic_config()
+    script = ScriptDirectory.from_config(cfg)
+    assert script.get_revision("0075_client_strategy").down_revision == "0074_task_assignees"
+    command.upgrade(cfg, previous)
+    engine = create_engine(f"sqlite:///{db_path}")
+    try:
+        has_strategy = inspect(engine).has_table("client_strategies")
+        with engine.begin() as conn:
+            conn.execute(text("""INSERT INTO clients
+                (id,name,aliases,industry,country,keywords,alert_topics,active,created_at)
+                VALUES (1,'Migration Test','[]','','DE','[]','[]',1,CURRENT_TIMESTAMP)"""))
+            conn.execute(text("""INSERT INTO tasks
+                (title,note,priority,status,owner,context_href,assignees,created_at)
+                VALUES ('Keep assignment','','mittel','offen','','','["lucas"]',CURRENT_TIMESTAMP)"""))
+            if has_strategy and placeholder:
+                # Reproduce the no-op 0075 which was shipped before this fix.
+                conn.execute(text("DROP TABLE strategy_sources"))
+                conn.execute(text("DROP TABLE client_strategies"))
+            elif has_strategy:
+                conn.execute(text("INSERT INTO client_strategies VALUES (1,'Existing strategy',3)"))
+                conn.execute(text("""INSERT INTO strategy_sources
+                    (id,client_id,filename,text,uploaded_at)
+                    VALUES (1,1,'workshop.txt','Existing workshop',CURRENT_TIMESTAMP)"""))
+        command.upgrade(cfg, "head")
+        command.upgrade(cfg, "head")
+        assert {"client_strategies", "strategy_sources"} <= set(inspect(engine).get_table_names())
+        assert "ix_strategy_sources_client_id" in {i["name"] for i in inspect(engine).get_indexes("strategy_sources")}
+        with engine.connect() as conn:
+            assert json.loads(conn.scalar(text("SELECT assignees FROM tasks"))) == ["lucas"]
+            if has_strategy and not placeholder:
+                assert conn.scalar(text("SELECT text FROM client_strategies")) == "Existing strategy"
+                assert conn.scalar(text("SELECT text FROM strategy_sources")) == "Existing workshop"
+    finally:
+        engine.dispose()
