@@ -191,7 +191,15 @@ function Decisions({ items }) {
   if (!items?.length) return null;
   return (
     <section className="tm-decisions" id="entscheidungen" aria-label={t("Offene Entscheidungen")}>
-      <h2>{t("Offene Entscheidungen")} <span>{items.length}</span></h2>
+      <header className="tm-decisions__head">
+        <span className="tm-decisions__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 4H6a2 2 0 0 0-2 2v14h16V6a2 2 0 0 0-2-2h-3" />
+            <rect x="9" y="2" width="6" height="4" rx="1" /><path d="m8 13 3 3 5-6" />
+          </svg>
+        </span>
+        <h2>{t("Offene Entscheidungen")} <span>{items.length}</span></h2>
+      </header>
       <ul>
         {items.map((x, i) => (
           <li key={`${x.href}-${i}`}>
@@ -199,6 +207,7 @@ function Decisions({ items }) {
               <span className="tm-row__title">{x.title}</span>
               <span className="tm-row__meta"><span className="tm-chip tm-chip--client">{x.client.name}</span>
                 <span className="tm-chip">{t(DECISION[x.kind] || x.kind)}</span></span>
+              <span className="tm-decisions__arrow" aria-hidden="true">→</span>
             </a>
           </li>
         ))}
