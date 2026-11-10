@@ -22,7 +22,7 @@ from .models import (
 
 #: How the pages name each value. One place, so the Desk says the same words.
 TASK_PRIORITY_LABELS = {"hoch": "Hoch", "mittel": "Mittel", "niedrig": "Niedrig"}
-TASK_STATE_LABELS = {"offen": "Offen", "in_arbeit": "In Arbeit", "erledigt": "Erledigt"}
+TASK_STATE_LABELS = {"offen": "Offen", "in_arbeit": "In Bearbeitung", "review": "Review", "erledigt": "Erledigt"}
 POST_STATE_LABELS = {"idee": "Idee", "entwurf": "Entwurf", "freigabe": "Freigabe",
                      "geplant": "Geplant", "veroeffentlicht": "Veröffentlicht"}
 DEAL_STAGE_LABELS = {"lead": "Lead", "gespraech": "Gespräch", "angebot": "Angebot",

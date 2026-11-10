@@ -774,3 +774,25 @@ def test_strategy_migration_repairs_both_histories_without_losing_data(tmp_path,
                 assert conn.scalar(text("SELECT text FROM strategy_sources")) == "Existing workshop"
     finally:
         engine.dispose()
+
+
+def test_review_status_migration_preserves_tasks_on_upgrade_and_downgrade(tmp_path, monkeypatch):
+    db_path = tmp_path / "review.db"
+    monkeypatch.setattr(config, "DATABASE_PATH", db_path)
+    cfg = _alembic_config()
+    command.upgrade(cfg, "0077_ensure_client_strategy")
+    engine = create_engine(f"sqlite:///{db_path}")
+    try:
+        with engine.begin() as conn:
+            conn.execute(text("""INSERT INTO tasks
+                (title,note,priority,status,owner,context_href,assignees,created_at)
+                VALUES ('Keep me','Note','hoch','in_arbeit','','','["lucas"]',CURRENT_TIMESTAMP)"""))
+        command.upgrade(cfg, "head")
+        with engine.begin() as conn:
+            conn.execute(text("UPDATE tasks SET status='review'"))
+        command.downgrade(cfg, "0077_ensure_client_strategy")
+        with engine.connect() as conn:
+            row = conn.execute(text("SELECT title,note,status,assignees FROM tasks")).one()
+            assert tuple(row) == ('Keep me','Note','in_arbeit','["lucas"]')
+    finally:
+        engine.dispose()

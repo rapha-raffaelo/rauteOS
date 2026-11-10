@@ -299,11 +299,10 @@ def test_the_task_manager_lists_by_person_client_and_internal(web, session):
     worklists.save_task(session, {"title": "Medienliste", "assignees": ["raphael", "lucas"]})
     worklists.save_task(session, {"title": "fertig", "status": "erledigt"})
     body = rendered(web.get("/aufgaben"))
-    for list_link in ('href="/aufgaben?liste=heute"', 'href="/aufgaben?liste=person%3Alucas"',
-                      'href="/aufgaben?liste=person%3Araphael"', 'href="/aufgaben?liste=intern"',
-                      'href="/aufgaben?liste=kunde%3A1"'):
-        assert list_link in body
-    assert "@Lucas" in body and "@Raphael" in body
+    for option in ('value="heute"', 'value="person:lucas"', 'value="person:raphael"',
+                   'value="intern"', 'value="kunden"', 'value="kunde:1"'):
+        assert option in body
+    assert 'title="Lucas"' in body and 'title="Raphael"' in body
     assert "Pitch Qonto" in body and "Medienliste" in body
 
 
@@ -352,3 +351,22 @@ def test_a_text_link_names_its_occasion_and_an_anchor_that_exists(session):
     template = Path(workspaces.__file__).parent / "web/templates/advice.html"
     assert 'id="asset-text-{{ asset.id }}"' in template.read_text()
     assert 'id="letter-text-{{ msg.id }}"' in template.read_text()
+
+
+def test_dragging_a_task_to_review_keeps_its_details(web, session):
+    web.post("/aufgaben", data={"title": "Review pitch", "assignees": ["raphael", "lucas"],
+        "priority": "hoch", "due_on": "2026-11-12", "client_id": "1", "note": "Keep this"})
+    task = session.scalar(select(Task))
+    response = web.post(f"/aufgaben/{task.id}", data={"status": "review"},
+                        headers={"Accept": "application/json"})
+    assert response.status_code == 200
+    assert response.json() == {"id": task.id, "status": "review"}
+    session.refresh(task)
+    assert task.assignees == ["raphael", "lucas"]
+    assert (task.note, task.priority, task.client_id, task.done_at) == ("Keep this", "hoch", 1, None)
+    assert task.due_on == dt.date(2026, 11, 12)
+    response = web.post(f"/aufgaben/{task.id}", data={"status": "unknown"},
+                        headers={"Accept": "application/json"})
+    assert response.status_code == 422
+    session.refresh(task)
+    assert task.status == "review"

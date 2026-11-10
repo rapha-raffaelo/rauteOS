@@ -11,7 +11,7 @@ import logging
 import secrets
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import RedirectResponse, Response
+from fastapi.responses import JSONResponse, RedirectResponse, Response
 from sqlalchemy.orm import Session
 
 from ... import config, desk, linkedin_link, worklists, workspaces
@@ -135,7 +135,11 @@ async def update_task(task_id: int, request: Request, session: Session = Depends
             worklists.save_task(session, form, task)
     except worklists.Invalid as exc:
         session.rollback()
+        if "application/json" in request.headers.get("accept", ""):
+            return JSONResponse({"error": str(exc)}, status_code=422)
         return _tasks_page(request, session, error=str(exc))
+    if "application/json" in request.headers.get("accept", ""):
+        return JSONResponse({"id": task.id, "status": task.status})
     return RedirectResponse(back, status_code=_SEE_OTHER)
 
 

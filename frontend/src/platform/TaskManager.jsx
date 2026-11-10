@@ -1,9 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Notice, t } from "./shared.jsx";
 
-// Aufgaben as a task manager in the manner of Microsoft To Do and Apple's
-// Reminders: lists on the left, a quick add on top, round checkboxes, a star
-// for what matters, and the details of one task on the right.
+// Shared tasks in a status board or list, with inline creation and a detail drawer.
 //
 // Every change is a plain form that posts and comes back to the same list
 // (``redirect_to``); the server checks each value (newspulse.worklists). The
@@ -68,7 +66,7 @@ function defaultsFor(list, me) {
 
 const href = (list, task) => {
   const q = new URLSearchParams();
-  if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("ansicht") === "board") q.set("ansicht", "board");
+  if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("ansicht") === "liste") q.set("ansicht", "liste");
   if (list && list !== "alle") q.set("liste", list);
   if (task) q.set("aufgabe", task);
   return "/aufgaben" + (q.toString() ? "?" + q : "");
@@ -125,12 +123,12 @@ function AreaFields({ clients, clientId, customer = false }) {
   const [area, setArea] = useState(clientId || customer ? "kunde" : "intern");
   return <>
     <label className="tm-field"><span>Bereich</span>
-      <select value={area} onChange={e => setArea(e.target.value)}>
+      <select aria-label="Bereich" value={area} onChange={e => setArea(e.target.value)}>
         <option value="intern">Intern</option><option value="kunde">Kunde</option>
       </select>
     </label>
     {area === "kunde" ? <label className="tm-field"><span>Kunde auswählen</span>
-      <select name="client_id" defaultValue={clientId || ""} required>
+      <select aria-label="Kunde auswählen" name="client_id" defaultValue={clientId || ""} required>
         <option value="">Bitte auswählen</option>
         {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
       </select>
@@ -148,7 +146,7 @@ function Details({ task, d, list }) {
       </div>
       <form method="post" action={`/aufgaben/${task.id}`} className="tm-detail__form">
         <input type="hidden" name="redirect_to" value={back} />
-        <label className="tm-field"><span>{t("Status")}</span><select name="status" defaultValue={task.status}>{STATES.map(([key, label]) => <option key={key} value={key}>{t(label)}</option>)}</select></label>
+        <label className="tm-field"><span>{t("Status")}</span><select aria-label="Status" name="status" defaultValue={task.status}>{STATES.map(([key, label]) => <option key={key} value={key}>{t(label)}</option>)}</select></label>
         <input type="hidden" name="owner" value={task.owner || ""} />
         <label className="tm-field"><span>{t("Aufgabe")}</span>
           <input type="text" name="title" defaultValue={task.title} required maxLength={200} /></label>
@@ -166,7 +164,7 @@ function Details({ task, d, list }) {
         <label className="tm-field"><span>{t("Fällig am")}</span>
           <input type="date" name="due_on" defaultValue={task.due_on || ""} /></label>
         <label className="tm-field"><span>{t("Priorität")}</span>
-          <select name="priority" defaultValue={task.priority}>
+          <select aria-label="Priorität" name="priority" defaultValue={task.priority}>
             {d.priorities.map(([v, l]) => <option key={v} value={v}>{t(l)}</option>)}
           </select></label>
         <label className="tm-field"><span>{t("Notiz")}</span>
@@ -208,25 +206,81 @@ function Decisions({ items }) {
   );
 }
 
-const STATES = [["offen", "Offen"], ["in_arbeit", "In Bearbeitung"], ["erledigt", "Erledigt"]];
+const STATES = [["offen", "Offen"], ["in_arbeit", "In Bearbeitung"], ["review", "Review"], ["erledigt", "Erledigt"]];
 
-function Board({ tasks, d, list, selectedId }) {
-  return <div className="tm-board">
-    {STATES.map(([status, label]) => <section className="tm-column" key={status} aria-label={label}>
-      <h2>{t(label)} <span>{tasks.filter(x => x.status === status).length}</span></h2>
-      <ul className="tm-rows">{tasks.filter(x => x.status === status).map(task => <li key={task.id} className="tm-board-card">
-        <ul className="tm-rows"><Row task={task} d={d} list={list} selected={task.id === selectedId} /></ul>
-        <form method="post" action={`/aufgaben/${task.id}`} className="tm-move">
-          <Hidden values={{redirect_to: href(list, selectedId)}} />
-          <select name="status" aria-label={`Status: ${task.title}`} defaultValue={task.status}>
-            {STATES.map(([key, name]) => <option key={key} value={key}>{t(name)}</option>)}
-          </select>
-          <button className="btn btn--quiet" type="submit">{t("Ändern")}</button>
-        </form>
-      </li>)}</ul>
-      {!tasks.some(x => x.status === status) && <p className="tm-empty">{t("Keine Aufgaben")}</p>}
-    </section>)}
-  </div>;
+function CreateTask({ d, list, status = "offen", onClose }) {
+  const defaults = defaultsFor(list, d.me);
+  return <form method="post" action="/aufgaben" className="tm-add tm-add--inline">
+    <div className="tm-add-title"><strong>Neue Aufgabe</strong><button type="button" className="tm-close" aria-label="Neue Aufgabe schließen" onClick={onClose}>×</button></div>
+    <input type="text" name="title" required maxLength={200} autoFocus placeholder="Name der Aufgabe" aria-label="Aufgabe hinzufügen" />
+    <Hidden values={{ status, redirect_to: href(list) }} />
+    <div className="tm-add-options">
+      <AreaFields clients={d.clients} clientId={defaults.client_id} customer={list === "kunden"} />
+      <fieldset className="tm-field tm-people"><legend>Zuständig</legend>{d.team.map(person =>
+        <label className="tm-tag" key={person.key}><input type="checkbox" name="assignees" value={person.key} defaultChecked={defaults.assignees === person.key} /><span>@{person.name}</span></label>)}</fieldset>
+      <label className="tm-field"><span>Fällig am</span><input type="date" name="due_on" defaultValue={defaults.due_on || ""} /></label>
+      <label className="tm-field"><span>Priorität</span><select aria-label="Priorität" name="priority" defaultValue={defaults.priority || "mittel"}>{d.priorities.map(([key,label]) => <option key={key} value={key}>{label}</option>)}</select></label>
+    </div>
+    <button type="submit" className="btn btn--go">Aufgabe erstellen</button>
+  </form>;
+}
+
+function Board({ tasks, d, list, selectedId, createStatus, onCreate }) {
+  const [dragged, setDragged] = useState(null);
+  const [target, setTarget] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  async function move(taskId, status) {
+    if (busy) return;
+    setBusy(true); setError("");
+    try {
+      const response = await fetch(`/aufgaben/${taskId}`, {
+        method: "POST", headers: { Accept: "application/json" },
+        body: new URLSearchParams({status, redirect_to: href(list, selectedId)}),
+      });
+      if (!response.ok) throw new Error();
+      const result = await response.json();
+      if (result.status !== status) throw new Error();
+      window.location.assign(href(list, selectedId));
+    } catch {
+      setError("Die Aufgabe konnte nicht verschoben werden. Bitte erneut versuchen.");
+      setBusy(false);
+    }
+  }
+  return <>
+    {error && <p role="alert">{error}</p>}
+    <div className="tm-board" aria-busy={busy}>
+      {STATES.map(([status,label]) => <section key={status}
+        className={`tm-column tm-column--${status}${target === status ? " tm-column--drop" : ""}`}
+        aria-label={label}
+        onDragOver={event => { if (dragged && !busy) { event.preventDefault(); setTarget(status); } }}
+        onDrop={event => { event.preventDefault(); setTarget(null); if (dragged && dragged.status !== status) move(dragged.id,status); setDragged(null); }}>
+        <h2><span className="tm-status-dot" aria-hidden="true" />{label}<span className="tm-column-count">{tasks.filter(task => task.status === status).length}</span></h2>
+        <ul className="tm-rows">{tasks.filter(task => task.status === status).map(task =>
+          <li key={task.id} id={`task-${task.id}`} className={`tm-board-card${task.id === selectedId ? " tm-board-card--selected" : ""}`}
+            draggable={!busy} onDragStart={event => { setDragged(task); event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", String(task.id)); }}
+            onDragEnd={() => { setDragged(null); setTarget(null); }}>
+            <div className="tm-card-title"><Check task={task} back={href(list)} /><a href={href(list,task.id)}>{task.title}</a><Star task={task} back={href(list)} /></div>
+            <div className="tm-card-meta">
+              {task.assignees.map(key => <span className="tm-avatar" title={d.team.find(p => p.key === key)?.name || key} key={key}>{key === "raphael" ? "RM" : key === "lucas" ? "L" : key.slice(0,2).toUpperCase()}</span>)}
+              {task.due_on && <span className={task.status !== "erledigt" && task.due_on < isoToday() ? "tm-overdue" : ""}>▦ {shortDay(task.due_on)}</span>}
+              <span className={`tm-priority tm-priority--${task.priority}`}>⚑ {d.priorities.find(([key]) => key === task.priority)?.[1]}</span>
+            </div>
+            <div className="tm-card-footer"><span>{task.client?.name || "Intern"}</span>
+              <details><summary aria-label={`Status ändern: ${task.title}`}>•••</summary>
+                <form method="post" action={`/aufgaben/${task.id}`} className="tm-move">
+                  <Hidden values={{redirect_to: href(list)}} />
+                  <select name="status" aria-label={`Status: ${task.title}`} defaultValue={task.status}>{STATES.map(([key,name]) => <option key={key} value={key}>{name}</option>)}</select>
+                  <button className="btn btn--quiet" type="submit">Ändern</button>
+                </form>
+              </details>
+            </div>
+          </li>)}</ul>
+        {createStatus === status ? <CreateTask key={status} d={d} list={list} status={status} onClose={() => onCreate(null)} /> :
+          <button type="button" className="tm-column-add" onClick={() => onCreate(status)}>+ Aufgabe hinzufügen<span className="sr-only">: {label}</span></button>}
+      </section>)}
+    </div>
+  </>;
 }
 
 export function TasksPage({ data: d }) {
@@ -234,7 +288,8 @@ export function TasksPage({ data: d }) {
   const list = params.get("liste") || "alle";
   const selectedId = Number(params.get("aufgabe")) || null;
   const [showDone, setShowDone] = useState(false);
-  const board = params.get("ansicht") === "board";
+  const board = params.get("ansicht") !== "liste";
+  const [createStatus, setCreateStatus] = useState(null);
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState("datum");
   const matches = x => [x.title, x.note, x.client?.name, ...x.assignees].join(" ").toLocaleLowerCase().includes(query.trim().toLocaleLowerCase());
@@ -252,59 +307,32 @@ export function TasksPage({ data: d }) {
   // A list other than "Erledigt" keeps its finished tasks below, on request.
   const finished = list === "erledigt" ? [] : tasks.filter((x) => x.status === "erledigt" && matches(x) && belongs(list, { ...x, status: "offen" }, me));
   const selected = tasks.find((x) => x.id === selectedId);
-  const defaults = defaultsFor(list, me);
-  const [title, setTitle] = useState("");
   useEffect(() => { document.getElementById(`task-${selectedId}`)?.scrollIntoView?.({ block: "nearest" }); }, [selectedId]);
 
-  const nav = (key, label, icon, n) => (
-    <a key={key} href={href(key)} className="tm-list" aria-current={list === key ? "page" : undefined}>
-      <span className="tm-list__icon" aria-hidden="true">{icon}</span><span>{label}</span>
-      {n > 0 && <span className="tm-list__n">{n}</span>}
-    </a>
-  );
-  const clientsWithTasks = d.clients.filter((c) => tasks.some((x) => x.status !== "erledigt" && x.client?.id === c.id));
 
   return (
     <section className={`tm${selected ? " tm--detail" : ""}`}>
-      <nav className="tm-lists" aria-label={t("Listen")}>
-        {SMART.map(([key, label, icon]) => nav(key, t(label), icon, key === "erledigt" ? 0 : count(key)))}
-        <p className="tm-lists__h">{t("Personen")}</p>
-        {d.team.map((p) => nav(`person:${p.key}`, p.name, "@", count(`person:${p.key}`)))}
-        <p className="tm-lists__h">{t("Bereich")}</p>
-        {nav("intern", t("Intern"), "◇", count("intern"))}
-        {nav("kunden", t("Kunde"), "◆", count("kunden"))}
-        {clientsWithTasks.map((c) => nav(`kunde:${c.id}`, c.name, "◆", count(`kunde:${c.id}`)))}
-      </nav>
-
       <div className="tm-main">
         <header className="tm-head">
-          <p className="tm-eyebrow">{t("Aufgaben")}</p>
-          <h1>{listTitle(list, d)}</h1>
+          <p className="tm-eyebrow">Arbeitsplatz</p>
+          <h1>{list === "alle" ? "Aufgaben" : listTitle(list, d)}</h1>
+          <button className="btn btn--go" type="button" onClick={() => setCreateStatus("offen")}>+ Neue Aufgabe</button>
           {list === "heute" && <p className="tm-sub">{new Date().toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "long" })}</p>}
         </header>
         <div className="tm-toolbar">
           <nav aria-label="Ansicht"><a className="btn btn--quiet" aria-current={!board ? "page" : undefined} href={viewLink("liste")}>Liste</a><a className="btn btn--quiet" aria-current={board ? "page" : undefined} href={viewLink("board")}>Board</a></nav>
+          <select aria-label="Aufgaben filtern" value={list} onChange={event => window.location.assign(href(event.target.value))}>
+            <optgroup label="Ansicht">{SMART.map(([key,label]) => <option key={key} value={key}>{label} ({count(key)})</option>)}</optgroup>
+            <optgroup label="Personen">{d.team.map(person => <option key={person.key} value={`person:${person.key}`}>{person.name}</option>)}</optgroup>
+            <optgroup label="Bereich"><option value="intern">Intern</option><option value="kunden">Kunde</option></optgroup>
+            <optgroup label="Kunden">{d.clients.map(client => <option key={client.id} value={`kunde:${client.id}`}>{client.name}</option>)}</optgroup>
+          </select>
           <input type="search" aria-label="Aufgaben suchen" placeholder="Aufgaben suchen" value={query} onChange={e => setQuery(e.target.value)} />
           <select aria-label="Sortieren" value={sort} onChange={e => setSort(e.target.value)}><option value="datum">Fälligkeit</option><option value="prioritaet">Priorität</option><option value="titel">Titel</option></select>
         </div>
         <Notice>{d.error}</Notice>
-        {list !== "erledigt" && (
-          <form method="post" action="/aufgaben" className="tm-add">
-            <h2 className="tm-add-heading">Neue Aufgabe</h2>
-            <span className="tm-circle tm-circle--add" aria-hidden="true">+</span>
-            <input type="text" name="title" required maxLength={200} value={title} onChange={(e) => setTitle(e.target.value)}
-              placeholder={t("Aufgabe hinzufügen")} aria-label={t("Aufgabe hinzufügen")} />
-            <Hidden values={{ redirect_to: href(list) }} />
-            <div className="tm-add-options">
-              <AreaFields clients={d.clients} clientId={defaults.client_id} customer={list === "kunden"} />
-              <fieldset className="tm-field tm-people"><legend>Zuständig</legend>{d.team.map(p => <label className="tm-tag" key={p.key}><input type="checkbox" name="assignees" value={p.key} defaultChecked={defaults.assignees === p.key} /><span>@{p.name}</span></label>)}</fieldset>
-              <label className="tm-field"><span>Fällig am</span><input type="date" name="due_on" defaultValue={defaults.due_on || ""} /></label>
-              <label className="tm-field"><span>Priorität</span><select name="priority" defaultValue={defaults.priority || "mittel"}>{d.priorities.map(([key, label]) => <option value={key} key={key}>{label}</option>)}</select></label>
-            </div>
-            <button type="submit" className="btn btn--go">{t("Aufgabe erstellen")}</button>
-          </form>
-        )}
-        {board ? <Board tasks={[...shown, ...finished]} d={d} list={list} selectedId={selectedId} /> : <ul className="tm-rows">
+        {!board && createStatus && <CreateTask d={d} list={list} status={createStatus} onClose={() => setCreateStatus(null)} />}
+        {board ? <Board tasks={[...shown, ...finished]} d={d} list={list} selectedId={selectedId} createStatus={createStatus} onCreate={setCreateStatus} /> : <ul className="tm-rows">
           {shown.map((x) => <Row key={x.id} task={x} d={d} list={list} selected={x.id === selectedId} />)}
         </ul>}
         {!board && !shown.length && <p className="tm-empty">{t(list === "erledigt" ? "Noch keine erledigten Aufgaben" : "Keine offenen Aufgaben")}</p>}
