@@ -54,9 +54,10 @@ function listTitle(list, d) {
 }
 
 // What a task added to this list should start with, so it lands where it was typed.
-function defaultsFor(list) {
+function defaultsFor(list, me) {
   const today = isoToday();
-  if (list === "heute") return { due_on: today };
+  if (list === "mir" && me) return { assignees: me };
+  if (list === "geplant" || list === "heute") return { due_on: today };
   if (list === "wichtig") return { priority: "hoch" };
   if (list.startsWith("person:")) return { assignees: list.slice(7) };
   if (list.startsWith("kunde:")) return { client_id: list.slice(6) };
@@ -65,6 +66,7 @@ function defaultsFor(list) {
 
 const href = (list, task) => {
   const q = new URLSearchParams();
+  if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("ansicht") === "board") q.set("ansicht", "board");
   if (list && list !== "alle") q.set("liste", list);
   if (task) q.set("aufgabe", task);
   return "/aufgaben" + (q.toString() ? "?" + q : "");
@@ -127,9 +129,10 @@ function Details({ task, d, list }) {
       </div>
       <form method="post" action={`/aufgaben/${task.id}`} className="tm-detail__form">
         <input type="hidden" name="redirect_to" value={back} />
-        <input type="hidden" name="status" value={task.status} />
+        <label className="tm-field"><span>{t("Status")}</span><select name="status" defaultValue={task.status}>{STATES.map(([key, label]) => <option key={key} value={key}>{t(label)}</option>)}</select></label>
+        <input type="hidden" name="owner" value={task.owner || ""} />
         <label className="tm-field"><span>{t("Aufgabe")}</span>
-          <input name="title" defaultValue={task.title} required maxLength={200} /></label>
+          <input type="text" name="title" defaultValue={task.title} required maxLength={200} /></label>
         <fieldset className="tm-field tm-people">
           <legend>{t("Zuständig")}</legend>
           {d.team.map((p) => (
@@ -191,23 +194,51 @@ function Decisions({ items }) {
   );
 }
 
+const STATES = [["offen", "Offen"], ["in_arbeit", "In Bearbeitung"], ["erledigt", "Erledigt"]];
+
+function Board({ tasks, d, list, selectedId }) {
+  return <div className="tm-board">
+    {STATES.map(([status, label]) => <section className="tm-column" key={status} aria-label={label}>
+      <h2>{t(label)} <span>{tasks.filter(x => x.status === status).length}</span></h2>
+      <ul className="tm-rows">{tasks.filter(x => x.status === status).map(task => <li key={task.id} className="tm-board-card">
+        <ul className="tm-rows"><Row task={task} d={d} list={list} selected={task.id === selectedId} /></ul>
+        <form method="post" action={`/aufgaben/${task.id}`} className="tm-move">
+          <Hidden values={{redirect_to: href(list, selectedId)}} />
+          <select name="status" aria-label={`Status: ${task.title}`} defaultValue={task.status}>
+            {STATES.map(([key, name]) => <option key={key} value={key}>{t(name)}</option>)}
+          </select>
+          <button className="btn btn--quiet" type="submit">{t("Ändern")}</button>
+        </form>
+      </li>)}</ul>
+      {!tasks.some(x => x.status === status) && <p className="tm-empty">{t("Keine Aufgaben")}</p>}
+    </section>)}
+  </div>;
+}
+
 export function TasksPage({ data: d }) {
   const params = new URLSearchParams(typeof window === "undefined" ? "" : window.location.search);
   const list = params.get("liste") || "alle";
   const selectedId = Number(params.get("aufgabe")) || null;
   const [showDone, setShowDone] = useState(false);
+  const board = params.get("ansicht") === "board";
+  const [query, setQuery] = useState("");
+  const [sort, setSort] = useState("datum");
+  const matches = x => [x.title, x.note, x.client?.name, ...x.assignees].join(" ").toLocaleLowerCase().includes(query.trim().toLocaleLowerCase());
+  const viewLink = value => { const q = new URLSearchParams(params); q.set("ansicht", value); return "/aufgaben?" + q; };
   const tasks = d.tasks;
   const me = d.me;
   const count = (key) => tasks.filter((x) => belongs(key, x, me)).length;
   const shown = useMemo(() => {
-    const rows = tasks.filter((x) => belongs(list, x, me));
-    if (list === "geplant") rows.sort((a, b) => (a.due_on || "").localeCompare(b.due_on || ""));
+    const rows = tasks.filter((x) => belongs(list, x, me) && matches(x));
+    if (sort === "datum") rows.sort((a, b) => (a.due_on || "9999").localeCompare(b.due_on || "9999"));
+    if (sort === "titel") rows.sort((a, b) => a.title.localeCompare(b.title));
+    if (sort === "prioritaet") rows.sort((a, b) => ["hoch", "mittel", "niedrig"].indexOf(a.priority) - ["hoch", "mittel", "niedrig"].indexOf(b.priority));
     return rows;
-  }, [tasks, list, me]);
+  }, [tasks, list, me, query, sort]);
   // A list other than "Erledigt" keeps its finished tasks below, on request.
-  const finished = list === "erledigt" ? [] : tasks.filter((x) => x.status === "erledigt" && belongs(list, { ...x, status: "offen" }, me));
+  const finished = list === "erledigt" ? [] : tasks.filter((x) => x.status === "erledigt" && matches(x) && belongs(list, { ...x, status: "offen" }, me));
   const selected = tasks.find((x) => x.id === selectedId);
-  const defaults = defaultsFor(list);
+  const defaults = defaultsFor(list, me);
   const [title, setTitle] = useState("");
   useEffect(() => { document.getElementById(`task-${selectedId}`)?.scrollIntoView?.({ block: "nearest" }); }, [selectedId]);
 
@@ -233,25 +264,35 @@ export function TasksPage({ data: d }) {
 
       <div className="tm-main">
         <header className="tm-head">
-          <p className="tm-eyebrow">{t("Aufgaben")}</p>
+          <p className="tm-eyebrow">{t("To-Do's")}</p>
           <h1>{listTitle(list, d)}</h1>
           {list === "heute" && <p className="tm-sub">{new Date().toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "long" })}</p>}
         </header>
+        <div className="tm-toolbar">
+          <nav aria-label="Ansicht"><a className="btn btn--quiet" aria-current={!board ? "page" : undefined} href={viewLink("liste")}>Liste</a><a className="btn btn--quiet" aria-current={board ? "page" : undefined} href={viewLink("board")}>Board</a></nav>
+          <input type="search" aria-label="Aufgaben suchen" placeholder="Aufgaben suchen" value={query} onChange={e => setQuery(e.target.value)} />
+          <select aria-label="Sortieren" value={sort} onChange={e => setSort(e.target.value)}><option value="datum">Fälligkeit</option><option value="prioritaet">Priorität</option><option value="titel">Titel</option></select>
+        </div>
         <Notice>{d.error}</Notice>
         {list !== "erledigt" && (
           <form method="post" action="/aufgaben" className="tm-add">
             <span className="tm-circle tm-circle--add" aria-hidden="true">+</span>
-            <input name="title" required maxLength={200} value={title} onChange={(e) => setTitle(e.target.value)}
+            <input type="text" name="title" required maxLength={200} value={title} onChange={(e) => setTitle(e.target.value)}
               placeholder={t("Aufgabe hinzufügen")} aria-label={t("Aufgabe hinzufügen")} />
-            <Hidden values={{ ...defaults, redirect_to: href(list) }} />
+            <Hidden values={{ client_id: defaults.client_id, redirect_to: href(list) }} />
+            <div className="tm-add-options">
+              <fieldset className="tm-field tm-people"><legend>Zuständig</legend>{d.team.map(p => <label className="tm-tag" key={p.key}><input type="checkbox" name="assignees" value={p.key} defaultChecked={defaults.assignees === p.key} /><span>@{p.name}</span></label>)}</fieldset>
+              <label className="tm-field"><span>Fällig am</span><input type="date" name="due_on" defaultValue={defaults.due_on || ""} /></label>
+              <label className="tm-field"><span>Priorität</span><select name="priority" defaultValue={defaults.priority || "mittel"}>{d.priorities.map(([key, label]) => <option value={key} key={key}>{label}</option>)}</select></label>
+            </div>
             {title && <button type="submit" className="btn btn--go">{t("Hinzufügen")}</button>}
           </form>
         )}
-        <ul className="tm-rows">
+        {board ? <Board tasks={[...shown, ...finished]} d={d} list={list} selectedId={selectedId} /> : <ul className="tm-rows">
           {shown.map((x) => <Row key={x.id} task={x} d={d} list={list} selected={x.id === selectedId} />)}
-        </ul>
-        {!shown.length && <p className="tm-empty">{t(list === "erledigt" ? "Noch nichts erledigt." : "Nichts offen. Gut so.")}</p>}
-        {finished.length > 0 && (
+        </ul>}
+        {!board && !shown.length && <p className="tm-empty">{t(list === "erledigt" ? "Noch keine erledigten Aufgaben" : "Keine offenen Aufgaben")}</p>}
+        {!board && finished.length > 0 && (
           <>
             <button type="button" className="btn btn--quiet tm-done-toggle" aria-expanded={showDone} onClick={() => setShowDone(!showDone)}>
               {t(showDone ? "Erledigte ausblenden" : "Erledigte anzeigen")} · {finished.length}

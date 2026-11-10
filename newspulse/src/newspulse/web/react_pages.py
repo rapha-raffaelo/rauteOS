@@ -106,7 +106,7 @@ def render(request, page, context):
         'frontend': assets, 'page': page, 'data': data,
         'page_title': ({'rivals': 'Wettbewerb', 'guide': 'Kommunikations-Guide'}.get(data.get('view'), 'Profil') if page == 'profile' else
                        {'archive': 'Archiv', 'settings': 'Einstellungen', 'new_client': 'Neuer Mandant',
-                        'tasks': 'Aufgaben', 'linkedin': 'LinkedIn', 'sales': 'Sales CRM'}[page]),
+                        "tasks": "To-Do's", 'linkedin': 'LinkedIn', 'sales': 'Sales CRM'}[page]),
         'client': context.get('client'),
         'active': ({'rivals': 'rivals', 'guide': 'guide'}.get(data.get('view'), 'twin')
                    if page == 'profile' else 'overview'),

@@ -1,5 +1,5 @@
 import React from 'react';
-import {render,screen,within,cleanup} from '@testing-library/react';
+import {render,screen,within,cleanup,fireEvent} from '@testing-library/react';
 import {afterEach,expect,it} from 'vitest';
 import {TasksPage} from './TaskManager.jsx';
 afterEach(()=>{cleanup();window.history.replaceState(null,'','/aufgaben');});
@@ -30,4 +30,26 @@ it('counts each list and opens the details with tags for every team member',()=>
   expect(within(details).getByLabelText('@Raphael').checked).toBe(true);
   expect(within(details).getByLabelText('@Lucas').checked).toBe(false);
   expect(within(details).getByText('Einem Kunden zugeordnet, erscheint die Aufgabe auch auf seinem Dashboard.')).toBeTruthy();
+});
+
+it('keeps board navigation and posts only status when moving a task',()=>{
+  window.history.replaceState(null,'','/aufgaben?ansicht=board');
+  render(<TasksPage data={base}/>);
+  expect(screen.getByRole('region',{name:'Erledigt'})).toBeTruthy();
+  const move=screen.getByLabelText('Status: Pitch Qonto').closest('form');
+  fireEvent.change(screen.getByLabelText('Status: Pitch Qonto'),{target:{value:'in_arbeit'}});
+  expect(new FormData(move).get('status')).toBe('in_arbeit');
+  expect(new FormData(move).get('redirect_to')).toBe('/aufgaben?ansicht=board');
+  expect(screen.getByText('Alt')).toBeTruthy();
+  fireEvent.change(screen.getByLabelText('Aufgaben suchen'),{target:{value:'Medienliste'}});
+  expect(screen.queryByText('Pitch Qonto')).toBeNull();
+  expect(screen.getByText('Medienliste')).toBeTruthy();
+});
+it('assigns new tasks to me by default and supports both team members',()=>{
+  window.history.replaceState(null,'','/aufgaben?liste=mir');
+  render(<TasksPage data={base}/>);
+  const form=screen.getByLabelText('Aufgabe hinzufügen').closest('form');
+  expect(new FormData(form).getAll('assignees')).toEqual(['lucas']);
+  fireEvent.click(within(form).getByLabelText('@Raphael'));
+  expect(new FormData(form).getAll('assignees')).toEqual(['raphael','lucas']);
 });
