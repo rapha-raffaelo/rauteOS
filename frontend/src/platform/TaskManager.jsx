@@ -37,6 +37,7 @@ function belongs(list, x, me) {
   if (list === "geplant") return !!x.due_on;
   if (list === "wichtig") return x.priority === "hoch";
   if (list === "intern") return !x.client;
+  if (list === "kunden") return !!x.client;
   if (list === "mir") return !!me && x.assignees.includes(me);
   if (list.startsWith("person:")) return x.assignees.includes(list.slice(7));
   if (list.startsWith("kunde:")) return String(x.client?.id) === list.slice(6);
@@ -47,6 +48,7 @@ function listTitle(list, d) {
   const smart = SMART.find(([key]) => key === list);
   if (smart) return t(smart[1]);
   if (list === "intern") return t("Intern");
+  if (list === "kunden") return t("Kunde");
   if (list === "mir") return t("Mir zugewiesen");
   if (list.startsWith("person:")) return d.team.find((p) => p.key === list.slice(7))?.name || list;
   if (list.startsWith("kunde:")) return d.clients.find((c) => String(c.id) === list.slice(6))?.name || t("Kunde");
@@ -119,6 +121,23 @@ function Row({ task, d, list, selected }) {
   );
 }
 
+function AreaFields({ clients, clientId, customer = false }) {
+  const [area, setArea] = useState(clientId || customer ? "kunde" : "intern");
+  return <>
+    <label className="tm-field"><span>Bereich</span>
+      <select value={area} onChange={e => setArea(e.target.value)}>
+        <option value="intern">Intern</option><option value="kunde">Kunde</option>
+      </select>
+    </label>
+    {area === "kunde" ? <label className="tm-field"><span>Kunde auswählen</span>
+      <select name="client_id" defaultValue={clientId || ""} required>
+        <option value="">Bitte auswählen</option>
+        {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+      </select>
+    </label> : <input type="hidden" name="client_id" value="" />}
+  </>;
+}
+
 function Details({ task, d, list }) {
   const back = href(list, task.id);
   return (
@@ -142,13 +161,8 @@ function Details({ task, d, list }) {
             </label>
           ))}
         </fieldset>
-        <label className="tm-field"><span>{t("Kunde")}</span>
-          <select name="client_id" defaultValue={task.client?.id ?? ""}>
-            <option value="">{t("Intern (kein Kunde)")}</option>
-            {d.clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-          <small>{t("Einem Kunden zugeordnet, erscheint die Aufgabe auch auf seinem Dashboard.")}</small>
-        </label>
+        <AreaFields clients={d.clients} clientId={task.client?.id} />
+        <small>{t("Einem Kunden zugeordnet, erscheint die Aufgabe auch auf seinem Dashboard.")}</small>
         <label className="tm-field"><span>{t("Fällig am")}</span>
           <input type="date" name="due_on" defaultValue={task.due_on || ""} /></label>
         <label className="tm-field"><span>{t("Priorität")}</span>
@@ -255,16 +269,16 @@ export function TasksPage({ data: d }) {
       <nav className="tm-lists" aria-label={t("Listen")}>
         {SMART.map(([key, label, icon]) => nav(key, t(label), icon, key === "erledigt" ? 0 : count(key)))}
         <p className="tm-lists__h">{t("Personen")}</p>
-        {me && nav("mir", t("Mir zugewiesen"), "@", count("mir"))}
         {d.team.map((p) => nav(`person:${p.key}`, p.name, "@", count(`person:${p.key}`)))}
-        <p className="tm-lists__h">{t("Kunden")}</p>
+        <p className="tm-lists__h">{t("Bereich")}</p>
         {nav("intern", t("Intern"), "◇", count("intern"))}
+        {nav("kunden", t("Kunde"), "◆", count("kunden"))}
         {clientsWithTasks.map((c) => nav(`kunde:${c.id}`, c.name, "◆", count(`kunde:${c.id}`)))}
       </nav>
 
       <div className="tm-main">
         <header className="tm-head">
-          <p className="tm-eyebrow">{t("To-Do's")}</p>
+          <p className="tm-eyebrow">{t("Aufgaben")}</p>
           <h1>{listTitle(list, d)}</h1>
           {list === "heute" && <p className="tm-sub">{new Date().toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "long" })}</p>}
         </header>
@@ -276,16 +290,18 @@ export function TasksPage({ data: d }) {
         <Notice>{d.error}</Notice>
         {list !== "erledigt" && (
           <form method="post" action="/aufgaben" className="tm-add">
+            <h2 className="tm-add-heading">Neue Aufgabe</h2>
             <span className="tm-circle tm-circle--add" aria-hidden="true">+</span>
             <input type="text" name="title" required maxLength={200} value={title} onChange={(e) => setTitle(e.target.value)}
               placeholder={t("Aufgabe hinzufügen")} aria-label={t("Aufgabe hinzufügen")} />
-            <Hidden values={{ client_id: defaults.client_id, redirect_to: href(list) }} />
+            <Hidden values={{ redirect_to: href(list) }} />
             <div className="tm-add-options">
+              <AreaFields clients={d.clients} clientId={defaults.client_id} customer={list === "kunden"} />
               <fieldset className="tm-field tm-people"><legend>Zuständig</legend>{d.team.map(p => <label className="tm-tag" key={p.key}><input type="checkbox" name="assignees" value={p.key} defaultChecked={defaults.assignees === p.key} /><span>@{p.name}</span></label>)}</fieldset>
               <label className="tm-field"><span>Fällig am</span><input type="date" name="due_on" defaultValue={defaults.due_on || ""} /></label>
               <label className="tm-field"><span>Priorität</span><select name="priority" defaultValue={defaults.priority || "mittel"}>{d.priorities.map(([key, label]) => <option value={key} key={key}>{label}</option>)}</select></label>
             </div>
-            {title && <button type="submit" className="btn btn--go">{t("Hinzufügen")}</button>}
+            <button type="submit" className="btn btn--go">{t("Aufgabe erstellen")}</button>
           </form>
         )}
         {board ? <Board tasks={[...shown, ...finished]} d={d} list={list} selectedId={selectedId} /> : <ul className="tm-rows">

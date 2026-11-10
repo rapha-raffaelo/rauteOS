@@ -24,7 +24,7 @@ it('counts each list and opens the details with tags for every team member',()=>
   window.history.replaceState(null,'','/aufgaben?aufgabe=2');
   render(<TasksPage data={base}/>);
   const lists=screen.getByRole('navigation',{name:'Listen'});
-  expect(within(lists).getByRole('link',{name:/Mir zugewiesen/}).textContent).toContain('1');
+  expect(within(lists).queryByRole('link',{name:/Mir zugewiesen/})).toBeNull();
   expect(within(lists).getByRole('link',{name:/Intern/}).textContent).toContain('1');
   const details=screen.getByRole('complementary',{name:'Aufgabe bearbeiten'});
   expect(within(details).getByLabelText('@Raphael').checked).toBe(true);
@@ -52,4 +52,22 @@ it('assigns new tasks to me by default and supports both team members',()=>{
   expect(new FormData(form).getAll('assignees')).toEqual(['lucas']);
   fireEvent.click(within(form).getByLabelText('@Raphael'));
   expect(new FormData(form).getAll('assignees')).toEqual(['raphael','lucas']);
+});
+
+it('combines client and internal tasks and offers client assignment at creation',()=>{
+  render(<TasksPage data={base}/>);
+  expect(screen.getByText('Pitch Qonto')).toBeTruthy();
+  expect(screen.getByText('Medienliste')).toBeTruthy();
+  const form=screen.getByLabelText('Aufgabe hinzufügen').closest('form');
+  fireEvent.change(within(form).getByLabelText('Bereich'),{target:{value:'kunde'}});
+  fireEvent.change(within(form).getByLabelText('Kunde auswählen'),{target:{value:'1'}});
+  expect(new FormData(form).get('client_id')).toBe('1');
+  expect(within(form).getByRole('button',{name:'Aufgabe erstellen'})).toBeTruthy();
+  fireEvent.change(within(form).getByLabelText('Bereich'),{target:{value:'intern'}});
+  expect(new FormData(form).get('client_id')).toBe('');
+  expect(within(form).queryByLabelText('Kunde auswählen')).toBeNull();
+  const lists=screen.getByRole('navigation',{name:'Listen'});
+  expect(within(lists).queryByText('Mir zugewiesen')).toBeNull();
+  expect(within(lists).getByText('Raphael')).toBeTruthy();
+  expect(within(lists).getByText('Lucas')).toBeTruthy();
 });
