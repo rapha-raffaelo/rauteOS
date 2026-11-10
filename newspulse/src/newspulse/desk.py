@@ -164,6 +164,7 @@ class Decision:
     detail: str
     since: dt.datetime | None
     href: str
+    source_key: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -415,6 +416,7 @@ def _decisions(session: Session, clients: dict[int, Client]) -> list[Decision]:
                 ),
                 since=letter.generated_at,
                 href=workspaces.text_href(session, letter, "outreach"),
+                source_key=f"outreach:{letter.id}",
             )
         )
 
@@ -433,6 +435,7 @@ def _decisions(session: Session, clients: dict[int, Client]) -> list[Decision]:
                 detail="Die Recherche widerspricht dem, was im Profil steht.",
                 since=row.proposed_at,
                 href=f"/client/{row.client_id}/profil",
+                source_key=f"profile-proposal:{row.id}",
             )
         )
 
@@ -574,7 +577,7 @@ def _open_tasks(session: Session) -> list[TaskItem]:
     return [TaskItem(id=t.id, client=t.client, title=t.title, priority=t.priority, due_on=t.due_on,
                      href=t.context_href or f"/aufgaben?aufgabe={t.id}",
                      assignees=tuple(names.get(a, a) for a in (t.assignees or [])))
-            for t in worklists.open_tasks(session)]
+            for t in worklists.open_tasks(session) if not t.source_key]
 
 
 #: How many open opportunities the Desk lists. The count beside it is the

@@ -11,18 +11,20 @@ import datetime as dt
 import threading
 from collections.abc import Mapping
 
-from sqlalchemy import select
+from sqlalchemy import select, update
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from . import config, linkedin_link
 from .models import (
     DEAL_STAGES, POST_STATES, TASK_PRIORITIES, TASK_STATES,
-    Asset, Client, Deal, LinkedInPost, Task,
+    Asset, Client, Deal, LinkedInPost, Task, TaskBoard,
 )
 
 #: How the pages name each value. One place, so the Desk says the same words.
 TASK_PRIORITY_LABELS = {"hoch": "Hoch", "mittel": "Mittel", "niedrig": "Niedrig"}
-TASK_STATE_LABELS = {"offen": "Offen", "in_arbeit": "In Bearbeitung", "review": "Review", "erledigt": "Erledigt"}
+TASK_STATE_LABELS = {"offen": "Offen", "in_arbeit": "In Arbeit", "review": "Review", "erledigt": "Done"}
 POST_STATE_LABELS = {"idee": "Idee", "entwurf": "Entwurf", "freigabe": "Freigabe",
                      "geplant": "Geplant", "veroeffentlicht": "Veröffentlicht"}
 DEAL_STAGE_LABELS = {"lead": "Lead", "gespraech": "Gespräch", "angebot": "Angebot",
@@ -110,6 +112,83 @@ def member_for(email: str | None) -> str | None:
     return next((key for key, _, emails in TEAM if address in emails), None)
 
 
+DEFAULT_BOARDS = (("general", "Allgemein"), ("decisions", "Offene Entscheidungen"), ("rauteos", "rauteOS"))
+
+
+def task_boards(session: Session) -> list[TaskBoard]:
+    existing = set(session.scalars(select(TaskBoard.system_key)))
+    for key, name in DEFAULT_BOARDS:
+        if key not in existing:
+            session.execute(sqlite_insert(TaskBoard).values(
+                name=name, name_key=name.casefold(), system_key=key,
+                created_at=_now()).on_conflict_do_nothing())
+    rows = list(session.scalars(select(TaskBoard).order_by(TaskBoard.id)))
+    general = next(board for board in rows if board.system_key == "general")
+    session.execute(update(Task).where(Task.board_id.is_(None)).values(board_id=general.id))
+    return rows
+
+
+def create_task_board(session: Session, form: Mapping) -> TaskBoard:
+    task_boards(session)
+    name = _text(form, "workspace_name", 80, required="Bitte einen Namen für den Workspace eingeben")
+    board = TaskBoard(name=name, name_key=name.casefold())
+    session.add(board)
+    try:
+        session.commit()
+    except IntegrityError:
+        session.rollback()
+        raise Invalid("Ein Workspace mit diesem Namen existiert bereits") from None
+    return board
+
+
+def _task_board(session: Session, form: Mapping, task: Task) -> int:
+    boards = task_boards(session)
+    raw = form.get("board_id")
+    if raw is None or raw == "":
+        return task.board_id or next(b.id for b in boards if b.system_key == "general")
+    try:
+        board_id = int(raw)
+    except (ValueError, TypeError, OverflowError):
+        raise Invalid("Unbekannter Workspace") from None
+    if board_id not in {b.id for b in boards}:
+        raise Invalid("Unbekannter Workspace")
+    if task.source_key and board_id != task.board_id:
+        raise Invalid("Diese Entscheidung gehört zum Workspace Offene Entscheidungen")
+    return board_id
+
+
+def sync_decision_tasks(session: Session, decisions, boards: list[TaskBoard]) -> None:
+    """Mirror decision sources without treating a task move as an approval."""
+    board_id = next(b.id for b in boards if b.system_key == "decisions")
+    by_key = {task.source_key: task for task in session.scalars(
+        select(Task).where(Task.source_key.is_not(None)))}
+    active = set()
+    for decision in decisions:
+        key = decision.source_key
+        if not key:
+            continue
+        active.add(key)
+        task = by_key.get(key)
+        if task is None:
+            session.execute(sqlite_insert(Task).values(
+                board_id=board_id, source_key=key, source_kind=decision.kind, source_open=True,
+                client_id=decision.client.id, title=decision.title[:200], note=decision.detail,
+                priority="mittel", status="offen", owner="", assignees=[],
+                context_href=decision.href, created_at=_now(),
+            ).on_conflict_do_nothing(index_elements=["source_key"]))
+        else:
+            if task.source_open is False:
+                set_task_status(task, "offen")
+            task.source_open = True
+            task.source_kind = decision.kind
+            task.context_href = decision.href
+    for key, task in by_key.items():
+        if key not in active and task.source_open:
+            task.source_open = False
+            set_task_status(task, "erledigt")
+    session.commit()
+
+
 def _assignees(form: Mapping) -> list[str]:
     raw = form.get("assignees", [])
     values = raw if isinstance(raw, (list, tuple)) else [raw]
@@ -136,6 +215,7 @@ def quick_update(session: Session, task: Task, form: Mapping) -> Task:
 
 def save_task(session: Session, form: Mapping, task: Task | None = None) -> Task:
     task = task or Task()
+    task.board_id = _task_board(session, form, task)
     task.assignees = _assignees(form)
     task.title = _text(form, "title", 200, required="Was ist zu tun?")
     task.note = _text(form, "note", 5000)
@@ -143,8 +223,9 @@ def save_task(session: Session, form: Mapping, task: Task | None = None) -> Task
     status = _choice(form, "status", TASK_STATES, task.status or "offen")
     task.due_on = _date(form, "due_on")
     task.owner = _text(form, "owner", 120)
-    task.context_href = _href(form, "context_href")
-    task.client_id = _mandate(session, form)
+    if not task.source_key:
+        task.context_href = _href(form, "context_href")
+        task.client_id = _mandate(session, form)
     set_task_status(task, status)
     session.add(task)
     session.commit()

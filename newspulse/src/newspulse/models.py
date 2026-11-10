@@ -4643,6 +4643,16 @@ POST_STATES = ("idee", "entwurf", "freigabe", "geplant", "veroeffentlicht")
 DEAL_STAGES = ("lead", "gespraech", "angebot", "verhandlung", "gewonnen", "verloren")
 
 
+class TaskBoard(Base):
+    """A shared workspace for the agency's tasks."""
+    __tablename__ = "task_boards"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(80), nullable=False)
+    name_key: Mapped[str] = mapped_column(String(80), nullable=False, unique=True)
+    system_key: Mapped[str | None] = mapped_column(String(30), nullable=True, unique=True)
+    created_at: Mapped[dt.datetime] = mapped_column(UTCDateTime(), nullable=False, default=_utcnow)
+
+
 class Task(Base):
     """One thing somebody at the agency has to do, kept by hand (spec 10).
 
@@ -4660,6 +4670,10 @@ class Task(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     client_id: Mapped[int | None] = mapped_column(
         ForeignKey("clients.id", ondelete="CASCADE"), nullable=True, index=True)
+    board_id: Mapped[int | None] = mapped_column(ForeignKey("task_boards.id", ondelete="RESTRICT"), nullable=True, index=True)
+    source_key: Mapped[str | None] = mapped_column(String(100), nullable=True, unique=True)
+    source_kind: Mapped[str] = mapped_column(String(40), nullable=False, default="", server_default="")
+    source_open: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     note: Mapped[str] = mapped_column(Text, nullable=False, default="")
     priority: Mapped[str] = mapped_column(String(10), nullable=False, default="mittel")

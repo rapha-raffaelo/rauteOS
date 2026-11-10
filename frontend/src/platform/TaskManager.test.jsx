@@ -13,7 +13,7 @@ const base={team:[{key:'raphael',name:'Raphael'},{key:'lucas',name:'Lucas'}],me:
 
 it('defaults to four columns and creates a task in the selected status',()=>{
   render(<TasksPage data={base}/>);
-  for(const name of ['Offen','In Bearbeitung','Review','Erledigt']) expect(screen.getByRole('region',{name})).toBeTruthy();
+  for(const name of ['Offen','In Arbeit','Review','Done']) expect(screen.getByRole('region',{name})).toBeTruthy();
   fireEvent.click(within(screen.getByRole('region',{name:'Review'})).getByRole('button',{name:/Aufgabe hinzufügen/}));
   const form=screen.getByLabelText('Aufgabe hinzufügen').closest('form');
   expect(new FormData(form).get('status')).toBe('review');
@@ -127,4 +127,19 @@ it('renders task information in a table in list view',()=>{
   }
   expect(within(table).getByRole('link',{name:'Pitch Qonto'})).toBeTruthy();
   expect(within(table).getByText('@Lucas')).toBeTruthy();
+});
+
+it('separates workspaces and creates tasks in the active workspace',()=>{
+  const data={...base,active_board_id:3,boards:[
+    {id:1,name:'Allgemein',open_count:1},{id:2,name:'Offene Entscheidungen',open_count:0},{id:3,name:'rauteOS',open_count:1}
+  ],tasks:base.tasks.map(task=>({...task,board_id:task.id===1?3:1}))};
+  render(<TasksPage data={data}/>);
+  expect(screen.getByRole('heading',{name:'rauteOS'})).toBeTruthy();
+  expect(screen.getByText('Pitch Qonto')).toBeTruthy();
+  expect(screen.queryByText('Medienliste')).toBeNull();
+  fireEvent.click(screen.getByRole('button',{name:'+ Neue Aufgabe'}));
+  expect(new FormData(screen.getByLabelText('Aufgabe hinzufügen').closest('form')).get('board_id')).toBe('3');
+  fireEvent.click(screen.getByRole('button',{name:'Workspace hinzufügen'}));
+  expect(screen.getByLabelText('Workspace-Name')).toBeTruthy();
+  expect(screen.getByRole('button',{name:'Workspace anlegen'}).closest('form').getAttribute('action')).toBe('/aufgaben/boards');
 });

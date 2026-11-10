@@ -796,3 +796,32 @@ def test_review_status_migration_preserves_tasks_on_upgrade_and_downgrade(tmp_pa
             assert tuple(row) == ('Keep me','Note','in_arbeit','["lucas"]')
     finally:
         engine.dispose()
+
+
+def test_task_workspaces_preserve_legacy_tasks_and_enforce_unique_sources(tmp_path, monkeypatch):
+    db_path = tmp_path / "task-boards.db"
+    monkeypatch.setattr(config, "DATABASE_PATH", db_path)
+    cfg = _alembic_config()
+    command.upgrade(cfg, "0078_task_review")
+    engine = create_engine(f"sqlite:///{db_path}")
+    try:
+        with engine.begin() as conn:
+            conn.execute(text("""INSERT INTO tasks
+                (title,note,priority,status,owner,context_href,assignees,created_at)
+                VALUES ('Existing task','Keep note','hoch','review','','','["lucas"]',CURRENT_TIMESTAMP)"""))
+        command.upgrade(cfg, "head")
+        with engine.begin() as conn:
+            assert conn.scalar(text("SELECT name FROM task_boards WHERE id=1")) == "Allgemein"
+            row = conn.execute(text("SELECT title,note,status,assignees,board_id FROM tasks")).one()
+            assert tuple(row) == ('Existing task','Keep note','review','["lucas"]',1)
+            assert set(conn.scalars(text("SELECT system_key FROM task_boards"))) == {'general','decisions','rauteos'}
+            conn.execute(text("UPDATE tasks SET source_key='outreach:123'"))
+        with engine.begin() as conn, pytest.raises(IntegrityError):
+            conn.execute(text("""INSERT INTO tasks
+                (title,note,priority,status,owner,context_href,assignees,created_at,source_key)
+                VALUES ('Duplicate','','mittel','offen','','','[]',CURRENT_TIMESTAMP,'outreach:123')"""))
+        command.downgrade(cfg, "0078_task_review")
+        with engine.connect() as conn:
+            assert conn.scalar(text("SELECT title FROM tasks")) == "Existing task"
+    finally:
+        engine.dispose()

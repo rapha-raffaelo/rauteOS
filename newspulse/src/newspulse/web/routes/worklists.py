@@ -9,13 +9,14 @@ from __future__ import annotations
 
 import logging
 import secrets
+from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse, RedirectResponse, Response
 from sqlalchemy.orm import Session
 
 from ... import config, desk, linkedin_link, worklists, workspaces
-from ...models import DEAL_STAGES, POST_STATES, TASK_PRIORITIES, TASK_STATES, Asset, Deal, LinkedInPost, Task
+from ...models import DEAL_STAGES, POST_STATES, TASK_PRIORITIES, TASK_STATES, Asset, Deal, LinkedInPost, Task, TaskBoard
 from .. import redirects
 from ..app import get_db
 from ..react_pages import render as render_react
@@ -32,6 +33,7 @@ def _clients(session: Session) -> list[dict]:
 
 def _task(t: Task) -> dict:
     return dict(id=t.id, title=t.title, note=t.note, priority=t.priority, status=t.status,
+                board_id=t.board_id, source_key=t.source_key, source_kind=t.source_kind, source_open=t.source_open,
                 due_on=t.due_on, owner=t.owner, context_href=t.context_href, assignees=list(t.assignees or []),
                 client=dict(id=t.client.id, name=t.client.name) if t.client else None,
                 created_at=t.created_at, done_at=t.done_at)
@@ -87,18 +89,25 @@ def _tasks_page(request: Request, session: Session, *, error: str = "", draft: d
     status = status if status in TASK_STATES else ""
     raw = request.query_params.get("client", "")
     client_id = int(raw) if raw.isdigit() else None
+    boards = worklists.task_boards(session)
+    worklists.sync_decision_tasks(session, desk.open_decisions(session), boards)
     rows = worklists.tasks(session, status=status, client_id=client_id)
-    # Over every open task, whatever the filter: the same number as the sidebar.
     everything = worklists.open_tasks(session)
     me = worklists.member_for(request.scope.get("user_email"))
-    # What the Desk counts as "Entscheidungen offen": letters, impulses and
-    # profile conflicts that wait on a person. Listed here so the Desk's figure
-    # has a page to click through to.
-    decisions = [dict(kind=d.kind, title=d.title, detail=d.detail, since=d.since, href=d.href,
-                      client=dict(id=d.client.id, name=d.client.name))
-                 for d in desk.open_decisions(session, client_id)]
+    raw_board = request.query_params.get("board", "")
+    selected_board = next((b for b in boards if str(b.id) == raw_board), None)
+    if not raw_board:
+        raw_task = request.query_params.get("aufgabe", "")
+        task = next((row for row in rows if str(row.id) == raw_task), None)
+        if task:
+            selected_board = next((b for b in boards if b.id == task.board_id), None)
+    selected_board = selected_board or next(b for b in boards if b.system_key == "general")
     return render_react(request, "tasks", dict(
-        tasks=[_task(t) for t in rows], clients=_clients(session), decisions=decisions,
+        tasks=[_task(t) for t in rows], clients=_clients(session), decisions=[],
+        boards=[dict(id=b.id, name=b.name, system_key=b.system_key,
+                     open_count=sum(t.board_id == b.id for t in everything)) for b in boards],
+        active_board_id=None if raw_board == "all" else selected_board.id,
+        default_board_id=next(b.id for b in boards if b.system_key == "general"),
         team=[dict(key=key, name=name) for key, name, _ in worklists.TEAM], me=me,
         open_total=len(everything), due_on=[t.due_on for t in everything if t.due_on],
         priorities=[[p, worklists.TASK_PRIORITY_LABELS[p]] for p in TASK_PRIORITIES],
@@ -108,6 +117,21 @@ def _tasks_page(request: Request, session: Session, *, error: str = "", draft: d
 
 @router.get("/aufgaben")
 def tasks_view(request: Request, session: Session = Depends(get_db)) -> Response:
+    if not request.query_params.get("board"):
+        boards = worklists.task_boards(session)
+        workspace = request.query_params.get("workspace")
+        board = next((b for b in boards if workspace and b.system_key == workspace), None)
+        raw_task = request.query_params.get("aufgabe", "")
+        if board is None and raw_task.isdigit() and len(raw_task) < 19:
+            task = session.get(Task, int(raw_task))
+            if task:
+                board = next((b for b in boards if b.id == task.board_id), None)
+        board = board or next(b for b in boards if b.system_key == "general")
+        session.commit()
+        query = dict(request.query_params)
+        query.pop("workspace", None)
+        query["board"] = str(board.id)
+        return RedirectResponse("/aufgaben?" + urlencode(query), status_code=_SEE_OTHER)
     return _tasks_page(request, session)
 
 
@@ -121,6 +145,17 @@ async def create_task(request: Request, session: Session = Depends(get_db)) -> R
         session.rollback()
         return _tasks_page(request, session, error=str(exc), draft=form)
     return RedirectResponse(back, status_code=_SEE_OTHER)
+
+
+@router.post("/aufgaben/boards")
+async def create_task_board(request: Request, session: Session = Depends(get_db)) -> Response:
+    form = await _form(request)
+    try:
+        board = worklists.create_task_board(session, form)
+    except worklists.Invalid as exc:
+        session.rollback()
+        return _tasks_page(request, session, error=str(exc), draft=form)
+    return RedirectResponse(f"/aufgaben?board={board.id}", status_code=_SEE_OTHER)
 
 
 @router.post("/aufgaben/{task_id}")
@@ -146,7 +181,10 @@ async def update_task(task_id: int, request: Request, session: Session = Depends
 @router.post("/aufgaben/{task_id}/delete")
 async def delete_task(task_id: int, request: Request, session: Session = Depends(get_db)) -> Response:
     back = _task_back(await _form(request))
-    session.delete(_row_or_404(session, Task, task_id))
+    task = _row_or_404(session, Task, task_id)
+    if task.source_key:
+        raise HTTPException(status_code=400, detail="Automatische Entscheidungen bitte über den Status abschließen")
+    session.delete(task)
     session.commit()
     return RedirectResponse(back, status_code=_SEE_OTHER)
 

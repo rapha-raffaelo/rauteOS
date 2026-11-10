@@ -84,7 +84,7 @@ describe('Desk', () => {
     const {container} = render(<DeskPage />);
     await screen.findByText('Pitch');
     const hrefs = [...container.querySelectorAll('.stat-row a.stat')].map((a) => a.getAttribute('href'));
-    expect(hrefs).toEqual(['/aufgaben', '/aufgaben#entscheidungen', '/today', '#mandanten']);
+    expect(hrefs).toEqual(['/aufgaben?board=all', '/aufgaben?workspace=decisions', '/today', '#mandanten']);
     const tick = screen.getByRole('button', {name: 'Erledigt: Pitch'}).closest('form');
     expect(tick.getAttribute('action')).toBe('/aufgaben/4');
     expect(new FormData(tick).get('status')).toBe('erledigt');
@@ -92,7 +92,7 @@ describe('Desk', () => {
     expect(decision.getAttribute('href')).toBe('/client/7/x');
     expect(decision.querySelector('.task__box')).toBeNull();
     expect(new FormData(tick).get('redirect_to')).toBe('/desk');
-    expect(screen.getByRole('link', {name: /Kundenfreigaben/}).getAttribute('href')).toBe('/aufgaben#entscheidungen');
+    expect(screen.getByRole('link', {name: /Kundenfreigaben/}).getAttribute('href')).toBe('/aufgaben?workspace=decisions');
   });
 
   it('lists open chances across mandates and links each to its workspace', async () => {

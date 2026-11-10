@@ -12,7 +12,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from newspulse import desk, worklists
-from newspulse.models import Angle, Base, Client, Deal, LinkedInPost, Outreach, OutreachState, Task
+from newspulse.models import Angle, Base, Client, Deal, LinkedInPost, Outreach, OutreachState, Task, TaskBoard
 from newspulse.web.app import create_app, get_db
 
 
@@ -128,8 +128,8 @@ def test_the_desks_open_decisions_are_listed_on_the_tasks_page(web, session):
     _client_letter(session)
     board = desk.build(session)
     assert board.decisions_open == len(desk.open_decisions(session))
-    body = rendered(web.get("/aufgaben"))
-    assert 'id="entscheidungen"' in body
+    body = rendered(web.get("/aufgaben?workspace=decisions"))
+    assert "Offene Entscheidungen" in body
     assert "Was beim Wechsel zum Depot nicht mitwandert" in body
     assert "Kundenfreigabe" in body
     for decision in board.decisions:
@@ -370,3 +370,62 @@ def test_dragging_a_task_to_review_keeps_its_details(web, session):
     assert response.status_code == 422
     session.refresh(task)
     assert task.status == "review"
+
+
+def test_workspaces_keep_tasks_separate_and_can_be_created_and_changed(web, session):
+    response = web.post("/aufgaben/boards", data={"workspace_name": "Operations"}, follow_redirects=False)
+    assert response.status_code == 303
+    board = session.scalar(select(TaskBoard).where(TaskBoard.name == "Operations"))
+    assert response.headers["location"] == f"/aufgaben?board={board.id}"
+    response = web.post("/aufgaben/boards", data={"workspace_name": " operations "})
+    assert "existiert bereits" in response.text
+    web.post("/aufgaben", data={"title": "Only Operations", "board_id": str(board.id), "status": "review"})
+    task = session.scalar(select(Task).where(Task.title == "Only Operations"))
+    assert task.board_id == board.id
+    assert "Only Operations" in rendered(web.get(f"/aufgaben?board={board.id}"))
+    assert "Only Operations" not in rendered(web.get("/aufgaben"))
+    assert "Only Operations" in rendered(web.get("/aufgaben?board=all"))
+    other = session.scalar(select(TaskBoard).where(TaskBoard.system_key == "rauteos"))
+    web.post(f"/aufgaben/{task.id}", data={"title": task.title, "board_id": str(other.id), "status": "review"})
+    session.refresh(task)
+    assert task.board_id == other.id
+    assert "Only Operations" in rendered(web.get(f"/aufgaben?board={other.id}"))
+    assert "Only Operations" not in rendered(web.get(f"/aufgaben?board={board.id}"))
+    response = web.post("/aufgaben", data={"title": "Invalid", "board_id": "999999"})
+    assert "Unbekannter Workspace" in response.text
+
+
+def test_decision_board_is_idempotent_and_status_does_not_approve_source(web, session):
+    _client_letter(session)
+    web.get("/aufgaben?workspace=decisions")
+    task = session.scalar(select(Task).where(Task.source_key.is_not(None)))
+    letter = session.scalar(select(Outreach))
+    board = session.scalar(select(TaskBoard).where(TaskBoard.system_key == "decisions"))
+    assert task.board_id == board.id and task.status == "offen"
+    assert task.source_key == f"outreach:{letter.id}"
+    web.post(f"/aufgaben/{task.id}", data={"status": "review"})
+    web.get("/aufgaben?workspace=decisions")
+    session.refresh(task)
+    assert task.status == "review"
+    web.post(f"/aufgaben/{task.id}", data={"status": "erledigt"})
+    web.get("/aufgaben?workspace=decisions")
+    session.refresh(letter)
+    assert letter.state == OutreachState.ENTWURF and letter.client_ok_at is None
+    assert len(list(session.scalars(select(Task).where(Task.source_key.is_not(None))))) == 1
+    assert web.post(f"/aufgaben/{task.id}/delete").status_code == 400
+    # Advancing the source gate must reuse the same card, not create another.
+    letter.client_ok_at = dt.datetime.now(dt.UTC)
+    session.commit()
+    web.get("/aufgaben?workspace=decisions")
+    session.refresh(task)
+    assert task.source_kind == "freigabe" and task.status == "erledigt"
+    letter.state = OutreachState.RAUS
+    session.commit()
+    web.get("/aufgaben?workspace=decisions")
+    session.refresh(task)
+    assert task.source_open is False and task.status == "erledigt"
+    letter.state = OutreachState.ENTWURF
+    session.commit()
+    web.get("/aufgaben?workspace=decisions")
+    session.refresh(task)
+    assert task.source_open is True and task.status == "offen"

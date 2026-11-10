@@ -747,3 +747,18 @@
 .tm-table-status--in_arbeit { background: var(--tint-wash); color: var(--tint); }
 .tm-table-status--review { background: color-mix(in srgb,#a54cb4 10%,var(--card)); color: #a54cb4; }
 .tm-table-status--erledigt { background: color-mix(in srgb,#238566 10%,var(--card)); color: #238566; }
+
+.tm-workspaces { display: flex; gap: 8px; align-items: center; margin: 24px 0 4px; border-bottom: 1px solid var(--line); padding-bottom: 10px; }
+.tm-workspaces nav { display: flex; gap: 6px; overflow-x: auto; min-width: 0; }
+.tm-workspaces nav a { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; padding: 9px 12px; border-radius: 8px; font-size: 13px; color: var(--muted); }
+.tm-workspaces nav a[aria-current="page"] { color: var(--tint); background: var(--tint-wash); font-weight: 650; }
+.tm-workspaces nav a:hover { text-decoration: none; background: var(--fill-2); }
+.tm-workspace-count { font-size: 11px; padding: 1px 6px; border-radius: 5px; background: var(--card); }
+.tm-workspace-plus { flex: none; border: 1px dashed var(--line-strong); border-radius: 8px; background: var(--card); color: var(--tint); width: 36px; height: 36px; font-size: 22px; cursor: pointer; }
+.tm-workspace-form { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; padding: 16px; margin-top: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
+.tm-workspace-form label { display: flex; flex: 1; flex-direction: column; gap: 6px; min-width: 180px; font-size: 12px; }
+.tm-workspace-form input { width: 100%; box-sizing: border-box; }
+.tm-source-link { color: var(--tint); font-size: 11px; }
+.tm-task-source { display: flex; flex-direction: column; align-items: start; gap: 8px; padding: 12px; border-radius: 8px; background: var(--tint-wash); }
+.tm-task-source small { color: var(--muted); }
+.tm-decision-kind { display: inline-block; margin-top: 10px; }

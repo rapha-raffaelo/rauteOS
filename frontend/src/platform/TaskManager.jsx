@@ -105,7 +105,7 @@ function TaskList({ tasks, d, list, selectedId }) {
   return <div className="tm-table-wrap"><table className="tm-table">
     <thead><tr><th>Aufgabe</th><th>Status</th><th>Zuständig</th><th>Fälligkeit</th><th>Bereich</th><th>Priorität</th></tr></thead>
     <tbody>{tasks.map(task => <tr key={task.id} id={`task-${task.id}`} className={task.id === selectedId ? "tm-table-selected" : undefined}>
-      <td><div className="tm-table-title"><Check task={task} back={href(list)} /><a href={href(list,task.id)} className={task.status === "erledigt" ? "tm-table-done" : undefined}>{task.title}</a></div></td>
+      <td><div className="tm-table-title"><Check task={task} back={href(list)} /><a href={href(list,task.id)} className={task.status === "erledigt" ? "tm-table-done" : undefined}>{task.title}</a></div>{task.source_key && <a className="tm-source-link" href={task.context_href}>Zum Ursprung →</a>}</td>
       <td><span className={`tm-table-status tm-table-status--${task.status}`}>{STATES.find(([key]) => key === task.status)?.[1]}</span></td>
       <td>{task.assignees.length ? task.assignees.map(key => <span className="tm-chip tm-chip--person" key={key}>@{names[key] || key}</span>) : "—"}</td>
       <td className={task.status !== "erledigt" && task.due_on && task.due_on < isoToday() ? "tm-overdue" : undefined}>{task.due_on ? shortDay(task.due_on) : "—"}</td>
@@ -144,6 +144,10 @@ function Details({ task, d, list }) {
         <input type="hidden" name="redirect_to" value={back} />
         <label className="tm-field"><span>{t("Status")}</span><select aria-label="Status" name="status" defaultValue={task.status}>{STATES.map(([key, label]) => <option key={key} value={key}>{t(label)}</option>)}</select></label>
         <input type="hidden" name="owner" value={task.owner || ""} />
+        {d.boards?.length > 0 && (task.source_key ? <input type="hidden" name="board_id" value={task.board_id} /> :
+          <label className="tm-field"><span>Workspace</span><select name="board_id" aria-label="Workspace" defaultValue={task.board_id || d.active_board_id}>
+            {d.boards.map(board => <option key={board.id} value={board.id}>{board.name}</option>)}
+          </select></label>)}
         <label className="tm-field"><span>{t("Aufgabe")}</span>
           <input type="text" name="title" defaultValue={task.title} required maxLength={200} /></label>
         <fieldset className="tm-field tm-people">
@@ -155,7 +159,7 @@ function Details({ task, d, list }) {
             </label>
           ))}
         </fieldset>
-        <AreaFields clients={d.clients} clientId={task.client?.id} />
+        {task.source_key ? <p className="tm-source-client">{task.client?.name}</p> : <AreaFields clients={d.clients} clientId={task.client?.id} />}
         <small>{t("Einem Kunden zugeordnet, erscheint die Aufgabe auch auf seinem Dashboard.")}</small>
         <label className="tm-field"><span>{t("Fällig am")}</span>
           <input type="date" name="due_on" defaultValue={task.due_on || ""} /></label>
@@ -166,14 +170,18 @@ function Details({ task, d, list }) {
         <label className="tm-field"><span>{t("Notiz")}</span>
           <textarea aria-label={t("Notiz")} name="note" defaultValue={task.note} rows={5} /></label>
         <input type="hidden" name="context_href" value={task.context_href || ""} />
-        {task.context_href && <a className="tm-link" href={task.context_href}>{t("Zum Vorgang")} →</a>}
+        {task.context_href && <div className="tm-task-source">
+          {task.source_kind && <span className="tm-chip">{DECISION[task.source_kind] || task.source_kind}</span>}
+          <a className="tm-link" href={task.context_href}>Zum Ursprung →</a>
+          {task.source_key && <small>{task.source_open === false ? "Im Ursprung abgeschlossen" : "Freigaben werden im verknüpften Vorgang erteilt"}</small>}
+        </div>}
         <button type="submit" className="btn btn--go">{t("Speichern")}</button>
       </form>
-      <form method="post" action={`/aufgaben/${task.id}/delete`} className="tm-detail__delete"
+      {!task.source_key && <form method="post" action={`/aufgaben/${task.id}/delete`} className="tm-detail__delete"
         onSubmit={(e) => { if (!window.confirm(t("Diese Aufgabe endgültig löschen?"))) e.preventDefault(); }}>
         <input type="hidden" name="redirect_to" value={href(list)} />
         <button type="submit" className="btn btn--quiet tm-danger">{t("Löschen")}</button>
-      </form>
+      </form>}
     </aside>
   );
 }
@@ -182,36 +190,7 @@ function Details({ task, d, list }) {
 // live (the letter, the impulse, the profile), so each row opens that place.
 const DECISION = { kundenfreigabe: "Kundenfreigabe", freigabe: "Freigabe", impuls: "Impuls", profil: "Profil" };
 
-function Decisions({ items }) {
-  if (!items?.length) return null;
-  return (
-    <section className="tm-decisions" id="entscheidungen" aria-label={t("Offene Entscheidungen")}>
-      <header className="tm-decisions__head">
-        <span className="tm-decisions__icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M9 4H6a2 2 0 0 0-2 2v14h16V6a2 2 0 0 0-2-2h-3" />
-            <rect x="9" y="2" width="6" height="4" rx="1" /><path d="m8 13 3 3 5-6" />
-          </svg>
-        </span>
-        <h2>{t("Offene Entscheidungen")} <span>{items.length}</span></h2>
-      </header>
-      <ul>
-        {items.map((x, i) => (
-          <li key={`${x.href}-${i}`}>
-            <a href={x.href}>
-              <span className="tm-row__title">{x.title}</span>
-              <span className="tm-row__meta"><span className="tm-chip tm-chip--client">{x.client.name}</span>
-                <span className="tm-chip">{t(DECISION[x.kind] || x.kind)}</span></span>
-              <span className="tm-decisions__arrow" aria-hidden="true">→</span>
-            </a>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
-
-const STATES = [["offen", "Offen"], ["in_arbeit", "In Bearbeitung"], ["review", "Review"], ["erledigt", "Erledigt"]];
+const STATES = [["offen", "Offen"], ["in_arbeit", "In Arbeit"], ["review", "Review"], ["erledigt", "Done"]];
 
 function CreateTask({ d, list, filters, status = "offen", onClose }) {
   const defaults = defaultsFor(list, d.me, filters);
@@ -219,6 +198,11 @@ function CreateTask({ d, list, filters, status = "offen", onClose }) {
     <div className="tm-add-title"><strong>Neue Aufgabe</strong><button type="button" className="tm-close" aria-label="Neue Aufgabe schließen" onClick={onClose}>×</button></div>
     <input type="text" name="title" required maxLength={200} autoFocus placeholder="Name der Aufgabe" aria-label="Aufgabe hinzufügen" />
     <Hidden values={{ redirect_to: href(list) }} />
+    {d.boards?.length > 0 && <label className="tm-field tm-create-status"><span>Workspace</span>
+      <select name="board_id" aria-label="Workspace der neuen Aufgabe" defaultValue={d.active_board_id || d.default_board_id}>
+        {d.boards.map(workspace => <option key={workspace.id} value={workspace.id}>{workspace.name}</option>)}
+      </select>
+    </label>}
     <label className="tm-field tm-create-status"><span>Status</span><select name="status" aria-label="Status der neuen Aufgabe" defaultValue={status}>{STATES.map(([key,label]) => <option key={key} value={key}>{label}</option>)}</select></label>
     <div className="tm-add-options">
       <AreaFields clients={d.clients} clientId={defaults.client_id} customer={filters?.area === "kunde"} />
@@ -272,7 +256,9 @@ function Board({ tasks, d, list, selectedId, createStatus, onCreate, filters }) 
               {task.due_on && <span className={task.status !== "erledigt" && task.due_on < isoToday() ? "tm-overdue" : ""}>▦ {shortDay(task.due_on)}</span>}
               <span className={`tm-priority tm-priority--${task.priority}`}>⚑ {d.priorities.find(([key]) => key === task.priority)?.[1]}</span>
             </div>
+            {task.source_kind && <span className="tm-chip tm-decision-kind">{DECISION[task.source_kind] || task.source_kind}</span>}
             <div className="tm-card-footer"><span>{task.client?.name || "Intern"}</span>
+              {task.source_key && <a className="tm-source-link" href={task.context_href}>Zum Ursprung →</a>}
               <details><summary aria-label={`Status ändern: ${task.title}`}>•••</summary>
                 <form method="post" action={`/aufgaben/${task.id}`} className="tm-move">
                   <Hidden values={{redirect_to: href(list)}} />
@@ -309,7 +295,13 @@ export function TasksPage({ data: d }) {
   const [sort, setSort] = useState("datum");
   const matches = x => matchesTaskFilters(x,filters) && [x.title, x.note, x.client?.name, ...x.assignees].join(" ").toLocaleLowerCase().includes(query.trim().toLocaleLowerCase());
   const viewLink = value => { const q = new URLSearchParams(params); q.set("ansicht", value); return "/aufgaben?" + q; };
-  const tasks = d.tasks;
+  const activeBoard = d.boards?.find(board => board.id === d.active_board_id);
+  const tasks = d.tasks.filter(task => !activeBoard || task.board_id === activeBoard.id);
+  const [showWorkspaceForm, setShowWorkspaceForm] = useState(!!d.draft?.workspace_name);
+  function workspaceHref(id) {
+    const q = new URLSearchParams({board:String(id),ansicht:board ? "board" : "liste"});
+    return "/aufgaben?" + q;
+  }
   const me = d.me;
   const shown = useMemo(() => {
     const rows = tasks.filter((x) => belongs(list, x, me) && matches(x));
@@ -329,8 +321,8 @@ export function TasksPage({ data: d }) {
       <div className="tm-main">
         <header className="tm-head">
           <div>
-            <p className="tm-eyebrow">Arbeitsplatz</p>
-            <h1>{list === "alle" ? "Aufgaben" : listTitle(list, d)}</h1>
+            <p className="tm-eyebrow">Aufgaben · Workspaces</p>
+            <h1>{activeBoard?.name || (list === "alle" ? "Aufgaben" : listTitle(list, d))}</h1>
             {list === "heute" && <p className="tm-sub">{new Date().toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "long" })}</p>}
           </div>
           <div className="tm-head-actions">
@@ -341,6 +333,19 @@ export function TasksPage({ data: d }) {
             <button className="btn btn--go" type="button" onClick={() => setCreateStatus("offen")}>+ Neue Aufgabe</button>
           </div>
         </header>
+        {d.boards?.length > 0 && <div className="tm-workspaces">
+          <nav aria-label="Workspaces">
+            <a href={workspaceHref("all")} aria-current={!activeBoard ? "page" : undefined}><span>Alle Aufgaben</span><span className="tm-workspace-count">{d.boards.reduce((total,workspace)=>total+workspace.open_count,0)}</span></a>
+            {d.boards.map(workspace => <a key={workspace.id} href={workspaceHref(workspace.id)} aria-current={workspace.id === d.active_board_id ? "page" : undefined}>
+            <span>{workspace.name}</span><span className="tm-workspace-count">{workspace.open_count}</span>
+          </a>)}</nav>
+          <button type="button" className="tm-workspace-plus" aria-label="Workspace hinzufügen" aria-expanded={showWorkspaceForm} onClick={()=>setShowWorkspaceForm(!showWorkspaceForm)}>+</button>
+        </div>}
+        {showWorkspaceForm && <form method="post" action="/aufgaben/boards" className="tm-workspace-form">
+          <label>Workspace-Name<input name="workspace_name" aria-label="Workspace-Name" placeholder="z. B. Kundenprojekte" required maxLength={80} defaultValue={d.draft?.workspace_name || ""} autoFocus /></label>
+          <button type="submit" className="btn btn--go">Workspace anlegen</button>
+          <button type="button" className="btn btn--quiet" onClick={()=>setShowWorkspaceForm(false)}>Abbrechen</button>
+        </form>}
         <div className="tm-toolbar">
           <input type="search" aria-label="Aufgaben suchen" placeholder="Aufgaben suchen" value={query} onChange={e => setQuery(e.target.value)} />
           <select aria-label="Sortieren" value={sort} onChange={e => setSort(e.target.value)}><option value="datum">Fälligkeit</option><option value="prioritaet">Priorität</option><option value="titel">Titel</option></select>
@@ -358,7 +363,7 @@ export function TasksPage({ data: d }) {
             {showDone && <TaskList tasks={finished} d={d} list={list} selectedId={selectedId} />}
           </>
         )}
-        {list === "alle" && !filters.person && !filters.area && !filters.client && !filters.from && !query && <Decisions items={d.decisions} />}
+
       </div>
 
       {selected && <Details key={selected.id} task={selected} d={d} list={list} />}

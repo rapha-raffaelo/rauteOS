@@ -93,10 +93,10 @@ export function DeskPage({ translations = {}, language = 'de' }) {
   const due = board.tasks_due ?? tasks.filter((x) => x.due_on && x.due_on <= isoToday).length;
   // Every figure opens the list it counts.
   const stats = [
-    ['Offene Aufgaben', board.tasks_open || 0, `${due} ${t('heute fällig')}`, due > 0, '/aufgaben'],
+    ['Offene Aufgaben', board.tasks_open || 0, `${due} ${t('heute fällig')}`, due > 0, '/aufgaben?board=all'],
     ['Entscheidungen offen', board.decisions_open,
       customer.length ? `${customer.length} ${t('davon beim Kunden')}` : t('Nichts blockiert'), customer.length > 0,
-      '/aufgaben#entscheidungen'],
+      '/aufgaben?workspace=decisions'],
     ['Offene Chancen', board.opportunities, t('Fenster noch offen'), false, '/today'],
     ['Actions diesen Monat', board.actions_month, t('abgeliefert und nachgetragen'), false, '#mandanten'],
   ];
@@ -109,7 +109,7 @@ export function DeskPage({ translations = {}, language = 'de' }) {
         <p className="desk__sub">{today} · {t('Alle Kunden und Aufgaben im Blick.')}</p>
       </div>
       <div className="desk__acts">
-        <a className="btn btn--ghost" href="/aufgaben">{t('Alle Aufgaben')}</a>
+        <a className="btn btn--ghost" href="/aufgaben?board=all">{t('Alle Aufgaben')}</a>
         <a className="btn btn--go" href="/mandant/neu">+ {t('Neuer Mandant')}</a>
       </div>
     </header>
@@ -136,7 +136,7 @@ export function DeskPage({ translations = {}, language = 'de' }) {
 
     <div className="desk-grid">
       <div className="desk-col">
-        <Card title={t('Heute priorisiert')} link={['/aufgaben', t('Alle Aufgaben')]}>
+        <Card title={t('Heute priorisiert')} link={['/aufgaben?board=all', t('Alle Aufgaben')]}>
           {tasks.map((x) => <div className="task" key={`task-${x.id}`}>
             <form method="post" action={`/aufgaben/${x.id}`} className="task__done">
               <input type="hidden" name="status" value="erledigt" />
@@ -176,7 +176,7 @@ export function DeskPage({ translations = {}, language = 'de' }) {
           {!board.in_flight.length && <p className="pane__empty">{t('Nichts unterwegs.')}</p>}
         </Card>
         <Tile icon="profil" title={t('Kundenfreigaben')} note={t('Warten auf Abstimmungen')}
-          count={customer.length} unit={t('offen')} href="/aufgaben#entscheidungen" />
+          count={customer.length} unit={t('offen')} href="/aufgaben?workspace=decisions" />
         <Tile icon="clients" title={t('Profile mit Wissenslücken')} note={`${t('Schnitt')} ${board.twin_average} %`}
           count={board.twins_with_gaps} unit={t('Profile')} href="/clients" />
         <Tile icon="media" title={t('Warten auf Antwort')} note={t('Offene Rückmeldungen')}
