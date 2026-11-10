@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Notice, t } from "./shared.jsx";
+import { TaskFilters, readTaskFilters, setFilterParams, matchesTaskFilters } from "./TaskFilters.jsx";
 
 // Shared tasks in a status board or list, with inline creation and a detail drawer.
 //
@@ -18,13 +19,7 @@ const shortDay = (iso) => {
   return d.toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit" });
 };
 
-const SMART = [
-  ["heute", "Heute", "☀"],
-  ["geplant", "Geplant", "▦"],
-  ["wichtig", "Wichtig", "★"],
-  ["alle", "Alle", "≡"],
-  ["erledigt", "Erledigt", "✓"],
-];
+const SMART = [["heute","Heute"],["geplant","Geplant"],["wichtig","Wichtig"],["alle","Alle"],["erledigt","Erledigt"]];
 
 function belongs(list, x, me) {
   const open = x.status !== "erledigt";
@@ -54,7 +49,13 @@ function listTitle(list, d) {
 }
 
 // What a task added to this list should start with, so it lands where it was typed.
-function defaultsFor(list, me) {
+function defaultsFor(list, me, filters) {
+  if (filters) return {
+    assignees: filters.person || (list === "mir" ? me : ""),
+    client_id: filters.client,
+    due_on: filters.from || (["heute","geplant"].includes(list) ? isoToday() : ""),
+    priority: list === "wichtig" ? "hoch" : "mittel",
+  };
   const today = isoToday();
   if (list === "mir" && me) return { assignees: me };
   if (list === "geplant" || list === "heute") return { due_on: today };
@@ -65,9 +66,9 @@ function defaultsFor(list, me) {
 }
 
 const href = (list, task) => {
-  const q = new URLSearchParams();
-  if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("ansicht") === "liste") q.set("ansicht", "liste");
-  if (list && list !== "alle") q.set("liste", list);
+  const q = new URLSearchParams(typeof window === "undefined" ? "" : window.location.search);
+  setFilterParams(q, {...readTaskFilters(q), view:list || "alle"});
+  q.delete("aufgabe");
   if (task) q.set("aufgabe", task);
   return "/aufgaben" + (q.toString() ? "?" + q : "");
 };
@@ -168,7 +169,7 @@ function Details({ task, d, list }) {
             {d.priorities.map(([v, l]) => <option key={v} value={v}>{t(l)}</option>)}
           </select></label>
         <label className="tm-field"><span>{t("Notiz")}</span>
-          <textarea name="note" defaultValue={task.note} rows={5} /></label>
+          <textarea aria-label={t("Notiz")} name="note" defaultValue={task.note} rows={5} /></label>
         <input type="hidden" name="context_href" value={task.context_href || ""} />
         {task.context_href && <a className="tm-link" href={task.context_href}>{t("Zum Vorgang")} →</a>}
         <button type="submit" className="btn btn--go">{t("Speichern")}</button>
@@ -208,14 +209,14 @@ function Decisions({ items }) {
 
 const STATES = [["offen", "Offen"], ["in_arbeit", "In Bearbeitung"], ["review", "Review"], ["erledigt", "Erledigt"]];
 
-function CreateTask({ d, list, status = "offen", onClose }) {
-  const defaults = defaultsFor(list, d.me);
+function CreateTask({ d, list, filters, status = "offen", onClose }) {
+  const defaults = defaultsFor(list, d.me, filters);
   return <form method="post" action="/aufgaben" className="tm-add tm-add--inline">
     <div className="tm-add-title"><strong>Neue Aufgabe</strong><button type="button" className="tm-close" aria-label="Neue Aufgabe schließen" onClick={onClose}>×</button></div>
     <input type="text" name="title" required maxLength={200} autoFocus placeholder="Name der Aufgabe" aria-label="Aufgabe hinzufügen" />
     <Hidden values={{ status, redirect_to: href(list) }} />
     <div className="tm-add-options">
-      <AreaFields clients={d.clients} clientId={defaults.client_id} customer={list === "kunden"} />
+      <AreaFields clients={d.clients} clientId={defaults.client_id} customer={filters?.area === "kunde"} />
       <fieldset className="tm-field tm-people"><legend>Zuständig</legend>{d.team.map(person =>
         <label className="tm-tag" key={person.key}><input type="checkbox" name="assignees" value={person.key} defaultChecked={defaults.assignees === person.key} /><span>@{person.name}</span></label>)}</fieldset>
       <label className="tm-field"><span>Fällig am</span><input type="date" name="due_on" defaultValue={defaults.due_on || ""} /></label>
@@ -225,7 +226,7 @@ function CreateTask({ d, list, status = "offen", onClose }) {
   </form>;
 }
 
-function Board({ tasks, d, list, selectedId, createStatus, onCreate }) {
+function Board({ tasks, d, list, selectedId, createStatus, onCreate, filters }) {
   const [dragged, setDragged] = useState(null);
   const [target, setTarget] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -276,7 +277,7 @@ function Board({ tasks, d, list, selectedId, createStatus, onCreate }) {
               </details>
             </div>
           </li>)}</ul>
-        {createStatus === status ? <CreateTask key={status} d={d} list={list} status={status} onClose={() => onCreate(null)} /> :
+        {createStatus === status ? <CreateTask key={status} d={d} list={list} filters={filters} status={status} onClose={() => onCreate(null)} /> :
           <button type="button" className="tm-column-add" onClick={() => onCreate(status)}>+ Aufgabe hinzufügen<span className="sr-only">: {label}</span></button>}
       </section>)}
     </div>
@@ -285,25 +286,33 @@ function Board({ tasks, d, list, selectedId, createStatus, onCreate }) {
 
 export function TasksPage({ data: d }) {
   const params = new URLSearchParams(typeof window === "undefined" ? "" : window.location.search);
-  const list = params.get("liste") || "alle";
+  const [filters, setFilters] = useState(() => readTaskFilters(params));
+  const list = filters.view;
+  function changeFilters(patch) {
+    const next = {...filters,...patch};
+    const q = setFilterParams(new URLSearchParams(window.location.search), next);
+    q.delete("aufgabe");
+    window.history.replaceState(null,"","/aufgaben"+(q.toString() ? "?"+q : ""));
+    setFilters(next);
+    setCreateStatus(null);
+  }
   const selectedId = Number(params.get("aufgabe")) || null;
   const [showDone, setShowDone] = useState(false);
   const board = params.get("ansicht") !== "liste";
   const [createStatus, setCreateStatus] = useState(null);
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState("datum");
-  const matches = x => [x.title, x.note, x.client?.name, ...x.assignees].join(" ").toLocaleLowerCase().includes(query.trim().toLocaleLowerCase());
+  const matches = x => matchesTaskFilters(x,filters) && [x.title, x.note, x.client?.name, ...x.assignees].join(" ").toLocaleLowerCase().includes(query.trim().toLocaleLowerCase());
   const viewLink = value => { const q = new URLSearchParams(params); q.set("ansicht", value); return "/aufgaben?" + q; };
   const tasks = d.tasks;
   const me = d.me;
-  const count = (key) => tasks.filter((x) => belongs(key, x, me)).length;
   const shown = useMemo(() => {
     const rows = tasks.filter((x) => belongs(list, x, me) && matches(x));
     if (sort === "datum") rows.sort((a, b) => (a.due_on || "9999").localeCompare(b.due_on || "9999"));
     if (sort === "titel") rows.sort((a, b) => a.title.localeCompare(b.title));
     if (sort === "prioritaet") rows.sort((a, b) => ["hoch", "mittel", "niedrig"].indexOf(a.priority) - ["hoch", "mittel", "niedrig"].indexOf(b.priority));
     return rows;
-  }, [tasks, list, me, query, sort]);
+  }, [tasks, list, me, query, sort, filters]);
   // A list other than "Erledigt" keeps its finished tasks below, on request.
   const finished = list === "erledigt" ? [] : tasks.filter((x) => x.status === "erledigt" && matches(x) && belongs(list, { ...x, status: "offen" }, me));
   const selected = tasks.find((x) => x.id === selectedId);
@@ -321,18 +330,13 @@ export function TasksPage({ data: d }) {
         </header>
         <div className="tm-toolbar">
           <nav aria-label="Ansicht"><a className="btn btn--quiet" aria-current={!board ? "page" : undefined} href={viewLink("liste")}>Liste</a><a className="btn btn--quiet" aria-current={board ? "page" : undefined} href={viewLink("board")}>Board</a></nav>
-          <select aria-label="Aufgaben filtern" value={list} onChange={event => window.location.assign(href(event.target.value))}>
-            <optgroup label="Ansicht">{SMART.map(([key,label]) => <option key={key} value={key}>{label} ({count(key)})</option>)}</optgroup>
-            <optgroup label="Personen">{d.team.map(person => <option key={person.key} value={`person:${person.key}`}>{person.name}</option>)}</optgroup>
-            <optgroup label="Bereich"><option value="intern">Intern</option><option value="kunden">Kunde</option></optgroup>
-            <optgroup label="Kunden">{d.clients.map(client => <option key={client.id} value={`kunde:${client.id}`}>{client.name}</option>)}</optgroup>
-          </select>
           <input type="search" aria-label="Aufgaben suchen" placeholder="Aufgaben suchen" value={query} onChange={e => setQuery(e.target.value)} />
           <select aria-label="Sortieren" value={sort} onChange={e => setSort(e.target.value)}><option value="datum">Fälligkeit</option><option value="prioritaet">Priorität</option><option value="titel">Titel</option></select>
         </div>
+        <TaskFilters filters={filters} onChange={changeFilters} team={d.team} clients={d.clients} />
         <Notice>{d.error}</Notice>
-        {!board && createStatus && <CreateTask d={d} list={list} status={createStatus} onClose={() => setCreateStatus(null)} />}
-        {board ? <Board tasks={[...shown, ...finished]} d={d} list={list} selectedId={selectedId} createStatus={createStatus} onCreate={setCreateStatus} /> : <ul className="tm-rows">
+        {!board && createStatus && <CreateTask d={d} list={list} filters={filters} status={createStatus} onClose={() => setCreateStatus(null)} />}
+        {board ? <Board tasks={[...shown, ...finished]} d={d} list={list} selectedId={selectedId} createStatus={createStatus} onCreate={setCreateStatus} filters={filters} /> : <ul className="tm-rows">
           {shown.map((x) => <Row key={x.id} task={x} d={d} list={list} selected={x.id === selectedId} />)}
         </ul>}
         {!board && !shown.length && <p className="tm-empty">{t(list === "erledigt" ? "Noch keine erledigten Aufgaben" : "Keine offenen Aufgaben")}</p>}
@@ -344,7 +348,7 @@ export function TasksPage({ data: d }) {
             {showDone && <ul className="tm-rows">{finished.map((x) => <Row key={x.id} task={x} d={d} list={list} selected={x.id === selectedId} />)}</ul>}
           </>
         )}
-        {(list === "alle" || list === "heute") && <Decisions items={d.decisions} />}
+        {list === "alle" && !filters.person && !filters.area && !filters.client && !filters.from && !query && <Decisions items={d.decisions} />}
       </div>
 
       {selected && <Details key={selected.id} task={selected} d={d} list={list} />}

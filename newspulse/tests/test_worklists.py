@@ -299,8 +299,8 @@ def test_the_task_manager_lists_by_person_client_and_internal(web, session):
     worklists.save_task(session, {"title": "Medienliste", "assignees": ["raphael", "lucas"]})
     worklists.save_task(session, {"title": "fertig", "status": "erledigt"})
     body = rendered(web.get("/aufgaben"))
-    for option in ('value="heute"', 'value="person:lucas"', 'value="person:raphael"',
-                   'value="intern"', 'value="kunden"', 'value="kunde:1"'):
+    for option in ('value="heute"', 'value="lucas"', 'value="raphael"',
+                   'value="intern"', 'value="kunde"', 'value="1"'):
         assert option in body
     assert 'title="Lucas"' in body and 'title="Raphael"' in body
     assert "Pitch Qonto" in body and "Medienliste" in body

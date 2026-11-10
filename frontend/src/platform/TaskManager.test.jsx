@@ -60,3 +60,50 @@ it('retains list mode and edits assignments and review status in the drawer',()=
   fireEvent.change(within(detail).getByLabelText('Status'),{target:{value:'review'}});
   expect(new FormData(within(detail).getByRole('button',{name:'Speichern'}).closest('form')).get('status')).toBe('review');
 });
+
+it('combines person, area and customer filters and keeps them in task links',()=>{
+  render(<TasksPage data={base}/>);
+  fireEvent.change(screen.getByLabelText('Person filtern'),{target:{value:'lucas'}});
+  fireEvent.change(screen.getByLabelText('Bereich filtern'),{target:{value:'kunde'}});
+  fireEvent.change(screen.getByLabelText('Kunde filtern'),{target:{value:'1'}});
+  expect(screen.getByText('Pitch Qonto')).toBeTruthy();
+  expect(screen.queryByText('Medienliste')).toBeNull();
+  const link=screen.getByRole('link',{name:'Pitch Qonto'});
+  expect(link.getAttribute('href')).toContain('person=lucas');
+  expect(link.getAttribute('href')).toContain('kunde=1');
+  expect(window.location.search).toContain('bereich=kunde');
+  fireEvent.change(screen.getByLabelText('Bereich filtern'),{target:{value:'intern'}});
+  expect(screen.getByLabelText('Kunde filtern').disabled).toBe(true);
+  expect(window.location.search).not.toContain('kunde=1');
+  fireEvent.click(screen.getByRole('button',{name:'Filter zurücksetzen'}));
+  expect(screen.getByText('Medienliste')).toBeTruthy();
+  expect(screen.getByText('Pitch Qonto')).toBeTruthy();
+});
+it('selects an inclusive calendar range and a single day and preserves dates in navigation',()=>{
+  window.history.replaceState(null,'','/aufgaben?von=2026-11-10&bis=2026-11-10');
+  const data={...base,tasks:[
+    {...base.tasks[0],due_on:'2026-11-10'},
+    {...base.tasks[1],due_on:'2026-11-12'},
+    {...base.tasks[2],due_on:'2026-11-13'}
+  ]};
+  render(<TasksPage data={data}/>);
+  fireEvent.click(screen.getByRole('button',{name:/10.11.2026/}));
+  fireEvent.click(screen.getByRole('button',{name:'Zeitraum'}));
+  fireEvent.click(screen.getByRole('button',{name:'2026-11-10'}));
+  fireEvent.click(screen.getByRole('button',{name:'2026-11-12'}));
+  fireEvent.click(screen.getByRole('button',{name:'Anwenden'}));
+  expect(screen.getByText('Pitch Qonto')).toBeTruthy();
+  expect(screen.getByText('Medienliste')).toBeTruthy();
+  expect(screen.queryByText('Alt')).toBeNull();
+  expect(screen.getByRole('link',{name:'Liste'}).getAttribute('href')).toContain('bis=2026-11-12');
+  fireEvent.click(screen.getByRole('button',{name:/10.11.2026/}));
+  fireEvent.click(screen.getByRole('button',{name:'Einzelner Tag'}));
+  fireEvent.click(screen.getByRole('button',{name:'2026-11-12'}));
+  fireEvent.click(screen.getByRole('button',{name:'Anwenden'}));
+  expect(screen.queryByText('Pitch Qonto')).toBeNull();
+  expect(screen.getByText('Medienliste')).toBeTruthy();
+  expect(window.location.search).toContain('von=2026-11-12');
+  fireEvent.click(screen.getByRole('button',{name:/12.11.2026/}));
+  fireEvent.click(screen.getByRole('button',{name:'Alle Termine'}));
+  expect(screen.getByText('Alt')).toBeTruthy();
+});
