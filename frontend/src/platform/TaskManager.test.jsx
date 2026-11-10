@@ -107,3 +107,24 @@ it('selects an inclusive calendar range and a single day and preserves dates in 
   fireEvent.click(screen.getByRole('button',{name:'Alle Termine'}));
   expect(screen.getByText('Alt')).toBeTruthy();
 });
+it('offers a top-right view switch and all creation statuses',()=>{
+  render(<TasksPage data={base}/>);
+  const views=screen.getByRole('navigation',{name:'Ansicht'});
+  expect(within(views).getByRole('link',{name:'Liste'})).toBeTruthy();
+  expect(within(views).getByRole('link',{name:'Kanban'}).getAttribute('aria-current')).toBe('page');
+  fireEvent.click(screen.getByRole('button',{name:'+ Neue Aufgabe'}));
+  const status=screen.getByLabelText('Status der neuen Aufgabe');
+  expect([...status.options].map(option=>option.value)).toEqual(['offen','in_arbeit','review','erledigt']);
+  fireEvent.change(status,{target:{value:'review'}});
+  expect(new FormData(status.closest('form')).get('status')).toBe('review');
+});
+it('renders task information in a table in list view',()=>{
+  window.history.replaceState(null,'','/aufgaben?ansicht=liste');
+  render(<TasksPage data={base}/>);
+  const table=screen.getByRole('table');
+  for(const name of ['Aufgabe','Status','Zuständig','Fälligkeit','Bereich','Priorität']) {
+    expect(within(table).getByRole('columnheader',{name})).toBeTruthy();
+  }
+  expect(within(table).getByRole('link',{name:'Pitch Qonto'})).toBeTruthy();
+  expect(within(table).getByText('@Lucas')).toBeTruthy();
+});
