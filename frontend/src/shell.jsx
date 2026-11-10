@@ -245,7 +245,7 @@ export function Shell({ data, portals = true }) {
           ["/clients", "Kunden", "clients"],
           ["/today", "Intel", "intel"],
           ["/assets", "Stories", "stories"],
-          ["/aufgaben", "Tasks", "tasks"],
+          ["/aufgaben", "To-Do's", "tasks"],
         ].map(([href, label, icon]) => {
           const on = path === href || path.startsWith(href + "/");
           return (
