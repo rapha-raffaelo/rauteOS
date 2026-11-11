@@ -25,6 +25,7 @@ _log = logging.getLogger(__name__)
 
 
 class StatementRead(BaseModel):
+    preview: str | None = None
     id: int
     key: str
     value: str
@@ -127,7 +128,10 @@ def read_twin(client_id: int, response: Response, session: Session = Depends(get
     client = mandate_or_404(session, client_id)
     response.headers['Cache-Control'] = 'no-store'
     rows = twin.all_statements(session, client_id)
-    return dict(client=dict(id=client.id, name=client.name), fields=[dict(f, hint=HINTS.get(f['key'], '')) for f in twin.fields()], statements=rows,
+    from ...profile_previews import previews
+    compact = previews(session, rows)
+    statements = [StatementRead.model_validate(row).model_copy(update={"preview": compact.get(row.id)}) for row in rows]
+    return dict(client=dict(id=client.id, name=client.name), fields=[dict(f, hint=HINTS.get(f['key'], '')) for f in twin.fields()], statements=statements,
                 progress=twin.completeness(rows), options={
                     name: list(enum) for name, enum in {
                         'evidence_type': evidence.EvidenceType, 'source_type': evidence.SourceType,

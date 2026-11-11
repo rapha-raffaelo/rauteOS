@@ -150,3 +150,15 @@ it('saves a new answer from the icon top right and warns before leaving unsaved 
  await waitFor(()=>expect(fetch.mock.calls[1][0]).toBe('/api/v1/clients/1/twin/statements'));
  expect(JSON.parse(fetch.mock.calls[1][1].body)).toMatchObject({key:'R02.01',value:'Neu'});
 });
+
+it('shows compact research first and opens the unchanged original',async()=>{
+ const original='Diese vollständige ursprüngliche Aussage bleibt erhalten und steht weiterhin im Editor.';
+ stubFetch(vi.fn().mockResolvedValue(response({...data,statements:[{...row,value:original,preview:'• Kurze Kernaussage'}]})));
+ render(<TwinPage clientId={1}/>);
+ await screen.findByText('Kurze Kernaussage');
+ expect(screen.queryByText(original)).toBeNull();
+ fireEvent.click(screen.getByRole('button',{name:'Mehr anzeigen'}));
+ expect(screen.getByText(original)).toBeTruthy();
+ fireEvent.click(screen.getByRole('button',{name:'Bearbeiten'}));
+ expect(screen.getByLabelText('Aussage').value).toBe(original);
+});

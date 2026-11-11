@@ -179,9 +179,9 @@ function Statement({row, busy, onEdit}) {
   const inactive = ['Rejected', 'Archived'].includes(row.fact_status);
   const more = [...new Set((row.note || '').match(/https?:\/\/[^\s,]+/g) || [])]
     .filter(url => host(url) && host(url) !== host(row.source_url));
-  const long = (row.value || '').length > 280;
+  const long = Boolean(row.preview) || (row.value || '').length > 280;
   return <article className={`twin-statement ${inactive ? 'twin-inactive' : ''}`}>
-    <div className={`twin-value ${long && !open ? 'twin-value--clipped' : ''}`}><FactValue text={row.value}/></div>
+    <div className={`twin-value ${long && !open && !row.preview ? 'twin-value--clipped' : ''}`}><FactValue text={!open && row.preview ? row.preview : row.value}/></div>
     {long && <button type="button" className="linkbtn twin-more" onClick={() => setOpen(!open)}>{open ? 'Weniger anzeigen' : 'Mehr anzeigen'}</button>}
     <div className="twin-statement-foot">
       <span className="twin-provenance">
