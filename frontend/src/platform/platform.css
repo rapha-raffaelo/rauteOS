@@ -798,3 +798,16 @@
 .media-calendar-days { grid-template-columns: repeat(7,minmax(0,1fr)); }
 .media-calendar-days button { min-width: 0; padding: 0; width: 100%; }
 .media-range input { min-width: 0; box-sizing: border-box; }
+
+.tm-subtasks { border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+.tm-subtasks-heading { display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; align-items: center; }
+.tm-subtask-progress { display: inline-block; color: var(--muted); font-size: 12px; margin: 4px 0; }
+.tm-subtasks ul { list-style: none; padding: 0; margin: 10px 0; }
+.tm-subtasks li { display: flex; align-items: center; gap: 8px; padding: 6px 0; }
+.tm-subtasks li > span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.tm-subtasks input[type="checkbox"] { width: 17px; height: 17px; flex: none; accent-color: var(--tint); }
+.tm-subtask-done { text-decoration: line-through; color: var(--muted); }
+.tm-subtask-icon { background: transparent; border: none; color: var(--muted); cursor: pointer; padding: 5px; }
+.tm-subtask-add { display: flex; gap: 8px; }
+.tm-subtask-add input,.tm-subtasks li input:not([type="checkbox"]) { flex: 1; min-width: 0; width: 0; }
+.tm-subtask-add button { flex: none; font-size: 12px; }

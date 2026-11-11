@@ -461,3 +461,33 @@ def test_favorites_are_independent_of_all_four_priorities(web, session):
         worklists.save_task(session, {'title':priority,'priority':priority})
     rows = [t.priority for t in worklists.tasks(session)]
     assert rows[:3] == ['urgent','hoch','mittel']
+
+
+def test_subtasks_persist_and_stay_with_their_parent(web, session):
+    from newspulse.models import TaskSubtask
+    web.post('/aufgaben',data={'title':'Socials aufsetzen'})
+    parent=session.scalar(select(Task))
+    other=worklists.save_task(session,{'title':'Andere Aufgabe'})
+    first=web.post(f'/aufgaben/{parent.id}/subtasks',data={'title':'Instagram'}).json()['subtasks'][0]
+    rows=web.post(f'/aufgaben/{parent.id}/subtasks',data={'title':'Facebook'}).json()['subtasks']
+    assert [r['title'] for r in rows]==['Instagram','Facebook']
+    assert web.post(f'/aufgaben/{other.id}/subtasks/{first["id"]}',data={'completed':'1'}).status_code==404
+    response=web.post(f'/aufgaben/{parent.id}/subtasks/{first["id"]}',data={'completed':'1'})
+    assert response.json()['subtasks'][0]['completed'] is True
+    web.post(f'/aufgaben/{parent.id}/subtasks/{first["id"]}',data={'title':'Instagram-Profil'})
+    session.expire_all()
+    assert session.get(TaskSubtask,first['id']).title=='Instagram-Profil'
+    assert session.get(Task,parent.id).status=='offen'
+    assert len(worklists.tasks(session))==2
+    assert web.post(f'/aufgaben/{parent.id}/subtasks',data={'title':'   '}).status_code==422
+    assert web.post(f'/aufgaben/{parent.id}/subtasks',data={'title':'x'*201}).status_code==422
+    assert web.post(f'/aufgaben/{parent.id}/subtasks/{first["id"]}',data={'completed':'unknown'}).status_code==422
+    web.post(f'/aufgaben/{parent.id}/subtasks/{first["id"]}',data={'completed':'0'})
+    session.expire_all()
+    assert session.get(TaskSubtask,first['id']).completed is False
+    web.post(f'/aufgaben/{parent.id}/subtasks/{first["id"]}',data={'delete':'1'})
+    session.expire_all()
+    assert session.get(TaskSubtask,first['id']) is None
+    web.post(f'/aufgaben/{parent.id}/delete',follow_redirects=False)
+    session.expire_all()
+    assert list(session.scalars(select(TaskSubtask)))==[]

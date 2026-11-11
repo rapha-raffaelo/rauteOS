@@ -4693,7 +4693,18 @@ class Task(Base):
     created_at: Mapped[dt.datetime] = mapped_column(UTCDateTime(), nullable=False, default=_utcnow)
     done_at: Mapped[dt.datetime | None] = mapped_column(UTCDateTime(), nullable=True)
 
+    subtasks: Mapped[list["TaskSubtask"]] = relationship(
+        cascade="all, delete-orphan", lazy="selectin", order_by="TaskSubtask.id")
+
     client: Mapped["Client | None"] = relationship()
+
+
+class TaskSubtask(Base):
+    __tablename__ = "task_subtasks"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    task_id: Mapped[int] = mapped_column(ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False, index=True)
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    completed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="0")
 
 
 class LinkedInPost(Base):

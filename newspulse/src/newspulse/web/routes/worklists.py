@@ -16,7 +16,7 @@ from fastapi.responses import JSONResponse, RedirectResponse, Response
 from sqlalchemy.orm import Session
 
 from ... import config, desk, linkedin_link, worklists, workspaces
-from ...models import DEAL_STAGES, POST_STATES, TASK_PRIORITIES, TASK_STATES, Asset, Deal, LinkedInPost, Task, TaskBoard
+from ...models import DEAL_STAGES, POST_STATES, TASK_PRIORITIES, TASK_STATES, Asset, Deal, LinkedInPost, Task, TaskBoard, TaskSubtask
 from .. import redirects
 from ..app import get_db
 from ..react_pages import render as render_react
@@ -31,12 +31,16 @@ def _clients(session: Session) -> list[dict]:
     return [dict(id=c.id, name=c.name) for c in worklists.mandates(session)]
 
 
+def _subtasks(task):
+    return [dict(id=row.id, title=row.title, completed=row.completed) for row in task.subtasks]
+
+
 def _task(t: Task) -> dict:
     return dict(id=t.id, title=t.title, note=t.note, priority=t.priority, favorite=t.favorite, status=t.status,
                 board_id=t.board_id, source_key=t.source_key, source_kind=t.source_kind, source_open=t.source_open,
                 due_on=t.due_on, owner=t.owner, context_href=t.context_href, assignees=list(t.assignees or []),
                 client=dict(id=t.client.id, name=t.client.name) if t.client else None,
-                created_at=t.created_at, done_at=t.done_at)
+                created_at=t.created_at, done_at=t.done_at, subtasks=_subtasks(t))
 
 
 def _post(session: Session, p: LinkedInPost) -> dict:
@@ -187,6 +191,41 @@ async def delete_task(task_id: int, request: Request, session: Session = Depends
     session.delete(task)
     session.commit()
     return RedirectResponse(back, status_code=_SEE_OTHER)
+
+
+@router.post("/aufgaben/{task_id}/subtasks")
+async def create_subtask(task_id: int, request: Request, session: Session = Depends(get_db)):
+    task = _row_or_404(session, Task, task_id)
+    form = await _form(request)
+    title = str(form.get("title", "")).strip()
+    if not title or len(title) > 200:
+        return JSONResponse({"error":"Bitte einen Titel mit 1 bis 200 Zeichen eingeben"}, status_code=422)
+    task.subtasks.append(TaskSubtask(title=title))
+    session.commit()
+    return JSONResponse({"subtasks":_subtasks(task)})
+
+
+@router.post("/aufgaben/{task_id}/subtasks/{subtask_id}")
+async def update_subtask(task_id: int, subtask_id: int, request: Request, session: Session = Depends(get_db)):
+    task = _row_or_404(session, Task, task_id)
+    row = next((row for row in task.subtasks if row.id == subtask_id), None)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Unteraufgabe nicht gefunden")
+    form = await _form(request)
+    if form.get("delete") == "1":
+        task.subtasks.remove(row)
+    else:
+        if "title" in form:
+            title = str(form["title"]).strip()
+            if not title or len(title) > 200:
+                return JSONResponse({"error":"Bitte einen Titel mit 1 bis 200 Zeichen eingeben"}, status_code=422)
+            row.title = title
+        if "completed" in form:
+            if form["completed"] not in {"0", "1"}:
+                return JSONResponse({"error":"Ungültiger Status"}, status_code=422)
+            row.completed = form["completed"] == "1"
+    session.commit()
+    return JSONResponse({"subtasks":_subtasks(task)})
 
 
 # --- LinkedIn -------------------------------------------------------------------

@@ -1,3 +1,4 @@
+import {Subtasks, SubtaskProgress} from "./Subtasks.jsx";
 import {WorkspaceTabs} from "./WorkspaceTabs.jsx";
 import React, { useEffect, useMemo, useState } from "react";
 import { Notice, t } from "./shared.jsx";
@@ -106,7 +107,7 @@ function TaskList({ tasks, d, list, selectedId }) {
   return <div className="tm-table-wrap"><table className="tm-table">
     <thead><tr><th>Aufgabe</th><th>Favorit</th><th>Status</th><th>Zuständig</th><th>Fälligkeit</th><th>Bereich</th><th>Priorität</th></tr></thead>
     <tbody>{tasks.map(task => <tr key={task.id} id={`task-${task.id}`} className={task.id === selectedId ? "tm-table-selected" : undefined}>
-      <td><div className="tm-table-title"><Check task={task} back={href(list)} /><a href={href(list,task.id)} className={task.status === "erledigt" ? "tm-table-done" : undefined}>{task.title}</a></div>{task.source_key && <a className="tm-source-link" href={task.context_href}>Zum Ursprung →</a>}</td>
+      <td><div className="tm-table-title"><Check task={task} back={href(list)} /><a href={href(list,task.id)} className={task.status === "erledigt" ? "tm-table-done" : undefined}>{task.title}</a></div><SubtaskProgress task={task}/>{task.source_key && <a className="tm-source-link" href={task.context_href}>Zum Ursprung →</a>}</td>
       <td><Star task={task} back={href(list)} /></td>
       <td><span className={`tm-table-status tm-table-status--${task.status}`}>{STATES.find(([key]) => key === task.status)?.[1]}</span></td>
       <td>{task.assignees.length ? task.assignees.map(key => <span className="tm-chip tm-chip--person" key={key}>@{names[key] || key}</span>) : "—"}</td>
@@ -134,7 +135,7 @@ function AreaFields({ clients, clientId, customer = false }) {
   </>;
 }
 
-function Details({ task, d, list }) {
+function Details({ task, d, list, onSubtasksChange }) {
   const back = href(list, task.id);
   return (
     <aside className="tm-detail" aria-label={t("Aufgabe bearbeiten")}>
@@ -159,6 +160,7 @@ function Details({ task, d, list }) {
           </select></label>)}
         <label className="tm-field"><span>{t("Aufgabe")}</span>
           <input type="text" name="title" defaultValue={task.title} required maxLength={200} /></label>
+        <Subtasks task={task} onChange={onSubtasksChange}/>
         <fieldset className="tm-field tm-people">
           <legend>{t("Zuständig")}</legend>
           {d.team.map((p) => (
@@ -261,6 +263,7 @@ function Board({ tasks, d, list, selectedId, createStatus, onCreate, filters }) 
               {task.due_on && <span className={task.status !== "erledigt" && task.due_on < isoToday() ? "tm-overdue" : ""}>▦ {shortDay(task.due_on)}</span>}
               <span className={`tm-priority tm-priority--${task.priority}`}>⚑ {task.priority === "urgent" ? "! " : ""}{d.priorities.find(([key]) => key === task.priority)?.[1]}</span>
             </div>
+            <SubtaskProgress task={task}/>
             {task.source_kind && <span className="tm-chip tm-decision-kind">{DECISION[task.source_kind] || task.source_kind}</span>}
             <div className="tm-card-footer"><span>{task.client?.name || "Intern"}</span>
               {task.source_key && <a className="tm-source-link" href={task.context_href}>Zum Ursprung →</a>}
@@ -301,7 +304,8 @@ export function TasksPage({ data: d }) {
   const matches = x => matchesTaskFilters(x,filters) && [x.title, x.note, x.client?.name, ...x.assignees].join(" ").toLocaleLowerCase().includes(query.trim().toLocaleLowerCase());
   const viewLink = value => { const q = new URLSearchParams(params); q.set("ansicht", value); return "/aufgaben?" + q; };
   const activeBoard = d.boards?.find(board => board.id === d.active_board_id);
-  const tasks = d.tasks.filter(task => !activeBoard || task.board_id === activeBoard.id);
+  const [subtaskUpdates,setSubtaskUpdates] = useState({});
+  const tasks = d.tasks.map(task=>subtaskUpdates[task.id] ? {...task,subtasks:subtaskUpdates[task.id]} : task).filter(task => !activeBoard || task.board_id === activeBoard.id);
   const [showWorkspaceForm, setShowWorkspaceForm] = useState(!!d.draft?.workspace_name);
   function workspaceHref(id) {
     const q = new URLSearchParams({board:String(id),ansicht:board ? "board" : "liste"});
@@ -367,7 +371,7 @@ export function TasksPage({ data: d }) {
 
       </div>
 
-      {selected && <Details key={selected.id} task={selected} d={d} list={list} />}
+      {selected && <Details key={selected.id} task={selected} d={d} list={list} onSubtasksChange={rows=>setSubtaskUpdates(prev=>({...prev,[selected.id]:rows}))} />}
     </section>
   );
 }
