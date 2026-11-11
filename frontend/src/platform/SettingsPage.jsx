@@ -1,3 +1,4 @@
+import {AiSettings} from "./AiSettings.jsx";
 import {MediaReload} from "./MediaReload.jsx";
 import React, { useState, useEffect, useRef } from "react";
 import { PageHeading } from "../components/PageHeading.jsx";
@@ -74,96 +75,6 @@ const POWER = "M12 3v9M6.3 6.3a8 8 0 1 0 11.4 0";
 const Glyph = ({ d }) => (
   <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>
 );
-// KI-Modelle: connect each provider, then give each role its order. The first
-// connected provider of a role answers; the next steps in when it is spent.
-function AiModels({ data: ai }) {
-  if (!ai) return null;
-  const labels = Object.fromEntries(ai.providers.map((p) => [p.key, p.label]));
-  return (
-    <Panel title="KI-Modelle" id="ki-modelle">
-      <p>
-        {t("Erst die Anbieter verbinden, dann je Rolle festlegen, welches Modell zuerst antwortet. Fällt eines aus oder ist sein Kontingent erschöpft, springt das nächste ein.")}
-      </p>
-      <Notice>{ai.error}</Notice>
-      {ai.notice && <p className="ai-notice" role="status">{ai.notice}</p>}
-      {!ai.secret_ready && (
-        <Notice>{t("Auf dem Server fehlt NEWSPULSE_SESSION_SECRET. Ohne ihn werden keine Schlüssel gespeichert.")}</Notice>
-      )}
-      <div className="ai-providers">
-        {ai.providers.map((p) => (
-          <section className={`ai-provider${p.connected ? " ai-provider--on" : ""}`} key={p.key} aria-label={p.label}>
-            <header>
-              <h3>{p.label} <small>{p.vendor}</small></h3>
-              <span className="ai-state">{p.connected ? `${t("Verbunden")} · ${t(p.how)}${p.hint ? ` · …${p.hint}` : ""}` : t("Nicht verbunden")}</span>
-            </header>
-            {p.subscription_only ? (
-              <div className="ai-login">
-                <p>
-                  {t(p.connected
-                    ? "Läuft über das ChatGPT-Abo, ohne API-Schlüssel. Der Verbrauch zählt gegen die Kontingente des angemeldeten Kontos."
-                    : "Läuft über das ChatGPT-Abo, ohne API-Schlüssel. Einmal auf dem Server anmelden (im Ordner /srv/rauteos/repo/deploy), dann den angezeigten Link und Code im Browser bestätigen:")}
-                </p>
-                {!p.connected && <code className="ai-login__cmd">{p.login_command}</code>}
-                <form method="post" action="/settings/ai/key" className="ai-key">
-                  <input type="hidden" name="provider" value={p.key} />
-                  <label className="platform-field"><span>{t("Modell")}</span>
-                    <input type="text" name="model" defaultValue={p.model} placeholder={t("Standard des Abos")} maxLength={100} />
-                  </label>
-                  <button type="submit" className="btn btn--go">{t("Speichern")}</button>
-                </form>
-              </div>
-            ) : (
-              <form method="post" action="/settings/ai/key" className="ai-key">
-                <input type="hidden" name="provider" value={p.key} />
-                <label className="platform-field"><span>{t("API-Schlüssel")}</span>
-                  <input type="password" name="api_key" autoComplete="off" placeholder={p.hint ? `…${p.hint}` : ""} maxLength={500} />
-                </label>
-                <label className="platform-field"><span>{t("Modell")}</span>
-                  <input type="text" name="model" defaultValue={p.model} placeholder={p.default_model} maxLength={100} />
-                </label>
-                <button type="submit" className="btn btn--go">{t(p.connected ? "Speichern" : "Verbinden")}</button>
-              </form>
-            )}
-            <div className="ai-provider__acts">
-              <form method="post" action="/settings/ai/test">
-                <input type="hidden" name="provider" value={p.key} />
-                <button type="submit" className="btn btn--quiet" disabled={!p.connected}>{t("Verbindung testen")}</button>
-              </form>
-              {p.hint && (
-                <form method="post" action="/settings/ai/forget">
-                  <input type="hidden" name="provider" value={p.key} />
-                  <button type="submit" className="btn btn--quiet">{t("Schlüssel entfernen")}</button>
-                </form>
-              )}
-            </div>
-          </section>
-        ))}
-      </div>
-      <form method="post" action="/settings/ai/order" className="ai-roles">
-        <h3>{t("Rollen und Reihenfolge")}</h3>
-        {ai.roles.map((r) => (
-          <fieldset key={r.key} className="ai-role">
-            <legend>{t(r.label)}</legend>
-            <p>{t(r.description)}</p>
-            <div className="ai-role__order">
-              {[0, 1, 2].map((i) => (
-                <label key={i} className="platform-field"><span>{i + 1}.</span>
-                  <select name={`${r.key}_${i + 1}`} defaultValue={r.order[i] || ""} aria-label={`${t(r.label)} ${i + 1}.`}>
-                    <option value="">—</option>
-                    {ai.providers.map((p) => (
-                      <option key={p.key} value={p.key}>{labels[p.key]}{p.connected ? "" : ` (${t("nicht verbunden")})`}</option>
-                    ))}
-                  </select>
-                </label>
-              ))}
-            </div>
-          </fieldset>
-        ))}
-        <button type="submit" className="btn btn--go">{t("Reihenfolge speichern")}</button>
-      </form>
-    </Panel>
-  );
-}
 function ClientSettings({ client: c, data: d }) {
   const base = `/settings/clients/${c.id}`,
     edit = Number(d.edit_id) === c.id;
@@ -323,7 +234,31 @@ const gmailNotices = {
   fehler:
     "Die Verbindung mit Google ist fehlgeschlagen. Es wurde nichts gespeichert.",
 };
+const brainLabels = {
+  crisis_discipline: "Krisenkommunikation", evidence: "Belege & Nachweise", false_alarm: "Fehlalarme vermeiden",
+  house_style: "Sprache & Hausstil", journalistic_value: "Journalistischer Mehrwert", no_invention: "Fakten statt Erfindungen",
+  pitch_angle: "Blickwinkel für Pitches", pitch_shape: "Aufbau von Pitches", position: "Positionierung",
+  press_relevance: "Presserelevanz", quellenordnung: "Quellenordnung", quoted_material: "Zitate & Fremdmaterial",
+  refusal: "Grenzen & Ablehnung", scenario_discipline: "Szenarien", standing: "Haltung & Glaubwürdigkeit"
+};
+function RuleDialog({title, error, children}) {
+  const ref = useRef(null);
+  useEffect(() => {ref.current?.showModal();}, []);
+  return <dialog className="platform-dialog settings-rule-dialog" ref={ref} aria-label={title}
+    onCancel={e => {e.preventDefault(); window.location.assign('/settings#brain');}}>
+    <header><h2>{title}</h2><a className="btn" href="/settings#brain" aria-label="Schließen">×</a></header>
+    <Notice>{error}</Notice>{children}
+  </dialog>;
+}
+
 export function SettingsPage({ data: d, onData }) {
+  const sectionFromLocation = () => {
+    if (typeof window === "undefined") return d.brain_open ? "text" : "general";
+    const hash = window.location.hash;
+    return d.brain_open || hash.startsWith("#brain") ? "text" : hash === "#modelle-rollen" ? "roles" : hash === "#ki-modelle" ? "ai" : "general";
+  };
+  const [section, setSection] = useState(sectionFromLocation);
+  useEffect(() => {const change = () => setSection(sectionFromLocation()); window.addEventListener("hashchange", change); return () => window.removeEventListener("hashchange", change);}, [d.brain_open]);
   const submitting = useRef(false);
   const [saveError, setSaveError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -405,6 +340,13 @@ export function SettingsPage({ data: d, onData }) {
         title={t("Einstellungen")}
         description="Mandanten, Datenquellen und gemeinsame Arbeitsgrundlagen."
       />
+      <div className="settings-layout">
+      <nav className="settings-menu" aria-label="Einstellungsbereiche">
+        {[["general", "allgemein", "Allgemein"], ["ai", "ki-modelle", "KI-Verbindungen"], ["roles", "modelle-rollen", "Modelle & Rollen"], ["text", "brain", "Format & Text"]].map(([key, hash, label]) =>
+          <a key={key} href={d.brain_open ? `/settings#${hash}` : `#${hash}`} aria-current={section === key ? "page" : undefined}>{label}</a>)}
+      </nav>
+      <div className="settings-content">
+      <div hidden={section !== "general"}>
       {Object.entries(d.themes).map(([id, job]) => (
         <Job key={id} job={job} errorLabel="Themenvorschlag fehlgeschlagen">
           <Panel title={`Themen für ${job.client}`}>
@@ -486,7 +428,9 @@ export function SettingsPage({ data: d, onData }) {
             </section>
           ))}
       </Panel>
-      <Panel title={`Maßstäbe · Fassung ${d.brain_version}`} id="brain">
+      </div>
+      <div hidden={section !== "text"}>
+      <Panel title={`Format & Text · Fassung ${d.brain_version}`} id="brain">
         <p>
           Die gemeinsamen Regeln für erzeugte Texte. Änderungen gelten für alle
           Prompts, die den jeweiligen Block verwenden.
@@ -496,10 +440,10 @@ export function SettingsPage({ data: d, onData }) {
           <article
             key={b.key}
             id={`brain-${b.key}`}
-            className="platform-client"
+            className="settings-rule"
           >
             <header>
-              <h3>{b.key}</h3>
+              <h3>{brainLabels[b.key] || b.key}</h3>
               <span>
                 {t(
                   b.is_orphan
@@ -531,7 +475,7 @@ export function SettingsPage({ data: d, onData }) {
               </Notice>
             )}
             {d.brain_open === b.key ? (
-              <>
+              <RuleDialog title={brainLabels[b.key] || b.key} error={saveError || d.brain_error}>
                 <Action action={`/settings/brain/${b.key}`} label="Speichern">
                   <Field
                     name="text"
@@ -581,14 +525,15 @@ export function SettingsPage({ data: d, onData }) {
                     )}
                   </p>
                 )}
-              </>
-            ) : (
-              <pre className="platform-pre">{b.text}</pre>
-            )}
+              </RuleDialog>
+            ) : null}
           </article>
         ))}
       </Panel>
-      <AiModels data={d.ai} />
+      </div>
+      <div hidden={section !== "ai"}><AiSettings data={d.ai}/></div>
+      <div hidden={section !== "roles"}><AiSettings data={d.ai} roles/></div>
+      <div hidden={section !== "general"}>
       <div className="platform-columns">
         <Panel title="Postfach" id="gmail">
           <Notice>{gmailNotices[d.gmail_notice]}</Notice>
@@ -683,6 +628,7 @@ export function SettingsPage({ data: d, onData }) {
         </div>
         {!d.runs.length && <p>{t("Noch kein Lauf.")}</p>}
       </Panel>
+      </div></div></div>
     </div>
   );
 }

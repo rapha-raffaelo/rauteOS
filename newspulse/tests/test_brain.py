@@ -1334,14 +1334,13 @@ def _panel(body: str) -> str:
     return body.split("<!-- ── Brain")[1].split("<!-- ── /Brain")[0]
 
 
-def test_the_panel_lists_every_block_with_its_current_text(client):
+def test_the_panel_lists_blocks_compactly_with_editor_links(client):
     body = _panel(rendered(client.get("/settings")))
 
     for key, text in brain.shipped().items():
         assert key in body, key
-        # The first line of each block, which is its heading in the file: enough
-        # to prove the text is on the page rather than only its name.
-        assert text.splitlines()[0] in body, key
+        assert f"/settings/brain/{key}" in body
+        assert text.splitlines()[0] not in body, key
 
 
 def test_the_panel_says_a_block_is_the_shipped_default_when_nothing_was_changed(client):
@@ -1359,7 +1358,7 @@ def test_the_panel_says_a_block_is_an_override_once_it_has_been_edited(
 
     body = _panel(rendered(client.get("/settings")))
     assert "Überschrieben" in body
-    assert "Ein anderer Maßstab." in body
+    assert "Ein anderer Maßstab." in rendered(client.get(f"/settings/brain/{A_BLOCK}"))
     assert "lucas" in body
 
 
@@ -1438,7 +1437,7 @@ def test_an_override_whose_block_no_longer_ships_is_shown_as_orphaned(factory, c
     body = _panel(rendered(client.get("/settings")))
     assert "alter_name" in body
     assert "Verwaist" in body
-    assert "Gilt noch." in body
+    assert "Gilt noch." in rendered(client.get("/settings/brain/alter_name"))
 
 
 def test_an_orphaned_override_can_be_reverted_away(factory, client):

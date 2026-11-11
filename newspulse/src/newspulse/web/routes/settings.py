@@ -22,6 +22,7 @@ import logging
 import re
 import secrets
 import threading
+import time
 from collections.abc import Iterable
 from dataclasses import dataclass
 from enum import StrEnum
@@ -30,7 +31,7 @@ from urllib.parse import quote, urlparse
 from ..react_pages import render as render_react
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, Response
-from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
+from fastapi.responses import JSONResponse, HTMLResponse, PlainTextResponse, RedirectResponse
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -911,13 +912,15 @@ def _ai_context(session: Session) -> dict[str, object]:
         "providers": [
             {"key": key, "label": meta["label"], "vendor": meta["vendor"],
              "default_model": meta["model"] or ("" if key in ai_models.SUBSCRIPTION_ONLY else config.GEMINI_MODEL),
+             "models": ai_models.model_options(session, key),
              "subscription_only": key in ai_models.SUBSCRIPTION_ONLY,
              "login_command": ai_models.LOGIN_COMMAND.get(key, ""),
              **{k: v for k, v in vars(ai_models.status(session, key)).items() if k != "provider"}}
             for key, meta in ai_models.PROVIDERS.items()
         ],
         "roles": [
-            {"key": key, "label": label, "description": text, "order": ai_models.order(session)[key]}
+            {"key": key, "label": label, "description": text, "order": ai_models.order(session)[key],
+             "models": ai_models.role_models(session).get(key, {})}
             for key, (label, text) in ai_models.ROLES.items()
         ],
         "secret_ready": bool(config.session_secret()),
@@ -1779,11 +1782,25 @@ def test_ai_route(request: Request, provider: str = Form(...), session: Session 
     if provider not in ai_models.PROVIDERS:
         return _render_ai(request, session, error="Unbekannter Anbieter.")
     label = ai_models.PROVIDERS[provider]["label"]
+    inline = request.query_params.get("inline") == "1"
+    started = time.monotonic()
     try:
-        ai_models.test(session, provider)
+        reply = ai_models.test(session, provider)
+        if not reply:
+            raise AnalyzerError("Leere Antwort")
     except (ai_models.NotConnected, AnalyzerError) as exc:
         _log.info("ai test %s failed: %s", provider, exc)
+        if inline:
+            detail = str(exc).lower()
+            message = ("Zeitlimit erreicht – bitte erneut testen" if "time" in detail else
+                       "Kontingent erschöpft – bitte beim Anbieter prüfen" if "429" in detail or "quota" in detail else
+                       "Anmeldung prüfen oder Zugang erneuern" if isinstance(exc, ai_models.NotConnected) or "401" in detail or "403" in detail else
+                       "Keine gültige Antwort – bitte Modell und Verbindung prüfen")
+            return JSONResponse({"ok": False, "message": message}, status_code=422)
         return _render_ai(request, session, error=f"{label} antwortet nicht: {str(exc)[:200]}")
+    if inline:
+        return JSONResponse({"ok": True, "message": f"{label} antwortet", "model": ai_models.model_for(session, provider) or "Standard des Abos",
+                             "seconds": round(time.monotonic() - started, 1)})
     return _render_ai(request, session, notice=f"{label} antwortet.")
 
 
@@ -1795,11 +1812,13 @@ async def save_ai_order_route(request: Request, session: Session = Depends(get_d
     form = await request.form()
     roles = {role: [str(form.get(f"{role}_{n}") or "") for n in (1, 2, 3)] for role in ai_models.ROLES}
     try:
-        ai_models.save_order(session, roles)
+        models = {role: {str(form.get(f"{role}_{n}") or ""): str(form.get(f"{role}_model_{n}") or "")
+                         for n in (1, 2, 3)} for role in ai_models.ROLES}
+        ai_models.save_order(session, roles, models=models if any("_model_" in k for k in form) else None)
     except ValueError as exc:
         session.rollback()
         return _render_ai(request, session, error=str(exc))
-    return RedirectResponse("/settings#ki-modelle", status_code=_SEE_OTHER)
+    return RedirectResponse("/settings#modelle-rollen", status_code=_SEE_OTHER)
 
 
 @router.post("/settings/clients/{client_id}/reactivate")

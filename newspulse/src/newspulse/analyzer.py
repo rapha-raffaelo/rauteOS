@@ -341,7 +341,7 @@ def claude_env() -> dict[str, str]:
 
 
 def invoke_claude_cli(prompt: str, *, timeout: float = _SUBPROCESS_TIMEOUT_SECONDS,
-                      use_shared_knowledge: bool = True) -> str:
+                      use_shared_knowledge: bool = True, model: str = "") -> str:
     """Run one ``claude -p`` call and return the model's text.
 
     The single place the subscription CLI is invoked, shared by the analyzer and
@@ -352,6 +352,8 @@ def invoke_claude_cli(prompt: str, *, timeout: float = _SUBPROCESS_TIMEOUT_SECON
     if use_shared_knowledge:
         prompt = shared_guides.enrich_prompt(prompt, channel="claude_cli")
     argv = ["claude", "-p", "--output-format", "json"]
+    if model:
+        argv.extend(["--model", model])
     try:
         completed = subprocess.run(  # noqa: S603 - fixed argv, no shell, prompt uses stdin
             argv,

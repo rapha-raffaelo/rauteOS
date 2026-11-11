@@ -230,3 +230,55 @@ def test_the_settings_connect_a_provider_and_order_the_roles(web, factory, monke
     with factory() as s:
         assert ai_models.order(s)["designer"] == ["openai", "claude"]
         assert ai_models.order(s)["lektor"] == ["claude"]
+
+
+def test_role_models_are_persisted_and_used_independently(session, monkeypatch):
+    from newspulse import codex_cli
+    ai_models.save_order(session, {'designer': ['openai'], 'reviewer': ['gemini'], 'lektor': []},
+                         models={'designer': {'openai': 'test-model'}, 'reviewer': {'gemini': 'review-model'}})
+    assert ai_models.model_for(session, 'openai', 'designer') == 'test-model'
+    assert ai_models.model_for(session, 'openai') == ''
+    monkeypatch.setattr(codex_cli, 'logged_in', lambda: True)
+    calls = []
+    monkeypatch.setattr(codex_cli, 'run', lambda prompt, **kw: calls.append(kw) or 'ok')
+    assert ai_models.ask('designer', 'test', timeout=1, session=session) == 'ok'
+    assert calls[0]['model'] == 'test-model'
+
+
+def test_claude_subscription_receives_the_selected_model(session, monkeypatch):
+    from newspulse import analyzer
+    monkeypatch.setattr(ai_models, 'api_key', lambda *a: '')
+    ai_models.save_key(session, 'claude', '', 'opus')
+    calls = []
+    monkeypatch.setattr(analyzer, 'invoke_claude_cli', lambda prompt, **kw: calls.append(kw) or 'ok')
+    ai_models.call(session, 'claude', 'test', timeout=1)
+    assert calls[0]['model'] == 'opus'
+
+
+def test_invalid_model_and_duplicate_provider_leave_settings_unchanged(session):
+    before = ai_models.order(session)
+    with pytest.raises(ValueError):
+        ai_models.save_order(session, before, models={'designer': {'claude': '--bad flag'}})
+    assert ai_models.order(session) == before
+    with pytest.raises(ValueError):
+        ai_models.save_order(session, {'designer': ['claude', 'claude']})
+
+
+def test_inline_connection_check_reports_success_and_sanitized_errors(web, monkeypatch):
+    monkeypatch.setattr(ai_models, 'test', lambda *a: 'ok')
+    result = web.post('/settings/ai/test?inline=1', data={'provider': 'claude'})
+    assert result.status_code == 200 and result.json()['ok']
+    def fail(*a): raise BackendError('HTTP 401 private-secret')
+    monkeypatch.setattr(ai_models, 'test', fail)
+    result = web.post('/settings/ai/test?inline=1', data={'provider': 'claude'})
+    assert result.status_code == 422 and not result.json()['ok']
+    assert 'private-secret' not in result.text
+    assert 'Anmeldung' in result.json()['message']
+
+
+def test_role_model_form_reaches_storage(web, factory):
+    result = web.post('/settings/ai/order', data={'designer_1': 'openai', 'designer_model_1': 'selected-model',
+                                                  'reviewer_1': 'gemini'}, follow_redirects=False)
+    assert result.status_code == 303
+    with factory() as session:
+        assert ai_models.model_for(session, 'openai', 'designer') == 'selected-model'

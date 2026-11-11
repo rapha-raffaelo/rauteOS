@@ -31,6 +31,8 @@ import hashlib
 import json
 import logging
 import os
+import re
+from pathlib import Path
 import shutil
 import urllib.error
 import urllib.request
@@ -181,6 +183,7 @@ def api_key(session, provider: str, role: str | None = None) -> str:
 def save_key(session, provider: str, key: str, model: str = "") -> None:
     if provider not in PROVIDERS:
         raise ValueError("Unbekannter Anbieter.")
+    model = validate_model(model)
     key = key.strip()
     if key and provider in SUBSCRIPTION_ONLY:
         raise ValueError(f"{PROVIDERS[provider]['label']} wird über das Abo angemeldet, nicht mit einem Schlüssel.")
@@ -196,12 +199,47 @@ def forget_key(session, provider: str) -> None:
 
 
 def model_for(session, provider: str, role: str | None = None) -> str:
-    stored = _setting(session, _MODEL_PREFIX + provider)
+    stored = role_models(session).get(role, {}).get(provider, "") if role else ""
+    stored = stored or _setting(session, _MODEL_PREFIX + provider)
     if stored:
         return stored
     if provider == "gemini":
         return config.review_model() if role == "reviewer" else config.GEMINI_MODEL
     return PROVIDERS[provider]["model"]
+
+
+def validate_model(model: str) -> str:
+    model = model.strip()
+    if model and (len(model) > 100 or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._:/\[\]-]*", model)):
+        raise ValueError("Bitte eine gültige Modell-ID auswählen oder eingeben.")
+    return model
+
+
+def role_models(session) -> dict:
+    try:
+        value = json.loads(_setting(session, "ai_role_models") or "{}")
+    except json.JSONDecodeError:
+        return {}
+    return {r: {p: m for p, m in v.items() if p in PROVIDERS and isinstance(m, str)}
+            for r, v in value.items() if r in ROLES and isinstance(v, dict)} if isinstance(value, dict) else {}
+
+
+def model_options(session, provider: str) -> list[str]:
+    """Offer configured IDs and local CLI catalogue entries, not a guessed model list."""
+    options = [model_for(session, provider), PROVIDERS[provider]["model"]]
+    options.extend(model_for(session, provider, role) for role in ROLES)
+    if provider == "claude" and not api_key(session, provider):
+        options.extend(["sonnet", "opus", "haiku"])
+    if provider == "gemini":
+        options.extend([config.GEMINI_MODEL, config.review_model()])
+    if provider == "openai":
+        try:
+            cache = Path(os.environ.get("CODEX_HOME", str(Path.home() / ".codex"))) / "models_cache.json"
+            data = json.loads(cache.read_text())
+            options.extend(m.get("slug", "") for m in data.get("models", []) if isinstance(m, dict))
+        except (OSError, ValueError, TypeError, AttributeError):
+            pass
+    return list(dict.fromkeys(x for x in options if x))
 
 
 def _claude_cli() -> bool:
@@ -255,11 +293,17 @@ def order(session) -> dict[str, list[str]]:
     return result
 
 
-def save_order(session, roles: dict[str, list[str]]) -> None:
+def save_order(session, roles: dict[str, list[str]], models: dict | None = None) -> None:
     """Store the order; the reviewer may not start with the designer's first model."""
+    if any(len([p for p in roles.get(r, []) if p]) != len(set(p for p in roles.get(r, []) if p)) for r in ROLES):
+        raise ValueError("Bitte jeden Anbieter pro Rolle nur einmal auswählen.")
     clean = {role: [p for p in dict.fromkeys(roles.get(role, [])) if p in PROVIDERS] for role in ROLES}
     if clean["designer"] and clean["reviewer"] and clean["designer"][0] == clean["reviewer"][0]:
         raise ValueError("Der Reviewer braucht ein anderes erstes Modell als der Designer, sonst prüft ein Modell sich selbst.")
+    if models is not None:
+        checked = {r: {p: validate_model(m) for p, m in models.get(r, {}).items()
+                       if p in clean[r]} for r in ROLES}
+        _put(session, "ai_role_models", json.dumps(checked))
     _put(session, _ROLES_KEY, json.dumps(clean))
     session.commit()
 
@@ -308,7 +352,7 @@ def call(session, provider: str, prompt: str, *, timeout: float, role: str | Non
         # The subscription, exactly as before this page existed.
         from . import analyzer
 
-        return analyzer.invoke_claude_cli(prompt, timeout=timeout)
+        return analyzer.invoke_claude_cli(prompt, timeout=timeout, model=model)
     if provider == "openai":
         # The ChatGPT subscription through the Codex CLI; never an API key.
         from . import codex_cli
