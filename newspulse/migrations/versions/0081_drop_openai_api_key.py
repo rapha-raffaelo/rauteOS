@@ -7,8 +7,8 @@ The API model name goes too: Codex picks the subscription's own model.
 import sqlalchemy as sa
 from alembic import op
 
-revision = '0077_drop_openai_api_key'
-down_revision = '0076_ensure_task_assignees'
+revision = '0081_drop_openai_api_key'
+down_revision = '0080_dismissed_task_sources'
 branch_labels = None
 depends_on = None
 
