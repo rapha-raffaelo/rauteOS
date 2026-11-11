@@ -35,7 +35,7 @@ const ICONS = {
 };
 const Icon = ({name}) => <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={ICONS[name]}/></svg>;
 
-export function TwinPage({clientId, embedded = false}) {
+export function TwinPage({clientId, embedded = false, between = null}) {
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -145,6 +145,8 @@ export function TwinPage({clientId, embedded = false}) {
     {glance.length > 0 && <section className="twin-glance" aria-label="Auf einen Blick">
       {glance.map(([label, icon, value]) => <div key={label}><span className="twin-glance-icon"><Icon name={icon}/></span><div><small>{label}</small><p title={value}><FactValue text={value}/></p></div></div>)}
     </section>}
+
+    {between}
 
     <section className="twin-brief" aria-labelledby={`twin-brief-${clientId}`}>
       <header className="twin-section-head"><div><p className="twin-eyebrow">AUS DER RECHERCHE</p><h2 id={`twin-brief-${clientId}`}>Unternehmenssteckbrief</h2></div>

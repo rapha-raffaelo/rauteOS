@@ -502,7 +502,7 @@ def test_a_missing_crisis_contact_is_a_named_gap_linking_into_the_profile(
     page = web.get(f"/client/{mandate.id}/krise")
     assert "Im Profil fehlt der Krisenkontakt." in rendered(page)
     assert "Nicht im Profil hinterlegt." in rendered(page)
-    assert f"/client/{mandate.id}/twin#profilebody" in rendered(page)
+    assert f"/client/{mandate.id}/twin#kontakte" in rendered(page)
 
 
 def test_a_filled_crisis_contact_is_shown_and_not_flagged(web, session, mandate):
