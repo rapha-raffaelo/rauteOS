@@ -264,6 +264,9 @@ function Board({ tasks, d, list, selectedId, createStatus, onCreate, filters }) 
               <span className={`tm-priority tm-priority--${task.priority}`}>⚑ {task.priority === "urgent" ? "! " : ""}{d.priorities.find(([key]) => key === task.priority)?.[1]}</span>
             </div>
             <SubtaskProgress task={task}/>
+            {task.subtasks?.length > 0 && <ul className="tm-card-subtasks" aria-label="Unteraufgaben">
+              {task.subtasks.map(row=><li key={row.id} className={row.completed ? "tm-subtask-done" : undefined}><span aria-hidden="true">{row.completed ? "✓" : "–"}</span> {row.title}</li>)}
+            </ul>}
             {task.source_kind && <span className="tm-chip tm-decision-kind">{DECISION[task.source_kind] || task.source_kind}</span>}
             <div className="tm-card-footer"><span>{task.client?.name || "Intern"}</span>
               {task.source_key && <a className="tm-source-link" href={task.context_href}>Zum Ursprung →</a>}

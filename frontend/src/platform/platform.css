@@ -811,3 +811,7 @@
 .tm-subtask-add { display: flex; gap: 8px; }
 .tm-subtask-add input,.tm-subtasks li input:not([type="checkbox"]) { flex: 1; min-width: 0; width: 0; }
 .tm-subtask-add button { flex: none; font-size: 12px; }
+
+.tm-card-subtasks { list-style: none; margin: 0 0 10px; padding: 0; font-size: 13px; }
+.tm-card-subtasks li { padding: 3px 0; overflow-wrap: anywhere; }
+.tm-card-subtasks li > span { color: var(--muted); margin-right: 4px; }
