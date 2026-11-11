@@ -3,7 +3,6 @@ import { fetchDesk, writeBriefing } from '../api.js';
 
 // What the Desk calls each kind of decision, in a list and in the briefing.
 const KIND = {kundenfreigabe: 'Kundenfreigabe', freigabe: 'Freigabe', impuls: 'Impuls', profil: 'Profil'};
-const KIND_TAG = {kundenfreigabe: 'kunde', freigabe: 'agentur'};
 const WAITS = {kundenfreigabe: 'wartet auf eine Kundenfreigabe', freigabe: 'wartet auf die Freigabe',
   impuls: 'hat einen neuen Impuls', profil: 'braucht eine Profil-Entscheidung'};
 
@@ -145,12 +144,10 @@ export function DeskPage({ translations = {}, language = 'de' }) {
             </form>
             <a className="task__b task__link" href={x.href}><span className="task__t" title={x.title}>{x.title}</span>
               <span className="task__m">{x.client?.name || t('Intern')}{(x.assignees || []).length ? ` · ${x.assignees.map((a) => '@' + a).join(', ')}` : ''}{x.due_on ? ` · ${t('fällig')} ${date(x.due_on + 'T12:00:00Z')}` : ''} · {t('Aufgabe')}</span></a>
-            <span className={`badge badge--${x.due_on && x.due_on < isoToday ? 'late' : x.priority}`}>{t(x.due_on && x.due_on < isoToday ? 'Überfällig' : ({hoch: 'Hoch', mittel: 'Mittel', niedrig: 'Niedrig'})[x.priority])}</span>
           </div>)}
           {board.decisions.slice(0, Math.max(0, 6 - tasks.length)).map((item, index) => <a className="task" href={item.href} key={`${item.href}-${index}`}>
             <span className="task__b"><span className="task__t" title={item.title}>{item.title}</span>
               <span className="task__m">{item.client.name} · {item.since ? `${t('seit')} ${date(item.since)}` : t(KIND[item.kind])}{item.detail ? ` · ${item.detail}` : ''}</span></span>
-            <span className={`badge badge--${KIND_TAG[item.kind] ?? item.kind}`}>{t(KIND[item.kind])}</span>
             <span className="task__review">{t('Prüfen')} →</span>
           </a>)}
           {!board.decisions.length && !tasks.length && <p className="pane__empty">{t('Nichts wartet auf eine Entscheidung.')}</p>}
