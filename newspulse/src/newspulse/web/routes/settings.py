@@ -42,6 +42,7 @@ from ... import (
     guide,
     industry,
     job,
+    media_reload,
     outreach,
     pitch,
     profile_refresh,
@@ -835,6 +836,8 @@ def _page_context(session: Session) -> dict[str, object]:
         # own, so it shows today — in the reader's zone, like every other page.
         "header_date": dt.datetime.now(config.local_zone()).date(),
         "backfill_days": BACKFILL_DAYS,
+        "reload_preferences": media_reload.read(session, media_reload.KEY, {}),
+        "reload_status": media_reload.read(session, media_reload.STATUS, None),
         "run_error": None,
         "run_started": None,
         # Whether a backup provider is armed. Shown rather than assumed: a
@@ -1124,6 +1127,45 @@ def revert_brain_block_route(
     brain.revert(session, key)
     back = f"/settings/brain/{key}" if key in brain.shipped() else "/settings#brain"
     return RedirectResponse(back, status_code=_SEE_OTHER)
+
+
+def _execute_media_reload(days, choices):
+    try:
+        with get_session() as session:
+            media_reload.execute(session, days, choices)
+    except Exception:
+        _log.exception("Targeted media reload failed")
+        with get_session() as session:
+            media_reload.write(session, media_reload.STATUS, {"state":"failed", "results":[]})
+    finally:
+        _run_guard.release()
+
+
+@router.get("/settings/reload/status")
+def media_reload_status(session: Session = Depends(get_db)):
+    return {"active": _run_guard.locked(), "status": media_reload.read(session, media_reload.STATUS, None)}
+
+
+@router.post("/settings/reload")
+async def reload_media_route(request: Request, session: Session = Depends(get_db)):
+    form = await request.form()
+    try:
+        choices = json.loads(str(form.get("choices", "[]")))
+        days, selected = media_reload.validate(session, form.getlist("days"), choices)
+    except (ValueError, TypeError) as exc:
+        return _render_settings(request, session, run_error=str(exc))
+    if not _run_guard.acquire(blocking=False):
+        return _render_settings(request, session, run_error="Es läuft bereits ein Lauf")
+    try:
+        saved = media_reload.read(session, media_reload.KEY, {})
+        saved.update({str(key): value for key, value in selected.items()})
+        media_reload.write(session, media_reload.KEY, saved)
+        media_reload.write(session, media_reload.STATUS, {"state":"running", "results":[]})
+    except Exception:
+        _run_guard.release()
+        raise
+    spawn.start_or_release(_execute_media_reload, args=(days, selected), name="newspulse-media-reload", release=_run_guard.release)
+    return RedirectResponse("/settings#media-reload", status_code=_SEE_OTHER)
 
 
 @router.post("/settings/run")

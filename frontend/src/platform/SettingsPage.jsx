@@ -1,3 +1,4 @@
+import {MediaReload} from "./MediaReload.jsx";
 import React, { useState, useEffect, useRef } from "react";
 import { PageHeading } from "../components/PageHeading.jsx";
 import {
@@ -419,24 +420,8 @@ export function SettingsPage({ data: d, onData }) {
             ? "Lauf gestartet — läuft im Hintergrund."
             : ""}
         </Notice>
-        <Action
-          action="/settings/run"
-          label={d.run_active ? "Läuft…" : "Jetzt aktualisieren"}
-          disabled={d.run_active}
-        >
-          <Field
-            name="since_days"
-            label="Zeitraum"
-            options={[
-              ["", "Seit letztem Lauf (Standard)"],
-              ...d.backfill_days.map((n) => [n, `Letzte ${n} Tage nachladen`]),
-            ]}
-          />
-        </Action>
-        <p>
-          Ein Nachlauf erweitert das akzeptierte Zeitfenster. Feeds liefern nur
-          ihre verfügbaren Einträge; gespeicherte Artikel werden dedupliziert.
-        </p>
+        <MediaReload data={d}/>
+        <Action action="/settings/run" label="Regulären Lauf starten" disabled={d.run_active} />
       </Panel>
       <Panel title="Mandanten">
         <Notice>{d.client_error}</Notice>

@@ -307,7 +307,8 @@ def test_backfill_offers_an_onboarding_window(client):
 
     assert 90 in BACKFILL_DAYS
     body = rendered(client.get("/settings"))
-    assert 'value="90"' in body
+    assert 'maximal 90 Tagen' in body
+    assert 'Tage für den Nachlauf' in body
 
 
 def test_run_trigger_refuses_a_second_concurrent_run(client, monkeypatch):
@@ -455,3 +456,35 @@ def test_all_archived_mandates_can_be_deleted_at_once(factory, client):
     with factory() as session:
         names = {c.name for c in session.scalars(select(Client))}
     assert names == {"Live", "Rival"}
+
+
+def test_targeted_reload_passes_only_selected_days_and_customers(factory, client, monkeypatch):
+    import json
+    from newspulse import media_reload
+    from newspulse.web.routes import settings
+    with factory() as session:
+        one=Client(name='Selected',active=True,keywords=['Solar'])
+        two=Client(name='Not selected',active=True)
+        session.add_all([one,two]);session.commit();wanted=one.id
+    captured={}
+    def start(target, *, args, name, release):
+        captured['args']=args
+        release()
+    monkeypatch.setattr(settings.spawn,'start_or_release',start)
+    response=client.post('/settings/reload',data={'days':['2026-01-01','2026-01-03'],'choices':json.dumps([{'id':wanted,'company':False,'keywords':['Solar']}])},follow_redirects=False)
+    assert response.status_code==303
+    days,choices=captured['args']
+    assert days==[dt.date(2026,1,1),dt.date(2026,1,3)]
+    assert choices=={wanted:{'company':False,'keywords':['Solar']}}
+    with factory() as session:
+        assert media_reload.read(session,media_reload.KEY,{})[str(wanted)]['keywords']==['Solar']
+    assert not settings._run_guard.locked()
+
+
+def test_targeted_reload_rejects_invalid_input_before_start(factory, client, monkeypatch):
+    from newspulse.web.routes import settings
+    def unexpected(*a,**k):raise AssertionError('Invalid request started a worker')
+    monkeypatch.setattr(settings.spawn,'start_or_release',unexpected)
+    response=client.post('/settings/reload',data={'days':'bad','choices':'[]'})
+    assert 'gültige Kalendertage' in rendered(response)
+    assert not settings._run_guard.locked()
