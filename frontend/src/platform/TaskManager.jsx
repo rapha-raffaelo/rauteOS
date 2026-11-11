@@ -1,3 +1,4 @@
+import {WorkspaceTabs} from "./WorkspaceTabs.jsx";
 import React, { useEffect, useMemo, useState } from "react";
 import { Notice, t } from "./shared.jsx";
 import { TaskFilters, readTaskFilters, setFilterParams, matchesTaskFilters } from "./TaskFilters.jsx";
@@ -337,11 +338,7 @@ export function TasksPage({ data: d }) {
           </div>
         </header>
         {d.boards?.length > 0 && <div className="tm-workspaces">
-          <nav aria-label="Workspaces">
-            <a href={workspaceHref("all")} aria-current={!activeBoard ? "page" : undefined}><span>Alle Aufgaben</span><span className="tm-workspace-count">{d.boards.reduce((total,workspace)=>total+workspace.open_count,0)}</span></a>
-            {d.boards.map(workspace => <a key={workspace.id} href={workspaceHref(workspace.id)} aria-current={workspace.id === d.active_board_id ? "page" : undefined}>
-            <span>{workspace.name}</span><span className="tm-workspace-count">{workspace.open_count}</span>
-          </a>)}</nav>
+          <WorkspaceTabs boards={d.boards} activeId={d.active_board_id} href={workspaceHref} person={d.me} />
           <button type="button" className="tm-workspace-plus" aria-label="Workspace hinzufügen" aria-expanded={showWorkspaceForm} onClick={()=>setShowWorkspaceForm(!showWorkspaceForm)}>+</button>
         </div>}
         {showWorkspaceForm && <form method="post" action="/aufgaben/boards" className="tm-workspace-form">
