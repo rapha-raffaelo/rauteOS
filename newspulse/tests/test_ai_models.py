@@ -32,22 +32,23 @@ def session(factory):
         yield s
 
 
-def test_a_key_is_stored_encrypted_and_shown_only_by_its_last_four(session):
-    ai_models.save_key(session, "openai", "sk-test-1234567890abcd")
-    raw = session.get(Setting, "ai_key:openai").value
-    assert "sk-test" not in raw
-    assert ai_models.stored_key(session, "openai") == "sk-test-1234567890abcd"
-    state = ai_models.status(session, "openai")
+def test_a_key_is_stored_encrypted_and_shown_only_by_its_last_four(session, monkeypatch):
+    monkeypatch.setattr(ai_models, "_claude_cli", lambda: False)
+    ai_models.save_key(session, "claude", "sk-ant-test-1234567890abcd")
+    raw = session.get(Setting, "ai_key:claude").value
+    assert "sk-ant" not in raw
+    assert ai_models.stored_key(session, "claude") == "sk-ant-test-1234567890abcd"
+    state = ai_models.status(session, "claude")
     assert state.connected and state.hint == "abcd" and state.how == "Schlüssel aus den Einstellungen"
-    ai_models.forget_key(session, "openai")
-    assert not ai_models.status(session, "openai").connected
+    ai_models.forget_key(session, "claude")
+    assert not ai_models.status(session, "claude").connected
 
 
 def test_without_the_server_secret_no_key_is_stored(session, monkeypatch):
     monkeypatch.setenv("NEWSPULSE_SESSION_SECRET", "")
     monkeypatch.setattr(config, "SESSION_SECRET", "")
     with pytest.raises(ai_models.NoSecret):
-        ai_models.save_key(session, "openai", "sk-x")
+        ai_models.save_key(session, "claude", "sk-x")
 
 
 def test_the_reviewer_may_not_start_with_the_designers_model(session):
@@ -91,18 +92,71 @@ def test_the_bare_gemini_key_only_counts_for_the_reviewer(monkeypatch):
     assert ai_models.env_key("gemini", "reviewer") == "bare"
 
 
-def test_openai_is_called_with_the_stored_key(session, monkeypatch):
+# --- OpenAI over the ChatGPT subscription ------------------------------------------
+
+
+def _codex_home(tmp_path, monkeypatch, auth):
+    from newspulse import codex_cli
+
+    monkeypatch.setenv("CODEX_HOME", str(tmp_path))
+    monkeypatch.setattr(codex_cli, "installed", lambda: True)
+    if auth is not None:
+        (tmp_path / "auth.json").write_text(json.dumps(auth))
+    return codex_cli
+
+
+def test_openai_takes_no_api_key(session, monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-from-env")
+    with pytest.raises(ValueError, match="Abo"):
+        ai_models.save_key(session, "openai", "sk-abc")
+    assert ai_models.env_key("openai") == ""
+    session.add(Setting(key="ai_key:openai", value="left over"))
+    assert ai_models.stored_key(session, "openai") == ""
+
+
+def test_openai_counts_as_connected_only_with_a_chatgpt_login(session, tmp_path, monkeypatch):
+    _codex_home(tmp_path, monkeypatch, None)
+    assert not ai_models.status(session, "openai").connected
+    _codex_home(tmp_path, monkeypatch, {"OPENAI_API_KEY": "sk-key-login", "tokens": None})
+    assert not ai_models.status(session, "openai").connected
+    _codex_home(tmp_path, monkeypatch, {"OPENAI_API_KEY": None, "tokens": {"access_token": "x"}})
+    state = ai_models.status(session, "openai")
+    assert state.connected and state.how == "ChatGPT-Abo (Codex CLI)"
+
+
+def test_openai_runs_codex_read_only_without_any_api_key(session, tmp_path, monkeypatch):
+    import subprocess
+
+    codex_cli = _codex_home(tmp_path, monkeypatch, {"tokens": {"access_token": "x"}})
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-must-not-leak")
+    monkeypatch.setattr("newspulse.shared_guides.enrich_prompt", lambda prompt, channel: prompt)
     seen = {}
 
-    def post(url, body, headers, timeout, name):
-        seen.update(url=url, auth=headers["Authorization"], model=body["model"])
-        return {"choices": [{"message": {"content": "ok"}}]}
+    def fake_run(argv, *, input, env, **kwargs):
+        seen.update(argv=argv, prompt=input, env=env)
+        out = argv[argv.index("--output-last-message") + 1]
+        with open(out, "w", encoding="utf-8") as handle:
+            handle.write("ok\n")
+        return subprocess.CompletedProcess(argv, 0, "", "")
 
-    monkeypatch.setattr(ai_models, "_post", post)
-    monkeypatch.setattr("newspulse.shared_guides.enrich_prompt", lambda prompt, channel: prompt)
-    ai_models.save_key(session, "openai", "sk-abc", "gpt-test")
-    assert ai_models.call(session, "openai", "hi", timeout=5) == "ok"
-    assert seen == {"url": "https://api.openai.com/v1/chat/completions", "auth": "Bearer sk-abc", "model": "gpt-test"}
+    monkeypatch.setattr(codex_cli.subprocess, "run", fake_run)
+    assert ai_models.call(session, "openai", "hallo", timeout=5) == "ok"
+    argv = seen["argv"]
+    assert argv[:2] == ["codex", "exec"] and argv[-1] == "-" and seen["prompt"] == "hallo"
+    assert argv[argv.index("--sandbox") + 1] == "read-only" and "--ephemeral" in argv
+    assert 'forced_login_method="chatgpt"' in argv
+    assert "OPENAI_API_KEY" not in seen["env"] and seen["env"]["CODEX_HOME"] == str(tmp_path)
+
+
+def test_an_expired_codex_login_hands_over_to_the_next_model(session, monkeypatch):
+    def fake(session_, provider, prompt, *, timeout, role=None):
+        if provider == "openai":
+            raise BackendError("codex exec failed (1): ERROR: unexpected status 401 Unauthorized")
+        return "claude"
+
+    monkeypatch.setattr(ai_models, "call", fake)
+    ai_models.save_order(session, {"designer": ["openai", "claude"], "reviewer": ["gemini"], "lektor": []})
+    assert ai_models.ask("designer", "x", timeout=5, session=session) == "claude"
 
 
 # --- The Lektor ---------------------------------------------------------------------
@@ -153,15 +207,21 @@ def web(factory):
     return TestClient(app)
 
 
-def test_the_settings_connect_a_provider_and_order_the_roles(web, factory):
+def test_the_settings_connect_a_provider_and_order_the_roles(web, factory, monkeypatch):
+    from newspulse import codex_cli
+
+    monkeypatch.setattr(codex_cli, "logged_in", lambda: False)
     body = rendered(web.get("/settings"))
     assert 'id="ki-modelle"' in body and "Designer" in body and "Lektor" in body
     assert "KI-Ausweichmodell" not in body
 
-    assert web.post("/settings/ai/key", data={"provider": "openai", "api_key": "sk-zzzz9876"},
+    assert "codex login --device-auth" in body
+    assert web.post("/settings/ai/key", data={"provider": "claude", "api_key": "sk-zzzz9876"},
                     follow_redirects=False).status_code == 303
     body = rendered(web.get("/settings"))
     assert "…9876" in body and "sk-zzzz9876" not in body
+    assert "über das Abo angemeldet" in rendered(
+        web.post("/settings/ai/key", data={"provider": "openai", "api_key": "sk-x"}))
 
     refused = rendered(web.post("/settings/ai/order", data={"designer_1": "openai", "reviewer_1": "openai"}))
     assert "anderes erstes Modell" in refused

@@ -55,7 +55,7 @@ def test_a_survey_changes_nothing(session):
     client = _client(session)
     _hit(session, client, "Strategy sells 1,638 Bitcoin to fund dividends")
 
-    found = radar_cleanup.survey(session)
+    found = radar_cleanup.survey(session, now=_NOW)
 
     assert len(found) == 1
     assert session.query(TopicHit).count() == 1
@@ -91,7 +91,7 @@ def test_a_hit_outside_the_window_is_left_alone(session):
     client = _client(session)
     _hit(session, client, "Uraltes Krypto-Thema", days=200)
 
-    assert radar_cleanup.survey(session) == []
+    assert radar_cleanup.survey(session, now=_NOW) == []
 
 
 def test_the_article_itself_survives(session):
@@ -110,4 +110,4 @@ def test_a_mandate_without_themes_is_left_alone(session):
     client = _client(session, name="Ohne Themen", keywords=())
     _hit(session, client, "Irgendeine Meldung")
 
-    assert radar_cleanup.survey(session) == []
+    assert radar_cleanup.survey(session, now=_NOW) == []

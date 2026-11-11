@@ -538,6 +538,9 @@
 .ai-provider--on .ai-state { color: var(--tint); }
 .ai-key { display: grid; gap: 8px; }
 .ai-key input { width: 100%; box-sizing: border-box; }
+.ai-login { display: grid; gap: 8px; }
+.ai-login p { margin: 0; color: var(--muted); font-size: 13px; }
+.ai-login__cmd { display: block; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); font-size: 12px; overflow-wrap: anywhere; user-select: all; }
 .ai-provider__acts { display: flex; gap: 8px; flex-wrap: wrap; }
 .ai-provider__acts form { margin: 0; }
 .ai-roles h3 { margin: 0 0 8px; }
