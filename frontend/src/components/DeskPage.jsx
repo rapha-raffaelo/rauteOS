@@ -137,11 +137,6 @@ export function DeskPage({ translations = {}, language = 'de' }) {
       <div className="desk-col">
         <Card title={t('Heute priorisiert')} link={['/aufgaben?board=all', t('Alle Aufgaben')]}>
           {tasks.map((x) => <div className="task" key={`task-${x.id}`}>
-            <form method="post" action={`/aufgaben/${x.id}`} className="task__done">
-              <input type="hidden" name="status" value="erledigt" />
-              <input type="hidden" name="redirect_to" value="/desk" />
-              <button type="submit" className="task__box" aria-label={`${t('Erledigt')}: ${x.title}`} title={t('Als erledigt abhaken')} />
-            </form>
             <a className="task__b task__link" href={x.href}><span className="task__t" title={x.title}>{x.title}</span>
               <span className="task__m">{x.client?.name || t('Intern')}{(x.assignees || []).length ? ` · ${x.assignees.map((a) => '@' + a).join(', ')}` : ''}{x.due_on ? ` · ${t('fällig')} ${date(x.due_on + 'T12:00:00Z')}` : ''} · {t('Aufgabe')}</span></a>
           </div>)}

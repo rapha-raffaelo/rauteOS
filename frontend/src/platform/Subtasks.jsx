@@ -33,7 +33,7 @@ export function Subtasks({task,onChange}) {
     <button type="button" className="tm-subtask-icon" aria-label={`${row.title} löschen`} disabled={busy} onClick={()=>save({delete:'1'},row.id)}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7"/></svg></button>
    </>}
   </li>)}</ul>
-  <div className="tm-subtask-add"><input aria-label="Neue Unteraufgabe" placeholder="z. B. Instagram" value={title} maxLength={200} onChange={e=>setTitle(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();add();}}}/><button type="button" disabled={busy || !title.trim()} onClick={add}>+ Hinzufügen</button></div>
+  <div className="tm-subtask-add"><input aria-label="Neue Unteraufgabe" value={title} maxLength={200} onChange={e=>setTitle(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();add();}}}/><button type="button" disabled={busy || !title.trim()} onClick={add}>+ Hinzufügen</button></div>
   {error&&<p role="alert">{error}</p>}
  </section>;
 }

@@ -77,7 +77,7 @@ describe('Desk', () => {
     await waitFor(() => expect(fetch.mock.calls[0][1].signal.aborted).toBe(true));
   });
 
-  it('links every figure to the list it counts and lets a task be ticked off', async () => {
+  it('links every figure to the list it counts and opens tasks without completion controls', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(reply({...empty, rows: [row], decisions_open: 1,
       tasks_open: 1, tasks: [{id: 4, client: null, title: 'Pitch', priority: 'hoch', due_on: null, href: '/aufgaben#task-4'}],
       decisions: [{client: row.client, kind: 'kundenfreigabe', title: 'Brief', detail: '', since: null, href: '/client/7/x'}]})));
@@ -85,13 +85,11 @@ describe('Desk', () => {
     await screen.findByText('Pitch');
     const hrefs = [...container.querySelectorAll('.stat-row a.stat')].map((a) => a.getAttribute('href'));
     expect(hrefs).toEqual(['/aufgaben?board=all', '/aufgaben?workspace=decisions', '/today', '#mandanten']);
-    const tick = screen.getByRole('button', {name: 'Erledigt: Pitch'}).closest('form');
-    expect(tick.getAttribute('action')).toBe('/aufgaben/4');
-    expect(new FormData(tick).get('status')).toBe('erledigt');
+    expect(screen.queryByRole('button', {name: 'Erledigt: Pitch'})).toBeNull();
+    expect(screen.getByRole('link', {name: /Pitch/}).getAttribute('href')).toBe('/aufgaben#task-4');
     const decision = screen.getByRole('link', {name: /Brief.*Prüfen/});
     expect(decision.getAttribute('href')).toBe('/client/7/x');
     expect(decision.querySelector('.task__box')).toBeNull();
-    expect(new FormData(tick).get('redirect_to')).toBe('/desk');
     expect(screen.getByRole('link', {name: /Kundenfreigaben/}).getAttribute('href')).toBe('/aufgaben?workspace=decisions');
   });
 
