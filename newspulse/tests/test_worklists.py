@@ -442,3 +442,22 @@ def test_deleted_decision_stays_deleted_without_changing_source(web, session):
     assert session.get(Task, task_id) is None
     letter = session.scalar(select(Outreach))
     assert letter.state == OutreachState.ENTWURF and letter.client_ok_at is None
+
+
+def test_favorites_are_independent_of_all_four_priorities(web, session):
+    web.post('/aufgaben', data={'title':'Dringende Aufgabe','priority':'urgent'})
+    task = session.scalar(select(Task))
+    assert task.priority == 'urgent' and not task.favorite
+    web.post(f'/aufgaben/{task.id}', data={'favorite':'1'})
+    session.refresh(task)
+    assert task.favorite and task.priority == 'urgent'
+    web.post(f'/aufgaben/{task.id}', data={'priority':'niedrig'})
+    session.refresh(task)
+    assert task.favorite and task.priority == 'niedrig'
+    web.post(f'/aufgaben/{task.id}', data={'favorite':'0'})
+    session.refresh(task)
+    assert not task.favorite and task.priority == 'niedrig'
+    for priority in ('urgent','hoch','mittel','niedrig'):
+        worklists.save_task(session, {'title':priority,'priority':priority})
+    rows = [t.priority for t in worklists.tasks(session)]
+    assert rows[:3] == ['urgent','hoch','mittel']

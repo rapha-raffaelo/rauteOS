@@ -23,7 +23,7 @@ from .models import (
 )
 
 #: How the pages name each value. One place, so the Desk says the same words.
-TASK_PRIORITY_LABELS = {"hoch": "Hoch", "mittel": "Mittel", "niedrig": "Niedrig"}
+TASK_PRIORITY_LABELS = {"urgent": "Urgent", "hoch": "Hoch", "mittel": "Mittel", "niedrig": "Niedrig"}
 TASK_STATE_LABELS = {"offen": "Offen", "in_arbeit": "In Arbeit", "review": "Review", "erledigt": "Done"}
 POST_STATE_LABELS = {"idee": "Idee", "entwurf": "Entwurf", "freigabe": "Freigabe",
                      "geplant": "Geplant", "veroeffentlicht": "Veröffentlicht"}
@@ -201,11 +201,16 @@ def _assignees(form: Mapping) -> list[str]:
 
 #: The fields a one-click change may carry: ticking off and the star. Anything
 #: else is the full form, which rewrites every field it holds.
-QUICK_FIELDS = frozenset({"status", "priority"})
+QUICK_FIELDS = frozenset({"status", "priority", "favorite"})
 
 
 def quick_update(session: Session, task: Task, form: Mapping) -> Task:
     """Change only what the click carried, leaving every other field alone."""
+    if "favorite" in form:
+        value = str(form["favorite"])
+        if value not in {"0", "1"}:
+            raise Invalid("Ungültiger Favoritenstatus")
+        task.favorite = value == "1"
     if "priority" in form:
         task.priority = _choice(form, "priority", TASK_PRIORITIES, task.priority)
     if "status" in form:

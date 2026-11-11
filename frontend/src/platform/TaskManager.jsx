@@ -55,7 +55,7 @@ function defaultsFor(list, me, filters) {
     assignees: filters.person || (list === "mir" ? me : ""),
     client_id: filters.client,
     due_on: filters.from || (["heute","geplant"].includes(list) ? isoToday() : ""),
-    priority: list === "wichtig" ? "hoch" : "mittel",
+    priority: filters.priority || (list === "wichtig" ? "hoch" : "mittel"),
   };
   const today = isoToday();
   if (list === "mir" && me) return { assignees: me };
@@ -90,12 +90,12 @@ function Check({ task, back }) {
 }
 
 function Star({ task, back }) {
-  const on = task.priority === "hoch";
+  const on = !!task.favorite;
   return (
     <form method="post" action={`/aufgaben/${task.id}`} className="tm-star-form">
-      <Hidden values={{ priority: on ? "mittel" : "hoch", redirect_to: back }} />
+      <Hidden values={{ favorite: on ? "0" : "1", redirect_to: back }} />
       <button type="submit" className={`tm-star${on ? " tm-star--on" : ""}`} aria-pressed={on}
-        aria-label={`${t("Wichtig")}: ${task.title}`}>{on ? "★" : "☆"}</button>
+        aria-label={`${t("Favorit")}: ${task.title}`}>{on ? "★" : "☆"}</button>
     </form>
   );
 }
@@ -104,14 +104,15 @@ function TaskList({ tasks, d, list, selectedId }) {
   if (!tasks.length) return null;
   const names = Object.fromEntries(d.team.map(person => [person.key, person.name]));
   return <div className="tm-table-wrap"><table className="tm-table">
-    <thead><tr><th>Aufgabe</th><th>Status</th><th>Zuständig</th><th>Fälligkeit</th><th>Bereich</th><th>Priorität</th></tr></thead>
+    <thead><tr><th>Aufgabe</th><th>Favorit</th><th>Status</th><th>Zuständig</th><th>Fälligkeit</th><th>Bereich</th><th>Priorität</th></tr></thead>
     <tbody>{tasks.map(task => <tr key={task.id} id={`task-${task.id}`} className={task.id === selectedId ? "tm-table-selected" : undefined}>
       <td><div className="tm-table-title"><Check task={task} back={href(list)} /><a href={href(list,task.id)} className={task.status === "erledigt" ? "tm-table-done" : undefined}>{task.title}</a></div>{task.source_key && <a className="tm-source-link" href={task.context_href}>Zum Ursprung →</a>}</td>
+      <td><Star task={task} back={href(list)} /></td>
       <td><span className={`tm-table-status tm-table-status--${task.status}`}>{STATES.find(([key]) => key === task.status)?.[1]}</span></td>
       <td>{task.assignees.length ? task.assignees.map(key => <span className="tm-chip tm-chip--person" key={key}>@{names[key] || key}</span>) : "—"}</td>
       <td className={task.status !== "erledigt" && task.due_on && task.due_on < isoToday() ? "tm-overdue" : undefined}>{task.due_on ? shortDay(task.due_on) : "—"}</td>
       <td>{task.client?.name || "Intern"}</td>
-      <td><div className="tm-table-priority"><Star task={task} back={href(list)} /><span>{d.priorities.find(([key]) => key === task.priority)?.[1]}</span></div></td>
+      <td><div className="tm-table-priority"><span className={`tm-priority tm-priority--${task.priority}`}>⚑ {task.priority === "urgent" ? "! " : ""}{d.priorities.find(([key]) => key === task.priority)?.[1]}</span></div></td>
     </tr>)}</tbody>
   </table></div>;
 }
@@ -258,7 +259,7 @@ function Board({ tasks, d, list, selectedId, createStatus, onCreate, filters }) 
             <div className="tm-card-meta">
               {task.assignees.map(key => <span className="tm-avatar" title={d.team.find(p => p.key === key)?.name || key} key={key}>{key === "raphael" ? "RM" : key === "lucas" ? "L" : key.slice(0,2).toUpperCase()}</span>)}
               {task.due_on && <span className={task.status !== "erledigt" && task.due_on < isoToday() ? "tm-overdue" : ""}>▦ {shortDay(task.due_on)}</span>}
-              <span className={`tm-priority tm-priority--${task.priority}`}>⚑ {d.priorities.find(([key]) => key === task.priority)?.[1]}</span>
+              <span className={`tm-priority tm-priority--${task.priority}`}>⚑ {task.priority === "urgent" ? "! " : ""}{d.priorities.find(([key]) => key === task.priority)?.[1]}</span>
             </div>
             {task.source_kind && <span className="tm-chip tm-decision-kind">{DECISION[task.source_kind] || task.source_kind}</span>}
             <div className="tm-card-footer"><span>{task.client?.name || "Intern"}</span>
@@ -311,7 +312,7 @@ export function TasksPage({ data: d }) {
     const rows = tasks.filter((x) => belongs(list, x, me) && matches(x));
     if (sort === "datum") rows.sort((a, b) => (a.due_on || "9999").localeCompare(b.due_on || "9999"));
     if (sort === "titel") rows.sort((a, b) => a.title.localeCompare(b.title));
-    if (sort === "prioritaet") rows.sort((a, b) => ["hoch", "mittel", "niedrig"].indexOf(a.priority) - ["hoch", "mittel", "niedrig"].indexOf(b.priority));
+    if (sort === "prioritaet") rows.sort((a, b) => ["urgent", "hoch", "mittel", "niedrig"].indexOf(a.priority) - ["urgent", "hoch", "mittel", "niedrig"].indexOf(b.priority));
     return rows;
   }, [tasks, list, me, query, sort, filters]);
   // A list other than "Erledigt" keeps its finished tasks below, on request.

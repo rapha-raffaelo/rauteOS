@@ -4637,7 +4637,7 @@ class CustomerOnboardingAudio(Base):
 
 # --- Spec 10: Aufgaben, LinkedIn, Sales CRM --------------------------------------
 #: The values each status column may hold, in their working order.
-TASK_PRIORITIES = ("hoch", "mittel", "niedrig")
+TASK_PRIORITIES = ("urgent", "hoch", "mittel", "niedrig")
 TASK_STATES = ("offen", "in_arbeit", "review", "erledigt")
 POST_STATES = ("idee", "entwurf", "freigabe", "geplant", "veroeffentlicht")
 DEAL_STAGES = ("lead", "gespraech", "angebot", "verhandlung", "gewonnen", "verloren")
@@ -4668,7 +4668,7 @@ class Task(Base):
 
     __tablename__ = "tasks"
     __table_args__ = (
-        CheckConstraint("priority IN ('hoch','mittel','niedrig')", name="ck_tasks_priority"),
+        CheckConstraint("priority IN ('urgent','hoch','mittel','niedrig')", name="ck_tasks_priority"),
         CheckConstraint("status IN ('offen','in_arbeit','review','erledigt')", name="ck_tasks_status"),
     )
 
@@ -4682,6 +4682,7 @@ class Task(Base):
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     note: Mapped[str] = mapped_column(Text, nullable=False, default="")
     priority: Mapped[str] = mapped_column(String(10), nullable=False, default="mittel")
+    favorite: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="0")
     status: Mapped[str] = mapped_column(String(10), nullable=False, default="offen", index=True)
     due_on: Mapped[dt.date | None] = mapped_column(Date(), nullable=True, index=True)
     owner: Mapped[str] = mapped_column(String(120), nullable=False, default="")

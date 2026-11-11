@@ -769,3 +769,6 @@
 .tm-workspace-tab--target { box-shadow: inset 3px 0 var(--tint); }
 .tm-order-status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 @media(max-width: 640px) { .tm-workspaces { flex-wrap: wrap; } .tm-workspaces nav { flex-basis: 100%; } }
+
+.tm-priority--niedrig { color: var(--muted); }
+.tm-priority--urgent { color: var(--alert); font-weight: 750; }

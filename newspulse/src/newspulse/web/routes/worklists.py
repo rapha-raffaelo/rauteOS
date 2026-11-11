@@ -32,7 +32,7 @@ def _clients(session: Session) -> list[dict]:
 
 
 def _task(t: Task) -> dict:
-    return dict(id=t.id, title=t.title, note=t.note, priority=t.priority, status=t.status,
+    return dict(id=t.id, title=t.title, note=t.note, priority=t.priority, favorite=t.favorite, status=t.status,
                 board_id=t.board_id, source_key=t.source_key, source_kind=t.source_kind, source_open=t.source_open,
                 due_on=t.due_on, owner=t.owner, context_href=t.context_href, assignees=list(t.assignees or []),
                 client=dict(id=t.client.id, name=t.client.name) if t.client else None,

@@ -7,12 +7,14 @@ const dateValue = value => {
 };
 const iso = date => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
 const pretty = value => value ? new Date(value + "T12:00:00").toLocaleDateString("de-DE") : "";
-export const EMPTY_FILTERS = {view:"alle", person:"", area:"", client:"", from:"", to:""};
+export const EMPTY_FILTERS = {view:"alle", person:"", area:"", client:"", from:"", to:"", priority:"", favorite:""};
 
 export function readTaskFilters(params) {
   const old = params.get("liste") || "alle";
   const filters = {
-    view: ["heute","geplant","wichtig","erledigt"].includes(old) ? old : "alle",
+    view: ["heute","geplant","erledigt"].includes(old) ? old : "alle",
+    priority: params.get("prioritaet") || (old === "wichtig" ? "hoch" : ""),
+    favorite: params.get("favoriten") === "1" ? "1" : "",
     person: params.get("person") || (old.startsWith("person:") ? old.slice(7) : ""),
     area: params.get("bereich") || (old === "intern" ? "intern" : old === "kunden" || old.startsWith("kunde:") ? "kunde" : ""),
     client: params.get("kunde") || (old.startsWith("kunde:") ? old.slice(6) : ""),
@@ -28,13 +30,15 @@ export function readTaskFilters(params) {
 export function setFilterParams(params, filters) {
   for (const [key,value] of Object.entries({
     liste: filters.view === "alle" ? "" : filters.view, person:filters.person,
-    bereich:filters.area, kunde:filters.client, von:filters.from, bis:filters.to,
+    bereich:filters.area, kunde:filters.client, prioritaet:filters.priority, favoriten:filters.favorite, von:filters.from, bis:filters.to,
   })) { if (value) params.set(key,value); else params.delete(key); }
   return params;
 }
 
 export function matchesTaskFilters(task, filters) {
-  return (!filters.person || task.assignees.includes(filters.person))
+  return (!filters.priority || task.priority === filters.priority)
+    && (!filters.favorite || task.favorite)
+    && (!filters.person || task.assignees.includes(filters.person))
     && (!filters.area || (filters.area === "intern" ? !task.client : !!task.client))
     && (!filters.client || String(task.client?.id) === filters.client)
     && (!filters.from || (!!task.due_on && task.due_on >= filters.from && task.due_on <= filters.to));
@@ -123,7 +127,7 @@ export function TaskFilters({ filters, onChange, team, clients }) {
   const active=Object.entries(filters).some(([key,value])=>key==="view" ? value!=="alle" : !!value);
   return <div className="tm-filters" aria-label="Aufgabenfilter">
     <label><span>Ansicht</span><select aria-label="Ansicht filtern" value={filters.view} onChange={e=>onChange({view:e.target.value,...(e.target.value==="heute" ? {from:"",to:""} : {})})}>
-      <option value="alle">Alle Aufgaben</option><option value="heute">Heute & überfällig</option><option value="geplant">Mit Fälligkeit</option><option value="wichtig">Wichtig</option><option value="erledigt">Erledigt</option>
+      <option value="alle">Alle Aufgaben</option><option value="heute">Heute & überfällig</option><option value="geplant">Mit Fälligkeit</option><option value="erledigt">Erledigt</option>
     </select></label>
     <label><span>Person</span><select aria-label="Person filtern" value={filters.person} onChange={e=>onChange({person:e.target.value})}>
       <option value="">Alle Personen</option>{team.map(person=><option key={person.key} value={person.key}>{person.name}</option>)}
@@ -133,6 +137,12 @@ export function TaskFilters({ filters, onChange, team, clients }) {
     </select></label>
     <label><span>Kunde</span><select aria-label="Kunde filtern" value={filters.client} disabled={filters.area==="intern"} onChange={e=>onChange({client:e.target.value,...(e.target.value ? {area:"kunde"} : {})})}>
       <option value="">Alle Kunden</option>{clients.map(client=><option key={client.id} value={client.id}>{client.name}</option>)}
+    </select></label>
+    <label><span>Priorität</span><select aria-label="Priorität filtern" value={filters.priority || ""} onChange={e=>onChange({priority:e.target.value})}>
+      <option value="">Alle Prioritäten</option><option value="niedrig">Niedrig</option><option value="mittel">Mittel</option><option value="hoch">Hoch</option><option value="urgent">Urgent</option>
+    </select></label>
+    <label><span>Favoriten</span><select aria-label="Favoriten filtern" value={filters.favorite || ""} onChange={e=>onChange({favorite:e.target.value})}>
+      <option value="">Alle Aufgaben</option><option value="1">★ Nur Favoriten</option>
     </select></label>
     <DateCalendar filters={filters} onChange={onChange} />
     {active && <button type="button" className="btn btn--quiet" onClick={()=>onChange({...EMPTY_FILTERS})}>Filter zurücksetzen</button>}

@@ -143,3 +143,20 @@ it('separates workspaces and creates tasks in the active workspace',()=>{
   expect(screen.getByLabelText('Workspace-Name')).toBeTruthy();
   expect(screen.getByRole('button',{name:'Workspace anlegen'}).closest('form').getAttribute('action')).toBe('/aufgaben/boards');
 });
+
+it('combines independent favorites and priority filters in the list',()=>{
+ window.history.replaceState(null,'','/aufgaben?ansicht=liste');
+ render(<TasksPage data={{...base,priorities:[['urgent','Urgent'],...base.priorities],tasks:[
+ {...base.tasks[0],favorite:true,priority:'urgent'}, {...base.tasks[1],favorite:true}, {...base.tasks[2],status:'offen',favorite:false,priority:'urgent'}]}}/>);
+ fireEvent.change(screen.getByLabelText('Favoriten filtern'),{target:{value:'1'}});
+ expect(screen.queryByText('Alt')).toBeNull();
+ fireEvent.change(screen.getByLabelText('Priorität filtern'),{target:{value:'urgent'}});
+ expect(screen.getByText('Pitch Qonto')).toBeTruthy();
+ expect(screen.queryByText('Medienliste')).toBeNull();
+ expect(screen.getByText(/⚑ ! Urgent/).className).toContain('tm-priority--urgent');
+ const form=screen.getByRole('button',{name:'Favorit: Pitch Qonto'}).closest('form');
+ expect(new FormData(form).get('favorite')).toBe('0');
+ expect(new FormData(form).has('priority')).toBe(false);
+ expect(window.location.search).toContain('prioritaet=urgent');
+ expect(window.location.search).toContain('favoriten=1');
+});
