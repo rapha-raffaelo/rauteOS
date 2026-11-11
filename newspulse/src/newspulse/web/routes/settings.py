@@ -910,7 +910,9 @@ def _ai_context(session: Session) -> dict[str, object]:
     return {
         "providers": [
             {"key": key, "label": meta["label"], "vendor": meta["vendor"],
-             "default_model": meta["model"] or config.GEMINI_MODEL,
+             "default_model": meta["model"] or ("" if key in ai_models.SUBSCRIPTION_ONLY else config.GEMINI_MODEL),
+             "subscription_only": key in ai_models.SUBSCRIPTION_ONLY,
+             "login_command": ai_models.LOGIN_COMMAND.get(key, ""),
              **{k: v for k, v in vars(ai_models.status(session, key)).items() if k != "provider"}}
             for key, meta in ai_models.PROVIDERS.items()
         ],
@@ -1753,7 +1755,7 @@ def save_ai_key_route(
         return _render_ai(request, session, error="Unbekannter Anbieter.")
     try:
         ai_models.save_key(session, provider, api_key[:500], model[:100])
-    except ai_models.NoSecret as exc:
+    except (ai_models.NoSecret, ValueError) as exc:
         session.rollback()
         return _render_ai(request, session, error=str(exc))
     return RedirectResponse("/settings#ki-modelle", status_code=_SEE_OTHER)

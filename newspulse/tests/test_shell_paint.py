@@ -422,11 +422,11 @@ def test_each_workspace_keeps_its_tools_reachable(web, mandate, suffix, options)
 def test_profile_keeps_its_forms_and_hands_competition_and_guide_to_their_tabs(web, mandate, suffix):
     body = rendered(web.get(f"/client/{mandate.id}{suffix}"))
     assert 'id="workspace-view"' not in body
-    for section in ("wissen", "unternehmen"):
+    for section in ("wissen", "kontakte"):
         assert f'id="{section}"' in body
+    assert 'id="unternehmen"' not in body and "Presse, Krise" not in body
     assert body.count('id="react-twin"') <= 1
     assert body.count('<html') == 1
-    assert f'action="/client/{mandate.id}/profil"' in body
     for section in ("wettbewerb", "marktumfeld", "guide"):
         assert f'id="{section}"' not in body
 

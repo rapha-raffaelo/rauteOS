@@ -66,172 +66,6 @@ function Guide({ data: d, base }) {
     </div>
   </div></Panel>;
 }
-// The lines only the kick-off knows, beside the phone book. Who speaks is the
-// book's (PeopleBook); everything else the old company form held (business,
-// founding, seat, products, competitors) is a topic of the brief or a glance
-// fact above, filled by the onboarding research.
-const CONTACTS = ["pressekontakt", "krisenkontakt", "zielmedien"];
-function Company({ data, base }) {
-  const shown = (p) => CONTACTS.includes(p.key);
-  const d = {...data, fields: data.fields.filter(shown), proposals: data.proposals.filter(shown),
-    contradictions: data.contradictions.filter(shown)};
-  const filled = d.fields.filter((f) => d.facts[f.key]?.value).length;
-  return (
-    <>
-      <Panel title="Presse, Krise & Zielmedien" id="profilebody">
-        <dl className="profile-fact-sheet">{d.fields.filter(f => d.facts[f.key]?.value).map(f =>
-          <div key={f.key}><dt>{t(f.label)}</dt><dd>{d.facts[f.key].value}</dd></div>)}</dl>
-        {!filled && <p>Wer Presseanfragen annimmt, wer abends erreichbar ist und welche Titel zählen, weiß nur der Kunde.</p>}
-        <details className="profile-edit" open={Boolean(d.proposals.length || d.contradictions.length)}>
-        <summary>Bearbeiten <span>{filled}/{d.fields.length} ausgefüllt</span></summary>
-        <Notice>{d.research_error}</Notice>
-        {!!d.proposals.length && (
-          <>
-            <p>
-              {d.proposals.length} Vorschläge stehen bereits in ihren Feldern
-              und sind noch nicht gespeichert. Geänderte Werte gelten als deine
-              Angabe; unveränderte Vorschläge behalten ihre Quelle.
-            </p>
-            <Action
-              action={base + "/profil/discard"}
-              label="Alle verwerfen"
-              values={{
-                key: d.proposals.filter((p) => p.from_person).map((p) => p.key),
-                pid: d.proposals
-                  .filter((p) => !p.from_person)
-                  .map((p) => p.row_id),
-              }}
-            />
-          </>
-        )}
-        {!!d.contradictions.length && (
-          <section>
-            <h3>Von Hand gefüllt — das Netz sagt etwas anderes</h3>
-            <p>
-              {t(
-                "Regel: Eine Angabe von Hand wird nie überschrieben. Das Netz widerspricht hier nur — ändern können Sie den Wert selbst, unten im Feld.",
-              )}
-              {t(
-                "Verwerfen heißt: Dieser Widerspruch wird beim nächsten Abgleich nicht erneut gemeldet.",
-              )}
-            </p>
-            {d.contradictions.map((p) => (
-              <article className="feed-item" key={p.id}>
-                <strong>
-                  {d.fields.find((f) => f.key === p.key)?.label || p.key}
-                </strong>
-                <p>Deine Angabe: {d.facts[p.key]?.value}</p>
-                <p>Das Netz sagt: {p.value}</p>
-                <Source url={p.source_url}>
-                  {p.source_title || p.source_url}
-                </Source>
-                <Action
-                  action={base + "/profil/discard"}
-                  label="Verwerfen"
-                  values={{ pid: p.id }}
-                />
-              </article>
-            ))}
-          </section>
-        )}
-        <form method="post" action={base + "/profil"}>
-          <div className="platform-fields">
-            {d.fields.map((f) => {
-              const fact = d.facts[f.key],
-                offer = d.proposals.find((p) => p.key === f.key);
-              return (
-                <div
-                  key={`${f.key}:${offer?.value ?? fact?.value ?? ""}`}
-                  className={`prof__row ${f.long ? "platform-span " : ""}${offer ? "platform-proposal prof__row--offered" : ""}`}
-                >
-                  {offer && fact && (
-                    <p>
-                      <del>{fact.value}</del>
-                    </p>
-                  )}
-                  <Field
-                    id={`f-${f.key}`}
-                    name={f.key}
-                    label={f.label}
-                    type={f.long ? "textarea" : "text"}
-                    value={offer?.value ?? fact?.value ?? ""}
-                  >
-                    <small>{t(f.hint)}</small>
-                  </Field>
-                  {offer && (
-                    <p className="prof__src prof__src--offer">
-                      Vorschlag, noch nicht gespeichert ·{" "}
-                      {offer.source_url ? (
-                        <Source url={offer.source_url}>
-                          {offer.source_title || offer.source_url}
-                        </Source>
-                      ) : (
-                        offer.source_title ||
-                        (offer.from_person
-                          ? "Angabe des Mandanten"
-                          : "Recherche ohne Quelle")
-                      )}
-                    </p>
-                  )}
-                  {fact && (
-                    <p className="prof__src">
-                      {fact.filled_by === d.by_hand
-                        ? t("Ihre Angabe")
-                        : `Von ${fact.filled_by}`}
-                      {fact.source_url && (
-                        <>
-                          {" "}
-                          ·{" "}
-                          <Source url={fact.source_url}>
-                            {fact.source_title || t("Quelle")}
-                          </Source>
-                        </>
-                      )}
-                    </p>
-                  )}
-                  {fact?.is_disputed && (
-                    <div className="prof__old">
-                      Vorher: {fact.superseded_value} ·{" "}
-                      {fact.superseded_filled_by}
-                      {fact.superseded_source_url && (
-                        <>
-                          {" "}
-                          ·{" "}
-                          <Source url={fact.superseded_source_url}>
-                            {fact.superseded_source_title || t("Quelle")}
-                          </Source>
-                        </>
-                      )}
-                      <button type="submit" form={`forget-${f.key}`}>
-                        {t("Alte Angabe verwerfen")}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-          <button type="submit" className="btn btn--go">{t("Profil speichern")}</button>
-          <p className="panel-hint">
-            Was du hier änderst, gilt als deine Angabe und wird von der KI nicht
-            mehr überschrieben.
-          </p>
-        </form>
-        {d.fields
-          .filter((f) => d.facts[f.key]?.is_disputed)
-          .map((f) => (
-            <form
-              key={f.key}
-              id={`forget-${f.key}`}
-              method="post"
-              action={`${base}/profil/${f.key}/forget`}
-            />
-          ))}
-        </details>
-      </Panel>
-    </>
-  );
-}
 function Rivals({ data: d, base }) {
   const redirect_to = base + "/wettbewerb#wettbewerb";
   return (
@@ -535,7 +369,6 @@ export function ProfilePage({ data: d, onData }) {
       const target = document.getElementById(decodeURIComponent(window.location.hash.slice(1)));
       if (!target) return;
       for (let node = target; node; node = node.parentElement) if (node.tagName === 'DETAILS') node.open = true;
-      if (['unternehmen', 'profilebody'].includes(target.id)) target.querySelector('details')?.setAttribute('open', '');
       target.scrollIntoView?.({block:'start'});
     }
     reveal(); window.addEventListener('hashchange', reveal);
@@ -558,26 +391,24 @@ export function ProfilePage({ data: d, onData }) {
         description={d.client.legal_name ? `${t("Unternehmen dahinter")}: ${d.client.legal_name} · ${t(heading[1])}` : t(heading[1])}
       />
       {view === "profile" && <>
-        {/* Onboarding and the contacts side by side: who to ask, next to the
-            link that asks them. */}
+        <Notice>{refreshError}</Notice>
+        {ready && (
+          <Notice>
+            Recherche abgeschlossen. Bitte die Seite neu laden, um die Vorschläge zu sehen.
+          </Notice>
+        )}
+        {/* Onboarding and the contacts side by side, 70 to 30: who to ask,
+            next to the link that asks them. */}
         <div className="profile-top">
           <OnboardingLinks key={d.client.id} clientId={d.client.id} />
-          <section id="unternehmen" className="profile-section" onChangeCapture={() => setDirty(true)}>
-            <Notice>{refreshError}</Notice>
-            {ready && (
-              <Notice>
-                Recherche abgeschlossen. Bitte ungespeicherte Eingaben sichern und
-                die Seite neu laden, um die Vorschläge zu sehen.
-              </Notice>
-            )}
-            <Company data={d.company} base={base} />
-          </section>
+          <PeopleBook people={d.people} error={d.people_error} draft={d.people_draft} base={base} />
         </div>
-        <PeopleBook people={d.people} error={d.people_error} draft={d.people_draft} base={base} />
         <section id="wissen" className="profile-knowledge" aria-label={t("Wissen & Aussagen")}>
-          <TwinPage clientId={d.client.id} embedded />
+          {/* The search keywords sit between the short facts and the long
+              brief: what the radar looks for, right under who the client is. */}
+          <TwinPage clientId={d.client.id} embedded
+            between={<MonitoringKeywords key={`keywords-${d.client.id}`} clientId={d.client.id}/>} />
         </section>
-        <MonitoringKeywords key={`keywords-${d.client.id}`} clientId={d.client.id}/>
       </>}
       {view === "rivals" && <>
         <section id="wettbewerber" className="profile-section"><RivalManagement data={d.rivals} base={base}/></section>

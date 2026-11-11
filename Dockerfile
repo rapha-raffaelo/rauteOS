@@ -27,8 +27,12 @@ RUN apt-get update \
 
 # The analyzer and the assistant both invoke `claude`; without it the sweep
 # fails per batch and the drawer reports "CLI not found".
-RUN npm install -g @anthropic-ai/claude-code && npm cache clean --force \
- && node --version && claude --version
+#
+# OpenAI runs over the ChatGPT subscription through the Codex CLI, logged in
+# once on the server with `docker compose exec app codex login --device-auth`.
+# Its login lives on the volume (CODEX_HOME below), never in the image.
+RUN npm install -g @anthropic-ai/claude-code @openai/codex && npm cache clean --force \
+ && node --version && claude --version && codex --version
 
 # This file lives at the repository root, and the app lives in newspulse/, hence
 # the prefixed COPY paths. It sits here so a PaaS that auto-detects a Dockerfile
@@ -51,7 +55,8 @@ RUN pip install --no-cache-dir uv && uv sync --frozen --no-dev
 # gained by separating them — they are lost together or kept together.
 ENV NEWSPULSE_DATABASE_PATH=/data/newspulse.db \
     NEWSPULSE_WEB_HOST=0.0.0.0 \
-    NEWSPULSE_CLAUDE_CONFIG_DIR=/data/claude
+    NEWSPULSE_CLAUDE_CONFIG_DIR=/data/claude \
+    CODEX_HOME=/data/codex
 
 # Deliberately no `VOLUME /data`: Railway rejects the instruction outright
 # ("docker VOLUME is not supported, use Railway Volumes") and the build fails to
@@ -66,4 +71,6 @@ RUN mkdir -p /data
 EXPOSE 8000
 
 # Migrations run on start so a deploy never serves a schema older than its code.
-CMD ["sh", "-c", "uv run alembic upgrade head && uv run newspulse-web"]
+# Codex refuses to start while CODEX_HOME does not exist, and /data is mounted
+# over anything the image could create, so the folder is made on start.
+CMD ["sh", "-c", "mkdir -p \"$CODEX_HOME\" && uv run alembic upgrade head && uv run newspulse-web"]

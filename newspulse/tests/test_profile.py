@@ -220,47 +220,6 @@ def test_an_unknown_field_is_refused(session):
 # contact, speakers, target media); the rest of the old form became the brief.
 
 
-def test_the_page_shows_the_source_of_a_machine_filled_line(factory, web):
-    with factory() as session:
-        client = _client(session)
-        profiles.save(session, client, "pressekontakt", "Alexandre Prot",
-                      source_url="https://qonto.com/ueber-uns", source_title="Qonto",
-                      filled_by="gemini-2.5-flash")
-        client_id = client.id
-
-    body = rendered(web.get(f"/client/{client_id}/profil"))
-
-    assert "Alexandre Prot" in body
-    assert "gemini-2.5-flash" in body
-    assert "https://qonto.com/ueber-uns" in body
-
-
-def test_unified_profile_escapes_fact_text(factory, web):
-    with factory() as session:
-        client = _client(session)
-        profiles.save(session, client, "pressekontakt", '<script>alert("fact")</script>')
-        client_id = client.id
-
-    body = rendered(web.get(f"/client/{client_id}/twin"))
-
-    assert '<script>alert("fact")</script>' not in body
-    assert '&lt;script&gt;alert(' in body
-
-
-def test_a_hand_typed_line_carries_no_citation(factory, web):
-    """His own knowledge is the strongest provenance in the building and needs no
-    link; printing "Von mensch" beside it would be noise."""
-    with factory() as session:
-        client = _client(session)
-        profiles.save(session, client, "pressekontakt", "Weiß ich vom Kick-off")
-        client_id = client.id
-
-    body = rendered(web.get(f"/client/{client_id}/profil"))
-
-    assert "Weiß ich vom Kick-off" in body
-    assert "mensch" not in body
-
-
 def test_saving_the_form_makes_a_changed_line_the_consultants(factory, web):
     """Editing a machine answer makes it his, because that is what it now is —
     and the AI must not come back and overwrite it."""
@@ -350,38 +309,6 @@ def test_accepting_a_proposal_stamps_the_fact_as_the_humans(factory, web):
     assert [p.key for p in left] == ["sitz"]
 
 
-def test_a_field_the_consultant_filled_is_not_proposed_over(factory, web):
-    """The machine may fill a blank and may correct itself. It may not overrule
-    the person it works for.
-
-    The web's version is on the page — that is the DEC-2 rule, contradiction
-    rather than silence — but it is drawn under the "never overwritten" heading
-    and carries no accept button, where an ordinary offer carries one.
-    """
-    with factory() as session:
-        client = _client(session)
-        profiles.save(session, client, "pressekontakt", "Weiß ich besser")
-        client_id = client.id
-        ids = _propose(
-            session, client_id,
-            pressekontakt=("Jemand anderes", "https://irgendwo.de", "Irgendwo"),
-            krisenkontakt=("Paris", "https://qonto.com", "Qonto"),
-        )
-
-    body = rendered(web.get(f"/client/{client_id}/profil"))
-
-    assert "Weiß ich besser" in body, "his own value still stands"
-    # The offers are rendered into the fields they are offers for, so the field
-    # itself is the assertion: an ordinary offer sits in its box, and the one
-    # arguing with a hand-filled answer does not sit in his.
-    assert "Jemand anderes" not in _field_row(body, "pressekontakt"), (
-        "nothing on the page puts the machine's version in the field he filled"
-    )
-    assert "Weiß ich besser" in _field_row(body, "pressekontakt")
-    assert "Paris" in _field_row(body, "krisenkontakt"), "an ordinary offer does stand in its field"
-    assert ids  # the rows were filed; what is drawn from them is the point above
-
-
 def test_posting_a_hand_filled_key_to_accept_does_not_overwrite_it(factory, web):
     """The page draws no accept button for a hand-filled field, but the form body
     is not the page: a tab left open while the value was typed in elsewhere posts
@@ -409,77 +336,6 @@ def test_posting_a_hand_filled_key_to_accept_does_not_overwrite_it(factory, web)
     # The refused one is still on file: it is a contradiction PRF-02 renders, not
     # something to silently drop because the accept did not honour it.
     assert left == {"ceo"}
-
-
-def test_only_contradictions_left_still_offers_a_way_to_clear_them(factory, web):
-    """A proposal against a hand-filled field gets no accept button, so a client
-    whose profile was typed in entirely by hand used to accumulate rows that were
-    invisible *and* unclearable — the discard button lived inside the block that
-    the filter had just emptied."""
-    with factory() as session:
-        client = _client(session)
-        profiles.save(session, client, "pressekontakt", "Weiß ich besser")
-        client_id = client.id
-        ids = _propose(
-            session, client_id, pressekontakt=("Jemand anderes", "https://irgendwo.de", "Irgendwo")
-        )
-
-    body = rendered(web.get(f"/client/{client_id}/profil"))
-    assert "Verwerfen" in body, "the rows are reachable"
-    assert f'name="pid" value="{ids["pressekontakt"]}"' in body, "and the button names them"
-
-    web.post(f"/client/{client_id}/profil/discard", data={"pid": ids["pressekontakt"]},
-             follow_redirects=False)
-
-    with factory() as session:
-        assert profile_refresh.outstanding(session, client_id) == []
-
-
-def test_a_contradiction_is_visible_beside_an_ordinary_proposal(factory, web):
-    """The two piles are independent. Hanging the contradictions off "there are no
-    proposals" hid them on every mandate that also had one ordinary offer — which
-    is most of them — and an accepted offer then left the held-back row on file,
-    invisible, until the next refresh."""
-    with factory() as session:
-        client = _client(session)
-        profiles.save(session, client, "pressekontakt", "Weiß ich besser")
-        client_id = client.id
-        _propose(
-            session, client_id,
-            pressekontakt=("Jemand anderes", "https://irgendwo.de", "Irgendwo"),
-            krisenkontakt=("Paris", "https://qonto.com", "Qonto"),
-        )
-
-    body = rendered(web.get(f"/client/{client_id}/profil"))
-
-    assert "Paris" in body, "the offer is drawn"
-    assert "das Netz sagt etwas anderes" in body, "and so is the one held back"
-
-
-def test_the_reason_a_check_broke_reaches_the_page(factory, web):
-    """The sweep researches at 06:10 and the page is opened at nine, in a process
-    that never saw the failure. Without the stored note the page shows a profile
-    that was "checked" with no reason and no way to find one."""
-    from newspulse.web.routes import profile as profile_routes
-
-    def _boom(prompt):
-        raise RuntimeError("die Suche ist nicht erreichbar")
-
-    with factory() as session:
-        client = _client(session)
-        client_id = client.id
-        with pytest.raises(RuntimeError):
-            profile_refresh.refresh(
-                session, client, now=dt.datetime(2031, 3, 5, 6, 10, tzinfo=dt.UTC),
-                generate=_boom,
-            )
-        assert client.profile_note
-    # Nothing in memory: the sweep runs elsewhere and leaves this dict empty.
-    profile_routes._errors.pop(client_id, None)
-
-    body = rendered(web.get(f"/client/{client_id}/profil"))
-
-    assert "nicht erreichbar" in body, "the sweep's failure is invisible on the page"
 
 
 def test_discarding_clears_the_proposals_from_the_page(factory, web):

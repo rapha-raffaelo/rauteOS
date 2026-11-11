@@ -96,16 +96,34 @@ function AiModels({ data: ai }) {
               <h3>{p.label} <small>{p.vendor}</small></h3>
               <span className="ai-state">{p.connected ? `${t("Verbunden")} · ${t(p.how)}${p.hint ? ` · …${p.hint}` : ""}` : t("Nicht verbunden")}</span>
             </header>
-            <form method="post" action="/settings/ai/key" className="ai-key">
-              <input type="hidden" name="provider" value={p.key} />
-              <label className="platform-field"><span>{t("API-Schlüssel")}</span>
-                <input type="password" name="api_key" autoComplete="off" placeholder={p.hint ? `…${p.hint}` : ""} maxLength={500} />
-              </label>
-              <label className="platform-field"><span>{t("Modell")}</span>
-                <input type="text" name="model" defaultValue={p.model} placeholder={p.default_model} maxLength={100} />
-              </label>
-              <button type="submit" className="btn btn--go">{t(p.connected ? "Speichern" : "Verbinden")}</button>
-            </form>
+            {p.subscription_only ? (
+              <div className="ai-login">
+                <p>
+                  {t(p.connected
+                    ? "Läuft über das ChatGPT-Abo, ohne API-Schlüssel. Der Verbrauch zählt gegen die Kontingente des angemeldeten Kontos."
+                    : "Läuft über das ChatGPT-Abo, ohne API-Schlüssel. Einmal auf dem Server anmelden (im Ordner /srv/rauteos/repo/deploy), dann den angezeigten Link und Code im Browser bestätigen:")}
+                </p>
+                {!p.connected && <code className="ai-login__cmd">{p.login_command}</code>}
+                <form method="post" action="/settings/ai/key" className="ai-key">
+                  <input type="hidden" name="provider" value={p.key} />
+                  <label className="platform-field"><span>{t("Modell")}</span>
+                    <input type="text" name="model" defaultValue={p.model} placeholder={t("Standard des Abos")} maxLength={100} />
+                  </label>
+                  <button type="submit" className="btn btn--go">{t("Speichern")}</button>
+                </form>
+              </div>
+            ) : (
+              <form method="post" action="/settings/ai/key" className="ai-key">
+                <input type="hidden" name="provider" value={p.key} />
+                <label className="platform-field"><span>{t("API-Schlüssel")}</span>
+                  <input type="password" name="api_key" autoComplete="off" placeholder={p.hint ? `…${p.hint}` : ""} maxLength={500} />
+                </label>
+                <label className="platform-field"><span>{t("Modell")}</span>
+                  <input type="text" name="model" defaultValue={p.model} placeholder={p.default_model} maxLength={100} />
+                </label>
+                <button type="submit" className="btn btn--go">{t(p.connected ? "Speichern" : "Verbinden")}</button>
+              </form>
+            )}
             <div className="ai-provider__acts">
               <form method="post" action="/settings/ai/test">
                 <input type="hidden" name="provider" value={p.key} />

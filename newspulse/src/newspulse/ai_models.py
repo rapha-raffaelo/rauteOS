@@ -17,6 +17,11 @@ Keys entered in the settings are stored encrypted in the ``settings`` table. The
 encryption key is derived from ``NEWSPULSE_SESSION_SECRET`` and never stored, so
 a copy of the database alone does not hand out the keys. Without that secret no
 key can be stored. Keys from the environment keep working as before.
+
+OpenAI takes no key at all: it runs over the ChatGPT subscription through the
+Codex CLI (:mod:`newspulse.codex_cli`), logged in once on the server with
+``codex login --device-auth``. No path here sends a prompt to the metered
+OpenAI API.
 """
 
 from __future__ import annotations
@@ -38,7 +43,7 @@ _log = logging.getLogger(__name__)
 
 PROVIDERS: dict[str, dict[str, str]] = {
     "claude": {"label": "Claude", "vendor": "Anthropic", "model": "claude-sonnet-5"},
-    "openai": {"label": "OpenAI", "vendor": "OpenAI", "model": "gpt-5"},
+    "openai": {"label": "OpenAI", "vendor": "ChatGPT-Abo", "model": ""},
     "gemini": {"label": "Gemini", "vendor": "Google", "model": ""},
 }
 
@@ -61,9 +66,15 @@ _MODEL_PREFIX = "ai_model:"
 _ROLES_KEY = "ai_roles"
 _ENV_KEYS = {
     "claude": ("NEWSPULSE_ANTHROPIC_API_KEY", "ANTHROPIC_API_KEY"),
-    "openai": ("NEWSPULSE_OPENAI_API_KEY", "OPENAI_API_KEY"),
     "gemini": ("NEWSPULSE_GEMINI_API_KEY", "GEMINI_API_KEY"),
 }
+
+
+#: Providers reached only through a subscription CLI login, never with a key.
+SUBSCRIPTION_ONLY = frozenset({"openai"})
+
+#: How to log in, shown in the settings for a provider without a key field.
+LOGIN_COMMAND = {"openai": "docker compose exec app codex login --device-auth"}
 
 
 class NotConnected(Exception):
@@ -132,6 +143,8 @@ def _put(session, key: str, value: str | None) -> None:
 
 def stored_key(session, provider: str) -> str:
     """The key entered in the settings, decrypted, or "" when none (or unreadable)."""
+    if provider in SUBSCRIPTION_ONLY:
+        return ""
     token = _setting(session, _KEY_PREFIX + provider)
     if not token:
         return ""
@@ -150,6 +163,8 @@ def env_key(provider: str, role: str | None = None) -> str:
     explicitly named ``NEWSPULSE_GEMINI_API_KEY`` (or a key entered in the
     settings): two different things to consent to, see ``config.review_api_key``.
     """
+    if provider in SUBSCRIPTION_ONLY:
+        return ""
     if provider == "gemini":
         if role == "reviewer":
             return config.review_api_key() if config.review_configured() else ""
@@ -167,6 +182,8 @@ def save_key(session, provider: str, key: str, model: str = "") -> None:
     if provider not in PROVIDERS:
         raise ValueError("Unbekannter Anbieter.")
     key = key.strip()
+    if key and provider in SUBSCRIPTION_ONLY:
+        raise ValueError(f"{PROVIDERS[provider]['label']} wird über das Abo angemeldet, nicht mit einem Schlüssel.")
     if key:
         _put(session, _KEY_PREFIX + provider, _fernet().encrypt(key.encode()).decode())
     _put(session, _MODEL_PREFIX + provider, model.strip() or None)
@@ -191,11 +208,17 @@ def _claude_cli() -> bool:
     return shutil.which("claude") is not None
 
 
+def _codex_login() -> bool:
+    from . import codex_cli
+
+    return codex_cli.logged_in()
+
+
 @dataclass(frozen=True)
 class Status:
     provider: str
     connected: bool
-    how: str  # "Schlüssel aus den Einstellungen", "Server-Konfiguration", "Claude-Abo (CLI)", ""
+    how: str  # "Schlüssel aus den Einstellungen", "Server-Konfiguration", "Claude-Abo (CLI)", "ChatGPT-Abo (Codex CLI)", ""
     hint: str  # the last four characters of a stored key, never more
     model: str
 
@@ -208,6 +231,8 @@ def status(session, provider: str, role: str | None = None) -> Status:
         how, hint = "Server-Konfiguration", ""
     elif provider == "claude" and _claude_cli():
         how, hint = "Claude-Abo (CLI)", ""
+    elif provider == "openai" and _codex_login():
+        how, hint = "ChatGPT-Abo (Codex CLI)", ""
     else:
         how, hint = "", ""
     return Status(provider, bool(how), how, hint, model_for(session, provider, role))
@@ -284,19 +309,21 @@ def call(session, provider: str, prompt: str, *, timeout: float, role: str | Non
         from . import analyzer
 
         return analyzer.invoke_claude_cli(prompt, timeout=timeout)
+    if provider == "openai":
+        # The ChatGPT subscription through the Codex CLI; never an API key.
+        from . import codex_cli
+
+        if not codex_cli.logged_in():
+            raise NotConnected("OpenAI ist nicht angemeldet: auf dem Server codex login --device-auth ausführen.")
+        return codex_cli.run(shared_guides.enrich_prompt(prompt, channel="openai_codex"),
+                             timeout=timeout, model=model)
     if not key:
         raise NotConnected(f"{PROVIDERS[provider]['label']} ist nicht verbunden.")
     prompt = shared_guides.enrich_prompt(prompt, channel=f"{provider}_api")
-    if provider == "claude":
-        payload = _post("https://api.anthropic.com/v1/messages",
-                        {"model": model, "max_tokens": 8192, "messages": [{"role": "user", "content": prompt}]},
-                        {"x-api-key": key, "anthropic-version": "2023-06-01"}, timeout, "Claude")
-        text = "".join(b.get("text", "") for b in payload.get("content", []) if b.get("type") == "text")
-    else:
-        payload = _post("https://api.openai.com/v1/chat/completions",
-                        {"model": model, "messages": [{"role": "user", "content": prompt}]},
-                        {"Authorization": f"Bearer {key}"}, timeout, "OpenAI")
-        text = ((payload.get("choices") or [{}])[0].get("message") or {}).get("content") or ""
+    payload = _post("https://api.anthropic.com/v1/messages",
+                    {"model": model, "max_tokens": 8192, "messages": [{"role": "user", "content": prompt}]},
+                    {"x-api-key": key, "anthropic-version": "2023-06-01"}, timeout, "Claude")
+    text = "".join(b.get("text", "") for b in payload.get("content", []) if b.get("type") == "text")
     if not text.strip():
         raise BackendError(f"{PROVIDERS[provider]['label']} returned no text")
     return text
@@ -310,7 +337,9 @@ def _steps_aside(exc: Exception) -> bool:
     if isinstance(exc, NotConnected) or is_quota_error(exc):
         return True
     text = str(exc)
-    return any(f"HTTP {code}" in text for code in (401, 403)) or "unreachable" in text
+    # "401 Unauthorized" is how the Codex CLI reports an expired login.
+    return (any(f"HTTP {code}" in text for code in (401, 403)) or "unreachable" in text
+            or "401 Unauthorized" in text)
 
 
 def ask(role: str, prompt: str, *, timeout: float, session=None, providers: list[str] | None = None) -> str:
