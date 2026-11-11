@@ -764,11 +764,8 @@
 .tm-decision-kind { display: inline-block; margin-top: 10px; }
 
 .tm-workspace-tab { display: flex; align-items: center; flex: none; border: 1px solid transparent; border-radius: 9px; }
-.tm-workspace-tab[draggable="true"] { cursor: grab; border-color: var(--line); background: var(--card); }
+.tm-workspace-tab[draggable="true"] a { cursor: grab; }
+.tm-workspace-tab[draggable="true"] a:active { cursor: grabbing; }
 .tm-workspace-tab--target { box-shadow: inset 3px 0 var(--tint); }
-.tm-workspace-move { display: flex; padding-right: 5px; }
-.tm-workspace-move button { border: 0; background: transparent; color: var(--tint); min-width: 30px; min-height: 36px; cursor: pointer; }
-.tm-workspace-move button:disabled { opacity: .3; cursor: default; }
-.tm-workspace-arrange { flex: none; white-space: nowrap; }
 .tm-order-status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 @media(max-width: 640px) { .tm-workspaces { flex-wrap: wrap; } .tm-workspaces nav { flex-basis: 100%; } }

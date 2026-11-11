@@ -3,7 +3,6 @@ import React, {useEffect, useState} from 'react';
 export function WorkspaceTabs({boards, activeId, href, person}) {
   const storageKey = `rauteos.workspace-order.${person || 'default'}`;
   const [order, setOrder] = useState([]);
-  const [editing, setEditing] = useState(false);
   const [dragged, setDragged] = useState(null);
   const [target, setTarget] = useState(null);
   const [notice, setNotice] = useState('');
@@ -31,22 +30,19 @@ export function WorkspaceTabs({boards, activeId, href, person}) {
   return <>
     <nav aria-label="Workspaces">
       {ranked.map((item,index)=><div key={item.id} className={`tm-workspace-tab${target===item.id?' tm-workspace-tab--target':''}`}
-        draggable={editing}
+        draggable
         onDragStart={e=>{setDragged(item.id);e.dataTransfer.setData('text/plain',item.id);e.dataTransfer.effectAllowed='move';}}
         onDragOver={e=>{if(dragged){e.preventDefault();setTarget(item.id);}}}
         onDrop={e=>{e.preventDefault();if(dragged)move(dragged,index);setDragged(null);setTarget(null);}}
         onDragEnd={()=>{setDragged(null);setTarget(null);}}>
-        <a href={href(item.id)} draggable={false} onClick={e=>{if(editing)e.preventDefault();}}
+        <a href={href(item.id)} draggable={false} title="Ziehen zum Anordnen · Alt + Pfeiltaste zum Verschieben"
+          onKeyDown={e=>{if(e.altKey && ['ArrowLeft','ArrowRight'].includes(e.key)){e.preventDefault();move(item.id,index+(e.key==='ArrowLeft'?-1:1));}}}
           aria-current={item.id===String(activeId || 'all')?'page':undefined}>
-          {editing && <span aria-hidden="true">⠿</span>}<span>{item.name}</span><span className="tm-workspace-count">{item.open_count}</span>
+          <span>{item.name}</span><span className="tm-workspace-count">{item.open_count}</span>
         </a>
-        {editing && <span className="tm-workspace-move">
-          <button type="button" disabled={index===0} aria-label={`${item.name} nach links`} onClick={()=>move(item.id,index-1)}>←</button>
-          <button type="button" disabled={index===ranked.length-1} aria-label={`${item.name} nach rechts`} onClick={()=>move(item.id,index+1)}>→</button>
-        </span>}
+
       </div>)}
     </nav>
-    <button type="button" className="btn btn--quiet tm-workspace-arrange" aria-pressed={editing} onClick={()=>setEditing(!editing)}>{editing?'Fertig':'Reiter anordnen'}</button>
     <span className="tm-order-status" role="status">{notice}</span>
   </>;
 }

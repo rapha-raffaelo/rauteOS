@@ -5,10 +5,9 @@ import {WorkspaceTabs} from './WorkspaceTabs.jsx';
 afterEach(()=>{cleanup();localStorage.clear();});
 const props={boards:[{id:1,name:'Allgemein',open_count:0},{id:2,name:'rauteOS',open_count:2}],activeId:1,href:id=>`/aufgaben?board=${id}`,person:'raphael'};
 const names=()=>within(screen.getByRole('navigation')).getAllByRole('link').map(a=>a.textContent);
-it('reorders tabs with buttons and persists after remount',()=>{
+it('reorders tabs with the keyboard and persists after remount',()=>{
  const {unmount}=render(<WorkspaceTabs {...props}/>);
- fireEvent.click(screen.getByText('Reiter anordnen'));
- fireEvent.click(screen.getByRole('button',{name:'rauteOS nach links'}));
+ fireEvent.keyDown(screen.getByRole('link',{name:/rauteOS/}),{key:'ArrowLeft',altKey:true});
  expect(names()[1]).toContain('rauteOS');
  unmount();render(<WorkspaceTabs {...props}/>);
  expect(names()[1]).toContain('rauteOS');
@@ -16,7 +15,6 @@ it('reorders tabs with buttons and persists after remount',()=>{
 });
 it('supports dragging and appends new workspaces without losing the saved order',()=>{
  const {rerender}=render(<WorkspaceTabs {...props}/>);
- fireEvent.click(screen.getByText('Reiter anordnen'));
  const source=screen.getByRole('link',{name:/rauteOS/}).parentElement;
  const target=screen.getByRole('link',{name:/Alle Aufgaben/}).parentElement;
  fireEvent.dragStart(source,{dataTransfer:{setData(){}}});fireEvent.dragOver(target);fireEvent.drop(target);
