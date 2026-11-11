@@ -491,6 +491,20 @@ def scheduler_enabled() -> bool:
     return raw not in {"0", "false", "off", "no"}
 
 
+def daily_run_times() -> list[tuple[int, int]]:
+    """Local sweep slots; the explicit multi-slot setting overrides legacy time."""
+    raw = os.environ.get("NEWSPULSE_DAILY_TIMES")
+    if raw is None and ENV_DAILY_AT in os.environ:
+        return [daily_run_at()]
+    try:
+        slots = [tuple(map(int, value.strip().split(":"))) for value in (raw or "08:00,16:00").split(",")]
+        if not slots or any(len(s) != 2 or not 0 <= s[0] < 24 or not 0 <= s[1] < 60 for s in slots):
+            raise ValueError
+        return sorted(set(slots))
+    except ValueError:
+        return [(8, 0), (16, 0)]
+
+
 def daily_run_at() -> tuple[int, int]:
     """The local (hour, minute) for the daily sweep. Falls back on a bad value.
 

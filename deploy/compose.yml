@@ -17,6 +17,7 @@ services:
     env_file: [/srv/rauteos/.env]
     environment:
       TZ: Europe/Berlin
+      NEWSPULSE_DAILY_TIMES: "08:00,16:00"
     volumes:
       - /srv/rauteos/data:/data
     # Only Caddy reaches it; never published on the host.

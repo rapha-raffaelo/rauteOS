@@ -412,7 +412,6 @@ def test_decision_board_is_idempotent_and_status_does_not_approve_source(web, se
     session.refresh(letter)
     assert letter.state == OutreachState.ENTWURF and letter.client_ok_at is None
     assert len(list(session.scalars(select(Task).where(Task.source_key.is_not(None))))) == 1
-    assert web.post(f"/aufgaben/{task.id}/delete").status_code == 400
     # Advancing the source gate must reuse the same card, not create another.
     letter.client_ok_at = dt.datetime.now(dt.UTC)
     session.commit()
@@ -429,3 +428,17 @@ def test_decision_board_is_idempotent_and_status_does_not_approve_source(web, se
     web.get("/aufgaben?workspace=decisions")
     session.refresh(task)
     assert task.source_open is True and task.status == "offen"
+
+
+def test_deleted_decision_stays_deleted_without_changing_source(web, session):
+    _client_letter(session)
+    web.get("/aufgaben?workspace=decisions")
+    task = session.scalar(select(Task).where(Task.source_key.is_not(None)))
+    task_id = task.id
+    assert web.post(f"/aufgaben/{task_id}/delete", follow_redirects=False).status_code == 303
+    for _ in range(2):
+        web.get("/aufgaben?workspace=decisions")
+    session.expire_all()
+    assert session.get(Task, task_id) is None
+    letter = session.scalar(select(Outreach))
+    assert letter.state == OutreachState.ENTWURF and letter.client_ok_at is None

@@ -183,7 +183,7 @@ async def delete_task(task_id: int, request: Request, session: Session = Depends
     back = _task_back(await _form(request))
     task = _row_or_404(session, Task, task_id)
     if task.source_key:
-        raise HTTPException(status_code=400, detail="Automatische Entscheidungen bitte über den Status abschließen")
+        session.merge(worklists.DismissedTaskSource(source_key=task.source_key))
     session.delete(task)
     session.commit()
     return RedirectResponse(back, status_code=_SEE_OTHER)

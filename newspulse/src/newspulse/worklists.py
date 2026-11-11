@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 from . import config, linkedin_link
 from .models import (
     DEAL_STAGES, POST_STATES, TASK_PRIORITIES, TASK_STATES,
-    Asset, Client, Deal, LinkedInPost, Task, TaskBoard,
+    Asset, Client, Deal, LinkedInPost, Task, TaskBoard, DismissedTaskSource,
 )
 
 #: How the pages name each value. One place, so the Desk says the same words.
@@ -162,10 +162,11 @@ def sync_decision_tasks(session: Session, decisions, boards: list[TaskBoard]) ->
     board_id = next(b.id for b in boards if b.system_key == "decisions")
     by_key = {task.source_key: task for task in session.scalars(
         select(Task).where(Task.source_key.is_not(None)))}
+    dismissed = set(session.scalars(select(DismissedTaskSource.source_key)))
     active = set()
     for decision in decisions:
         key = decision.source_key
-        if not key:
+        if not key or key in dismissed:
             continue
         active.add(key)
         task = by_key.get(key)

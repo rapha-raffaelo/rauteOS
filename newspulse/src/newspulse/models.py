@@ -4643,6 +4643,11 @@ POST_STATES = ("idee", "entwurf", "freigabe", "geplant", "veroeffentlicht")
 DEAL_STAGES = ("lead", "gespraech", "angebot", "verhandlung", "gewonnen", "verloren")
 
 
+class DismissedTaskSource(Base):
+    __tablename__ = "dismissed_task_sources"
+    source_key: Mapped[str] = mapped_column(String(100), primary_key=True)
+
+
 class TaskBoard(Base):
     """A shared workspace for the agency's tasks."""
     __tablename__ = "task_boards"

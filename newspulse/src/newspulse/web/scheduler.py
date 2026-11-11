@@ -78,10 +78,10 @@ def _scheduled_today(now: dt.datetime) -> dt.datetime:
     the digest is, and on a UTC host the naive reading would fire at 08:10 local
     in summer and 07:10 in winter.
     """
-    hour, minute = config.daily_run_at()
-    return now.astimezone(config.local_zone()).replace(
-        hour=hour, minute=minute, second=0, microsecond=0
-    )
+    local = now.astimezone(config.local_zone())
+    slots = [local.replace(hour=h, minute=m, second=0, microsecond=0)
+             for h, m in config.daily_run_times()]
+    return max((slot for slot in slots if slot <= local), default=slots[0])
 
 
 def _already_ran(session, scheduled: dt.datetime) -> bool:
@@ -405,12 +405,11 @@ def start() -> threading.Event | None:
     if not config.scheduler_enabled():
         _log.info("daily scheduler is switched off (%s)", config.ENV_SCHEDULER)
         return None
-    hour, minute = config.daily_run_at()
     stop = threading.Event()
     threading.Thread(
         target=_loop, args=(stop,), daemon=True, name="newspulse-scheduler"
     ).start()
-    _log.info("daily scheduler armed for %02d:%02d %s", hour, minute, config.local_zone())
+    _log.info("sweep scheduler armed for %s %s", config.daily_run_times(), config.local_zone())
     # One stop event for both: the switch that turns the scheduler off turns off
     # the crisis cadence with it, because both mean "an external cron does this".
     threading.Thread(

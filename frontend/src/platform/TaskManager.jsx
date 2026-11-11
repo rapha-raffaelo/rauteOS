@@ -138,6 +138,13 @@ function Details({ task, d, list }) {
     <aside className="tm-detail" aria-label={t("Aufgabe bearbeiten")}>
       <div className="tm-detail__head">
         <Check task={task} back={back} />
+        <form method="post" action={`/aufgaben/${task.id}/delete`} style={{marginLeft: "auto"}}
+          onSubmit={e => { if (!window.confirm(task.source_key ? "Aufgabe löschen? Der verknüpfte Vorgang bleibt erhalten." : "Diese Aufgabe endgültig löschen?")) e.preventDefault(); }}>
+          <input type="hidden" name="redirect_to" value={href(list)} />
+          <button type="submit" className="btn btn--quiet tm-danger" aria-label="Aufgabe löschen" title="Aufgabe löschen">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7" /></svg>
+          </button>
+        </form>
         <a className="tm-close" href={href(list)} aria-label={t("Details schließen")}>×</a>
       </div>
       <form method="post" action={`/aufgaben/${task.id}`} className="tm-detail__form">
@@ -177,11 +184,7 @@ function Details({ task, d, list }) {
         </div>}
         <button type="submit" className="btn btn--go">{t("Speichern")}</button>
       </form>
-      {!task.source_key && <form method="post" action={`/aufgaben/${task.id}/delete`} className="tm-detail__delete"
-        onSubmit={(e) => { if (!window.confirm(t("Diese Aufgabe endgültig löschen?"))) e.preventDefault(); }}>
-        <input type="hidden" name="redirect_to" value={href(list)} />
-        <button type="submit" className="btn btn--quiet tm-danger">{t("Löschen")}</button>
-      </form>}
+
     </aside>
   );
 }

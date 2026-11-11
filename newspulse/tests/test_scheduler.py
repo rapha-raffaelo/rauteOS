@@ -26,6 +26,12 @@ from newspulse.web import scheduler
 _BERLIN = config.resolve_local_zone()
 
 
+@pytest.fixture(autouse=True)
+def legacy_schedule(monkeypatch):
+    monkeypatch.delenv("NEWSPULSE_DAILY_TIMES", raising=False)
+    monkeypatch.setenv(config.ENV_DAILY_AT, "06:10")
+
+
 @pytest.fixture
 def session():
     engine = make_engine("sqlite:///:memory:")
@@ -279,3 +285,17 @@ def test_a_sweep_that_finished_while_we_waited_settles_the_day(
     scheduler._run_once()
 
     assert ran == []
+
+
+@pytest.mark.parametrize("month", [1, 7, 11])
+def test_two_local_slots_survive_restart_and_dst(session, monkeypatch, month):
+    monkeypatch.setenv("NEWSPULSE_DAILY_TIMES", "08:00,16:00")
+    def at(hour, minute=0):
+        return dt.datetime(2026, month, 11, hour, minute, tzinfo=_BERLIN)
+    assert not scheduler._due(session, at(7, 59))
+    assert scheduler._due(session, at(8))
+    _run(session, at(8).astimezone(dt.UTC))
+    assert not scheduler._due(session, at(15, 59))
+    assert scheduler._due(session, at(16))
+    _run(session, at(16).astimezone(dt.UTC))
+    assert not scheduler._due(session, at(17))
