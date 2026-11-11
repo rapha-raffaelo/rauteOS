@@ -926,3 +926,18 @@ def test_the_count_is_bounded_by_its_own_window(factory, client):
     body = rendered(client.get(f"/client/{cid}"))
 
     assert "1 Beiträge aus dem Themen-Radar der letzten 30 Tage" in body
+
+
+def test_media_tab_reuses_customer_history_and_filters(factory, client):
+    with factory() as session:
+        customer = _seed_multi_month(session)
+        customer_id = customer.id
+    response = client.get(f"/client/{customer_id}/medien")
+    assert response.status_code == 200
+    body = rendered(response)
+    assert _headline_count(body) == 4
+    assert f'action="/client/{customer_id}/medien"' in body
+    assert f'/client/{customer_id}/export.xlsx' in body
+    filtered = rendered(client.get(f"/client/{customer_id}/medien", params={"q":"JAN Produktstart"}))
+    assert _headline_count(filtered) == 1
+    assert client.get("/client/999999/medien").status_code == 404

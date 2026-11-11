@@ -45,7 +45,8 @@ export function ClientTabs({ data, path = window.location.pathname }) {
     strategie: ["guide", "rivals", "market", "map"],
     // The Redaktionsplan sits at the bottom of Aktivitäten; /plan redirects there.
     chancen: ["opportunities", "issues", "krise", "texte", "plan"],
-    wirkung: ["visibility", "berichte", "overview", "monitoring_social", "monitoring_kpis"],
+    medien: ["media", "overview"],
+    wirkung: ["visibility", "berichte", "monitoring_social", "monitoring_kpis"],
   };
   const group =
     Object.keys(groups).find((key) => groups[key].includes(active)) || active;
@@ -53,6 +54,7 @@ export function ClientTabs({ data, path = window.location.pathname }) {
     ["client_overview", "/overview", "Überblick"],
     ["wissen", "/twin", "Kundenprofil"],
     ["strategie", "/guide", "Strategie"],
+    ["medien", "/medien", "Medien"],
     ["chancen", "/opportunities", "Aktivitäten"],
     ["wirkung", "/ki", "Monitoring"],
   ];
@@ -257,7 +259,6 @@ export function Shell({ data, portals = true }) {
         })}
       </nav>
       <div id="workspace-account" className="side__foot">
-        {link("/archive", "Archiv", "archiv")}
         {link("/settings", "Einstellungen")}
         {data.login && (
           <form method="post" action="/logout" className="side__out">
@@ -292,7 +293,7 @@ export function Shell({ data, portals = true }) {
         <form
           className="topsearch"
           method="get"
-          action="/archive"
+          action="/medien"
           role="search"
         >
           <svg className="ico topsearch__ico" aria-hidden="true">
@@ -304,9 +305,9 @@ export function Shell({ data, portals = true }) {
             type="search"
             name="q"
             autoComplete="off"
-            defaultValue={path === "/archive" ? current.get("q") || "" : ""}
-            placeholder={t("Archiv durchsuchen…")}
-            aria-label={t("Archiv durchsuchen")}
+            defaultValue={["/archive", "/medien"].includes(path) ? current.get("q") || "" : ""}
+            placeholder={t("Medien durchsuchen…")}
+            aria-label={t("Medien durchsuchen")}
           />
           <kbd className="topsearch__kbd" aria-hidden="true">⌘K</kbd>
           <button type="submit" className="topsearch__go">

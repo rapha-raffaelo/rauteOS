@@ -81,7 +81,7 @@ function News({news,base}){
   {item.summary&&<p>{item.summary}</p>}
   {item.analysis_id&&<form method="post" action={`/coverage/${item.analysis_id}/dismiss`} className="co-news-dismiss"><input type="hidden" name="redirect_to" value={back}/><button type="submit" className="btn btn--quiet">nicht relevant</button></form>}
  </article>;
- return <section className="co-panel co-news" id="kundennews"><header className="co-panel-head"><h2>Kundennews <span className="co-count">{news?.total??0} heute</span></h2><a href={base}>Ganzes Archiv →</a></header>
+ return <section className="co-panel co-news" id="kundennews"><header className="co-panel-head"><h2>Kundennews <span className="co-count">{news?.total??0} heute</span></h2><a href={`${base}/medien`}>Alle Medien →</a></header>
   {today.map(item=>row(item,false))}
   {!today.length&&<p className="co-quiet">Heute wurden noch keine relevanten Kundenmeldungen erfasst.{earlier.length?' Zuletzt berichtet:':''}</p>}
   {earlier.length>0&&today.length>0&&<p className="co-news-sep">Zuvor</p>}

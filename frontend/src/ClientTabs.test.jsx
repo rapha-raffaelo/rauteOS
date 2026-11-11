@@ -17,3 +17,11 @@ it('keeps legacy impulse details within activities',()=>{
  render(<ClientTabs path="/client/1/advice" data={{client:{id:1},active:'texte'}}/>);
  expect(screen.getByRole('link',{name:'Aktivitäten'}).getAttribute('aria-current')).toBe('page');
 });
+
+it('places customer media between strategy and activities',()=>{
+ render(<ClientTabs path="/client/1/medien" data={{client:{id:1},active:'media'}}/>);
+ const links=within(screen.getByRole('navigation',{name:'Mandant'})).getAllByRole('link');
+ expect(links.map(a=>a.textContent)).toEqual(['Überblick','Kundenprofil','Strategie','Medien','Aktivitäten','Monitoring']);
+ expect(screen.getByRole('link',{name:'Medien'}).getAttribute('aria-current')).toBe('page');
+ expect(screen.getByRole('link',{name:'Medien'}).getAttribute('href')).toBe('/client/1/medien');
+});

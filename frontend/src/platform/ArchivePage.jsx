@@ -3,7 +3,8 @@ import { PageHeading } from "../components/PageHeading.jsx";
 import { Action, Field, Panel, Source, date, dateTime, t } from "./shared.jsx";
 export function ArchivePage({ data: d }) {
   const client = d.client,
-    base = client ? `/client/${client.id}` : "/archive",
+    clientBase = client ? `/client/${client.id}` : "",
+    base = client ? `${clientBase}/medien` : "/medien",
     f = d.filters,
     active = Boolean(
       f.search || f.client || f.month || f.tier || f.source || f.category || f.date_from || f.date_to,
@@ -12,11 +13,11 @@ export function ArchivePage({ data: d }) {
     <div className="platform-page">
       <PageHeading
         eyebrow={client?.name || "Recherche"}
-        title={t("Archiv")}
+        title={t("Medien")}
         description={`${d.pagination.total_count} ${t("Artikel")}`}
       >
         {client && !client.is_competitor && (
-          <a className="btn btn--ghost" href={`${base}/export.xlsx`} download>
+          <a className="btn btn--ghost" href={`${clientBase}/export.xlsx`} download>
             ↓ Excel
           </a>
         )}
@@ -101,7 +102,7 @@ export function ArchivePage({ data: d }) {
           {d.radar_count} Beiträge aus dem Themen-Radar der letzten{" "}
           {d.radar_days} Tage: Marktmaterial, das den Mandanten nicht nennt und
           deshalb keine Berichterstattung ist.{" "}
-          <a href={`${base}/wettbewerb#marktumfeld`}>{t("Im Marktumfeld ansehen")}</a>
+          <a href={`${clientBase}/wettbewerb#marktumfeld`}>{t("Im Marktumfeld ansehen")}</a>
         </p>
       )}
       <section id="archive-list" aria-label={t("Artikel")}>
@@ -120,7 +121,7 @@ export function ArchivePage({ data: d }) {
                   <div className="archive-item__body">
                     <div className="feed-item__meta">
                       {row.client_id && (
-                        <a className="clichip" href={`/client/${row.client_id}`}>
+                        <a className="clichip" href={`/client/${row.client_id}/medien`}>
                           {row.client_name}
                         </a>
                       )}
@@ -158,7 +159,7 @@ export function ArchivePage({ data: d }) {
         {!d.rows.length && (
           <p className="empty-state">{t("Keine Artikel für die gewählten Filter.")}</p>
         )}
-        <nav className="pagination" aria-label="Archivseiten">
+        <nav className="pagination" aria-label="Medienseiten">
           {d.pagination.prev_url && (
             <a rel="prev" href={d.pagination.prev_url}>
               {t("← Neuer")}
@@ -182,7 +183,7 @@ export function ArchivePage({ data: d }) {
               <>
                 {" "}
                 ·{" "}
-                <a href={`${base}/wettbewerb`}>{t("Vergleichsgruppe")}</a>
+                <a href={`${clientBase}/wettbewerb`}>{t("Vergleichsgruppe")}</a>
               </>
             )}
           </p>
@@ -219,7 +220,7 @@ export function ArchivePage({ data: d }) {
           {d.opportunities.map((o) => (
             <article className="feed-item" key={o.id}>
               <h3>
-                <a href={`${base}/gelegenheit/${o.id}`}>{o.headline}</a>
+                <a href={`${clientBase}/gelegenheit/${o.id}`}>{o.headline}</a>
               </h3>
               <p>
                 <Source url={o.url}>{t("Ursprungsbeitrag")}</Source> ·{" "}
@@ -232,7 +233,7 @@ export function ArchivePage({ data: d }) {
                 {date(o.dismissed_at || o.window_ends_at)} ·{" "}
                 {o.angle_id && o.texts ? (
                   <a
-                    href={`${base}/advice?eintrag=anlass-${o.angle_id}#impulse-${o.angle_id}`}
+                    href={`${clientBase}/advice?eintrag=anlass-${o.angle_id}#impulse-${o.angle_id}`}
                   >
                     {o.texts} Text(e) ansehen →
                   </a>

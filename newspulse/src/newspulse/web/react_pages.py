@@ -105,9 +105,9 @@ def render(request, page, context):
     return templates.TemplateResponse(request, 'react_page.html', {
         'frontend': assets, 'page': page, 'data': data,
         'page_title': ({'rivals': 'Wettbewerb', 'guide': 'Kommunikations-Guide'}.get(data.get('view'), 'Profil') if page == 'profile' else
-                       {'archive': 'Archiv', 'settings': 'Einstellungen', 'new_client': 'Neuer Mandant',
+                       {'archive': 'Medien', 'settings': 'Einstellungen', 'new_client': 'Neuer Mandant',
                         "tasks": "Aufgaben", 'linkedin': 'LinkedIn', 'sales': 'Sales CRM'}[page]),
         'client': context.get('client'),
         'active': ({'rivals': 'rivals', 'guide': 'guide'}.get(data.get('view'), 'twin')
-                   if page == 'profile' else 'overview'),
+                   if page == 'profile' else 'media' if page == 'archive' else 'overview'),
     }, headers={'Cache-Control': 'no-store', 'Vary': 'Accept'})

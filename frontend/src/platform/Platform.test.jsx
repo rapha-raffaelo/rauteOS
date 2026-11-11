@@ -20,7 +20,7 @@ it("shows the six workspace tabs of the prototype with the views of the open one
     <ClientTabs data={data} path="/client/1/opportunities" />,
   );
   expect(within(screen.getByRole("navigation", {name:"Mandant"})).getAllByRole("link").map((l) => l.textContent)).toEqual([
-    "Überblick", "Kundenprofil", "Strategie", "Aktivitäten", "Monitoring",
+    "Überblick", "Kundenprofil", "Strategie", "Medien", "Aktivitäten", "Monitoring",
   ]);
   expect(screen.queryByRole("navigation", {name:"Ansicht"})).toBeNull();
   rerender(<ClientTabs data={{ ...data, active: "twin" }} path="/client/1/twin" />);

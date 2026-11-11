@@ -295,7 +295,7 @@ def _page_url(client_id: int, filters: ArchiveFilters, page: int) -> str:
     if filters.search:
         params.append(("q", filters.search))
     params.append(("page", str(page)))
-    return f"/client/{client_id}?{urlencode(params)}"
+    return f"/client/{client_id}/medien?{urlencode(params)}"
 
 
 def _paginate(
@@ -730,6 +730,7 @@ def _render_detail(
     )
 
 
+@router.get("/client/{client_id}/medien", response_class=HTMLResponse)
 @router.get("/client/{client_id}", response_class=HTMLResponse)
 def client_detail(
     request: Request,

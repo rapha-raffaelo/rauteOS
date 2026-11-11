@@ -285,7 +285,7 @@ def _page_url(filters: ArchiveFilters, page: int) -> str:
     if page > 1:
         params.append(("page", str(page)))
     query = urlencode(params)
-    return "/archive" + (f"?{query}" if query else "")
+    return "/medien" + (f"?{query}" if query else "")
 
 
 def _paginate(
@@ -300,6 +300,7 @@ def _paginate(
     )
 
 
+@router.get("/medien", response_class=HTMLResponse)
 @router.get("/archive", response_class=HTMLResponse)
 def archive_view(
     request: Request,
