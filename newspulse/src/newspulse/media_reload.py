@@ -87,7 +87,7 @@ def reload_day(session, client, day, choice, *, fetch=fetch_search_feed, analyze
             batch = [item for item in batch if item.published_at is not None and start <= item.published_at < end]
             items.extend(batch)
             if topic:
-                topic_pairs.extend((item, client) for item in batch)
+                topic_pairs.extend(job.Candidate(item=item, client=client) for item in batch)
         except Exception as exc:
             errors.append(f'{client.name}: Suche fehlgeschlagen ({type(exc).__name__})')
     candidates = job._match(items, [client], errors)
