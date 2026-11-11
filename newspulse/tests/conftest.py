@@ -427,3 +427,10 @@ def ai_settings_from_environment_only(monkeypatch):
         yield ai_models._NoSettings()
 
     monkeypatch.setattr(ai_models, "_open", _none)
+
+
+@pytest.fixture(autouse=True)
+def no_live_google_web_search(monkeypatch):
+    """A developer's GEMINI_API_KEY would otherwise make every sweep test search
+    Google for real. The tests of the search itself switch it back on."""
+    monkeypatch.setenv("NEWSPULSE_GOOGLE_WEB_SEARCH", "0")

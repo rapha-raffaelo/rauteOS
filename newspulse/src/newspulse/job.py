@@ -2175,6 +2175,17 @@ def _run_real(
             except Exception as exc:  # Supplemental research must not stop ingestion.
                 _log.exception("daily subscription news search failed")
                 errors.append(f"daily news search: {type(exc).__name__}")
+        # The open web through Google, once per mandate and slot (08:00, 16:00).
+        from . import google_web_search
+        if google_web_search.enabled():
+            try:
+                extra, search_errors = google_web_search.harvest(
+                    clients, since, fetched_at=started)
+                items.extend(extra)
+                errors.extend(search_errors)
+            except Exception as exc:  # Supplemental search must not stop ingestion.
+                _log.exception("Google web search failed")
+                errors.append(f"Google web search: {type(exc).__name__}")
 
         topic_pairs, topics_ok = _fetch_topics(radar, clients, since, fetch, started, errors)
         feeds_ok += topics_ok

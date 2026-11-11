@@ -200,7 +200,8 @@ def stream(
 
 
 def search(
-    prompt: str, *, timeout: float = _TIMEOUT, model: str | None = None
+    prompt: str, *, timeout: float = _TIMEOUT, model: str | None = None,
+    api_key: str | None = None,
 ) -> tuple[str, list[tuple[str, str]]]:
     """Answer with the web, and hand back the pages it used.
 
@@ -226,7 +227,7 @@ def search(
         data=body,
         headers={
             "Content-Type": "application/json",
-            _KEY_HEADER: config.review_api_key(),
+            _KEY_HEADER: api_key or config.review_api_key(),
         },
         method="POST",
     )

@@ -54,7 +54,7 @@ def _url(raw):
         return None
 
 
-def _parse(text, sources, *, since, now):
+def _parse(text, sources, *, since, now, resolve=None):
     """Accept only tool-observed URLs and dated articles inside the time window.
 
     The publication time is extracted by Claude from the source, not independently
@@ -68,7 +68,8 @@ def _parse(text, sources, *, since, now):
     accepted, rejected, seen = [], 0, set()
     for row in payload['articles'][:50]:
         try:
-            url = _url(row.get('url'))
+            raw = row.get('url')
+            url = _url(resolve(raw) if resolve and isinstance(raw, str) else raw)
             if not url or url not in observed or url in seen:
                 raise ValueError('Unobserved or duplicate URL')
             published = dt.datetime.fromisoformat(row['published_at'].replace('Z', '+00:00'))
