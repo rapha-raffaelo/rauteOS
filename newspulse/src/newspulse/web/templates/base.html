@@ -85,7 +85,7 @@
   <div id="react-shell"></div>
   <script id="react-shell-data" type="application/json">{{ shell_data(request) | tojson }}</script>
   {% set shell = shell_assets() %}
-  {% if shell %}<script type="module" src="{{ shell.script }}"></script>{% endif %}
+  {% if shell %}{% for href in shell.css %}<link rel="stylesheet" href="{{ href }}">{% endfor %}<script type="module" src="{{ shell.script }}"></script>{% endif %}
   <noscript><p>Bitte JavaScript aktivieren, um RauteOS zu verwenden.</p></noscript>
 </body>
 </html>

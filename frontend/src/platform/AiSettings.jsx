@@ -37,6 +37,7 @@ function Provider({provider: p}) {
     <div className="settings-row">
       <div className="settings-provider__icon" aria-hidden="true">{p.label.slice(0,1)}</div>
       <div className="settings-row__body"><h3>{p.label}</h3><p>{p.how || 'Noch nicht eingerichtet'}</p></div>
+      {p.key === 'claude' && <button type="button" className="btn" onClick={() => window.dispatchEvent(new Event('raute:claude-login'))}>Anmelden</button>}
       <span className={`settings-status ${test?.ok ? 'is-success' : ''}`}>{test?.ok ? 'Geprüft' : p.connected ? 'Eingerichtet' : 'Nicht verbunden'}</span>
       <button type="button" className="btn" disabled={!p.connected || test?.busy} onClick={check}>{test?.busy ? 'Wird getestet…' : 'Verbindung testen'}</button>
     </div>

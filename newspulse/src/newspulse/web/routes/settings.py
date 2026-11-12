@@ -2012,3 +2012,48 @@ __all__ = [
     "router",
     "set_active_feed_names",
 ]
+
+
+# The application's authentication and same-origin middleware protect these routes.
+def _login_owner(request):
+    return str(request.scope.get('user_email') or request.scope.get('user') or 'authenticated-workspace')
+
+
+@router.get('/settings/ai/claude/status')
+def claude_login_status(session: Session = Depends(get_db)):
+    from ... import ai_models, claude_login
+    if ai_models.api_key(session, 'claude'):
+        result = {'state':'api_key'}
+    else:
+        result = claude_login.status()
+    return JSONResponse(result, headers={'Cache-Control':'no-store'})
+
+
+@router.post('/settings/ai/claude/login')
+def claude_login_start(request: Request):
+    from ... import claude_login
+    try:
+        result = claude_login.start(_login_owner(request))
+    except ValueError as exc:
+        return JSONResponse({'message':str(exc)}, status_code=409)
+    return JSONResponse(result, headers={'Cache-Control':'no-store'})
+
+
+@router.get('/settings/ai/claude/login/{login_id}')
+def claude_login_poll(login_id: str, request: Request):
+    from ... import claude_login
+    try: result = claude_login.poll(login_id, _login_owner(request))
+    except KeyError: raise HTTPException(404, 'Anmeldung abgelaufen. Bitte erneut starten.') from None
+    return JSONResponse(result, headers={'Cache-Control':'no-store'})
+
+
+@router.post('/settings/ai/claude/login/{login_id}/{action}')
+def claude_login_action(login_id: str, action: str, request: Request, code: str = Form('')):
+    from ... import claude_login
+    try:
+        if action == 'code': result = claude_login.submit(login_id, _login_owner(request), code.strip())
+        elif action == 'cancel': result = claude_login.cancel(login_id, _login_owner(request))
+        else: raise HTTPException(404)
+    except KeyError: raise HTTPException(404, 'Anmeldung abgelaufen. Bitte erneut starten.') from None
+    except ValueError as exc: return JSONResponse({'message':str(exc)},status_code=422)
+    return JSONResponse(result, headers={'Cache-Control':'no-store'})

@@ -488,3 +488,19 @@ def test_targeted_reload_rejects_invalid_input_before_start(factory, client, mon
     response=client.post('/settings/reload',data={'days':'bad','choices':'[]'})
     assert 'gültige Kalendertage' in rendered(response)
     assert not settings._run_guard.locked()
+
+def test_guided_claude_login_routes(client, monkeypatch):
+    from newspulse import claude_login, ai_models
+    monkeypatch.setattr(ai_models,'api_key',lambda *a,**k:'')
+    monkeypatch.setattr(claude_login,'status',lambda:{'state':'login_required'})
+    assert client.get('/settings/ai/claude/status').json()['state']=='login_required'
+    monkeypatch.setattr(claude_login,'_current',None)
+    monkeypatch.setattr(claude_login,'_login',lambda session:None)
+    response=client.post('/settings/ai/claude/login')
+    assert response.status_code==200
+    assert response.headers['cache-control']=='no-store'
+    id=response.json()['id']
+    assert client.get('/settings/ai/claude/login/'+id).json()['state']=='starting'
+    assert client.post('/settings/ai/claude/login/'+id+'/code',data={'code':'x\ncommand'}).status_code==422
+    assert client.post('/settings/ai/claude/login/'+id+'/cancel').json()['state']=='cancelled'
+    assert client.get('/settings/ai/claude/login/missing').status_code==404
