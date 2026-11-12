@@ -36,7 +36,7 @@ export function MediaReload({data:d}) {
  const first=new Date(month.getFullYear(),month.getMonth(),1);
  const offset=(first.getDay()+6)%7,count=new Date(month.getFullYear(),month.getMonth()+1,0).getDate();
  return <section id="media-reload" className="media-reload">
-  <p>Unternehmensmeldungen und Keywords über Google News für ausgewählte Tage nachladen</p>
+  <p>Unternehmensmeldungen und Suchbegriffe über Google News für ausgewählte Tage nachladen</p>
   <form method="post" action="/settings/reload" onSubmit={e=>{if(!days.length||!selected.length){e.preventDefault();setError('Bitte Tage und Kunden auswählen');}}}>
    <input type="hidden" name="choices" value={JSON.stringify(selected.map(id=>({id,...prefs[id]})))}/>
    {days.map(day=><input type="hidden" key={day} name="days" value={day}/>)}
@@ -50,7 +50,7 @@ export function MediaReload({data:d}) {
     </div>
     <div>
      <details className="media-client-picker"><summary>Kunden auswählen · {selected.length} von {clients.length}</summary><button type="button" className="btn btn--quiet" onClick={()=>setSelected(clients.map(c=>c.id))}>Alle auswählen</button><button type="button" className="btn btn--quiet" onClick={()=>setSelected([])}>Alle abwählen</button>{clients.map(c=><label key={c.id}><input type="checkbox" checked={selected.includes(c.id)} onChange={e=>setSelected(p=>e.target.checked?[...p,c.id]:p.filter(id=>id!==c.id))}/>{c.name}</label>)}</details>
-     {clients.filter(c=>selected.includes(c.id)).map(c=><details key={c.id} className="media-client-config"><summary>{c.name} · Suche anpassen</summary><label><input type="checkbox" checked={prefs[c.id].company} onChange={e=>change(c.id,{company:e.target.checked})}/>Unternehmensname und Aliasse</label><p>Keywords aus dem Kundenprofil</p>{(c.keywords || []).map(keyword=><label key={keyword}><input type="checkbox" checked={prefs[c.id].keywords.includes(keyword)} onChange={e=>change(c.id,{keywords:e.target.checked?[...prefs[c.id].keywords,keyword]:prefs[c.id].keywords.filter(k=>k!==keyword)})}/>{keyword}</label>)}<a href={`/client/${c.id}/twin`}>Keywords im Profil bearbeiten →</a><p><a target="_blank" rel="noreferrer" href={googleLink(c, prefs[c.id], days)}>Auch direkt bei Google ansehen ↗</a></p></details>)}
+     {clients.filter(c=>selected.includes(c.id)).map(c=><details key={c.id} className="media-client-config"><summary>{c.name} · Suche anpassen</summary><label><input type="checkbox" checked={prefs[c.id].company} onChange={e=>change(c.id,{company:e.target.checked})}/>Unternehmensname und Aliasse</label><p>Suchbegriffe aus dem Kundenprofil</p>{(c.keywords || []).map(keyword=><label key={keyword}><input type="checkbox" checked={prefs[c.id].keywords.includes(keyword)} onChange={e=>change(c.id,{keywords:e.target.checked?[...prefs[c.id].keywords,keyword]:prefs[c.id].keywords.filter(k=>k!==keyword)})}/>{keyword}</label>)}<a href={`/client/${c.id}/twin`}>Suchbegriffe im Profil bearbeiten →</a><p><a target="_blank" rel="noreferrer" href={googleLink(c, prefs[c.id], days)}>Auch direkt bei Google ansehen ↗</a></p></details>)}
     </div>
    </div>
    {error&&<p role="alert">{error}</p>}

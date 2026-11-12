@@ -556,7 +556,7 @@ def test_manual_collection_is_available_once_in_settings(client):
         assert 'href="/settings"' in body, path
     body = rendered(client.get("/settings"))
     assert body.count('action="/settings/run"') == 1
-    assert "Jetzt aktualisieren" in body
+    assert "Regulären Lauf starten" in body
 
 
 def test_a_stored_logo_survives_rendering_but_an_svg_never_does(client):
@@ -976,7 +976,7 @@ def test_the_archive_link_carries_the_filter(factory, client):
 
     body = rendered(client.get("/today", params={"date": _TEST_DAY.isoformat(), "client": arrakis}))
 
-    assert f'href="/archive?client={arrakis}"' in body
+    assert f'href="/client/{arrakis}/medien"' in body
 
 
 def test_a_mandate_with_nothing_at_all_gets_a_checklist_not_a_dead_link(factory, client):
@@ -1015,7 +1015,7 @@ def test_without_a_filter_the_portfolio_count_is_still_the_right_one(factory, cl
     assert "2 Artikel in den letzten 10 Tagen" in hint
     # No filter, so no client scoping in the sentence or in the link.
     assert "für diesen Mandanten" not in hint
-    assert 'href="/archive"' in body
+    assert 'href="/medien"' in body
 
 
 # --- The rail holds openings, and only openings ---------------------------------

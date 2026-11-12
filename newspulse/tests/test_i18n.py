@@ -105,7 +105,7 @@ def test_an_unknown_language_code_stores_the_default(client):
     [
         ("/", "Kommunikation", "Communication"),
         ("/clients?view=classic", "Mandanten", "Clients"),
-        ("/archive", "Archiv", "Archive"),
+        ("/archive", "Medien", "Media"),
         ("/settings", "Einstellungen", "Settings"),
     ],
 )

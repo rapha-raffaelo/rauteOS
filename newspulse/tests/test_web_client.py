@@ -394,7 +394,7 @@ def test_zero_relevance_row_is_excluded(factory, client):
 
     body = rendered(client.get(f"/client/{client_id}"))
     assert "NOISE Nicht relevant" not in body
-    assert "Keine Artikel" in body  # empty state
+    assert "Noch keine Berichterstattung" in body  # empty state
 
 
 def test_unknown_client_returns_404(client):

@@ -217,7 +217,7 @@ def test_the_bar_names_the_workspace_and_the_mandate(web, mandate):
 
 def test_the_bar_names_the_workspace_alone_off_a_mandate(web, mandate):
     bar = _topbar(rendered(web.get("/archive")))
-    assert "Archiv" in bar
+    assert "Medien" in bar
     assert "Solaris AG" not in bar, "no mandate is being looked at here"
 
 
@@ -248,7 +248,7 @@ def _request(path: str, db=None, **query: str):
         ("/", "Portfolio"),
         ("/clients", "Kunden"),
         ("/today", "Intelligence"),
-        ("/archive", "Archiv"),
+        ("/archive", "Medien"),
         ("/contacts", "Media & Relationships"),
         ("/settings", "Einstellungen"),
         ("/settings/brain/pitch", "Einstellungen"),
@@ -331,7 +331,7 @@ def test_no_session_on_the_request_is_a_workspace_not_a_500():
 
 def test_the_search_field_submits_to_the_archive_search(web, mandate):
     bar = _topbar(rendered(web.get("/today")))
-    assert 'action="/archive"' in bar
+    assert 'action="/medien"' in bar
     assert 'name="q"' in bar
     assert 'method="get"' in bar
 
@@ -398,7 +398,9 @@ def test_the_primary_tabs_are_consolidated(web, mandate):
     ("/issues", "/themen"), ("/heute", "/overview"),
     ("/plan", "/themen"), ("/advice", "/themen"),
     # Monitoring opens on KI-Sichtbarkeit; the news moved into the Überblick.
-    ("/ki", "/ki"), ("/berichte", "/ki"), ("", "/ki"),
+    ("/ki", "/ki"), ("/berichte", "/ki"),
+    # The mandate's own address opens its Medien (the client archive moved there).
+    ("", "/medien"),
 ])
 def test_specialist_views_select_their_primary_workspace(web, mandate, suffix, parent):
     strip = _strip(rendered(web.get(f"/client/{mandate.id}{suffix}")))
@@ -470,9 +472,10 @@ def test_the_sidebar_keeps_its_rows_and_only_changes_how_they_look(web, mandate)
     side = page.split('<aside class="side">', 1)[1].split("</aside>", 1)[0]
     rows = re.findall(r'<a href="([^"]+)" class="side__row', side)
     # Spec 10 added Aufgaben, LinkedIn and, under Wachstum, Sales CRM.
-    assert rows[:8] == ["/desk", "/aufgaben", "/clients", "/today", "/assets", "/contacts", "/linkedin", "/sales"]
+    assert rows[:9] == ["/desk", "/aufgaben", "/clients", "/gmail", "/today", "/assets", "/contacts", "/linkedin", "/sales"]
     assert '<a href="/" class="side__row' not in side
-    assert rows[-2:] == ["/archive", "/settings"]
+    # The archive moved into each client's Medien tab; the foot keeps "Neuer Kunde" and Einstellungen.
+    assert rows[-2:] == ["/mandant/neu", "/settings"]
     assert f"/client/{mandate.id}/overview" in side
     assert "/settings" in side
 

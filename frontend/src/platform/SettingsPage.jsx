@@ -388,7 +388,7 @@ export function SettingsPage({ data: d, onData }) {
             : ""}
         </Notice>
         <MediaReload data={d}/>
-        <Action action="/settings/run" label="Regulären Lauf starten" disabled={d.run_active} />
+        <Action action="/settings/run" label={d.run_active ? "Läuft…" : "Regulären Lauf starten"} disabled={d.run_active} />
       </Panel>
       <Panel title="Mandanten">
         <Notice>{d.client_error}</Notice>

@@ -415,6 +415,8 @@ CARRIED_BEFORE = {
     "workspace_asset.txt": set(),
     # Spec 12: the Deep Dive of a starred article. New, nothing to carry.
     "themen_deep_dive.txt": set(),
+    # Spec 12: RAUTE's own topic proposals from the last four weeks. New.
+    "topic_suggestions.txt": set(),
 }
 
 #: Standards a prompt did *not* carry before and now does. Every one is a
@@ -430,6 +432,10 @@ ADDED_IN_MIGRATION = {
     # the article and profile carry (evidence, no_invention) and is read by the
     # consultant as prose (house_style), like a workspace draft.
     "themen_deep_dive.txt": {"position", "evidence", "no_invention", "house_style"},
+    # A proposal cites the reports it rests on (evidence), names nothing they
+    # do not carry (no_invention), quotes them fenced as material, never as
+    # instruction (quoted_material), and is read as prose (house_style).
+    "topic_suggestions.txt": {"evidence", "no_invention", "house_style", "quoted_material"},
     # What the move gives the seven, and why each is wanted.
     #
     # All six formats gain the standards they leaned on without stating: they are
@@ -2116,6 +2122,23 @@ def _store_a_thema(session) -> Angle:
     return themen.deep_dive(session, row.id, invoke=lambda *a, **k: reply)
 
 
+def _store_a_topic_suggestion(session) -> Angle:
+    """Drive ``topic_suggestions`` the way the Themen page does: lease, then propose."""
+    from newspulse import topic_suggestions
+    from newspulse.models import TopicHit
+
+    client = _a_mandate(session)
+    article = _an_article(session, "vorschlag")
+    session.add(TopicHit(client_id=client.id, article_id=article.id, found_at=_RECENTLY))
+    session.commit()
+    reply = json.dumps({"topics": [{"title": "Ein Thema", "situation": "Es ist etwas passiert.",
+                                    "relevance": "Es betrifft das Mandat.", "pitch": "Eine Position.",
+                                    "evidence": [0]}], "note": ""})
+    lease = topic_suggestions.claim(session, client.id)
+    topic_suggestions.generate(session, client.id, lease, invoke=lambda *a, **k: reply)
+    return session.scalar(select(Angle).where(Angle.client_id == client.id))
+
+
 GENERATORS = [
     ("opportunity_development", _store_a_developed_opportunity),
     ("angles", _store_an_angle),
@@ -2158,6 +2181,10 @@ GENERATORS = [
     # stored rows, but what happened, why it matters and the pitch are model
     # prose a consultant activates a Thema on.
     ("themen", _store_a_thema),
+    # RAUTE's automatic topic proposals: the cited reports are stored rows, but
+    # title, situation, relevance and pitch are model prose a consultant may
+    # activate a Thema on.
+    ("topic_suggestions", _store_a_topic_suggestion),
 ]
 
 
