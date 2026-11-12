@@ -58,6 +58,16 @@ export function Usage({usage: u}) {
 }
 
 function Provider({provider: p}) {
+  const [connected, setConnected] = useState(p.connected);
+  useEffect(() => {
+    if (p.key !== 'claude') return;
+    function update(event) {
+      if (event.detail === 'login_required') setConnected(false);
+      if (['connected', 'api_key'].includes(event.detail)) setConnected(true);
+    }
+    window.addEventListener('raute:claude-status', update);
+    return () => window.removeEventListener('raute:claude-status', update);
+  }, [p.key]);
   const [test, setTest] = useState(null);
   const abort = useRef(null);
   useEffect(() => () => abort.current?.abort(), []);
@@ -71,6 +81,7 @@ function Provider({provider: p}) {
         headers: {Accept: 'application/json'}, body: new URLSearchParams({provider: p.key}), signal: controller.signal});
       const result = await response.json();
       if (!response.ok && !result.message) throw new Error();
+      if (result.ok) setConnected(true);
       setTest({...result, message: result.message || 'Verbindung konnte nicht geprüft werden'});
     } catch { setTest({ok: false, message: 'Keine Antwort erhalten – bitte erneut testen'}); }
     finally {clearTimeout(timeout);}
@@ -79,20 +90,20 @@ function Provider({provider: p}) {
     <div className="settings-row">
       <div className="settings-provider__icon" aria-hidden="true">{p.label.slice(0,1)}</div>
       <div className="settings-row__body"><h3>{p.label}</h3><p>{p.how || 'Noch nicht eingerichtet'}</p></div>
-      {p.key === 'claude' && <button type="button" className="btn" onClick={() => window.dispatchEvent(new Event('raute:claude-login'))}>Anmelden</button>}
-      <span className={`settings-status ${p.connected ? 'is-connected' : 'is-disconnected'}`}>{p.connected ? 'Verbunden' : 'Getrennt'}</span>
-      <button type="button" className="btn" disabled={!p.connected || test?.busy} onClick={check}>{test?.busy ? 'Wird getestet…' : 'Verbindung testen'}</button>
+      {p.key === 'claude' && !connected && <button type="button" className="btn" onClick={() => window.dispatchEvent(new Event('raute:claude-login'))}>Anmelden</button>}
+      <span className={`settings-status ${connected ? 'is-connected' : 'is-disconnected'}`}>{connected ? 'Verbunden' : 'Getrennt'}</span>
+      <button type="button" className="btn" disabled={!connected || test?.busy} onClick={check}>{test?.busy ? 'Wird getestet…' : 'Verbindung testen'}</button>
     </div>
-    {p.connected && <Usage usage={p.usage || {}} />}
+    {connected && <Usage usage={p.usage || {}} />}
     {test && <div role="status" className={`settings-test ${test.ok ? 'is-success' : test.busy ? '' : 'is-error'}`}>
       <strong>{test.busy ? '◌ ' : test.ok ? '✓ ' : '! '}{test.message}</strong>
       {test.ok && <span>{test.model} · {test.seconds} s</span>}
       {test.busy && <span>Die gespeicherte Verbindung wird aufgerufen, maximal 60 Sekunden</span>}
     </div>}
-    <details className="settings-config" open={!p.connected || undefined}>
-      <summary>{p.connected ? 'Verbindung und Standardmodell bearbeiten' : 'Verbindung einrichten'}</summary>
-      {p.subscription_only && <p>{p.connected ? 'Über das ChatGPT-Abo angemeldet' : 'Auf dem Server anmelden und den angezeigten Code im Browser bestätigen'}
-        {!p.connected && <code className="ai-login__cmd">{p.login_command}</code>}</p>}
+    <details className="settings-config" open={!connected || undefined}>
+      <summary>{connected ? 'Verbindung und Standardmodell bearbeiten' : 'Verbindung einrichten'}</summary>
+      {p.subscription_only && <p>{connected ? 'Über das ChatGPT-Abo angemeldet' : 'Auf dem Server anmelden und den angezeigten Code im Browser bestätigen'}
+        {!connected && <code className="ai-login__cmd">{p.login_command}</code>}</p>}
       <form method="post" action="/settings/ai/key" onChange={() => setTest(null)}>
         <input type="hidden" name="provider" value={p.key}/>
         <div className="settings-inputs">

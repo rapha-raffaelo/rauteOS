@@ -43,3 +43,11 @@ it('says Verbunden or Getrennt and shows what is left of each subscription or bu
  expect(screen.getByText('10.000')).toBeTruthy();
  expect(screen.getByRole('link',{name:'Google AI Studio'}).getAttribute('href')).toBe('https://aistudio.google.com/usage');
 });
+it('only offers login when Claude is disconnected and reacts to successful login',()=>{
+ render(<AiSettings data={data}/>);
+ expect(screen.queryByRole('button',{name:'Anmelden',exact:true})).toBeNull();
+ fireEvent(window,new CustomEvent('raute:claude-status',{detail:'login_required'}));
+ expect(screen.getByRole('button',{name:'Anmelden',exact:true})).toBeTruthy();
+ fireEvent(window,new CustomEvent('raute:claude-status',{detail:'connected'}));
+ expect(screen.queryByRole('button',{name:'Anmelden',exact:true})).toBeNull();
+});

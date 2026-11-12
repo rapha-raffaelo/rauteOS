@@ -22,6 +22,7 @@ export default function ClaudeLogin() {
         const data = await request('/status');
         if (disposed || data.state === 'unknown') return;
         setRequired(data.state === 'login_required');
+        window.dispatchEvent(new CustomEvent('raute:claude-status', {detail:data.state}));
         if (data.state === 'login_required' && !sessionStorage.getItem('claude-login-dismissed')) show();
         if (data.state === 'connected') sessionStorage.removeItem('claude-login-dismissed');
       } catch { /* A network outage is not an expired login. */ }
@@ -45,6 +46,7 @@ export default function ClaudeLogin() {
       try { if (popup.current && !popup.current.closed) popup.current.location.replace(session.url); } catch { /* Link remains available. */ }
     }
     if (session?.state === 'connected') {
+      window.dispatchEvent(new CustomEvent('raute:claude-status', {detail:'connected'}));
       setRequired(false); sessionStorage.removeItem('claude-login-dismissed'); popup.current?.close();
     }
   }, [session]);
