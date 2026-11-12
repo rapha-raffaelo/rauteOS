@@ -128,7 +128,7 @@ def _parse(text: str) -> dict:
                 storylines=[clean(s) for s in storylines if isinstance(s, str) and s.strip()][:3])
 
 
-def deep_dive(session: Session, workspace_id: int, *, invoke=None) -> None:
+def deep_dive(session: Session, workspace_id: int, *, invoke=None) -> Angle | None:
     """Write the Deep Dive of a starred article into its Thema."""
     from .analyzer import invoke_with_fallback
 
@@ -140,6 +140,9 @@ def deep_dive(session: Session, workspace_id: int, *, invoke=None) -> None:
     article = session.get(Article, int(row.data["article_id"]))
     if angle is None or client is None or article is None:
         return
+    # Captured with the prompt, as every generator does (see angles.suggest):
+    # the Deep Dive is model prose a consultant acts on.
+    written_under = brain.version(session)
     try:
         found = _parse((invoke or invoke_with_fallback)(_prompt(client, article), timeout=_TIMEOUT))
     except Exception as exc:  # noqa: BLE001 - the Thema stays usable without it
@@ -153,4 +156,6 @@ def deep_dive(session: Session, workspace_id: int, *, invoke=None) -> None:
     angle.thesis = found["pitch"]
     angle.credibility = found["relevance"]
     angle.statements = [s for s in [found["pitch"], *found["storylines"]] if s]
+    angle.brain_version = brain.stamp(written_under, what="this Thema's Deep Dive")
     session.commit()
+    return angle

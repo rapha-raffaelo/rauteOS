@@ -155,4 +155,4 @@ button.task__box:hover{border-color:var(--tint);background:var(--tint-wash)}
 @media(max-width:600px){.brief__acts{flex-direction:row;flex-wrap:wrap}}
 
 .task__review{flex:none;white-space:nowrap;font-size:12px;font-weight:600;color:var(--tint)}
-.task__badges{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:12px}.task__priority{font-weight:600;color:var(--muted)}.task__priority--mittel{color:var(--tint)}.task__priority--hoch,.task__priority--urgent{color:#c62828}.task__priority--urgent{font-weight:800}.task__status{padding:4px 8px;border-radius:6px;background:var(--fill-2);color:var(--ink-2)}
+.task__badges{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:12px}.task__priority{font-weight:600;color:var(--muted)}.task__priority--mittel{color:var(--tint)}.task__priority--hoch,.task__priority--urgent{color:var(--alert-ink)}.task__priority--urgent{font-weight:800}.task__status{padding:4px 8px;border-radius:6px;background:var(--fill-2);color:var(--ink-2)}

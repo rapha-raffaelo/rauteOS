@@ -8,7 +8,8 @@ already existed under "Aktivitäten", which now redirects here.
 from __future__ import annotations
 
 import datetime as dt
-from urllib.parse import urlencode
+from typing import Literal
+from urllib.parse import quote, urlencode
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import RedirectResponse
@@ -140,3 +141,97 @@ def unstar(client_id: int, article_id: int, session: Session = Depends(get_db)):
     except ValueError as exc:
         raise HTTPException(409, str(exc)) from exc
     return dict(ok=True)
+
+
+# --- Export: Word, PDF and Google Drive (Spec 12, phase 5) ----------------------
+
+_KIND_LABELS = {"kundenmail": "Kundenmail", "pitch": "Pitch", "statement": "Statement",
+                "pressemitteilung": "Pressemitteilung", "gastbeitrag": "Gastbeitrag", "custom": "Eigenes Format",
+                "qa": "Q&A", "interviewangebot": "Interviewangebot", "linkedin": "LinkedIn-Post"}
+Fmt = Literal["docx", "pdf"]
+
+
+def _text_document(session: Session, client, text_type: str, text_id: int):
+    from ... import asset_export
+    from ...models import Asset, Outreach
+
+    row = session.get(Asset if text_type == "asset" else Outreach, text_id)
+    if row is None or row.client_id != client.id:
+        raise HTTPException(404, "Text nicht gefunden.")
+    if text_type == "asset":
+        kind, title, body = row.kind, row.title or "", row.body or ""
+    else:
+        kind, title, body = "pitch", row.subject or "", row.message or ""
+    label = _KIND_LABELS.get(str(kind), str(kind))
+    return asset_export.Document(title=title or label, client=client.name,
+                                 sections=[asset_export.Section(heading="", body=body, kicker=label)])
+
+
+def _thema_document(session: Session, client, kind: str, identity: int):
+    from ... import activation, asset_export, workspaces
+
+    detail = workspaces.read(session, client.id, kind, identity)
+    if detail is None:
+        raise HTTPException(404, "Thema nicht gefunden.")
+    pitch = (detail.get("storyline") or (detail.get("storylines") or [""])[0] or "").strip()
+    sections = [asset_export.Section("Was ist passiert?", detail.get("situation") or "bitte ergänzen", "Deep Dive"),
+                asset_export.Section(f"Warum für {client.name} relevant?", detail.get("relevance") or "bitte ergänzen"),
+                asset_export.Section("Pitch", pitch or "bitte ergänzen")]
+    stored = workspaces.stored(session, client.id, kind, identity)
+    if stored is not None:
+        for text in activation.read(session, stored)["texts"]:
+            sections.append(asset_export.Section(text["title"] or "", text["body"],
+                                                 _KIND_LABELS.get(text["kind"], text["kind"])))
+    return asset_export.Document(title=detail["title"], client=client.name, sections=sections)
+
+
+def _download(document, fmt: str) -> Response:
+    from ... import asset_export
+
+    name = asset_export.filename(document, fmt)
+    return Response(asset_export.render(document, fmt), media_type=asset_export.MIME[fmt], headers={
+        "Content-Disposition": f"attachment; filename*=UTF-8''{quote(name)}"})
+
+
+def _to_drive(document, fmt: str) -> dict:
+    from ... import asset_export, drive_link
+
+    try:
+        url = drive_link.upload(document.client, asset_export.filename(document, fmt), asset_export.MIME[fmt],
+                                asset_export.render(document, fmt))
+    except drive_link.DriveError as exc:
+        raise HTTPException(409, str(exc)) from exc
+    return dict(url=url, folder=f"7. Assets › {document.client}")
+
+
+class DriveInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    format: Fmt = "docx"
+
+
+@router.get("/api/v1/clients/{client_id}/assets/{text_type}/{text_id}/export.{fmt}")
+def export_text(client_id: int, text_type: Literal["asset", "outreach"], text_id: int, fmt: Fmt,
+                session: Session = Depends(get_db)):
+    client = mandate_or_404(session, client_id)
+    return _download(_text_document(session, client, text_type, text_id), fmt)
+
+
+@router.post("/api/v1/clients/{client_id}/assets/{text_type}/{text_id}/drive")
+def drive_text(client_id: int, text_type: Literal["asset", "outreach"], text_id: int, body: DriveInput,
+               session: Session = Depends(get_db)):
+    client = mandate_or_404(session, client_id)
+    return _to_drive(_text_document(session, client, text_type, text_id), body.format)
+
+
+@router.get("/api/v1/clients/{client_id}/themen/{kind}/{identity}/export.{fmt}")
+def export_thema(client_id: int, kind: Literal["detected", "developed"], identity: int, fmt: Fmt,
+                 session: Session = Depends(get_db)):
+    client = mandate_or_404(session, client_id)
+    return _download(_thema_document(session, client, kind, identity), fmt)
+
+
+@router.post("/api/v1/clients/{client_id}/themen/{kind}/{identity}/drive")
+def drive_thema(client_id: int, kind: Literal["detected", "developed"], identity: int, body: DriveInput,
+                session: Session = Depends(get_db)):
+    client = mandate_or_404(session, client_id)
+    return _to_drive(_thema_document(session, client, kind, identity), body.format)

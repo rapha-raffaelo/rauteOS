@@ -750,6 +750,13 @@ def gmail_configured() -> bool:
     return bool(gmail_client_id() and gmail_client_secret())
 
 
+#: Spec 12: the shared drive folder "7. Assets" where exports land, one
+#: sub-folder per client. The id from the folder's link; overridable per deployment.
+DRIVE_ASSETS_FOLDER: str = os.environ.get(
+    "NEWSPULSE_DRIVE_ASSETS_FOLDER", "1fbSJobOCTD9nW-mQCKf9KHWQMMP_vHnD"
+).strip()
+
+
 def gmail_redirect_uri() -> str:
     """The address Google returns consent to — :func:`base_url` plus the callback.
 

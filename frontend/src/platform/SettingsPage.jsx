@@ -221,6 +221,12 @@ function Feeds({ data: d }) {
     </Panel>
   );
 }
+const driveNotices = {
+  verbunden: "Google Drive verbunden.",
+  getrennt: "Google Drive getrennt.",
+  fehler: "Die Verbindung mit Google Drive ist fehlgeschlagen. Es wurde nichts gespeichert.",
+  abgelehnt: "Die Freigabe wurde bei Google abgebrochen.",
+};
 const gmailNotices = {
   verbunden: "Postfach verbunden.",
   getrennt: "Postfach getrennt und der Zugriff bei Google widerrufen.",
@@ -587,6 +593,21 @@ export function SettingsPage({ data: d, onData }) {
                 {t("Einrichtung in der Deployment-Notiz")}
               </Source>
             </p>
+          )}
+        </Panel>
+        <Panel title="Google Drive" id="drive">
+          <Notice>{driveNotices[d.drive?.notice]}</Notice>
+          {d.drive?.connected ? (
+            <>
+              <p>{t("Verbunden als")} {d.drive.email}{d.drive.connected_at && ` · ${date(d.drive.connected_at)}`}</p>
+              <p>{t("Exporte landen im gemeinsamen Ordner „7. Assets“, je Kunde in einem eigenen Unterordner.")}</p>
+              <Action action="/settings/drive/disconnect" label="Drive trennen" />
+            </>
+          ) : (
+            <>
+              <p>{t("Nicht verbunden. Assets lassen sich dann als Word oder PDF herunterladen, aber nicht in Drive ablegen.")}</p>
+              {d.drive?.configured && <a className="btn" href="/settings/drive/start">{t("Drive verbinden")}</a>}
+            </>
           )}
         </Panel>
       </div>

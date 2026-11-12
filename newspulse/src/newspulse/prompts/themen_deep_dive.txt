@@ -10,6 +10,11 @@ Gib ausschließlich JSON zurück, alle Felder als Strings oder Listen von String
  "pitch": "Ein Satz: die Position, mit der sich das Mandat zu Wort melden könnte.",
  "storylines": ["Bis zu drei alternative Storylines, je ein Satz."]}
 
+{{brain:position}}
+{{brain:evidence}}
+{{brain:no_invention}}
+{{brain:house_style}}
+
 Wenn das Profil keinen glaubwürdigen Bezug trägt, schreibe in "relevance"
 genau das, und lass "pitch" leer. Erfinde keine Zahlen, Zitate, Personen oder
 Zusagen.

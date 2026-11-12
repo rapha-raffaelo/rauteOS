@@ -11,7 +11,31 @@ const LABEL=Object.fromEntries(KINDS.map(([k,l])=>[k,l]));
 const NEEDS_CONTACT=new Set(['pitch']);
 const speakerValue=d=>d.speaker_person_id?`p:${d.speaker_person_id}`:d.speaker_statement_id?`f:${d.speaker_statement_id}`:'';
 
-export function Editor({text,path,onSaved,exportHref}){
+// Export one asset or a whole Thema: as Word or PDF, downloaded or put into
+// the shared Drive folder "7. Assets" under the client's own sub-folder.
+export function ExportBox({base,label='Exportieren'}){
+ const [open,setOpen]=useState(false),[format,setFormat]=useState('docx'),[busy,setBusy]=useState(false),[result,setResult]=useState(null),[error,setError]=useState('');
+ async function drive(){setBusy(true);setError('');setResult(null);
+  try{setResult(await request(base.replace('/api/v1/','')+'/drive',{method:'POST',body:JSON.stringify({format})}));}
+  catch(e){setError(e.message);}finally{setBusy(false);}}
+ return <div className="asset-export">
+  <button type="button" className="btn btn--quiet" aria-expanded={open} onClick={()=>setOpen(!open)}>{label}</button>
+  {open&&<div className="asset-export__panel" role="group" aria-label={label}>
+   <fieldset><legend>Format</legend>
+    <label><input type="radio" name={`fmt-${base}`} checked={format==='docx'} onChange={()=>setFormat('docx')}/> Word (.docx)</label>
+    <label><input type="radio" name={`fmt-${base}`} checked={format==='pdf'} onChange={()=>setFormat('pdf')}/> PDF</label>
+   </fieldset>
+   <div className="asset-export__acts">
+    <a className="btn btn--quiet" href={`${base}/export.${format}`} download>Herunterladen</a>
+    <button type="button" className="btn" disabled={busy} onClick={drive}>{busy?'Wird abgelegt…':'In Drive ablegen'}</button>
+   </div>
+   {result&&<p role="status">Abgelegt in {result.folder}. <a href={result.url} target="_blank" rel="noreferrer">In Drive öffnen ↗</a></p>}
+   {error&&<p className="twin-error" role="alert">{error}{/verbunden|Einstellungen/.test(error)&&<> <a href="/settings#drive">Drive verbinden</a></>}</p>}
+  </div>}
+ </div>;
+}
+
+export function Editor({text,path,onSaved,exportBase}){
  const [title,setTitle]=useState(text.title),[body,setBody]=useState(text.body);
  const [error,setError]=useState(''),[notice,setNotice]=useState(''),[saving,setSaving]=useState(false);
  const dirty=title!==text.title||body!==text.body;
@@ -23,8 +47,7 @@ export function Editor({text,path,onSaved,exportHref}){
    <div><h2>{LABEL[text.kind]||text.kind_label||text.kind}</h2>
     <span className={`themen-tag${released?' themen-tag--on':' themen-tag--star'}`}>{released?'Freigegeben':dirty?'Ungespeicherte Änderungen':'Entwurf'}</span></div>
    <div className="asset-editor__acts">
-    {exportHref&&<a className="btn btn--quiet" href={exportHref('docx')}>Word</a>}
-    {exportHref&&<a className="btn btn--quiet" href={exportHref('pdf')}>PDF</a>}
+    {exportBase&&<ExportBox base={exportBase}/>}
     <button type="button" className="btn btn--quiet" onClick={copy}>Kopieren</button>
     <button type="button" className="btn" disabled title="Kommt später">Senden · bald</button>
     <button type="button" className="btn btn--go" disabled={released||!dirty||saving} onClick={save}>{saving?'Wird gespeichert…':'Speichern'}</button>
@@ -104,14 +127,17 @@ function Workspace({clientId,kind,identity,initialText=''}){
  }catch(e){waiting.current=false;setError(e.message);}finally{setBusy(false);}}
  if(!detail||!data)return error?<p className="twin-error" role="alert">{error}</p>:<p role="status">Thema wird geladen…</p>;
  const current=data.texts.find(t=>`${t.type}-${t.id}`===open);
- const exportHref=text=>format=>`/api/v1/clients/${clientId}/assets/${text.type}/${text.id}/export.${format}`;
+ const exportBase=text=>`/api/v1/clients/${clientId}/assets/${text.type}/${text.id}`;
  return <div className="assets-workspace">
   <header className="assets-workspace__head">
    <div><span className="themen-tag themen-tag--on">Thema aktiv</span><h2>{detail.title}</h2>{detail.storyline&&<p>Pitch: {detail.storyline}</p>}</div>
+   <div className="assets-workspace__side">
+   <ExportBox base={`/api/v1/clients/${clientId}/themen/${kind}/${identity}`} label="Thema exportieren"/>
    <label className="assets-speaker">Sprecher<select aria-label="Sprecher" value={speakerValue(detail)} onChange={e=>speaker(e.target.value)}>
     <option value="">Noch nicht gewählt</option>
     {(detail.people||[]).map(p=><option key={`p${p.id}`} value={`p:${p.id}`}>{p.label}</option>)}
     {detail.speakers.map(s=><option key={`f${s.id}`} value={`f:${s.id}`}>{s.value}</option>)}</select></label>
+   </div>
   </header>
   {error&&<p className="twin-error" role="alert">{error}</p>}
   {data.latest&&running&&<p role="status">RAUTE schreibt {LABEL[data.latest.kind]||'den Text'}…</p>}
@@ -120,7 +146,7 @@ function Workspace({clientId,kind,identity,initialText=''}){
    <div className="assets-list">{data.texts.map(text=>{const key=`${text.type}-${text.id}`;return <button type="button" key={key} className="asset-card" aria-pressed={open===key} onClick={()=>setOpen(open===key?'':key)}>
     <span>{LABEL[text.kind]||text.kind}<em className={`themen-tag${text.released_at?' themen-tag--on':''}`}>{text.released_at?'Freigegeben':'Entwurf'}</em></span>
     <strong>{text.title||'Ohne Titel'}</strong></button>;})}</div></section>}
-  {current&&<Editor key={`${open}-${current.digest}`} text={current} path={path} exportHref={current.type==='asset'?exportHref(current):null} onSaved={setData}/>}
+  {current&&<Editor key={`${open}-${current.digest}`} text={current} path={path} exportBase={exportBase(current)} onSaved={setData}/>}
   <NewAsset detail={detail} running={running||busy} onCreate={create}/>
  </div>;
 }

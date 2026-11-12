@@ -852,6 +852,7 @@ def _page_context(session: Session) -> dict[str, object]:
         # right now (read off the local file, never the network), and what the
         # last round trip to Google came back with.
         "gmail_configured": config.gmail_configured(),
+        "drive": _drive_state(),
         "gmail": gmail_link.connected(),
         "gmail_scopes": gmail_link.scope_words(),
         "gmail_notice": None,
@@ -902,6 +903,15 @@ def _feeds_by_tier(feeds) -> list[tuple[str, list]]:
     return [
         (label, buckets[tier]) for tier, label in _FEED_TIERS if buckets.get(tier)
     ]
+
+
+def _drive_state() -> dict[str, object]:
+    """Spec 12: whether exports can go to the shared folder "7. Assets"."""
+    from ... import drive_link
+    link = drive_link.connected()
+    return {"configured": drive_link.configured(), "connected": link is not None,
+            "email": link.email if link else "", "connected_at": link.connected_at if link else "",
+            "notice": None}
 
 
 def _ai_context(session: Session) -> dict[str, object]:
@@ -956,6 +966,7 @@ def settings_view(
     edit: int | None = None,
     started: int | None = None,
     gmail: str | None = None,
+    drive: str | None = None,
     session: Session = Depends(get_db),
 ) -> HTMLResponse:
     """Render the settings page. ``?edit=<client_id>`` opens that one client's
@@ -978,6 +989,8 @@ def settings_view(
             extra["gmail_notice"] = GmailNotice(gmail)
         except ValueError:
             _log.info("ignoring unknown gmail notice %r", gmail)
+    if drive in {"verbunden", "getrennt", "fehler", "abgelehnt"}:
+        extra["drive"] = {**_drive_state(), "notice": drive}
     return _render_settings(request, session, **extra)
 
 
@@ -1963,6 +1976,21 @@ def gmail_callback_route(
     """
     expected = request.cookies.get(_GMAIL_STATE_COOKIE, "")
     response: Response
+    from ... import drive_link
+    if state.startswith(drive_link.STATE_PREFIX) and _state_matches(state, expected):
+        # Spec 12: Drive shares this registered callback; its state says so.
+        if error or not code:
+            notice = "abgelehnt" if error == _GMAIL_DECLINED else "fehler"
+        else:
+            try:
+                drive_link.exchange(code)
+                notice = "verbunden"
+            except drive_link.DriveError as exc:
+                _log.error("Drive connection failed: %s", exc)
+                notice = "fehler"
+        response = RedirectResponse(f"/settings?drive={notice}#drive", status_code=_SEE_OTHER)
+        response.delete_cookie(_GMAIL_STATE_COOKIE, path="/settings")
+        return response
     if not _state_matches(state, expected):
         _log.warning("Gmail callback refused: state did not match")
         response = _back_to_panel(GmailNotice.STATE)
@@ -1987,6 +2015,29 @@ def gmail_callback_route(
     # One attempt, one state: it is spent whichever way this went.
     response.delete_cookie(_GMAIL_STATE_COOKIE, path="/settings")
     return response
+
+
+@router.get("/settings/drive/start")
+def drive_start_route(request: Request) -> Response:
+    """Google's consent screen for Drive, through the same callback as Gmail."""
+    from ... import drive_link
+    if not drive_link.configured():
+        return RedirectResponse("/settings?drive=fehler#drive", status_code=_SEE_OTHER)
+    state = drive_link.new_state()
+    response = RedirectResponse(drive_link.authorize_url(state, login_hint=request.scope.get("user_email", "")),
+                                status_code=_SEE_OTHER)
+    response.set_cookie(_GMAIL_STATE_COOKIE, state, max_age=_GMAIL_STATE_MAX_AGE, httponly=True,
+                        secure=_over_tls(request), samesite=_GMAIL_COOKIE_SAMESITE, path="/settings")
+    return response
+
+
+@router.post("/settings/drive/disconnect")
+def drive_disconnect_route(request: Request) -> Response:
+    from ... import drive_link
+    if not _same_origin(request):
+        return PlainTextResponse("Diese Anfrage kam nicht von dieser Anwendung.", status_code=_FORBIDDEN)
+    drive_link.disconnect()
+    return RedirectResponse("/settings?drive=getrennt#drive", status_code=_SEE_OTHER)
 
 
 @router.post("/settings/gmail/disconnect")

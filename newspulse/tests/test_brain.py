@@ -413,6 +413,8 @@ CARRIED_BEFORE = {
     "decision_packet.txt": set(),
     # New workspace formats have no predecessor.
     "workspace_asset.txt": set(),
+    # Spec 12: the Deep Dive of a starred article. New, nothing to carry.
+    "themen_deep_dive.txt": set(),
 }
 
 #: Standards a prompt did *not* carry before and now does. Every one is a
@@ -424,6 +426,10 @@ ADDED_IN_MIGRATION = {
     # Workspace drafts use the same positioning, evidence and prose standards
     # as existing assets; the format-specific refusal remains supplied by caller.
     "workspace_asset.txt": {"position", "evidence", "no_invention", "house_style"},
+    # The Deep Dive argues why a mandate may speak (position), names only what
+    # the article and profile carry (evidence, no_invention) and is read by the
+    # consultant as prose (house_style), like a workspace draft.
+    "themen_deep_dive.txt": {"position", "evidence", "no_invention", "house_style"},
     # What the move gives the seven, and why each is wanted.
     #
     # All six formats gain the standards they leaned on without stating: they are
@@ -2098,6 +2104,18 @@ def _store_a_developed_opportunity(session):
     return session.get(Angle, workspace.angle_id)
 
 
+def _store_a_thema(session) -> Angle:
+    """Drive ``themen`` the way the star does: star, then write the Deep Dive."""
+    from newspulse import themen
+
+    client = _a_mandate(session)
+    article = _an_article(session, "markt")
+    row = themen.star(session, client, article, by="lucas")
+    reply = json.dumps({"situation": "Es ist etwas passiert.", "relevance": "Es betrifft das Mandat.",
+                        "pitch": "Eine Position.", "storylines": []})
+    return themen.deep_dive(session, row.id, invoke=lambda *a, **k: reply)
+
+
 GENERATORS = [
     ("opportunity_development", _store_a_developed_opportunity),
     ("angles", _store_an_angle),
@@ -2136,6 +2154,10 @@ GENERATORS = [
     # matter — and acts on. NULL where a person attached it by hand, which is
     # the stronger claim.
     ("issues", _store_an_issue_signal),
+    # Spec 12: a starred article's Deep Dive. The article and the star are
+    # stored rows, but what happened, why it matters and the pitch are model
+    # prose a consultant activates a Thema on.
+    ("themen", _store_a_thema),
 ]
 
 

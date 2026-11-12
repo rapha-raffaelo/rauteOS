@@ -177,3 +177,95 @@ def test_an_activated_thema_keeps_its_star(web, session, mandate):
     row.status = "active"
     session.commit()
     assert web.delete(f"/api/v1/clients/{mandate.id}/themen/{article.id}").status_code == 409
+
+
+# --- Export: Word, PDF and Drive -------------------------------------------------
+
+import io
+import zipfile
+
+from newspulse import asset_export, drive_link
+from newspulse.models import Asset
+
+
+def _asset(session, mandate, angle_id, body="Erster Absatz.\n\nZweiter Absatz."):
+    asset = Asset(client_id=mandate.id, angle_id=angle_id, kind="statement", title="Statement zur Verschreibung",
+                  body=body)
+    session.add(asset)
+    session.commit()
+    return asset
+
+
+def test_an_asset_downloads_as_word_and_pdf(web, session, mandate):
+    article = _article(session, "Bundestag schränkt Medizinalcannabis ein", "https://ex.de/radar-007", radar=mandate)
+    row = themen.star(session, mandate, article)
+    asset = _asset(session, mandate, row.context_id)
+
+    word = web.get(f"/api/v1/clients/{mandate.id}/assets/asset/{asset.id}/export.docx")
+    assert word.status_code == 200 and word.headers["content-type"] == asset_export.DOCX
+    assert "Remexian" in word.headers["content-disposition"]
+    text = zipfile.ZipFile(io.BytesIO(word.content)).read("word/document.xml").decode()
+    assert "Zweiter Absatz." in text and "Statement zur Verschreibung" in text
+
+    pdf = web.get(f"/api/v1/clients/{mandate.id}/assets/asset/{asset.id}/export.pdf")
+    assert pdf.status_code == 200 and pdf.content.startswith(b"%PDF")
+    assert web.get(f"/api/v1/clients/{mandate.id}/assets/asset/{asset.id}/export.txt").status_code == 422
+
+
+def test_a_thema_exports_with_its_deep_dive(web, session, mandate):
+    article = _article(session, "Bundestag schränkt Medizinalcannabis ein", "https://ex.de/radar-008", radar=mandate)
+    row = themen.star(session, mandate, article)
+    word = web.get(f"/api/v1/clients/{mandate.id}/themen/developed/{row.context_id}/export.docx")
+    text = zipfile.ZipFile(io.BytesIO(word.content)).read("word/document.xml").decode()
+    assert "Was ist passiert?" in text and "Warum für Remexian Pharma GmbH relevant?" in text and "bitte ergänzen" in text
+
+
+def test_drive_puts_the_file_into_the_clients_folder_under_7_assets(tmp_path, monkeypatch):
+    from newspulse import config
+
+    monkeypatch.setattr(config, "DATABASE_PATH", tmp_path / "db.sqlite")
+    monkeypatch.setattr(config, "DRIVE_ASSETS_FOLDER", "root-folder")
+    drive_link._write({"refresh_token": "r", "access_token": "a", "expires_at": "2999-01-01T00:00:00+00:00"})
+    calls = []
+
+    def call(url, **kwargs):
+        calls.append((url, kwargs))
+        if "files?q=" in url:
+            return {"files": []}
+        if "upload" in url:
+            return {"id": "f1", "webViewLink": "https://drive.google.com/file/d/f1/view"}
+        return {"id": "folder-1"}
+
+    url = drive_link.upload("Remexian Pharma GmbH", "a.docx", asset_export.DOCX, b"bytes", call=call)
+    assert url == "https://drive.google.com/file/d/f1/view"
+    made = json.loads(calls[1][1]["body"])
+    assert made == {"name": "Remexian Pharma GmbH", "mimeType": "application/vnd.google-apps.folder", "parents": ["root-folder"]}
+    assert b'"parents": ["folder-1"]' in calls[2][1]["body"] and "supportsAllDrives=true" in calls[2][0]
+
+
+def test_without_a_drive_connection_the_export_says_so(web, session, mandate, tmp_path, monkeypatch):
+    from newspulse import config
+
+    monkeypatch.setattr(config, "DATABASE_PATH", tmp_path / "db.sqlite")
+    article = _article(session, "Bundestag schränkt Medizinalcannabis ein", "https://ex.de/radar-009", radar=mandate)
+    asset = _asset(session, mandate, themen.star(session, mandate, article).context_id)
+    refused = web.post(f"/api/v1/clients/{mandate.id}/assets/asset/{asset.id}/drive", json={"format": "pdf"})
+    assert refused.status_code == 409 and "nicht verbunden" in refused.json()["detail"]
+
+
+def test_drive_connects_through_the_gmail_callback_by_its_state(web, monkeypatch):
+    from newspulse import config
+
+    monkeypatch.setattr(config, "gmail_configured", lambda: True)
+    monkeypatch.setattr(config, "gmail_client_id", lambda: "client-id")
+    exchanged = []
+    monkeypatch.setattr(drive_link, "exchange", lambda code: exchanged.append(code))
+
+    start = web.get("/settings/drive/start", follow_redirects=False)
+    assert start.status_code == 303 and "auth%2Fdrive" in start.headers["location"]
+    state = web.cookies.get("newspulse_gmail_state")
+    assert state.startswith(drive_link.STATE_PREFIX)
+
+    back = web.get(f"/settings/gmail/callback?code=abc&state={state}", follow_redirects=False)
+    assert back.headers["location"] == "/settings?drive=verbunden#drive"
+    assert exchanged == ["abc"]

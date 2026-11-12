@@ -22,6 +22,8 @@ function DeepDive({clientId,clientName,row,id}){
  const missing=<em>bitte ergänzen</em>;
  return <div className="themen-dive" id={id} role="tooltip">
   {error?<p role="alert">{error}</p>:!detail?<p role="status">Deep Dive wird geladen…</p>:<>
+   {detail.deep_dive==='pending'&&<p role="status" className="themen-dive__note">RAUTE schreibt den Deep Dive. Bis dahin steht hier der Artikel.</p>}
+   {detail.deep_dive==='failed'&&<p className="themen-dive__note">Der Deep Dive ließ sich nicht schreiben. Pitch beim Aktivieren selbst formulieren.</p>}
    <section><h4>Was ist passiert?</h4><p>{detail.situation?.trim()||missing}</p></section>
    <section><h4>Warum für {clientName||'den Kunden'} relevant?</h4><p>{detail.relevance?.trim()||missing}</p></section>
    <section className="themen-dive__pitch"><h4>Pitch</h4><p>{pitchOf(detail)||row.summary||missing}</p></section>
