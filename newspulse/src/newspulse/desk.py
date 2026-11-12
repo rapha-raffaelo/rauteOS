@@ -180,7 +180,7 @@ class InFlight:
 
 @dataclass(frozen=True, slots=True)
 class Chance:
-    """One open opportunity, for the Desk's "Relevante Chancen" list."""
+    """One open Thema, for the Desk's "Themen" list."""
 
     client: Client
     kind: str
@@ -627,8 +627,11 @@ def _chances(session: Session, clients: dict[int, Client], limit: int = CHANCES_
             title=row["title"],
             status=row["status"],
             since=row["created_at"],
-            href=(f"/client/{client.id}/opportunities?kind={row['context_kind']}"
-                  f"&context={row['context_id']}"),
+            # Spec 12: an activated Thema is worked on under Assets; an open one
+            # is read on the Themen, at its own card.
+            href=(f"/client/{client.id}/assets?kind={row['context_kind']}&context={row['context_id']}"
+                  if row["status"] == "active" else
+                  f"/client/{client.id}/themen#thema-{row['context_kind']}-{row['context_id']}"),
         )
         for client in clients.values()
         for row in listed.get(client.id, [])

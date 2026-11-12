@@ -37,8 +37,8 @@ def text_href(session,row,kind='asset'):
         workspace=session.scalar(select(OpportunityWorkspace).where(OpportunityWorkspace.client_id==row.client_id,
             OpportunityWorkspace.angle_id==row.angle_id))
         if workspace:
-            return (f'/client/{row.client_id}/opportunities?kind={workspace.context_kind}&context={workspace.context_id}'
-                    f'&view=assets&text=asset-{row.id}')
+            return (f'/client/{row.client_id}/assets?kind={workspace.context_kind}&context={workspace.context_id}'
+                    f'&text=asset-{row.id}')
         return advice_href(row.client_id,row.angle_id,f'asset-text-{row.id}')
     return advice_href(row.client_id,row.angle_id,f'letter-text-{row.id}')
 

@@ -582,7 +582,7 @@ def test_unbuilt_checkout_keeps_a_working_desk(web, tmp_path, monkeypatch):
     assert 'Noch kein Mandant angelegt.' in rendered(web.get('/desk'))
 
 
-# --- Relevante Chancen (spec 09) ------------------------------------------------
+# --- Themen on the Desk (spec 09, spec 12) ------------------------------------
 
 
 def test_the_desk_lists_open_chances_across_mandates_newest_first(session):
@@ -600,7 +600,7 @@ def test_the_desk_lists_open_chances_across_mandates_newest_first(session):
 
     assert [c.title for c in chances] == ["Reservierungen", "Kreditbedingungen"]
     assert chances[0].client.name == "Zenchef"
-    assert chances[0].href == f"/client/{zenchef.id}/opportunities?kind=developed&context={newer.id}"
+    assert chances[0].href == f"/client/{zenchef.id}/themen#thema-developed-{newer.id}"
 
 
 def test_a_closed_chance_is_not_listed(session):

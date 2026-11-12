@@ -150,7 +150,7 @@ export function DeskPage({ translations = {}, language = 'de' }) {
           </a>)}
           {!board.decisions.length && !tasks.length && <p className="pane__empty">{t('Nichts wartet auf eine Entscheidung.')}</p>}
         </Card>
-        <Card title={t('Relevante Chancen')} link={['/today', t('Intelligence öffnen')]}>
+        <Card title={t('Themen')} link={['/today', t('Intelligence öffnen')]}>
           {chances.map((c) => <a className="chance" href={c.href} key={c.href}>
             <span className="chance__ico" aria-hidden="true"><svg className="ico"><use href="#ico-intel" /></svg></span>
             <span className="task__b"><span className="task__t" title={c.title}>{c.title}</span>

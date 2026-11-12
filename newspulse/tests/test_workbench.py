@@ -250,7 +250,7 @@ def test_stories_and_content_leads_with_the_running_stories(web, db):
     data = web.get('/api/v1/workbench/assets').json()
     assert [s['title'] for s in data['stories']] == ['Hypothesis']
     assert data['stories'][0]['client']['name'] == 'Alpha'
-    assert data['stories'][0]['href'].startswith('/client/1/opportunities?kind=developed&context=')
+    assert data['stories'][0]['href'].startswith('/client/1/themen#thema-developed-')
 
 
 def test_social_monitoring_scopes_published_posts(web, db):

@@ -40,7 +40,7 @@ function Card({clientId,clientName,row,onActivate,busy}){
  const show=()=>{clearTimeout(timer.current);setOpen(true);};
  const hide=()=>{timer.current=setTimeout(()=>setOpen(false),150);};
  const o=row.occasion;
- return <article className={`themen-card${row.status==='active'?' themen-card--active':''}`}>
+ return <article id={`thema-${row.context_kind}-${row.context_id}`} className={`themen-card${row.status==='active'?' themen-card--active':''}`}>
   <div className="themen-card__meta"><span className={`themen-tag${fromMedien(row)?' themen-tag--star':''}`}>{ORIGIN[row.origin]||'Vorschlag von RAUTE'}{row.starred_by&&` · @${row.starred_by}`}</span>
    {row.status==='active'&&<span className="themen-tag themen-tag--on">Aktiviert</span>}
    {o&&<span className="themen-card__source">{o.source}{o.published_at&&` · ${day(o.published_at)}`}</span>}</div>
