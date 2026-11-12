@@ -52,7 +52,7 @@ def test_settings_contract_excludes_secrets_and_serializes_proposals(web,monkeyp
     assert data['rival_work']['1']['rivals'][0]['aliases']==['Example AG']
     assert data['edit_id']==1 and len(data['clients'])==3
     from newspulse.gmail_link import Link
-    assert {'email','scopes','connected_at','lost','is_connected','may_send','scope_words'}==set(view_data(Link(email='example@example.org')))
+    assert {'email','scopes','connected_at','lost','is_connected','may_send','may_manage','scope_words'}==set(view_data(Link(email='example@example.org')))
     assert 'comms_guide' not in data['clients'][0]
     with pytest.raises(TypeError):view_data(object())
 
