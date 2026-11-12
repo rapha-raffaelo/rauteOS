@@ -105,13 +105,13 @@ def _tasks_page(request: Request, session: Session, *, error: str = "", draft: d
         task = next((row for row in rows if str(row.id) == raw_task), None)
         if task:
             selected_board = next((b for b in boards if b.id == task.board_id), None)
-    selected_board = selected_board or next(b for b in boards if b.system_key == "general")
+    selected_board = selected_board or next(b for b in boards if b.system_key == worklists.DEFAULT_BOARD)
     return render_react(request, "tasks", dict(
         tasks=[_task(t) for t in rows], clients=_clients(session), decisions=[],
         boards=[dict(id=b.id, name=b.name, system_key=b.system_key,
                      open_count=sum(t.board_id == b.id for t in everything)) for b in boards],
         active_board_id=None if raw_board == "all" else selected_board.id,
-        default_board_id=next(b.id for b in boards if b.system_key == "general"),
+        default_board_id=next(b.id for b in boards if b.system_key == worklists.DEFAULT_BOARD),
         team=[dict(key=key, name=name) for key, name, _ in worklists.TEAM], me=me,
         open_total=len(everything), due_on=[t.due_on for t in everything if t.due_on],
         priorities=[[p, worklists.TASK_PRIORITY_LABELS[p]] for p in TASK_PRIORITIES],
@@ -130,7 +130,7 @@ def tasks_view(request: Request, session: Session = Depends(get_db)) -> Response
             task = session.get(Task, int(raw_task))
             if task:
                 board = next((b for b in boards if b.id == task.board_id), None)
-        board = board or next(b for b in boards if b.system_key == "general")
+        board = board or next(b for b in boards if b.system_key == worklists.DEFAULT_BOARD)
         session.commit()
         query = dict(request.query_params)
         query.pop("workspace", None)

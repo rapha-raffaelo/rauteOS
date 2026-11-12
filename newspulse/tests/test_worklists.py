@@ -491,3 +491,30 @@ def test_subtasks_persist_and_stay_with_their_parent(web, session):
     web.post(f'/aufgaben/{parent.id}/delete',follow_redirects=False)
     session.expire_all()
     assert list(session.scalars(select(TaskSubtask)))==[]
+
+
+
+def test_the_retired_board_allgemein_hands_its_tasks_to_rauteos(session):
+    """Allgemein was removed from the task manager; nothing on it may be lost."""
+    from newspulse.models import Task, TaskBoard
+
+    old = TaskBoard(name="Allgemein", name_key="allgemein", system_key="general", created_at=_now_for_boards())
+    session.add(old)
+    session.flush()
+    session.add(Task(board_id=old.id, title="Steuerberater absagen", priority="mittel", status="offen",
+                     owner="", assignees=[], created_at=_now_for_boards()))
+    session.commit()
+
+    boards = worklists.task_boards(session)
+    session.commit()
+
+    assert [b.system_key for b in boards] == ["decisions", "rauteos"]
+    rauteos = next(b for b in boards if b.system_key == "rauteos")
+    assert session.query(Task).filter_by(title="Steuerberater absagen").one().board_id == rauteos.id
+    assert session.query(TaskBoard).filter_by(system_key="general").count() == 0
+
+
+def _now_for_boards():
+    import datetime as dt
+
+    return dt.datetime(2026, 11, 12, 9, 0, tzinfo=dt.UTC)

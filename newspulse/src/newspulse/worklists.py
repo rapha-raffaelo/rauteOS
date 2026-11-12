@@ -112,7 +112,11 @@ def member_for(email: str | None) -> str | None:
     return next((key for key, _, emails in TEAM if address in emails), None)
 
 
-DEFAULT_BOARDS = (("general", "Allgemein"), ("decisions", "Offene Entscheidungen"), ("rauteos", "rauteOS"))
+DEFAULT_BOARDS = (("decisions", "Offene Entscheidungen"), ("rauteos", "rauteOS"))
+#: Where a task without a workspace lands, and the board the page opens on.
+DEFAULT_BOARD = "rauteos"
+#: The board "Allgemein" was retired; its tasks moved to rauteOS.
+_RETIRED_BOARD = "general"
 
 
 def task_boards(session: Session) -> list[TaskBoard]:
@@ -123,8 +127,14 @@ def task_boards(session: Session) -> list[TaskBoard]:
                 name=name, name_key=name.casefold(), system_key=key,
                 created_at=_now()).on_conflict_do_nothing())
     rows = list(session.scalars(select(TaskBoard).order_by(TaskBoard.id)))
-    general = next(board for board in rows if board.system_key == "general")
-    session.execute(update(Task).where(Task.board_id.is_(None)).values(board_id=general.id))
+    home = next(board for board in rows if board.system_key == DEFAULT_BOARD)
+    retired = next((board for board in rows if board.system_key == _RETIRED_BOARD), None)
+    if retired is not None:
+        session.execute(update(Task).where(Task.board_id == retired.id).values(board_id=home.id))
+        session.delete(retired)
+        session.flush()
+        rows = [board for board in rows if board is not retired]
+    session.execute(update(Task).where(Task.board_id.is_(None)).values(board_id=home.id))
     return rows
 
 
@@ -145,7 +155,7 @@ def _task_board(session: Session, form: Mapping, task: Task) -> int:
     boards = task_boards(session)
     raw = form.get("board_id")
     if raw is None or raw == "":
-        return task.board_id or next(b.id for b in boards if b.system_key == "general")
+        return task.board_id or next(b.id for b in boards if b.system_key == DEFAULT_BOARD)
     try:
         board_id = int(raw)
     except (ValueError, TypeError, OverflowError):
