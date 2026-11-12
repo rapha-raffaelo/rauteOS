@@ -2059,3 +2059,13 @@ def claude_login_action(login_id: str, action: str, request: Request, code: str 
     except KeyError: raise HTTPException(404, 'Anmeldung abgelaufen. Bitte erneut starten.') from None
     except ValueError as exc: return JSONResponse({'message':str(exc)},status_code=422)
     return JSONResponse(result, headers={'Cache-Control':'no-store'})
+
+
+@router.post('/settings/ai/gemini/cash')
+def save_gemini_cash_route(amount: str = Form(...), currency: str = Form(...), session: Session = Depends(get_db)):
+    from ... import ai_usage
+    try:
+        result = ai_usage.save_gemini_cash(session, amount, currency)
+    except ValueError as exc:
+        return JSONResponse({'message': str(exc)}, status_code=422)
+    return JSONResponse(result, headers={'Cache-Control': 'no-store'})

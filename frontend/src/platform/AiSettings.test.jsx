@@ -51,3 +51,15 @@ it('only offers login when Claude is disconnected and reacts to successful login
  fireEvent(window,new CustomEvent('raute:claude-status',{detail:'connected'}));
  expect(screen.queryByRole('button',{name:'Anmelden',exact:true})).toBeNull();
 });
+it('saves a manual Gemini balance with currency and timestamp',async()=>{
+ const provider={key:'gemini',label:'Gemini',connected:true,models:[],usage:{kind:'budget',month:'2026-11'}};
+ vi.stubGlobal('fetch',vi.fn(async()=>({ok:true,json:async()=>({amount:'25.50',currency:'CHF',updated_at:'2026-11-12T10:00:00Z'})})));
+ render(<AiSettings data={{...data,providers:[provider]}}/>);
+ fireEvent.click(screen.getByRole('button',{name:'Guthaben hinterlegen'}));
+ fireEvent.change(screen.getByLabelText('Verfügbares Guthaben'),{target:{value:'25,50'}});
+ fireEvent.change(screen.getByLabelText('Währung'),{target:{value:'CHF'}});
+ fireEvent.click(screen.getByRole('button',{name:'Guthaben speichern'}));
+ await screen.findByText(/25,50.*CHF/);
+ expect(screen.getByText(/Manuell hinterlegt.*Stand/)).toBeTruthy();
+ expect(screen.queryByRole('button',{name:'Guthaben speichern'})).toBeNull();
+});

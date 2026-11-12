@@ -103,3 +103,16 @@ def test_gemini_counts_calls_tokens_and_searches_per_month(factory):
 def test_recording_without_a_database_is_silent():
     ai_usage.record_gemini({"usageMetadata": {"promptTokenCount": 1}})
     ai_usage.claude_events(json.dumps(EVENT))
+
+def test_manual_cash_is_independent_of_monthly_usage(factory, monkeypatch):
+    with factory() as s:
+        saved=ai_usage.save_gemini_cash(s,'123,45','EUR')
+        assert saved['amount']=='123.45' and saved['updated_at']
+    ai_usage.record_gemini({'usageMetadata':{'promptTokenCount':12}})
+    monkeypatch.setattr(ai_usage,'_now',lambda:dt.datetime(2030,1,1,tzinfo=dt.UTC))
+    with factory() as s:
+        assert ai_usage.overview(s)['gemini']['cash']==saved
+        for amount,currency in [('NaN','EUR'),('1.234','EUR'),('12','BAD')]:
+            with pytest.raises(ValueError): ai_usage.save_gemini_cash(s,amount,currency)
+        assert ai_usage.overview(s)['gemini']['cash']==saved
+        assert ai_usage.save_gemini_cash(s,'0','USD')['amount']=='0.00'

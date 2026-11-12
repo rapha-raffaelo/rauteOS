@@ -870,3 +870,9 @@
  .settings-inputs {grid-template-columns:minmax(0,1fr)}
  .settings-config,.settings-test {margin-left:0}
 }
+.gemini-cash{padding-bottom:20px;margin-bottom:20px;border-bottom:1px solid var(--line)}
+.gemini-cash__amount{display:block;font-size:1.6rem;margin:8px 0}
+.gemini-cash .ai-usage__row{flex-wrap:wrap;gap:16px;align-items:center}
+.gemini-cash__form{display:flex;flex-wrap:wrap;align-items:end;gap:12px;margin-top:16px}
+.gemini-cash__form .platform-field{flex:1;min-width:120px}
+.gemini-cash__form [role=alert]{width:100%;color:var(--alert)}

@@ -32,7 +32,7 @@ _CODEX_MAX_AGE = dt.timedelta(minutes=5)
 _CODEX_TIMEOUT = 8.0
 
 #: Where the Gemini budget is set and the bill is read.
-GEMINI_BILLING_URL = "https://aistudio.google.com/usage"
+GEMINI_BILLING_URL = "https://aistudio.google.com/billing"
 
 
 def _now() -> dt.datetime:
@@ -242,10 +242,31 @@ def overview(session) -> dict[str, dict]:
     return {
         "claude": {"kind": "windows", **_load(session, "claude")},
         "openai": {"kind": "windows", **openai},
-        "gemini": {"kind": "budget", "billing_url": GEMINI_BILLING_URL, **gemini},
+        "gemini": {"kind": "budget", "billing_url": GEMINI_BILLING_URL, **gemini, "cash": _load(session, "gemini_cash")},
     }
 
 
 def disabled() -> bool:
     """Tests and a developer without the CLIs can switch the live Codex query off."""
     return os.environ.get("NEWSPULSE_AI_USAGE_QUERY", "").lower() in {"0", "false", "off", "no"}
+
+
+def save_gemini_cash(session, amount: str, currency: str) -> dict:
+    """A manually copied balance, independent of usage counters and monthly reset."""
+    from decimal import Decimal
+    import re
+    from .models import Setting
+    text = amount.strip().replace(',', '.')
+    if not re.fullmatch(r'-?\d{1,9}(?:\.\d{1,2})?', text):
+        raise ValueError('Bitte einen Betrag mit maximal zwei Nachkommastellen eingeben')
+    if currency not in {'EUR', 'USD', 'CHF'}:
+        raise ValueError('Bitte EUR, USD oder CHF auswählen')
+    record = {'amount': format(Decimal(text), '.2f'), 'currency': currency, 'updated_at': _now().isoformat()}
+    key = _PREFIX + 'gemini_cash'
+    row = session.get(Setting, key)
+    if row is None:
+        session.add(Setting(key=key, value=json.dumps(record)))
+    else:
+        row.value = json.dumps(record)
+    session.commit()
+    return record

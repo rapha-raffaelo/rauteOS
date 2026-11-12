@@ -504,3 +504,10 @@ def test_guided_claude_login_routes(client, monkeypatch):
     assert client.post('/settings/ai/claude/login/'+id+'/code',data={'code':'x\ncommand'}).status_code==422
     assert client.post('/settings/ai/claude/login/'+id+'/cancel').json()['state']=='cancelled'
     assert client.get('/settings/ai/claude/login/missing').status_code==404
+
+def test_manual_gemini_cash_route(client):
+    response=client.post('/settings/ai/gemini/cash',data={'amount':'40,25','currency':'EUR'})
+    assert response.status_code==200
+    assert response.json()['amount']=='40.25'
+    assert response.json()['updated_at']
+    assert client.post('/settings/ai/gemini/cash',data={'amount':'NaN','currency':'EUR'}).status_code==422

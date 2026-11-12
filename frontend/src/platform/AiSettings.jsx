@@ -22,12 +22,43 @@ const since = (iso) => iso ? new Date(iso).toLocaleString('de-DE',
 const count = (n) => new Intl.NumberFormat('de-DE', {notation: n >= 100000 ? 'compact' : 'standard', maximumFractionDigits: 1}).format(n || 0);
 const MONTHS = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
 
+function GeminiCash({initial}) {
+  const [cash, setCash] = useState(initial || {});
+  const [editing, setEditing] = useState(false);
+  const [amount, setAmount] = useState(initial?.amount ?? '');
+  const [currency, setCurrency] = useState(initial?.currency || 'EUR');
+  const [busy, setBusy] = useState(false), [error, setError] = useState('');
+  async function save(e) {
+    e.preventDefault(); setBusy(true); setError('');
+    try {
+      const response = await fetch('/settings/ai/gemini/cash', {method:'POST', body:new URLSearchParams({amount,currency}), signal:AbortSignal.timeout(15000)});
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || 'Guthaben konnte nicht gespeichert werden');
+      setCash(result); setAmount(result.amount); setEditing(false);
+    } catch(e) {setError(e.message || 'Guthaben konnte nicht gespeichert werden');}
+    finally {setBusy(false);}
+  }
+  return <section className="gemini-cash" aria-label="Gemini-Guthaben">
+    <div className="ai-usage__row"><div><p className="ai-usage__title">Guthaben</p>
+      <strong className="gemini-cash__amount">{cash.amount != null ? new Intl.NumberFormat('de-DE', {style:'currency',currency:cash.currency}).format(Number(cash.amount)) : 'Noch nicht hinterlegt'}</strong>
+    </div><button type="button" className="btn" onClick={()=>{setAmount(cash.amount ?? '');setCurrency(cash.currency || 'EUR');setError('');setEditing(!editing);}} disabled={busy}>{editing ? 'Abbrechen' : cash.amount != null ? 'Guthaben aktualisieren' : 'Guthaben hinterlegen'}</button></div>
+    <p className="settings-caption">Manuell hinterlegt{cash.updated_at ? ` · Stand ${new Date(cash.updated_at).toLocaleString('de-DE')}` : ''} · Keine automatische Aktualisierung</p>
+    {editing && <form onSubmit={save} className="gemini-cash__form">
+      <label className="platform-field"><span>Verfügbares Guthaben</span><input required inputMode="decimal" value={amount} onChange={e=>setAmount(e.target.value)} maxLength={13}/></label>
+      <label className="platform-field"><span>Währung</span><select value={currency} onChange={e=>setCurrency(e.target.value)}><option>EUR</option><option>USD</option><option>CHF</option></select></label>
+      <button className="btn" disabled={busy}>{busy ? 'Wird gespeichert…' : 'Guthaben speichern'}</button>
+      {error && <p role="alert">{error}</p>}
+    </form>}
+  </section>;
+}
+
 // What is left of a subscription (Claude, ChatGPT) or spent of an API budget
 // (Gemini), as far as each provider says so.
 export function Usage({usage: u}) {
   if (u.kind === 'budget') {
     const month = u.month ? MONTHS[Number(u.month.slice(5)) - 1] : '';
     return <div className="ai-usage">
+      <GeminiCash initial={u.cash} />
       <p className="ai-usage__title">Verbrauch durch RauteOS im {month}</p>
       <dl className="ai-usage__counts">
         <div><dt>Aufrufe</dt><dd>{count(u.calls)}</dd></div>
@@ -35,7 +66,7 @@ export function Usage({usage: u}) {
         <div><dt>Google-Suchen</dt><dd>{count(u.searches)}</dd></div>
       </dl>
       {u.refused_at && <p className="ai-usage__warn">Zuletzt am {since(u.refused_at)} wegen Kontingent oder Budget abgelehnt</p>}
-      <p className="settings-caption">Google meldet kein Restbudget zurück. Budget und Kosten stehen in <a href={u.billing_url} target="_blank" rel="noreferrer">Google AI Studio</a></p>
+      <p className="settings-caption">Aktuellen Kontostand prüfen und Guthaben aufladen in <a href={u.billing_url} target="_blank" rel="noreferrer">Google AI Studio</a></p>
     </div>;
   }
   const windows = u.windows || [];
