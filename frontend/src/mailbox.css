@@ -1,0 +1,42 @@
+/* Gmail inside RauteOS. Colours only through tokens. */
+.mailbox-layout{display:grid;grid-template-columns:200px minmax(260px,360px) minmax(0,1fr);gap:16px;align-items:start}
+.mailbox-side{display:flex;flex-direction:column;gap:6px}
+.mailbox-side h2{margin:14px 0 2px;font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.mailbox-side nav{display:flex;flex-direction:column;gap:2px}
+.mailbox-side nav button{text-align:left;padding:8px 12px;border-radius:10px;border:0;background:transparent;font:inherit;font-size:14px;color:var(--ink);cursor:pointer;overflow-wrap:anywhere}
+.mailbox-side nav button:hover{background:var(--fill-2)}
+.mailbox-side nav button[aria-current=page]{background:var(--tint-wash);color:var(--tint-ink);font-weight:600}
+.mailbox-list{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;display:flex;flex-direction:column}
+.mailbox-list form{padding:10px;border-bottom:1px solid var(--line)}
+.mailbox-list input[type=search]{width:100%;box-sizing:border-box}
+.mailbox-list ul{list-style:none;margin:0;padding:0;max-height:70vh;overflow:auto}
+.mailbox-list>[role=status],.mailbox-list>.mailbox-hint,.mailbox-list>.btn{margin:12px}
+.mailbox-row{display:flex;flex-direction:column;gap:2px;width:100%;text-align:left;padding:12px 14px;border:0;border-bottom:1px solid var(--line);background:transparent;font:inherit;color:var(--ink);cursor:pointer}
+.mailbox-row:hover{background:var(--fill-2)}
+.mailbox-row[aria-current=true]{background:var(--tint-wash)}
+.mailbox-row__top{display:flex;justify-content:space-between;gap:8px;font-size:14px}
+.mailbox-row__top strong{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mailbox-row__top time{flex:none;font-size:12px;color:var(--muted)}
+.mailbox-row__subject{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mailbox-row__snippet{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mailbox-row.is-unread .mailbox-row__top strong,.mailbox-row.is-unread .mailbox-row__subject{font-weight:700}
+.mailbox-pane{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;min-height:300px;min-width:0}
+.mailbox-hint{color:var(--muted);font-size:13px;margin:0}
+.mailbox-reader header,.mailbox-compose header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:12px}
+.mailbox-reader h2,.mailbox-compose h2{margin:0;font-size:19px;overflow-wrap:anywhere}
+.mailbox-message{border-top:1px solid var(--line);padding:14px 0}
+.mailbox-message__head{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;font-size:14px}
+.mailbox-message__head span,.mailbox-message__head time,.mailbox-message__to,.mailbox-message__files{color:var(--muted);font-size:12px}
+.mailbox-message__head time{margin-left:auto}
+.mailbox-message__to{margin:4px 0 10px}
+.mailbox-message__body{white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px;line-height:1.6}
+.mailbox-compose{display:flex;flex-direction:column;gap:10px}
+.mailbox-compose label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+.mailbox-compose input,.mailbox-compose textarea,.mailbox-compose select{font:inherit;font-size:14px;color:var(--ink)}
+.mailbox-compose__acts{display:flex;justify-content:flex-end;align-items:center;gap:12px;flex-wrap:wrap}
+.mailbox-assets{border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;max-height:220px;overflow:auto}
+.mailbox-assets legend{font-size:12px;color:var(--muted);padding:0 4px}
+.mailbox-assets label{flex-direction:row;align-items:center;gap:8px;color:var(--ink)}
+.mailbox-assets label span{flex:1;overflow-wrap:anywhere}
+.mailbox-assets small{color:var(--muted)}
+@media(max-width:1100px){.mailbox-layout{grid-template-columns:1fr}.mailbox-side nav{flex-direction:row;flex-wrap:wrap}}

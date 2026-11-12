@@ -16,6 +16,7 @@ export default defineConfig({
         workbench: fileURLToPath(
           new URL("./src/workbench.jsx", import.meta.url),
         ),
+        mailbox: fileURLToPath(new URL("./src/mailbox.jsx", import.meta.url)),
         themen: fileURLToPath(new URL("./src/themen.jsx", import.meta.url)),
         assets: fileURLToPath(new URL("./src/assets.jsx", import.meta.url)),
         journalists: fileURLToPath(

@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Gmail · RauteOS{% endblock %}
+{% block pagetitle %}Gmail{% endblock %}
+{% block content %}
+{% if frontend %}
+{% for href in frontend.css %}<link rel="stylesheet" href="{{ href }}">{% endfor %}
+<div id="react-mailbox"><p role="status">Postfach wird geladen…</p></div>
+<script type="module" src="{{ frontend.script }}"></script>
+{% else %}<p>Das Postfach ist gerade nicht verfügbar. Bitte später neu laden.</p>{% endif %}
+{% endblock %}

@@ -233,3 +233,49 @@ def upload(client_name: str, filename: str, mime: str, data: bytes, *, call=_cal
     if made.get("error") or not made.get("id"):
         raise DriveError(f"Datei nicht hochgeladen ({_error(made)})")
     return str(made.get("webViewLink") or f"https://drive.google.com/file/d/{made['id']}/view")
+
+
+def _bytes(url: str, *, access: str) -> bytes:
+    request = urllib.request.Request(url, headers={"Authorization": f"Bearer {access}"})
+    try:
+        with urllib.request.urlopen(request, timeout=_TIMEOUT) as response:  # noqa: S310 - fixed Google endpoint
+            return response.read()
+    except (urllib.error.URLError, TimeoutError) as exc:
+        raise DriveError("Datei aus Drive nicht ladbar") from exc
+
+
+#: Google's own formats have no bytes of their own; a mail gets them as these.
+_EXPORTS = {"application/vnd.google-apps.document": ("application/pdf", ".pdf"),
+            "application/vnd.google-apps.spreadsheet": ("application/pdf", ".pdf"),
+            "application/vnd.google-apps.presentation": ("application/pdf", ".pdf")}
+
+
+def client_files(client_name: str, *, call=_call) -> list[dict]:
+    """The files in the client's folder under "7. Assets", newest first."""
+    access = token(call=call)
+    folder = client_folder(client_name, access=access, call=call)
+    found = call(f"{_FILES}?" + urllib.parse.urlencode({
+        "q": f"'{_quote(folder)}' in parents and trashed = false and mimeType != '{_FOLDER}'",
+        "fields": "files(id,name,mimeType,size,modifiedTime,webViewLink)", "orderBy": "modifiedTime desc",
+        "pageSize": "100", "supportsAllDrives": "true", "includeItemsFromAllDrives": "true", "corpora": "allDrives"}),
+        token=access)
+    if found.get("error"):
+        raise DriveError(f"Kundenordner nicht lesbar ({_error(found)})")
+    return [dict(id=f["id"], name=f["name"], mime=f.get("mimeType", ""), size=int(f.get("size") or 0),
+                 modified=f.get("modifiedTime", ""), url=f.get("webViewLink", "")) for f in found.get("files") or ()]
+
+
+def download(file_id: str, *, call=_call, fetch=None) -> tuple[str, str, bytes]:
+    """``(filename, mime, bytes)`` of one Drive file, Google formats as PDF."""
+    access = token(call=call)
+    quoted = urllib.parse.quote(file_id, safe="")
+    meta = call(f"{_FILES}/{quoted}?fields=name,mimeType&supportsAllDrives=true", token=access)
+    if meta.get("error"):
+        raise DriveError(f"Datei nicht gefunden ({_error(meta)})")
+    name, mime = str(meta.get("name") or "Anhang"), str(meta.get("mimeType") or "application/octet-stream")
+    read = fetch or _bytes
+    if mime in _EXPORTS:
+        target, suffix = _EXPORTS[mime]
+        data = read(f"{_FILES}/{quoted}/export?" + urllib.parse.urlencode({"mimeType": target}), access=access)
+        return (name if name.endswith(suffix) else name + suffix), target, data
+    return name, mime, read(f"{_FILES}/{quoted}?alt=media&supportsAllDrives=true", access=access)
