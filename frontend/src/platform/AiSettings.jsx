@@ -15,6 +15,48 @@ export function ModelPicker({provider, name, value = '', label = 'Modell'}) {
   </label>;
 }
 
+const when = (seconds) => new Date(seconds * 1000).toLocaleString('de-DE',
+  {weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin'});
+const since = (iso) => iso ? new Date(iso).toLocaleString('de-DE',
+  {day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin'}) : '';
+const count = (n) => new Intl.NumberFormat('de-DE', {notation: n >= 100000 ? 'compact' : 'standard', maximumFractionDigits: 1}).format(n || 0);
+const MONTHS = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+
+// What is left of a subscription (Claude, ChatGPT) or spent of an API budget
+// (Gemini), as far as each provider says so.
+export function Usage({usage: u}) {
+  if (u.kind === 'budget') {
+    const month = u.month ? MONTHS[Number(u.month.slice(5)) - 1] : '';
+    return <div className="ai-usage">
+      <p className="ai-usage__title">Verbrauch durch RauteOS im {month}</p>
+      <dl className="ai-usage__counts">
+        <div><dt>Aufrufe</dt><dd>{count(u.calls)}</dd></div>
+        <div><dt>Tokens</dt><dd>{count((u.input_tokens || 0) + (u.output_tokens || 0))}</dd></div>
+        <div><dt>Google-Suchen</dt><dd>{count(u.searches)}</dd></div>
+      </dl>
+      {u.refused_at && <p className="ai-usage__warn">Zuletzt am {since(u.refused_at)} wegen Kontingent oder Budget abgelehnt</p>}
+      <p className="settings-caption">Google meldet kein Restbudget zurück. Budget und Kosten stehen in <a href={u.billing_url} target="_blank" rel="noreferrer">Google AI Studio</a></p>
+    </div>;
+  }
+  const windows = u.windows || [];
+  return <div className="ai-usage">
+    {windows.length ? windows.map(w => {
+      const used = w.used_percent;
+      const level = used == null ? '' : used >= 90 ? ' is-critical' : used >= 70 ? ' is-high' : '';
+      return <div className="ai-usage__window" key={w.name}>
+        <div className="ai-usage__row"><span>Kontingent {w.name}</span>
+          <strong>{used == null ? 'unbekannt' : `${Math.max(0, Math.round(100 - used))} % frei`}</strong></div>
+        {used != null && <div className={`ai-usage__bar${level}`} role="meter" aria-label={`Kontingent ${w.name}`}
+          aria-valuenow={Math.round(used)} aria-valuemin={0} aria-valuemax={100}><span style={{width: `${Math.min(100, used)}%`}}/></div>}
+        {w.resets_at && <small>Setzt sich zurück am {when(w.resets_at)}</small>}
+      </div>;
+    }) : <p className="settings-caption">Noch keine Angaben. Sie erscheinen nach dem nächsten Aufruf über dieses Abo.</p>}
+    {u.blocked && <p className="ai-usage__warn">Das Abo lässt gerade keine Nutzung zu</p>}
+    {u.error && <p className="ai-usage__warn">{u.error}</p>}
+    {u.seen_at && <p className="settings-caption">Stand {since(u.seen_at)}</p>}
+  </div>;
+}
+
 function Provider({provider: p}) {
   const [test, setTest] = useState(null);
   const abort = useRef(null);
@@ -38,9 +80,10 @@ function Provider({provider: p}) {
       <div className="settings-provider__icon" aria-hidden="true">{p.label.slice(0,1)}</div>
       <div className="settings-row__body"><h3>{p.label}</h3><p>{p.how || 'Noch nicht eingerichtet'}</p></div>
       {p.key === 'claude' && <button type="button" className="btn" onClick={() => window.dispatchEvent(new Event('raute:claude-login'))}>Anmelden</button>}
-      <span className={`settings-status ${test?.ok ? 'is-success' : ''}`}>{test?.ok ? 'Geprüft' : p.connected ? 'Eingerichtet' : 'Nicht verbunden'}</span>
+      <span className={`settings-status ${p.connected ? 'is-connected' : 'is-disconnected'}`}>{p.connected ? 'Verbunden' : 'Getrennt'}</span>
       <button type="button" className="btn" disabled={!p.connected || test?.busy} onClick={check}>{test?.busy ? 'Wird getestet…' : 'Verbindung testen'}</button>
     </div>
+    {p.connected && <Usage usage={p.usage || {}} />}
     {test && <div role="status" className={`settings-test ${test.ok ? 'is-success' : test.busy ? '' : 'is-error'}`}>
       <strong>{test.busy ? '◌ ' : test.ok ? '✓ ' : '! '}{test.message}</strong>
       {test.ok && <span>{test.model} · {test.seconds} s</span>}

@@ -28,3 +28,18 @@ it('shows testing and success inline, then handles failure on retry',async()=>{
  await screen.findByText(/Anmeldung prüfen/);
  expect(screen.queryByText('Geprüft')).toBeNull();
 });
+it('says Verbunden or Getrennt and shows what is left of each subscription or budget',()=>{
+ const usage={secret_ready:true,roles:[],providers:[
+  {key:'claude',label:'Claude',connected:true,models:[],usage:{kind:'windows',seen_at:'2026-11-12T08:00:00Z',
+   windows:[{name:'5 Stunden',used_percent:20,resets_at:1794487200},{name:'7 Tage',used_percent:95,resets_at:1794571200}]}},
+  {key:'openai',label:'OpenAI',connected:false,models:[],usage:{kind:'windows'}},
+  {key:'gemini',label:'Gemini',connected:true,models:[],usage:{kind:'budget',month:'2026-11',calls:12,input_tokens:9000,output_tokens:1000,searches:4,billing_url:'https://aistudio.google.com/usage'}}]};
+ render(<AiSettings data={usage}/>);
+ expect(screen.getAllByText('Verbunden')).toHaveLength(2);
+ expect(screen.getByText('Getrennt')).toBeTruthy();
+ expect(screen.getByText('80 % frei')).toBeTruthy();
+ expect(screen.getByText('5 % frei')).toBeTruthy();
+ expect(screen.getByText('Verbrauch durch RauteOS im November')).toBeTruthy();
+ expect(screen.getByText('10.000')).toBeTruthy();
+ expect(screen.getByRole('link',{name:'Google AI Studio'}).getAttribute('href')).toBe('https://aistudio.google.com/usage');
+});

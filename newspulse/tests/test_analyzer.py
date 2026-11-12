@@ -91,8 +91,9 @@ def _completed(stdout: str = "", returncode: int = 0, stderr: str = "") -> Simpl
 
 
 def test_claude_code_invocation_shape_is_subprocess_only():
-    """The subscription backend invokes `claude -p "<prompt>" --output-format json`
-    as a subprocess under a timeout — nothing else."""
+    """The subscription backend invokes `claude -p "<prompt>"` with the event
+    stream (which carries the rate-limit windows) as a subprocess under a
+    timeout — nothing else."""
     article = make_article(0)
     with patch.object(subprocess, "run") as run:
         run.return_value = _completed(_cli_stdout([_verdict(0)]))
@@ -102,7 +103,7 @@ def test_claude_code_invocation_shape_is_subprocess_only():
     argv = run.call_args.args[0]
     assert argv[0] == "claude"
     assert argv[1] == "-p"
-    assert argv[2:] == ["--output-format", "json"]
+    assert argv[2:] == ["--output-format", "stream-json", "--verbose"]
     assert "Beispiel AG" in run.call_args.kwargs["input"]
     # A timeout is always set so one hung call can never stall the sweep.
     assert run.call_args.kwargs.get("timeout")

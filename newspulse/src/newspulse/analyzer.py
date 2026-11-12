@@ -359,7 +359,9 @@ def invoke_claude_cli(prompt: str, *, timeout: float = _SUBPROCESS_TIMEOUT_SECON
     """
     if use_shared_knowledge:
         prompt = shared_guides.enrich_prompt(prompt, channel="claude_cli")
-    argv = ["claude", "-p", "--output-format", "json"]
+    # The stream rather than the single envelope: it carries the subscription's
+    # rate-limit windows, which Einstellungen › KI-Verbindungen shows.
+    argv = ["claude", "-p", "--output-format", "stream-json", "--verbose"]
     if model:
         argv.extend(["--model", model])
     try:
@@ -377,19 +379,42 @@ def invoke_claude_cli(prompt: str, *, timeout: float = _SUBPROCESS_TIMEOUT_SECON
         raise BackendError(f"claude -p timed out after {timeout}s") from exc
     except FileNotFoundError as exc:
         raise BackendError("claude CLI not found on PATH") from exc
+    from . import ai_usage
+
+    ai_usage.claude_events(completed.stdout)
+    stdout = _result_line(completed.stdout)
     if completed.returncode != 0:
         stderr = (completed.stderr or "").strip()[:500]
         # Recent CLI versions put actionable errors (including quota failures)
         # in the JSON result while leaving stderr empty on a non-zero exit.
         try:
-            envelope = json.loads(completed.stdout or "")
+            envelope = json.loads(stdout or "")
         except json.JSONDecodeError:
             envelope = None
         if (isinstance(envelope, dict) and envelope.get("is_error")
                 and isinstance(envelope.get("result"), str)):
             stderr = f"{envelope['result'][:500]} {stderr}".strip()
         raise BackendError(f"claude -p exited {completed.returncode}: {stderr}")
-    return _extract_cli_result(completed.stdout)
+    return _extract_cli_result(stdout)
+
+
+def _result_line(stdout: str | None) -> str:
+    """The ``result`` event of a stream, which is the old single envelope.
+
+    Output that is one JSON object already (an older CLI, a test double) is
+    returned as it is.
+    """
+    text = stdout or ""
+    for line in reversed(text.splitlines()):
+        if '"result"' not in line:
+            continue
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(event, dict) and event.get("type") == "result":
+            return line
+    return text
 
 
 #: A researched answer runs several searches and page reads before it writes,
@@ -428,6 +453,9 @@ def invoke_claude_search(
         raise BackendError(f"claude -p timed out after {timeout}s") from exc
     except FileNotFoundError as exc:
         raise BackendError("claude CLI not found on PATH") from exc
+    from . import ai_usage
+
+    ai_usage.claude_events(completed.stdout)
     pages: dict[str, str] = {}
     searched = False
     result: dict | None = None

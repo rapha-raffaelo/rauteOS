@@ -72,6 +72,10 @@ def _raise_for_http(exc: urllib.error.HTTPError) -> None:
         detail = exc.read().decode("utf-8", "replace")[:500]
     except Exception:  # noqa: BLE001 — the original error is what matters
         detail = ""
+    if exc.code == 429:
+        from . import ai_usage
+
+        ai_usage.record_gemini_refusal(detail or str(exc.reason))
     raise BackendError(f"Gemini HTTP {exc.code}: {detail or exc.reason}") from exc
 
 
@@ -122,6 +126,9 @@ def generate(
     except json.JSONDecodeError as exc:
         raise BackendError(f"Gemini did not return JSON: {exc}") from exc
 
+    from . import ai_usage
+
+    ai_usage.record_gemini(payload)
     text = _text_from(payload)
     if not text:
         # An empty candidate list usually means the safety filter blocked it;
@@ -243,6 +250,9 @@ def search(
     except json.JSONDecodeError as exc:
         raise BackendError(f"Gemini did not return JSON: {exc}") from exc
 
+    from . import ai_usage
+
+    ai_usage.record_gemini(payload, searched=True)
     text = _text_from(payload)
     if not text:
         raise BackendError(

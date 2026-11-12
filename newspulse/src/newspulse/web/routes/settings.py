@@ -906,11 +906,13 @@ def _feeds_by_tier(feeds) -> list[tuple[str, list]]:
 
 def _ai_context(session: Session) -> dict[str, object]:
     """KI-Modelle: which providers are connected and which answers in each role."""
-    from ... import ai_models
+    from ... import ai_models, ai_usage
 
+    usage = ai_usage.overview(session)
     return {
         "providers": [
             {"key": key, "label": meta["label"], "vendor": meta["vendor"],
+             "usage": usage.get(key, {}),
              "default_model": meta["model"] or ("" if key in ai_models.SUBSCRIPTION_ONLY else config.GEMINI_MODEL),
              "models": ai_models.model_options(session, key),
              "subscription_only": key in ai_models.SUBSCRIPTION_ONLY,

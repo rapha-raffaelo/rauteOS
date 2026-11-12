@@ -831,6 +831,22 @@
 .settings-row p,.settings-caption {font-size:13px;color:var(--muted)}
 .settings-provider__icon {width:40px;height:40px;display:grid;place-items:center;background:var(--tint-soft,#f0ebff);border-radius:12px;font-weight:700;color:var(--tint)}
 .settings-status {font-size:12px;background:var(--line);padding:4px 9px;border-radius:20px}
+.settings-status.is-connected {background:var(--good-wash);color:var(--good-ink)}
+.settings-status.is-disconnected {background:var(--alert-wash);color:var(--alert-ink)}
+.ai-usage {display:grid;gap:10px;margin:4px 0 12px 58px;padding:12px 14px;border:1px solid var(--line);border-radius:10px}
+.ai-usage__title {margin:0;font-size:13px;font-weight:600}
+.ai-usage__counts {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0}
+.ai-usage__counts dt {font-size:12px;color:var(--muted)}
+.ai-usage__counts dd {margin:2px 0 0;font-size:18px;font-weight:600}
+.ai-usage__window {display:grid;gap:4px}
+.ai-usage__window small {color:var(--muted);font-size:12px}
+.ai-usage__row {display:flex;justify-content:space-between;gap:12px;font-size:13px}
+.ai-usage__bar {height:6px;border-radius:3px;background:var(--fill-2);overflow:hidden}
+.ai-usage__bar span {display:block;height:100%;background:var(--good)}
+.ai-usage__bar.is-high span {background:var(--warn)}
+.ai-usage__bar.is-critical span {background:var(--alert)}
+.ai-usage__warn {margin:0;font-size:13px;color:var(--alert-ink)}
+@media (max-width:640px) {.ai-usage {margin-left:0}}
 .settings-config {margin:16px 0 0 56px}
 .settings-config summary,.settings-role summary {cursor:pointer;color:var(--tint);padding:8px 0}
 .settings-inputs {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:12px 0}
