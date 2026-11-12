@@ -312,3 +312,12 @@ def test_suggestions_do_not_invent_news_and_report_model_failure(session, mandat
     topic_suggestions.generate(session, mandate.id, next_lease, invoke=fail)
     assert topic_suggestions.state(session, mandate.id)['status'] == 'failed'
     assert session.query(Angle).count() == 0
+
+
+def test_suggestions_retry_a_malformed_model_reply_once(session, mandate):
+    from newspulse import topic_suggestions
+    _article(session, 'Neue Studie', 'https://ex.de/retry-study', radar=mandate)
+    replies = iter(['{}\n{}', json.dumps(dict(worth_sending=True, subject='Thema', message='Pitch', evidence=[0]))])
+    lease = topic_suggestions.claim(session, mandate.id)
+    topic_suggestions.generate(session, mandate.id, lease, invoke=lambda *a, **kw: next(replies))
+    assert topic_suggestions.state(session, mandate.id)['status'] == 'ready'

@@ -79,9 +79,18 @@ def generate(session, client_id, lease, *, invoke=None):
         if not articles:
             finish(session, client_id, lease, 'empty', 'Noch keine neuen Meldungen der letzten vier Wochen für einen weiteren Themenvorschlag.')
             return
+        from .analyzer import ParseError, invoke_with_fallback
+        def validated_invoke(prompt, **kwargs):
+            call = invoke or invoke_with_fallback
+            raw = call(prompt, **kwargs)
+            try:
+                angles._parse(raw)
+            except ParseError:
+                raw = call(prompt + "\n\nFORMAT: Antworte ausschließlich mit genau einem JSON-Objekt nach dem Schema. Keine weiteren Objekte, keine Erläuterung außerhalb des JSON.", **kwargs)
+            return raw
         notes = []
         result = angles.suggest(session, client, [(a, a.source) for a in articles], note=notes.append,
-                                **({'invoke': invoke} if invoke else {}))
+                                invoke=validated_invoke)
         if result is None:
             finish(session, client_id, lease, 'empty', notes[-1] if notes else 'Aus den aktuellen Meldungen ergibt sich noch kein belastbares Thema.')
             return

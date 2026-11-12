@@ -328,3 +328,16 @@ def test_both_the_name_search_and_the_radar_use_that_edition():
         params = urllib.parse.parse_qs(urllib.parse.urlsplit(url).query)
         assert params["gl"] == ["AT"], url
         assert params["ceid"] == ["AT:de"], url
+
+
+def test_extra_queries_include_keywords_beyond_both_original_caps():
+    from urllib.parse import urlparse, parse_qs
+    client = Client(name='INFUZE CBD', industry='CBD', keywords=[
+        'Cannabinoid Forschung', 'CBD Spray', 'Transdermale Cannabinoide',
+        'Cannabis Rezeptur', 'Cannabis', 'Medizinalcannabis', 'Fertigarzneimittel'])
+    queries = [parse_qs(urlparse(url).query)['q'][0] for url in gnews.additional_topic_urls(client, widen=True)]
+    assert 'Cannabis' in queries[0] and 'Medizinalcannabis' in queries[0]
+    assert 'Fertigarzneimittel' in queries[1]
+    assert all('AND' not in query for query in queries)
+    scoped = gnews.additional_topic_urls(client, widen=False)
+    assert 'Fertigarzneimittel' in parse_qs(urlparse(scoped[0]).query)['q'][0]

@@ -548,3 +548,18 @@ def test_a_field_scoped_radar_that_returns_almost_nothing_widens(session, monkey
 
     assert job.draft_impulse(session, client, fetch=_fetch, now=lambda: _NOW) is True
     assert len(asked) == 2, "the thin scoped result has to widen"
+
+
+def test_empty_radar_fetches_later_keywords_without_industry_constraint(session):
+    client = _client(session, keywords=['Cannabinoid Forschung', 'CBD Spray', 'Transdermale Cannabinoide',
+        'Cannabis Rezeptur', 'Cannabis', 'Medizinalcannabis', 'Fertigarzneimittel'])
+    client.industry = 'CBD'
+    session.commit()
+    def fetch(url, since, **kwargs):
+        query = urllib.parse.parse_qs(urllib.parse.urlparse(url).query)['q'][0]
+        if 'Fertigarzneimittel' in query and 'AND' not in query:
+            return [FeedItem(title='Neue Fertigarzneimittel verfügbar', link='https://ex.de/new-medicine',
+                source='Fachmedium', published_at=_NOW, summary='Studie', language='de')]
+        return []
+    assert job.refresh_radar(session, client, fetch=fetch, now=lambda: _NOW) == 1
+    assert session.scalar(select(Article.title).join(TopicHit).where(TopicHit.client_id == client.id)) == 'Neue Fertigarzneimittel verfügbar'

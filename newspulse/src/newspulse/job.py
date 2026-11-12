@@ -473,6 +473,15 @@ def _fetch_topics(
                             client,
                         ),
                     ]
+            # The old fallback searched only the first three keywords. Remaining
+            # saved keywords must also be queried, without the overly narrow field
+            # constraint when widening; retain the literal theme-match gate.
+            for extra_url in gnews.additional_topic_urls(client, widen=len(usable) < _MIN_RADAR_ITEMS):
+                try:
+                    batch.extend(_on_theme(fetch(extra_url, since, source=feed.name,
+                        fetched_at=fetched_at, per_entry_source=feed.per_entry_source), client))
+                except Exception as exc:
+                    errors.append(f"feed {feed.name!r} additional keywords: {exc}")
         except Exception as exc:  # noqa: BLE001 — per-feed fault-isolation boundary
             _log.warning("topic radar %r failed to fetch: %s; skipping", feed.name, exc)
             errors.append(f"feed {feed.name!r}: {exc}")

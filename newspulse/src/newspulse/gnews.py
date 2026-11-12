@@ -333,6 +333,21 @@ def unscoped_topic_url(client: Client) -> str | None:
     )
 
 
+def additional_topic_urls(client: Client, *, widen: bool) -> list[str]:
+    """Search every saved theme in short batches instead of dropping the tail.
+
+    The first unscoped batch remains unscoped_topic_url for compatibility.
+    If the field query was useful, only search its omitted terms, in that field.
+    """
+    terms = topic_terms(client)
+    field = context_terms(client)
+    start = (_MAX_TOPIC_TERMS_UNSCOPED if widen or not field else _MAX_TOPIC_TERMS_SCOPED)
+    lang, country = edition_for(client)
+    return [query_url(terms[i:i+3], lang=lang, country=country,
+                      context=None if widen else field, max_terms=3)
+            for i in range(start, len(terms), 3)]
+
+
 def topic_feeds(clients: list[Client]) -> dict[int, Feed]:
     """One topic-radar feed per client that has themes, keyed by client id.
 
