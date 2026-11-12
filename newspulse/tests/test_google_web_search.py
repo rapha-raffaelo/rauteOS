@@ -127,3 +127,35 @@ def test_the_sweep_takes_google_hits_into_matching(monkeypatch):
                          now=lambda: MORNING)
     assert called["clients"] == ["Alpha AG"]
     assert report.status.value != "ok"
+
+
+def test_empty_gemini_response_is_retried_but_auth_is_not(monkeypatch):
+    from newspulse import gemini
+    from newspulse.analyzer import BackendError
+    from unittest.mock import Mock
+    monkeypatch.setattr(google, 'api_key', lambda: 'test')
+    monkeypatch.setattr(google.time, 'sleep', lambda _: None)
+    search = Mock(side_effect=[BackendError('Gemini returned no text (finish: None)'), ('{}', [])])
+    monkeypatch.setattr(gemini, 'search', search)
+    assert google._search('news') == ('{}', [])
+    assert search.call_count == 2
+    search = Mock(side_effect=BackendError('Gemini HTTP 401: unauthorized'))
+    monkeypatch.setattr(gemini, 'search', search)
+    import pytest
+    with pytest.raises(BackendError):
+        google._search('news')
+    assert search.call_count == 1
+
+
+def test_transient_retry_is_bounded(monkeypatch):
+    from newspulse import gemini
+    from newspulse.analyzer import BackendError
+    from unittest.mock import Mock
+    import pytest
+    monkeypatch.setattr(google, 'api_key', lambda: 'test')
+    monkeypatch.setattr(google.time, 'sleep', lambda _: None)
+    search = Mock(side_effect=BackendError('Gemini returned no text (finish: None)'))
+    monkeypatch.setattr(gemini, 'search', search)
+    with pytest.raises(BackendError):
+        google._search('news')
+    assert search.call_count == 3

@@ -245,12 +245,22 @@ def test_the_overview_names_the_company_its_goal_and_its_next_steps(web, db):
     assert web.get('/api/v1/workbench/clients/2').json()['company']['description'] == ''
 
 
-def test_stories_and_content_leads_with_the_running_stories(web, db):
-    """Spec 09: the story cards are each mandate's open opportunities."""
+def test_assets_customer_boards_filter_before_limit(web, db):
     data = web.get('/api/v1/workbench/assets').json()
-    assert [s['title'] for s in data['stories']] == ['Hypothesis']
-    assert data['stories'][0]['client']['name'] == 'Alpha'
-    assert data['stories'][0]['href'].startswith('/client/1/themen#thema-developed-')
+    assert 'stories' not in data
+    assert data['total'] == 1
+    assert [(c['name'], c['count']) for c in data['clients']] == [('Alpha', 1), ('Beta', 0)]
+    assert web.get('/api/v1/workbench/assets?client_id=2').json()['texts'] == []
+    assert web.get('/api/v1/workbench/assets?client_id=3').status_code == 404
+    assert web.get('/api/v1/workbench/assets?client_id=999').status_code == 404
+    for i in range(101):
+        angle = Angle(client_id=2, subject=f'Beta {i}', message='Proposal', context='Idea', article_ids=[])
+        db.add(angle)
+        db.flush()
+        db.add(Asset(client_id=2, angle_id=angle.id, kind='statement', title=f'Beta {i}', body='Text'))
+    db.commit()
+    assert web.get('/api/v1/workbench/assets?client_id=1').json()['texts'][0]['title'] == 'Draft'
+    assert web.get('/api/v1/workbench/assets?client_id=2').json()['truncated'] is True
 
 
 def test_social_monitoring_scopes_published_posts(web, db):
@@ -302,3 +312,21 @@ def test_daily_overview_includes_more_than_eight_news(db):
     db.commit()
     result = today_news(db, 1, now=now)
     assert result['total'] == len(result['items']) == 12
+
+
+def test_news_refresh_reuses_guard_and_existing_worker(web, monkeypatch):
+    from newspulse.web.routes import settings
+    from unittest.mock import Mock
+    guard = Mock()
+    guard.locked.return_value = False
+    guard.acquire.return_value = True
+    start = Mock()
+    monkeypatch.setattr(settings, '_run_guard', guard)
+    monkeypatch.setattr(settings.spawn, 'start_or_release', start)
+    assert web.get('/api/v1/news-run').json() == {'active': False, 'run': None}
+    assert web.post('/api/v1/news-run').status_code == 202
+    assert start.call_args.args[0] is settings._execute_run
+    assert start.call_args.kwargs['args'] == (None,)
+    guard.acquire.return_value = False
+    assert web.post('/api/v1/news-run').status_code == 409
+    assert start.call_count == 1

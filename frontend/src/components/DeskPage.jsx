@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import {NewsRefresh} from './NewsRefresh.jsx';
 import { fetchDesk, writeBriefing } from '../api.js';
 
 // What the Desk calls each kind of decision, in a list and in the briefing.
@@ -153,7 +154,7 @@ export function DeskPage({ translations = {}, language = 'de' }) {
           </a>)}
           {!board.decisions.length && !tasks.length && <p className="pane__empty">{t('Nichts wartet auf eine Entscheidung.')}</p>}
         </Card>
-        <Card title={t('Top-Meldungen · Heute')} link={['/medien', t('Alle Medien')]}>
+        <Card actions={<NewsRefresh onFinished={()=>setAttempt(v=>v+1)}/>} title={t('Top-Meldungen · Heute')} link={['/medien', t('Alle Medien')]}>
           {(board.top_news || []).map((n) => <div className="info-row" key={n.url}>
             <span className="info-row__ico" aria-hidden="true"><svg className="ico"><use href="#ico-media" /></svg></span>
             <span className="task__b"><a className="task__t" href={n.url} target="_blank" rel="noreferrer" title={n.title}>{n.title}</a>
@@ -218,9 +219,9 @@ export function DeskPage({ translations = {}, language = 'de' }) {
   </>;
 }
 
-function Card({ title, link, children }) {
+function Card({ title, link, children, actions }) {
   return <section className="dcard"><div className="dcard__h"><h2>{title}</h2>
-    {link && <a className="inline-link" href={link[0]}>{link[1]} →</a>}</div>
+    <div style={{display:"flex",alignItems:"center",gap:12}}>{link && <a className="inline-link" href={link[0]}>{link[1]} →</a>}{actions}</div></div>
     <div className="dcard__b">{children}</div></section>;
 }
 

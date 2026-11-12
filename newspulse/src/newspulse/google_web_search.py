@@ -32,6 +32,7 @@ import logging
 import os
 from pathlib import Path
 import sqlite3
+import time
 
 from . import config
 from .daily_news_search import _parse
@@ -110,7 +111,19 @@ def _prompt(client, since, now) -> str:
 def _search(prompt: str) -> tuple[str, list[tuple[str, str]]]:
     from . import gemini
 
-    return gemini.search(prompt, api_key=api_key())
+    from .analyzer import BackendError
+    for attempt in range(3):
+        try:
+            return gemini.search(prompt, api_key=api_key())
+        except BackendError as exc:
+            message = str(exc)
+            transient = any(marker in message for marker in (
+                "returned no text (finish: None)", "HTTP 500", "HTTP 502", "HTTP 503",
+                "HTTP 504", "timed out", "unreachable"))
+            if not transient or attempt == 2:
+                raise
+            time.sleep(2 ** attempt)
+
 
 
 def _resolve(url: str) -> str:
@@ -169,7 +182,8 @@ def harvest(clients, since, *, fetched_at, search=None, resolve=None, ledger_pat
                 _log.info("Google web search: client=%s articles=%d rejected=%d sources=%d",
                           client.id, len(found), rejected, len(sources))
             except Exception as exc:  # noqa: BLE001 - one mandate's search never stops the sweep
-                error = f"Google web search for client {client.id}: {type(exc).__name__}"
+                reason = "Leere Antwort von Gemini nach mehreren Versuchen" if "returned no text" in str(exc) else type(exc).__name__
+                error = f"Google web search for client {client.id}: {reason}"
                 conn.execute("UPDATE google_search SET status='failed',error=? WHERE slot=? AND client_id=?",
                              (error, *key))
                 conn.commit()

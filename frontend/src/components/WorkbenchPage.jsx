@@ -1,4 +1,5 @@
 import React,{useEffect,useState} from 'react';
+import {AssetOverview} from './AssetOverview.jsx';
 import {SocialMonitoring} from './SocialMonitoring.jsx';
 import {ClientOverview} from './ClientOverview.jsx';
 import {AskRaute} from './AskRaute.jsx';
@@ -6,21 +7,17 @@ import {ClientsPage} from './ClientsPage.jsx';
 import {PageHeading} from './PageHeading.jsx';
 const activityLabels={idea_developed:'Idee entwickelt',activated:'Opportunity aktiviert',choices_saved:'Auswahl gespeichert',text_created:'Text erstellt',text_checked:'Aussagen geprüft',text_edited:'Text bearbeitet'};
 const date=v=>v?new Date(v).toLocaleDateString('de-DE'):'–';
-const storyStatus={draft:'Idee',active:'In Bearbeitung',closed:'Abgeschlossen'};
 function Summary({row}){return <p>Profil: {row.twin.percent} % · Quartal: {row.actions_quarter.total} geliefert{row.promised_quarter!==null?` / ${row.promised_quarter} zugesagt`:' · Zusage offen'} · {row.opportunities} Opportunities</p>;}
 function Texts({items}){return <div className="workbench-list">{items.length?items.map(t=><article key={`${t.type}-${t.id}`}><span>{t.client} · {t.format_name||t.format} · {t.released_at?'Freigegeben':'Entwurf'}</span><h2><a href={t.href}>{t.title||'Ohne Titel'}</a></h2><p>{date(t.generated_at)}</p></article>):<p>Noch keine Texte.</p>}</div>;}
 export function WorkbenchPage({page,clientId}){
- const [data,setData]=useState(null),[error,setError]=useState(''),[search,setSearch]=useState(''),[filter,setFilter]=useState('all');
- useEffect(()=>{if(page==='ask'||page==='monitoring_kpis')return;let live=true;fetch(`/api/v1/workbench/${clientId?`clients/${clientId}${page==='monitoring_social'?'/monitoring/social':''}`:page}`).then(r=>{if(!r.ok)throw Error('Ansicht konnte nicht geladen werden.');return r.json();}).then(v=>{if(live)setData(v);}).catch(e=>{if(live)setError(e.message);});return()=>{live=false;};},[page,clientId]);
+ const [data,setData]=useState(null),[error,setError]=useState('');
+ useEffect(()=>{if(page==='assets'||page==='ask'||page==='monitoring_kpis')return;let live=true;fetch(`/api/v1/workbench/${clientId?`clients/${clientId}${page==='monitoring_social'?'/monitoring/social':''}`:page}`).then(r=>{if(!r.ok)throw Error('Ansicht konnte nicht geladen werden.');return r.json();}).then(v=>{if(live)setData(v);}).catch(e=>{if(live)setError(e.message);});return()=>{live=false;};},[page,clientId]);
  if(page==='ask')return <AskRaute/>;
  if(page==='monitoring_kpis')return <section><PageHeading eyebrow="Monitoring" title="KPIs" description="Dieser Bereich ist noch offen. Kennzahlen werden später ergänzt."/></section>;
+ if(page==='assets')return <AssetOverview/>;
  if(error)return <p role="alert">{error} <a href={window.location.href}>Erneut laden</a></p>;
  if(!data)return <p role="status">Ansicht wird geladen…</p>;
  if(page==='clients')return <ClientsPage clients={data.clients}/>;
- if(page==='assets')return <section><PageHeading eyebrow="STORY-FIRST EXECUTION" title="Stories & Content" description="Von der Analyse über Assets bis zur journalistischen Ansprache."/>
-  <div className="story-cards">{(data.stories||[]).map(st=><a className="story-card" key={st.href} href={st.href}><div className="story-card__m"><span className="badge">{st.kind==='detected'?'Erkannte Chance':'Entwickelte Chance'}</span><span className={`badge badge--${st.status}`}>{storyStatus[st.status]||st.status}</span></div><h2>{st.title}</h2><p>{st.client.name}{st.since?` · ${date(st.since)}`:''}<span aria-hidden="true">→</span></p></a>)}
-   {!(data.stories||[]).length&&<p className="story-cards__empty">Noch keine laufende Story. Stories entstehen aus Chancen im Kundenbereich oder in Intelligence.</p>}</div>
-  <h2 className="story-texts">Texte</h2><p className="story-texts__sub">Die neuesten {data.limit} Texte aus allen Mandaten.</p><div className="workbench-controls"><label>Texte suchen<input value={search} onChange={e=>setSearch(e.target.value)}/></label><label>Status<select value={filter} onChange={e=>setFilter(e.target.value)}><option value="all">Alle</option><option value="draft">Entwürfe</option><option value="released">Freigegeben</option></select></label></div><Texts items={data.texts.filter(t=>(filter==='all'||Boolean(t.released_at)===(filter==='released'))&&`${t.client} ${t.title}`.toLowerCase().includes(search.toLowerCase()))}/></section>;
  if(page==='monitoring_social')return <SocialMonitoring data={data} clientId={clientId}/>;
  if(page==='overview')return <ClientOverview data={data} clientId={clientId}/>;
  return <section><h1>{data.client.name} · {page==='actions'?'Actions':'Overview'}</h1>{data.summary&&<Summary row={data.summary}/>}

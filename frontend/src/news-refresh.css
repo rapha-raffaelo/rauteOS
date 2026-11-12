@@ -1,0 +1,6 @@
+.news-refresh { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.news-refresh__button { display:grid; place-items:center; padding:10px; border-radius:10px; }
+.news-refresh [role="status"] { font-size:.8rem; max-width:230px; }
+.news-refresh__spin { animation:news-refresh-spin 1.2s linear infinite; }
+@keyframes news-refresh-spin { to { transform:rotate(360deg); } }
+@media(prefers-reduced-motion:reduce) { .news-refresh__spin { animation:none; } }

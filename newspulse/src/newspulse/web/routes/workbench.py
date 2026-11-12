@@ -73,9 +73,20 @@ def clients(response: Response, session: Session = Depends(get_db)):
 
 
 @router.get('/api/v1/workbench/assets')
-def assets(response: Response, session: Session = Depends(get_db)):
+def assets(response: Response, session: Session = Depends(get_db), client_id: int | None = None):
     response.headers['Cache-Control'] = 'no-store'
-    return {'texts': texts(session), 'limit': 100, 'stories': stories(session)}
+    if client_id is not None:
+        mandate_or_404(session, client_id)
+    clients = session.scalars(select(Client).where(Client.is_competitor.is_(False)).order_by(Client.name)).all()
+    counts = {}
+    for model in (Asset, Outreach):
+        for cid, count in session.execute(select(model.client_id, func.count()).group_by(model.client_id)):
+            counts[cid] = counts.get(cid, 0) + count
+    total = sum(counts.get(c.id, 0) for c in clients)
+    selected_total = counts.get(client_id, 0) if client_id is not None else total
+    return {'texts': texts(session, client_id), 'limit': 100,
+            'clients': [dict(id=c.id, name=c.name, count=counts.get(c.id, 0)) for c in clients],
+            'total': total, 'truncated': selected_total > 100}
 
 
 @router.get('/api/v1/workbench/clients/{client_id}')

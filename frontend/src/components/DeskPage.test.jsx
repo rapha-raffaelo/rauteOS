@@ -3,6 +3,8 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { DeskPage, briefing, firstName } from './DeskPage.jsx';
 
+vi.mock('./NewsRefresh.jsx',()=>({NewsRefresh:()=>null}));
+
 const empty = {rows: [], decisions: [], in_flight: [], clients_active: 0, actions_month: 0,
   opportunities: 0, decisions_open: 0, twins_with_gaps: 0, twin_average: 0, timezone: 'Europe/Zurich'};
 const row = {client: {id: 7, name: '<script>alert(1)</script>', industry: 'Energy'},

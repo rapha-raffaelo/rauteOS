@@ -1190,6 +1190,22 @@ async def reload_media_route(request: Request, session: Session = Depends(get_db
     return RedirectResponse("/settings#media-reload", status_code=_SEE_OTHER)
 
 
+@router.get("/api/v1/news-run")
+def news_run_status(session: Session = Depends(get_db)):
+    run = session.scalar(select(Run).order_by(Run.id.desc()).limit(1))
+    return {"active": _run_guard.locked(), "run": None if run is None else {
+        "id": run.id, "status": run.status.value, "finished_at": run.finished_at,
+        "articles": run.articles_found, "errors": len(run.errors or [])}}
+
+
+@router.post("/api/v1/news-run", status_code=202)
+def start_news_run():
+    if not _run_guard.acquire(blocking=False):
+        raise HTTPException(409, "Es läuft bereits ein Nachrichtenlauf")
+    spawn.start_or_release(_execute_run, args=(None,), name="newspulse-run", release=_run_guard.release)
+    return {"active": True}
+
+
 @router.post("/settings/run")
 def trigger_run_route(
     request: Request,
