@@ -152,6 +152,7 @@ class _BaseClaudeAnalyzer:
         # FallbackAnalyzer, which cannot learn this from a raised exception
         # because the protocol requires analyze() to swallow batch failures.
         self.quota_exhausted = False
+        self.fallback_required = False
         # Batches that were dropped because the backend failed, and the last
         # reason. The protocol says analyze() must never raise — a failing batch
         # must not sink the sweep — but "never raise" was implemented as "never
@@ -184,7 +185,7 @@ class _BaseClaudeAnalyzer:
         results: list[Analysis] = []
         for chunk in _chunks(articles, self.batch_size):
             results.extend(self._analyze_batch(client, chunk))
-            if self.quota_exhausted:
+            if self.quota_exhausted or self.fallback_required:
                 # Stop asking. The limit is per account, not per batch, so every
                 # remaining chunk would spend a doomed call and its timeout to
                 # learn the same thing.
@@ -201,6 +202,13 @@ class _BaseClaudeAnalyzer:
                 batch = self._parse_batch(raw_text)
                 return self._to_analyses(client, chunk, batch)
             except AnalyzerError as exc:
+                from .ai_models import _steps_aside
+                if isinstance(exc, BackendError) and _steps_aside(exc) and not is_quota_error(exc):
+                    self.fallback_required = True
+                    self.failed_batches += 1
+                    self.last_error = str(exc)
+                    _log.warning("analysis provider unavailable for %r; requesting fallback", label)
+                    return []
                 if is_quota_error(exc):
                     # Out of capacity is a run-level condition, not a batch-level
                     # one: every remaining batch will hit the same wall. Record
@@ -702,11 +710,11 @@ class FallbackAnalyzer:
             return self.secondary.analyze(client, articles)
 
         results = self.primary.analyze(client, articles)
-        if not getattr(self.primary, "quota_exhausted", False):
+        if not (getattr(self.primary, "quota_exhausted", False) or getattr(self.primary, "fallback_required", False)):
             return results
 
         _log.warning(
-            "primary backend is out of quota; falling back to %s for the rest of this run",
+            "primary backend unavailable; falling back to %s for the rest of this run",
             type(self.secondary).__name__,
         )
         self.switched = True

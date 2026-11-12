@@ -395,3 +395,14 @@ def test_advisor_invoke_without_a_key_reraises_even_on_quota(monkeypatch):
 
     with pytest.raises(analyzer_mod.BackendError):
         analyzer_mod.invoke_with_fallback("prompt")
+
+
+def test_expired_login_switches_the_batch_analyzer_once():
+    primary = _StubAnalyzer([analyzer_mod.BackendError('Failed to authenticate: this login reached its time limit and cannot be renewed')], batch_size=1)
+    secondary = _StubAnalyzer(batch_size=1)
+    wrapper = analyzer_mod.FallbackAnalyzer(primary, secondary)
+    assert len(wrapper.analyze(_client(), _articles(2))) == 2
+    assert primary.calls == 1 and secondary.calls == 2
+    assert wrapper.failed_batches == 0
+    wrapper.analyze(_client(), _articles(1))
+    assert primary.calls == 1 and secondary.calls == 3

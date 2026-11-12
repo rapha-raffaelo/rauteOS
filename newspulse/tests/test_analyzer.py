@@ -235,7 +235,7 @@ def test_non_zero_exit_is_a_batch_failure(caplog):
     """A non-zero `claude` exit is logged and drops the batch; run continues."""
     articles = [make_article(0)]
     with patch.object(subprocess, "run") as run:
-        run.return_value = _completed(stdout="", returncode=1, stderr="not logged in")
+        run.return_value = _completed(stdout="", returncode=1, stderr="unexpected service error")
         with caplog.at_level(logging.ERROR):
             results = ClaudeCodeAnalyzer().analyze(make_client(), articles)
 
