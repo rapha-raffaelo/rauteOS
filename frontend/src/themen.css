@@ -100,3 +100,4 @@
 .asset-export__acts{display:flex;gap:8px;flex-wrap:wrap}
 .assets-workspace__side{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}
 .themen-dive__note{margin:0;font-size:13px;color:var(--muted)}
+.asset-editor__evidence{margin:0 18px 18px;background:var(--fill-2);border-radius:12px;padding:14px 16px}

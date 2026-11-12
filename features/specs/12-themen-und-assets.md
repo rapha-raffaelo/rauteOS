@@ -135,3 +135,24 @@ einen halben Umbau.
 - Bleiben Issues & Krisen ein eigener Reiter, oder ein Filter unter Themen?
 - Soll ein verworfenes Thema verschwinden oder unter „Verworfen“ liegen?
 - Wer darf aktivieren: beide, oder nur die Person, die das Thema favorisiert hat?
+
+## Stand der Umsetzung (12.11.2026)
+
+Alle sechs Phasen sind gebaut. Abweichungen und Entscheidungen beim Bauen:
+
+- **Thema = Impuls mit Arbeitsplatz.** Der Stern legt einen `Angle` mit
+  `OpportunityWorkspace` an (`data.origin = "medien"`, `starred_by`,
+  `article_id`), Modul `themen.py`. Kein neues Datenmodell, keine Migration.
+- **Medien** hat zwei Ansichten statt einer gemischten Liste: „Über <Kunde>“
+  und „Zu den Keywords“ (`?quelle=keywords`, Filter `&keyword=`).
+- **Drive:** Ablage im gemeinsamen Ordner „7. Assets“
+  (`NEWSPULSE_DRIVE_ASSETS_FOLDER`, Standard ist die ID aus dem Link), je
+  Kunde ein Unterordner, beim ersten Export angelegt. Verbunden unter
+  Einstellungen › Allgemein › Google Drive, über den schon registrierten
+  Gmail-Callback (der `state` beginnt mit `drive.`). Scope ist `drive`, weil
+  `drive.file` nicht in einen fremden Ordner schreiben darf.
+- **Logo im Export:** noch nicht. Logos liegen nur als URL vor; Word und PDF
+  tragen den Kundennamen im Kopf.
+- **Senden** ist sichtbar und gesperrt.
+- **Belegprüfung** („Aussagen prüfen“) ist aus dem alten Panel in den Editor
+  unter Assets übernommen.

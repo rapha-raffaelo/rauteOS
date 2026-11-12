@@ -1,6 +1,7 @@
 import React,{useEffect,useRef,useState} from 'react';
 import {PageHeading} from './PageHeading.jsx';
 import {journalistRequest as request} from '../journalists-api.js';
+import {EvidenceReview} from './ActivationPanel.jsx';
 
 // Spec 12: an activated Thema is written here. RAUTE drafts each asset from
 // Thema, pitch and profile; the text is edited in place. Sending comes later.
@@ -35,7 +36,7 @@ export function ExportBox({base,label='Exportieren'}){
  </div>;
 }
 
-export function Editor({text,path,onSaved,exportBase}){
+export function Editor({text,path,onSaved,exportBase,onCheck,checking=false}){
  const [title,setTitle]=useState(text.title),[body,setBody]=useState(text.body);
  const [error,setError]=useState(''),[notice,setNotice]=useState(''),[saving,setSaving]=useState(false);
  const dirty=title!==text.title||body!==text.body;
@@ -48,6 +49,7 @@ export function Editor({text,path,onSaved,exportBase}){
     <span className={`themen-tag${released?' themen-tag--on':' themen-tag--star'}`}>{released?'Freigegeben':dirty?'Ungespeicherte Änderungen':'Entwurf'}</span></div>
    <div className="asset-editor__acts">
     {exportBase&&<ExportBox base={exportBase}/>}
+    {!released&&onCheck&&<button type="button" className="btn btn--quiet" disabled={dirty||checking} title={dirty?'Erst speichern, dann prüfen':''} onClick={()=>onCheck(text)}>{checking?'Wird geprüft…':'Aussagen prüfen'}</button>}
     <button type="button" className="btn btn--quiet" onClick={copy}>Kopieren</button>
     <button type="button" className="btn" disabled title="Kommt später">Senden · bald</button>
     <button type="button" className="btn btn--go" disabled={released||!dirty||saving} onClick={save}>{saving?'Wird gespeichert…':'Speichern'}</button>
@@ -58,6 +60,7 @@ export function Editor({text,path,onSaved,exportBase}){
    <label>Betreff oder Titel<input aria-label="Titel" value={title} onChange={e=>setTitle(e.target.value)} disabled={released}/></label>
    <label>Text<textarea aria-label="Text" value={body} onChange={e=>setBody(e.target.value)} disabled={released} rows={18}/></label>
   </div>
+  {text.quality&&<aside className="asset-editor__evidence" aria-label="Belegprüfung"><EvidenceReview text={{...text,quality_stale:text.quality_stale||dirty}}/></aside>}
  </article>;
 }
 
@@ -146,7 +149,8 @@ function Workspace({clientId,kind,identity,initialText=''}){
    <div className="assets-list">{data.texts.map(text=>{const key=`${text.type}-${text.id}`;return <button type="button" key={key} className="asset-card" aria-pressed={open===key} onClick={()=>setOpen(open===key?'':key)}>
     <span>{LABEL[text.kind]||text.kind}<em className={`themen-tag${text.released_at?' themen-tag--on':''}`}>{text.released_at?'Freigegeben':'Entwurf'}</em></span>
     <strong>{text.title||'Ohne Titel'}</strong></button>;})}</div></section>}
-  {current&&<Editor key={`${open}-${current.digest}`} text={current} path={path} exportBase={exportBase(current)} onSaved={setData}/>}
+  {current&&<Editor key={`${open}-${current.digest}`} text={current} path={path} exportBase={exportBase(current)} onSaved={setData}
+   checking={running} onCheck={async t=>{setError('');try{const job=await request(`${path}/${t.type}/${t.id}/check`,{method:'POST'});setData(v=>({...v,latest:{...job,kind:t.kind,started_at:new Date().toISOString()}}));}catch(e){setError(e.message);}}}/>}
   <NewAsset detail={detail} running={running||busy} onCreate={create}/>
  </div>;
 }

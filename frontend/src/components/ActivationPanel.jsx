@@ -1,7 +1,7 @@
 import React,{useEffect,useRef,useState} from 'react';
 import {journalistRequest as request} from '../journalists-api.js';
 
-function EvidenceReview({text}){
+export function EvidenceReview({text}){
  const [open,setOpen]=useState(false);
  const quality=text.quality;
  return <div className="asset-evidence"><p><strong>{text.quality_stale?'Prüfung veraltet oder ausstehend':quality.status==='complete'?`${quality.warnings} Aussagen mit Prüfhinweisen`:'Text ist ungeprüft'}</strong></p>
