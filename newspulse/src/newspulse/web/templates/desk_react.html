@@ -2,7 +2,7 @@
 {% block title %}{{ translator(request)("Desk") }} · RauteOS{% endblock %}
 {% block content %}
 {% set t = translator(request) %}
-{% for href in frontend.css %}<link rel="stylesheet" href="{{ href }}">{% endfor %}
+{% for href in frontend.css %}<link rel="stylesheet" href="{{ href }}">{% endfor %}{% for href in frontend.preload or [] %}<link rel="modulepreload" href="{{ href }}">{% endfor %}
 <div id="react-desk"><p role="status">{{ t("Desk wird geladen…") }}</p>
   <p><a href="/desk?view=classic">{{ t("Klassischen Desk öffnen") }}</a></p>
 </div>

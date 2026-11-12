@@ -3,7 +3,7 @@
 {% block pagetitle %}Gmail{% endblock %}
 {% block content %}
 {% if frontend %}
-{% for href in frontend.css %}<link rel="stylesheet" href="{{ href }}">{% endfor %}
+{% for href in frontend.css %}<link rel="stylesheet" href="{{ href }}">{% endfor %}{% for href in frontend.preload or [] %}<link rel="modulepreload" href="{{ href }}">{% endfor %}
 <div id="react-mailbox"><p role="status">Postfach wird geladen…</p></div>
 <script type="module" src="{{ frontend.script }}"></script>
 {% else %}<p>Das Postfach ist gerade nicht verfügbar. Bitte später neu laden.</p>{% endif %}

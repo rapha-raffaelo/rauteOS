@@ -22,6 +22,16 @@
        navigation mid-load and double-fetch. It is a small local file, so the
        parse-blocking cost is negligible. -->
   <script src="/static/htmx.min.js?v={{ asset_version('htmx.min.js') }}"></script>
+  {# Pages are fetched the moment the pointer rests on a link, so the click
+     finds them ready (Chromium browsers; others simply ignore this). Only a
+     prefetch of the HTML, never a prerender: no script runs, nothing is
+     started. Links that do something on GET are left out. #}
+  <script type="speculationrules">
+  {"prefetch":[{"where":{"and":[{"href_matches":"/*"},
+    {"not":{"href_matches":["/api/*","/static/*","/logout*","/login*","/auth/*","/settings/*/start","/settings/*/callback*","/*/export*","/*.pdf","/*.docx","/*.csv"]}},
+    {"not":{"selector_matches":["[download]","[target=_blank]","[rel~=nofollow]"]}}]},
+    "eagerness":"moderate"}]}
+  </script>
 </head>
 <body class="raute-ui">
   {% set t = translator(request) %}

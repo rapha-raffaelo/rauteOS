@@ -9,7 +9,7 @@
   <header class="profile-page-head"><p>{{ client.name }}</p><h1>{{ t("Profil") }}</h1><p>{{ t("Wissen, Unternehmensangaben, Wettbewerb und Marktumfeld an einem Ort.") }}</p></header>
   <section id="wissen" class="profile-knowledge" aria-label="{{ t('Wissen & Aussagen') }}">
   {% if frontend %}
-    {% for href in frontend.css %}<link rel="stylesheet" href="{{ href }}">{% endfor %}
+    {% for href in frontend.css %}<link rel="stylesheet" href="{{ href }}">{% endfor %}{% for href in frontend.preload or [] %}<link rel="modulepreload" href="{{ href }}">{% endfor %}
     <div id="react-twin" data-client-id="{{ client.id }}"><p role="status">Profil wird geladen…</p></div>
     <script type="module" src="{{ frontend.script }}"></script>
   {% else %}

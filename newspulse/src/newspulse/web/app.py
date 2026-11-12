@@ -10,6 +10,7 @@ for the process-wide engine at import time.
 from __future__ import annotations
 
 import datetime as dt
+import functools
 import hashlib
 import re
 import urllib.parse
@@ -315,12 +316,38 @@ def asset_version(name: str) -> str:
     URL exactly as it was — a missing fingerprint must never break the page.
     """
     try:
-        digest = hashlib.blake2b(
-            (_STATIC_DIR / name).read_bytes(), digest_size=6
-        ).hexdigest()
+        stat = (_STATIC_DIR / name).stat()
     except OSError:  # noqa: BLE001 — an unreadable asset is not a broken page
         return ""
-    return digest
+    return _fingerprint(name, stat.st_mtime_ns, stat.st_size)
+
+
+@functools.lru_cache(maxsize=64)
+def _fingerprint(name: str, mtime_ns: int, size: int) -> str:
+    """The hash once per version of the file, not once per page render."""
+    try:
+        return hashlib.blake2b((_STATIC_DIR / name).read_bytes(), digest_size=6).hexdigest()
+    except OSError:  # noqa: BLE001
+        return ""
+
+
+class CachedStatic(StaticFiles):
+    """The static mount with a lifetime the browser can act on.
+
+    A file whose URL changes with its content (Vite's hashed bundles, and every
+    link that carries ``?v=``, see :func:`asset_version`) never changes under
+    that URL, so the browser keeps it for a year and asks nothing. Everything
+    else is checked with the server each time (``no-cache``), which is what
+    the missing header left to chance before.
+    """
+
+    async def get_response(self, path: str, scope):
+        response = await super().get_response(path, scope)
+        if response.status_code in (200, 304):
+            versioned = path.startswith("react/assets/") or b"v=" in scope.get("query_string", b"")
+            response.headers["Cache-Control"] = (
+                "public, max-age=31536000, immutable" if versioned else "no-cache")
+        return response
 
 
 templates.env.globals["asset_version"] = asset_version
@@ -358,7 +385,7 @@ def create_app() -> FastAPI:
     # Added after the auth middleware, so it runs *before* it: a cross-site
     # write is refused without the app having to work out who is asking.
     app.add_middleware(origin.SameOriginMiddleware)
-    app.mount("/static", StaticFiles(directory=str(_STATIC_DIR)), name="static")
+    app.mount("/static", CachedStatic(directory=str(_STATIC_DIR)), name="static")
 
     # Imported here (not at module top) to avoid a circular import: the route
     # modules import ``get_db``/``templates`` from this module.

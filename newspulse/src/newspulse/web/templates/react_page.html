@@ -4,6 +4,6 @@
 {% if client %}{% include "_client_tabs.html" %}{% endif %}
 <div id="react-platform" data-page="{{ page }}"><p role="status">Ansicht wird geladen…</p></div>
 <script id="react-page-data" type="application/json">{{ data | tojson }}</script>
-{% for href in frontend.css %}<link rel="stylesheet" href="{{ href }}">{% endfor %}
+{% for href in frontend.css %}<link rel="stylesheet" href="{{ href }}">{% endfor %}{% for href in frontend.preload or [] %}<link rel="modulepreload" href="{{ href }}">{% endfor %}
 <script type="module" src="{{ frontend.script }}"></script>
 {% endblock %}

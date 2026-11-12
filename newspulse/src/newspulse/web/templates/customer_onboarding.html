@@ -6,7 +6,7 @@
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
   <title>Ihr Start mit raute+kopf</title>
-  {% for href in frontend.css %}<link rel="stylesheet" href="{{ href }}">{% endfor %}
+  {% for href in frontend.css %}<link rel="stylesheet" href="{{ href }}">{% endfor %}{% for href in frontend.preload or [] %}<link rel="modulepreload" href="{{ href }}">{% endfor %}
 </head>
 <body>
   <div id="onboarding-root"></div>

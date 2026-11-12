@@ -5,7 +5,7 @@
 {% set t = translator(request) %}
 {% include '_client_tabs.html' %}
 {% if frontend %}
-{% for href in frontend.css %}<link rel="stylesheet" href="{{ href }}">{% endfor %}
+{% for href in frontend.css %}<link rel="stylesheet" href="{{ href }}">{% endfor %}{% for href in frontend.preload or [] %}<link rel="modulepreload" href="{{ href }}">{% endfor %}
 <div id="react-{{ page }}" data-client-id="{{ client.id }}" data-client-name="{{ client.name }}"><p role="status">{{ page_title }} werden geladen…</p></div>
 <script type="module" src="{{ frontend.script }}"></script>
 {% else %}<p>Diese Seite ist gerade nicht verfügbar. Bitte später neu laden.</p>{% endif %}
