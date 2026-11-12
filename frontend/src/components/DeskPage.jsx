@@ -11,6 +11,7 @@ const WAITS = {kundenfreigabe: 'wartet auf eine Kundenfreigabe', freigabe: 'wart
 // The first name Google gave at sign-in. Failing that, one read off the
 // address only when it starts with one ("lucas@…"): never initials
 // ("r.mankopf@…") and never a run-on full name ("raphaelmankopf@…").
+const ORIGIN = { medien: '★ Aus Medien', anlass: 'Anlass aus dem Radar', pitch: 'Themen-Pitch', plan: 'Aus der Agenda' };
 export function firstName(email, given = '') {
   if (given) return given;
   const head = (email || '').split('@')[0].split(/[._-]/)[0];
@@ -82,6 +83,8 @@ export function DeskPage({ translations = {}, language = 'de' }) {
   const customer = board.decisions.filter((d) => d.kind === 'kundenfreigabe');
   const waiting = board.in_flight.filter((item) => item.state === 'raus');
   const chances = board.chances || [];
+  // Spec 12: what could become communication and is not activated yet.
+  const potential = chances.filter((c) => c.status !== 'active').slice(0, 5);
   const brief = briefing(board, t);
   const written = ai || board.briefing_ai;
   async function phrase() {
@@ -150,25 +153,25 @@ export function DeskPage({ translations = {}, language = 'de' }) {
           </a>)}
           {!board.decisions.length && !tasks.length && <p className="pane__empty">{t('Nichts wartet auf eine Entscheidung.')}</p>}
         </Card>
-        <Card title={t('Themen')} link={['/today', t('Intelligence öffnen')]}>
-          {chances.map((c) => <a className="chance" href={c.href} key={c.href}>
-            <span className="chance__ico" aria-hidden="true"><svg className="ico"><use href="#ico-intel" /></svg></span>
-            <span className="task__b"><span className="task__t" title={c.title}>{c.title}</span>
-              <span className="task__m">{c.client.name} · {t(c.kind === 'detected' ? 'Erkannte Chance' : 'Entwickelte Chance')}{c.since ? ` · ${date(c.since)}` : ''}</span></span>
-            <span className="chance__go" aria-hidden="true">›</span>
-          </a>)}
-          {!chances.length && <p className="pane__empty">{t('Gerade keine offene Chance.')}</p>}
+        <Card title={t('Top-Meldungen')} link={['/medien', t('Alle Medien')]}>
+          {(board.top_news || []).map((n) => <div className="info-row" key={n.url}>
+            <span className="info-row__ico" aria-hidden="true"><svg className="ico"><use href="#ico-media" /></svg></span>
+            <span className="task__b"><a className="task__t" href={n.url} target="_blank" rel="noreferrer" title={n.title}>{n.title}</a>
+              <span className="task__m"><a href={n.href}>{n.client.name}</a> · {n.source} · {t('Wichtigkeit')} {n.importance}/10</span></span>
+            <span className="info-row__age">{date(n.published_at)}</span>
+          </div>)}
+          {!(board.top_news || []).length && <p className="pane__empty">{t('In den letzten sieben Tagen keine Meldung über die Mandanten.')}</p>}
         </Card>
       </div>
       <div className="desk-col">
-        <Card title={t('Das braucht Deine Aufmerksamkeit')}>
-          {board.in_flight.slice(0, 5).map((item, index) => <a className="info-row" href={item.href} key={`${item.href}-${index}`}>
-            <span className="info-row__ico" aria-hidden="true"><svg className="ico"><use href={item.state === 'raus' ? '#ico-media' : '#ico-texte'} /></svg></span>
-            <span className="task__b"><span className="task__t" title={item.title}>{item.title}</span>
-              <span className="task__m">{item.client.name} · {t(item.state === 'raus' ? 'Raus, wartet auf Antwort' : 'Entwurf')}</span></span>
-            <span className="info-row__age">{date(item.since)}</span>
+        <Card title={t('Potenzielle Themen')}>
+          {potential.map((c) => <a className="chance" href={c.href} key={c.href}>
+            <span className="chance__ico" aria-hidden="true"><svg className="ico"><use href="#ico-intel" /></svg></span>
+            <span className="task__b"><span className="task__t" title={c.title}>{c.title}</span>
+              <span className="task__m">{c.client.name} · {t(ORIGIN[c.origin] || (c.kind === 'detected' ? 'Anlass aus dem Radar' : 'Vorschlag von RAUTE'))}</span></span>
+            {c.since && <span className="info-row__age">{date(c.since)}</span>}
           </a>)}
-          {!board.in_flight.length && <p className="pane__empty">{t('Nichts unterwegs.')}</p>}
+          {!potential.length && <p className="pane__empty">{t('Gerade kein offenes Thema. Unter Medien macht der Stern einen Artikel zum Thema.')}</p>}
         </Card>
         <Tile icon="profil" title={t('Kundenfreigaben')} note={t('Warten auf Abstimmungen')}
           count={customer.length} unit={t('offen')} href="/aufgaben?workspace=decisions" />

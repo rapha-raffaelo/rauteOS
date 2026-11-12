@@ -188,6 +188,21 @@ class Chance:
     status: str
     since: dt.datetime | None
     href: str
+    #: Where the Thema came from: "medien" (starred), "anlass", "pitch", "plan".
+    origin: str = ""
+
+
+@dataclass(frozen=True, slots=True)
+class NewsItem:
+    """One of the top stories in Medien across the mandates (Spec 12)."""
+
+    client: Client
+    title: str
+    source: str
+    url: str
+    published_at: dt.datetime
+    importance: int
+    href: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -213,6 +228,7 @@ class Desk:
     decisions: list[Decision] = field(default_factory=list)
     in_flight: list[InFlight] = field(default_factory=list)
     chances: list[Chance] = field(default_factory=list)
+    top_news: list[NewsItem] = field(default_factory=list)
     tasks: list[TaskItem] = field(default_factory=list)
     tasks_open: int = 0
     #: Of those, due today or overdue. Counted over all of them, not the five shown.
@@ -567,12 +583,37 @@ def build(session: Session, *, now: dt.datetime | None = None, member: str | Non
         decisions=_personal_decisions(session, _decisions(session, by_id), member),
         in_flight=_in_flight(session, by_id),
         chances=_chances(session, by_id, listed=listed),
+        top_news=_top_news(session, by_id, moment),
         tasks=open_tasks[:TASKS_SHOWN],
         tasks_open=len(open_tasks),
         tasks_due=_due(open_tasks, moment),
         all_tasks=open_tasks,
         generated_at=moment,
     )
+
+
+#: The Desk's news list: the most important coverage of the last days, across
+#: every mandate, exactly the rows Medien shows (dismissed ones excluded).
+TOP_NEWS_SHOWN = 6
+TOP_NEWS_DAYS = 7
+
+
+def _top_news(session: Session, clients: dict[int, Client], now: dt.datetime) -> list[NewsItem]:
+    from .models import visible_coverage
+
+    if not clients:
+        return []
+    rows = session.execute(
+        select(Analysis, Article).join(Article, Analysis.article_id == Article.id)
+        .where(visible_coverage(), Analysis.client_id.in_(clients),
+               Article.published_at >= now - dt.timedelta(days=TOP_NEWS_DAYS))
+        .order_by(Analysis.importance_score.desc(), Article.published_at.desc())
+        .limit(TOP_NEWS_SHOWN)
+    ).all()
+    return [NewsItem(client=clients[analysis.client_id], title=article.title, source=article.source,
+                     url=article.url, published_at=article.published_at, importance=analysis.importance_score,
+                     href=f"/client/{analysis.client_id}/medien")
+            for analysis, article in rows]
 
 
 #: How many open tasks "Heute priorisiert" carries before the decisions.
@@ -627,6 +668,7 @@ def _chances(session: Session, clients: dict[int, Client], limit: int = CHANCES_
             title=row["title"],
             status=row["status"],
             since=row["created_at"],
+            origin=row.get("origin", ""),
             # Spec 12: an activated Thema is worked on under Assets; an open one
             # is read on the Themen, at its own card.
             href=(f"/client/{client.id}/assets?kind={row['context_kind']}&context={row['context_id']}"

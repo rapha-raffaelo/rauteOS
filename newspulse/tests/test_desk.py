@@ -686,3 +686,30 @@ def test_personal_tasks_and_overdue_are_scoped_to_signed_in_user(session, web, m
     assert all(t['title']!='Lucas only' for t in reminders['tasks'])
     desk_brief.write(board,invoke=lambda *a,**kw:'Raphael briefing',key='raphael')
     assert desk_brief.cached(key='lucas') is None
+
+
+# --- Top-Meldungen (spec 12) -------------------------------------------------------
+
+
+def test_the_desk_lists_the_most_important_recent_coverage_across_mandates(session):
+    from newspulse.models import Analysis, Article, Category
+
+    qonto, zalando = _mandate(session), _mandate(session, name="Zalando")
+
+    def story(client, title, importance, days_ago, dismissed=False):
+        at = _NOW - dt.timedelta(days=days_ago)
+        article = Article(title=title, url=f"https://ex.de/{title}", source="Handelsblatt", published_at=at,
+                          fetched_at=at, language="de", title_hash=title[:16].ljust(16, "x"))
+        session.add(article)
+        session.flush()
+        session.add(Analysis(article_id=article.id, client_id=client.id, summary="s", category=Category.PRODUKT,
+                             is_relevant=not dismissed, relevance_score=0 if dismissed else 5,
+                             importance_score=importance, is_alert=False))
+        session.commit()
+
+    story(qonto, "Wichtig", 9, 1)
+    story(zalando, "Mittel", 5, 2)
+    story(qonto, "Zu alt", 10, 20)
+    news = desk.build(session, now=_NOW).top_news
+    assert [n.title for n in news] == ["Wichtig", "Mittel"]
+    assert news[1].client.name == "Zalando" and news[1].href == f"/client/{zalando.id}/medien"

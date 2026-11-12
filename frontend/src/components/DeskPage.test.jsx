@@ -43,8 +43,8 @@ describe('Desk', () => {
   it('renders a zero contract as measured and dates in the server timezone', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(reply({...empty,
       rows: [{...row, promised_quarter: 0, on_track: true}],
-      in_flight: [{client: row.client, title: 'Released', state: 'raus',
-        since: '2026-09-08T23:30:00Z', href: '/client/7/advice#outreach-1'}]})));
+      top_news: [{client: row.client, title: 'Released', source: 'Handelsblatt', url: 'https://ex.de/a', importance: 7,
+        published_at: '2026-09-08T23:30:00Z', href: '/client/7/medien'}]})));
     render(<DeskPage />);
     await screen.findByText('0 / 3');
     expect(screen.queryByText('nicht hinterlegt')).toBeNull();
@@ -93,14 +93,20 @@ describe('Desk', () => {
     expect(screen.getByRole('link', {name: /Kundenfreigaben/}).getAttribute('href')).toBe('/aufgaben?workspace=decisions');
   });
 
-  it('lists open chances across mandates and links each to its workspace', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(reply({...empty, rows: [row], opportunities: 1,
-      chances: [{client: row.client, kind: 'detected', title: 'EZB verschärft Kreditbedingungen', status: 'draft',
-        since: '2026-11-04T08:00:00Z', href: '/client/7/opportunities?kind=detected&context=3'}]})));
+  it('lists the open, not yet activated Themen and the top news of Medien', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(reply({...empty, rows: [row], opportunities: 2,
+      chances: [{client: row.client, kind: 'developed', origin: 'medien', title: 'EZB verschärft Kreditbedingungen', status: 'draft',
+        since: '2026-11-04T08:00:00Z', href: '/client/7/themen#thema-developed-3'},
+        {client: row.client, kind: 'developed', title: 'Schon aktiviert', status: 'active', since: null, href: '/client/7/assets'}],
+      top_news: [{client: row.client, title: 'Qonto wächst', source: 'Handelsblatt', url: 'https://ex.de/q', importance: 8,
+        published_at: '2026-11-04T08:00:00Z', href: '/client/7/medien'}]})));
     render(<DeskPage />);
     const link = await screen.findByRole('link', {name: /EZB verschärft Kreditbedingungen/});
-    expect(link.getAttribute('href')).toBe('/client/7/opportunities?kind=detected&context=3');
-    expect(screen.getByRole('link', {name: /Intelligence öffnen/}).getAttribute('href')).toBe('/today');
+    expect(link.getAttribute('href')).toBe('/client/7/themen#thema-developed-3');
+    expect(link.textContent).toContain('★ Aus Medien');
+    expect(screen.queryByText('Schon aktiviert')).toBeNull();
+    expect(screen.getByRole('link', {name: 'Qonto wächst'}).getAttribute('href')).toBe('https://ex.de/q');
+    expect(screen.getByRole('link', {name: /Alle Medien/}).getAttribute('href')).toBe('/medien');
   });
 });
 

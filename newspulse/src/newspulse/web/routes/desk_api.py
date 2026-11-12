@@ -80,6 +80,17 @@ class ChanceSummary(ReadModel):
     status: str
     since: dt.datetime | None
     href: str
+    origin: str = ""
+
+
+class NewsSummary(ReadModel):
+    client: ClientSummary
+    title: str
+    source: str
+    url: str
+    published_at: dt.datetime
+    importance: int
+    href: str
 
 
 class InFlightSummary(ReadModel):
@@ -95,6 +106,7 @@ class DeskResponse(ReadModel):
     decisions: list[DecisionSummary]
     in_flight: list[InFlightSummary]
     chances: list[ChanceSummary] = []
+    top_news: list[NewsSummary] = []
     tasks: list[TaskSummary] = []
     tasks_open: int = 0
     tasks_due: int = 0
