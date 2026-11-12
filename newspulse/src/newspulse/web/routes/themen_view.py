@@ -84,6 +84,37 @@ def agenda(client_id: int, response: Response, session: Session = Depends(get_db
     return dict(items=items[:AGENDA_ITEMS], total=len(items), href=f"/client/{client_id}/plan")
 
 
+# One current, attributable RAUTE proposal, generated off the request thread.
+def _suggestion_worker(factory, client_id, lease):
+    from ... import topic_suggestions
+    with factory() as session:
+        topic_suggestions.generate(session, client_id, lease)
+
+
+@router.get("/api/v1/clients/{client_id}/themen/suggestions")
+def suggestion_status(client_id: int, response: Response, session: Session = Depends(get_db)):
+    from ... import topic_suggestions
+    mandate_or_404(session, client_id)
+    response.headers["Cache-Control"] = "no-store"
+    return topic_suggestions.state(session, client_id)
+
+
+@router.post("/api/v1/clients/{client_id}/themen/suggestions")
+def ensure_suggestion(client_id: int, session: Session = Depends(get_db)):
+    from ... import topic_suggestions
+    mandate_or_404(session, client_id)
+    lease = topic_suggestions.claim(session, client_id)
+    if lease:
+        factory = sessionmaker(bind=session.get_bind(), expire_on_commit=False)
+        try:
+            start_or_release(_suggestion_worker, args=(factory, client_id, lease), name=f"themen-suggestion-{client_id}",
+                release=lambda: topic_suggestions.finish(session, client_id, lease, 'failed', 'Themenvorschlag konnte nicht gestartet werden.'))
+        except RuntimeError:
+            raise HTTPException(503, 'Themenvorschlag konnte nicht gestartet werden.')
+        return lease
+    return topic_suggestions.state(session, client_id)
+
+
 # --- The star in Medien --------------------------------------------------------
 
 

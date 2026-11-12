@@ -269,3 +269,46 @@ def test_drive_connects_through_the_gmail_callback_by_its_state(web, monkeypatch
     back = web.get(f"/settings/gmail/callback?code=abc&state={state}", follow_redirects=False)
     assert back.headers["location"] == "/settings?drive=verbunden#drive"
     assert exchanged == ["abc"]
+
+
+def test_suggestions_use_recent_client_news_once_and_keep_sources(session, mandate):
+    from newspulse import topic_suggestions
+    recent = _article(session, 'Neue Versorgungsstudie', 'https://ex.de/new-study', radar=mandate)
+    old = _article(session, 'Alte Studie', 'https://ex.de/old-study', radar=mandate)
+    old.published_at = dt.datetime.now(dt.UTC) - dt.timedelta(days=60)
+    session.commit()
+    calls = []
+    def invoke(prompt, **kwargs):
+        calls.append(prompt)
+        assert 'Neue Versorgungsstudie' in prompt
+        assert 'Alte Studie' not in prompt
+        return json.dumps(dict(worth_sending=True, subject='Versorgung einordnen', message='Ein Vorschlag',
+                               evidence=[0], context='Die neue Studie', credibility='Versorgung', thesis='These'))
+    lease = topic_suggestions.claim(session, mandate.id)
+    assert lease and topic_suggestions.claim(session, mandate.id) is None
+    topic_suggestions.generate(session, mandate.id, lease, invoke=invoke)
+    assert topic_suggestions.state(session, mandate.id)['status'] == 'ready'
+    angle = session.query(Angle).filter_by(client_id=mandate.id).one()
+    assert angle.article_ids == [recent.id]
+    assert len(calls) == 1
+    # An archived suggestion must not be regenerated from the same news.
+    angle.dismissed_at = dt.datetime.now(dt.UTC)
+    session.commit()
+    next_lease = topic_suggestions.claim(session, mandate.id, now=dt.datetime.now(dt.UTC)+dt.timedelta(hours=7))
+    topic_suggestions.generate(session, mandate.id, next_lease, invoke=invoke)
+    assert len(calls) == 1
+    assert topic_suggestions.state(session, mandate.id)['status'] == 'empty'
+
+
+def test_suggestions_do_not_invent_news_and_report_model_failure(session, mandate):
+    from newspulse import topic_suggestions
+    lease = topic_suggestions.claim(session, mandate.id)
+    topic_suggestions.generate(session, mandate.id, lease, invoke=lambda *a, **kw: pytest.fail('No news: no model call'))
+    assert topic_suggestions.state(session, mandate.id)['status'] == 'empty'
+    _article(session, 'Neue Studie', 'https://ex.de/new-study', radar=mandate)
+    next_lease = topic_suggestions.claim(session, mandate.id, now=dt.datetime.now(dt.UTC)+dt.timedelta(hours=7))
+    def fail(*args, **kwargs):
+        raise RuntimeError('Provider unavailable')
+    topic_suggestions.generate(session, mandate.id, next_lease, invoke=fail)
+    assert topic_suggestions.state(session, mandate.id)['status'] == 'failed'
+    assert session.query(Angle).count() == 0

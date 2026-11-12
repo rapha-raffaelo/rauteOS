@@ -235,7 +235,13 @@ export function ArchivePage({ data: d }) {
           ))}
         </div>
         {!d.rows.length && (
-          <p className="empty-state">{t("Keine Artikel für die gewählten Filter.")}</p>
+          <div className="empty-state">
+            <p>{client && f.quelle !== 'keywords' && !d.counts?.kunde
+              ? `Noch keine Berichterstattung über ${client.name} gespeichert.`
+              : t("Keine Artikel für die gewählten Filter.")}</p>
+            {client && f.quelle !== 'keywords' && d.counts?.keywords > 0 &&
+              <p><a href={`${base}?quelle=keywords`}>{d.counts.keywords} Meldungen zu den Keywords ansehen →</a></p>}
+          </div>
         )}
         <nav className="pagination" aria-label="Medienseiten">
           {d.pagination.prev_url && (

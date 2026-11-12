@@ -27,6 +27,7 @@ function DeepDive({clientId,clientName,row,id}){
    <section><h4>Was ist passiert?</h4><p>{detail.situation?.trim()||missing}</p></section>
    <section><h4>Warum für {clientName||'den Kunden'} relevant?</h4><p>{detail.relevance?.trim()||missing}</p></section>
    <section className="themen-dive__pitch"><h4>Pitch</h4><p>{pitchOf(detail)||row.summary||missing}</p></section>
+   {detail.sources?.length>0&&<section><h4>Quellen</h4><ul>{detail.sources.map((source,i)=><li key={source.url||i}><a href={source.url} target="_blank" rel="noopener noreferrer">{source.title||source.source||'Quelle'} ↗</a></li>)}</ul></section>}
    <section><h4>Passende Ansprechpartner</h4>
     {detail.recipients?.length?<ul>{detail.recipients.slice(0,3).map(r=><li key={`${r.name}-${r.outlet}`}>{r.name}{r.outlet&&` · ${r.outlet}`}{r.reason&&<small> · {r.reason}</small>}</li>)}</ul>
      :detail.speaker_proposal?<p>Sprecher: {detail.people.find(p=>p.id===detail.speaker_proposal.person_id)?.label}</p>:<p>{missing}</p>}
@@ -45,6 +46,7 @@ function Card({clientId,clientName,row,onActivate,busy}){
    {row.status==='active'&&<span className="themen-tag themen-tag--on">Aktiviert</span>}
    {o&&<span className="themen-card__source">{o.source}{o.published_at&&` · ${day(o.published_at)}`}</span>}</div>
   <h2>{row.title}</h2>
+  {o?.url&&<p className="themen-hint">Auslöser: <a href={o.url} target="_blank" rel="noopener noreferrer">{o.title||o.source} ↗</a></p>}
   <div className="themen-card__acts" onMouseLeave={hide}>
    <button type="button" className="btn btn--quiet themen-dive-trigger" aria-expanded={open} aria-describedby={open?id:undefined}
     onMouseEnter={show} onFocus={show} onBlur={hide} onClick={()=>setOpen(!open)}>Deep Dive</button>
@@ -77,6 +79,17 @@ export function ThemenPage({clientId}){
  const [board,setBoard]=useState(null),[error,setError]=useState(''),[filter,setFilter]=useState('alle'),[busy,setBusy]=useState(false);
  const [developing,setDeveloping]=useState(false),[focus,setFocus]=useState('');
  const path=`clients/${clientId}/opportunities`;
+ const [suggestion,setSuggestion]=useState(null);
+ useEffect(()=>{let active=true;let timer;
+  const endpoint=`clients/${clientId}/themen/suggestions`;
+  async function check(start=false){try{
+   const value=await request(endpoint,start?{method:'POST'}:{});
+   if(!active)return;setSuggestion(value);
+   if(value?.status==='running')timer=setTimeout(()=>check(),3000);
+   else {const next=await request(path);if(active)setBoard(next);}
+  }catch(e){if(active)setError(e.message);}}
+  check(true);return()=>{active=false;clearTimeout(timer);};
+ },[clientId,path]);
  useEffect(()=>{let active=true;request(path).then(v=>{if(active)setBoard(v);}).catch(e=>{if(active)setError(e.message);});return()=>{active=false;};},[path]);
  const running=board?.development?.status==='running'&&Date.now()-new Date(board.development.started_at).getTime()<1200000;
  useEffect(()=>{if(!running)return;const timer=setInterval(()=>request(path).then(setBoard).catch(e=>setError(e.message)),2500);return()=>clearInterval(timer);},[path,running]);
@@ -114,6 +127,8 @@ export function ThemenPage({clientId}){
   {!board&&!error&&<p role="status">Themen werden geladen…</p>}
   {board&&<div className="themen-layout">
    <main>
+    <p className="themen-hint">RAUTE schlägt Themen aus den Meldungen der letzten vier Wochen vor.</p>
+    {suggestion?.note&&<p role={suggestion.status==='failed'?'alert':'status'}>{suggestion.note}</p>}
     <div className="themen-filters" role="group" aria-label="Themen filtern">{FILTERS.map(([key,label])=><button key={key} type="button" aria-pressed={filter===key} onClick={()=>setFilter(key)}>{label} · {counts[key]}</button>)}</div>
     {shown.length?shown.map(row=><Card key={`${row.context_kind}-${row.context_id}`} clientId={clientId} clientName={board.client.name} row={row} busy={busy} onActivate={activate}/>)
      :<p className="themen-empty">{filter==='medien'?'Noch nichts aus Medien übernommen. Unter Medien macht der Stern einen Artikel zum Thema.':'Gerade kein offenes Thema.'}</p>}

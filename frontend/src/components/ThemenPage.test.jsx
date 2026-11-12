@@ -82,3 +82,12 @@ it('offers the six asset kinds, drafts one and edits it with send locked',async(
  await screen.findByText('Gespeichert.');
  expect(JSON.parse(calls.find(c=>c.method==='PUT').body)).toMatchObject({digest:'d'.repeat(64),body:'Geändert'});
 });
+
+it('requests an automatic recent-news proposal and links the triggering report',async()=>{
+ const calls=routes({'/opportunities':{...board,opportunities:[{...board.opportunities[0],occasion:{title:'Neue Studie',url:'https://example.org/studie',source:'Fachmedium'}}]},
+  '/themen/suggestions':{status:'empty',note:'Noch keine neuen Meldungen'},'/agenda':{items:[]}});
+ render(<ThemenPage clientId={1}/>);
+ expect(await screen.findByRole('link',{name:'Neue Studie ↗'})).toHaveProperty('href','https://example.org/studie');
+ expect(await screen.findByRole('status')).toHaveProperty('textContent','Noch keine neuen Meldungen');
+ expect(calls.some(c=>c.url.endsWith('/themen/suggestions')&&c.method==='POST')).toBe(true);
+});
