@@ -222,7 +222,7 @@ function CreateTask({ d, list, filters, status = "offen", onClose }) {
   </form>;
 }
 
-function Board({ tasks, d, list, selectedId, createStatus, onCreate, filters }) {
+function Board({ tasks, d, list, selectedId, createStatus, onCreate, filters, onSubtasksChange }) {
   const [dragged, setDragged] = useState(null);
   const [target, setTarget] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -263,10 +263,7 @@ function Board({ tasks, d, list, selectedId, createStatus, onCreate, filters }) 
               {task.due_on && <span className={task.status !== "erledigt" && task.due_on < isoToday() ? "tm-overdue" : ""}>▦ {shortDay(task.due_on)}</span>}
               <span className={`tm-priority tm-priority--${task.priority}`}>⚑ {task.priority === "urgent" ? "! " : ""}{d.priorities.find(([key]) => key === task.priority)?.[1]}</span>
             </div>
-            <SubtaskProgress task={task}/>
-            {task.subtasks?.length > 0 && <ul className="tm-card-subtasks" aria-label="Unteraufgaben">
-              {task.subtasks.map(row=><li key={row.id} className={row.completed ? "tm-subtask-done" : undefined}><span aria-hidden="true">{row.completed ? "✓" : "–"}</span> {row.title}</li>)}
-            </ul>}
+            {task.subtasks?.length > 0 && <Subtasks compact task={task} onChange={rows=>onSubtasksChange(task.id,rows)}/>}
             {task.source_kind && <span className="tm-chip tm-decision-kind">{DECISION[task.source_kind] || task.source_kind}</span>}
             <div className="tm-card-footer"><span>{task.client?.name || "Intern"}</span>
               {task.source_key && <a className="tm-source-link" href={task.context_href}>Zum Ursprung →</a>}
@@ -361,7 +358,7 @@ export function TasksPage({ data: d }) {
         <TaskFilters filters={filters} onChange={changeFilters} team={d.team} clients={d.clients} />
         <Notice>{d.error}</Notice>
         {!board && createStatus && <CreateTask d={d} list={list} filters={filters} status={createStatus} onClose={() => setCreateStatus(null)} />}
-        {board ? <Board tasks={[...shown, ...finished]} d={d} list={list} selectedId={selectedId} createStatus={createStatus} onCreate={setCreateStatus} filters={filters} /> : <TaskList tasks={shown} d={d} list={list} selectedId={selectedId} />}
+        {board ? <Board tasks={[...shown, ...finished]} d={d} list={list} selectedId={selectedId} createStatus={createStatus} onCreate={setCreateStatus} filters={filters} onSubtasksChange={(id,rows)=>setSubtaskUpdates(prev=>({...prev,[id]:rows}))} /> : <TaskList tasks={shown} d={d} list={list} selectedId={selectedId} />}
         {!board && !shown.length && <p className="tm-empty">{t(list === "erledigt" ? "Noch keine erledigten Aufgaben" : "Keine offenen Aufgaben")}</p>}
         {!board && finished.length > 0 && (
           <>

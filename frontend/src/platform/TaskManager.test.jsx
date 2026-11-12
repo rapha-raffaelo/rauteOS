@@ -160,3 +160,24 @@ it('combines independent favorites and priority filters in the list',()=>{
  expect(window.location.search).toContain('prioritaet=urgent');
  expect(window.location.search).toContain('favoriten=1');
 });
+
+it('checks subtasks on the board and updates progress without opening details',async()=>{
+ const {vi}=await import('vitest');
+ const {waitFor}=await import('@testing-library/react');
+ const fetch=vi.fn().mockResolvedValueOnce({ok:true,json:async()=>({subtasks:[{id:7,title:'Anrufen',completed:true}]})})
+   .mockResolvedValueOnce({ok:true,json:async()=>({subtasks:[{id:7,title:'Anrufen',completed:false}]})});
+ vi.stubGlobal('fetch',fetch);
+ try {
+  render(<TasksPage data={{...base,tasks:[{...base.tasks[0],subtasks:[{id:7,title:'Anrufen',completed:false}]}]}}/>);
+  const checkbox=screen.getByRole('checkbox',{name:'Anrufen erledigt'});
+  fireEvent.click(checkbox);
+  await waitFor(()=>expect(checkbox.checked).toBe(true));
+  expect(screen.getByText('☑ 1/1 Unteraufgaben')).toBeTruthy();
+  expect(fetch.mock.calls[0][0]).toBe('/aufgaben/1/subtasks/7');
+  expect(fetch.mock.calls[0][1].body.get('completed')).toBe('1');
+  expect(screen.queryByLabelText('Neue Unteraufgabe')).toBeNull();
+  fireEvent.click(checkbox);
+  await waitFor(()=>expect(checkbox.checked).toBe(false));
+  expect(screen.getByText('☑ 0/1 Unteraufgaben')).toBeTruthy();
+ } finally {vi.unstubAllGlobals();}
+});
