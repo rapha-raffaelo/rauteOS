@@ -153,14 +153,14 @@ export function DeskPage({ translations = {}, language = 'de' }) {
           </a>)}
           {!board.decisions.length && !tasks.length && <p className="pane__empty">{t('Nichts wartet auf eine Entscheidung.')}</p>}
         </Card>
-        <Card title={t('Top-Meldungen')} link={['/medien', t('Alle Medien')]}>
+        <Card title={t('Top-Meldungen · Heute')} link={['/medien', t('Alle Medien')]}>
           {(board.top_news || []).map((n) => <div className="info-row" key={n.url}>
             <span className="info-row__ico" aria-hidden="true"><svg className="ico"><use href="#ico-media" /></svg></span>
             <span className="task__b"><a className="task__t" href={n.url} target="_blank" rel="noreferrer" title={n.title}>{n.title}</a>
               <span className="task__m"><a href={n.href}>{n.client.name}</a> · {n.source} · {t('Wichtigkeit')} {n.importance}/10</span></span>
             <span className="info-row__age">{date(n.published_at)}</span>
           </div>)}
-          {!(board.top_news || []).length && <p className="pane__empty">{t('In den letzten sieben Tagen keine Meldung über die Mandanten.')}</p>}
+          {!(board.top_news || []).length && <p className="pane__empty">{t('Heute wurden noch keine Meldungen über die Mandanten erfasst.')}</p>}
         </Card>
       </div>
       <div className="desk-col">

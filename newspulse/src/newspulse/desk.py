@@ -592,10 +592,9 @@ def build(session: Session, *, now: dt.datetime | None = None, member: str | Non
     )
 
 
-#: The Desk's news list: the most important coverage of the last days, across
+#: The Desk's news list: today's most important coverage, across
 #: every mandate, exactly the rows Medien shows (dismissed ones excluded).
 TOP_NEWS_SHOWN = 6
-TOP_NEWS_DAYS = 7
 
 
 def _top_news(session: Session, clients: dict[int, Client], now: dt.datetime) -> list[NewsItem]:
@@ -603,10 +602,12 @@ def _top_news(session: Session, clients: dict[int, Client], now: dt.datetime) ->
 
     if not clients:
         return []
+    local_day = now.astimezone(config.local_zone()).date()
+    start = dt.datetime.combine(local_day, dt.time.min, tzinfo=config.local_zone()).astimezone(dt.UTC)
     rows = session.execute(
         select(Analysis, Article).join(Article, Analysis.article_id == Article.id)
         .where(visible_coverage(), Analysis.client_id.in_(clients),
-               Article.published_at >= now - dt.timedelta(days=TOP_NEWS_DAYS))
+               Article.published_at >= start, Article.published_at <= now)
         .order_by(Analysis.importance_score.desc(), Article.published_at.desc())
         .limit(TOP_NEWS_SHOWN)
     ).all()

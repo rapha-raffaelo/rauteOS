@@ -691,7 +691,7 @@ def test_personal_tasks_and_overdue_are_scoped_to_signed_in_user(session, web, m
 # --- Top-Meldungen (spec 12) -------------------------------------------------------
 
 
-def test_the_desk_lists_the_most_important_recent_coverage_across_mandates(session):
+def test_the_desk_lists_only_todays_coverage_across_mandates(session):
     from newspulse.models import Analysis, Article, Category
 
     qonto, zalando = _mandate(session), _mandate(session, name="Zalando")
@@ -707,9 +707,32 @@ def test_the_desk_lists_the_most_important_recent_coverage_across_mandates(sessi
                              importance_score=importance, is_alert=False))
         session.commit()
 
-    story(qonto, "Wichtig", 9, 1)
-    story(zalando, "Mittel", 5, 2)
+    story(qonto, "Wichtig", 9, 0)
+    story(zalando, "Mittel", 5, 0)
     story(qonto, "Zu alt", 10, 20)
+    story(qonto, "Gestern", 10, 1)
+    story(qonto, "Zukunft", 10, -1)
+    story(qonto, "Verworfen", 10, 0, dismissed=True)
     news = desk.build(session, now=_NOW).top_news
     assert [n.title for n in news] == ["Wichtig", "Mittel"]
     assert news[1].client.name == "Zalando" and news[1].href == f"/client/{zalando.id}/medien"
+
+
+def test_top_news_respects_local_midnight_and_never_falls_back(session, monkeypatch):
+    from zoneinfo import ZoneInfo
+    from newspulse import config
+    from newspulse.models import Analysis, Category
+    monkeypatch.setattr(config, 'local_zone', lambda: ZoneInfo('Europe/Zurich'))
+    client = _mandate(session)
+    # In November, the local day begins at 23:00 UTC on the previous UTC date.
+    now = dt.datetime(2026, 11, 12, 0, 30, tzinfo=dt.UTC)
+    for title, at in [('Yesterday', dt.datetime(2026,11,11,22,59,tzinfo=dt.UTC)),
+                      ('Local midnight', dt.datetime(2026,11,11,23,0,tzinfo=dt.UTC)),
+                      ('Future today', dt.datetime(2026,11,12,1,0,tzinfo=dt.UTC))]:
+        article = Article(title=title,url='https://ex.de/'+title,source='Test',published_at=at,fetched_at=at,title_hash=title.ljust(20,'x'))
+        session.add(article);session.flush()
+        session.add(Analysis(article_id=article.id,client_id=client.id,summary='s',category=Category.PRODUKT,
+            is_relevant=True,relevance_score=8,importance_score=8,is_alert=False))
+    session.commit()
+    assert [n.title for n in desk._top_news(session,{client.id:client},now)] == ['Local midnight']
+    assert desk._top_news(session,{client.id:client},now+dt.timedelta(days=1)) == []
