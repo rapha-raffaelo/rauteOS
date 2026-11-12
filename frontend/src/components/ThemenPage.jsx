@@ -1,9 +1,9 @@
-import React,{useEffect,useRef,useState} from 'react';
+import React,{useEffect,useState} from 'react';
 import {PageHeading} from './PageHeading.jsx';
 import {journalistRequest as request} from '../journalists-api.js';
 
 // Spec 12: what could become communication, from a starred article ("Aus
-// Medien") or a proposal by RAUTE. The Deep Dive opens on hover or focus;
+// Medien") or a proposal by RAUTE. The Deep Dive opens as a detail page;
 // "Thema aktivieren" moves the Thema to Assets, where it is written.
 const day=value=>value?new Date(value).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'}):'';
 const MONTHS=['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
@@ -15,31 +15,40 @@ const ORIGIN={anlass:'Anlass aus dem Radar',pitch:'Themen-Pitch',plan:'Aus der A
 // else RAUTE's first one, else its summary.
 export const pitchOf=detail=>(detail?.storyline||detail?.storylines?.[0]||'').trim();
 
-function DeepDive({clientId,clientName,row,id}){
- const [detail,setDetail]=useState(null),[error,setError]=useState('');
- useEffect(()=>{let active=true;request(`clients/${clientId}/opportunities/${row.context_kind}/${row.context_id}`)
-  .then(v=>{if(active)setDetail(v);}).catch(e=>{if(active)setError(e.message);});return()=>{active=false;};},[clientId,row.context_kind,row.context_id]);
- const missing=<em>bitte ergänzen</em>;
- return <div className="themen-dive" id={id} role="tooltip">
-  {error?<p role="alert">{error}</p>:!detail?<p role="status">Deep Dive wird geladen…</p>:<>
-   {detail.deep_dive==='pending'&&<p role="status" className="themen-dive__note">RAUTE schreibt den Deep Dive. Bis dahin steht hier der Artikel.</p>}
-   {detail.deep_dive==='failed'&&<p className="themen-dive__note">Der Deep Dive ließ sich nicht schreiben. Pitch beim Aktivieren selbst formulieren.</p>}
-   <section><h4>Was ist passiert?</h4><p>{detail.situation?.trim()||missing}</p></section>
-   <section><h4>Warum für {clientName||'den Kunden'} relevant?</h4><p>{detail.relevance?.trim()||missing}</p></section>
-   <section className="themen-dive__pitch"><h4>Pitch</h4><p>{pitchOf(detail)||row.summary||missing}</p></section>
-   {detail.sources?.length>0&&<section><h4>Quellen</h4><ul>{detail.sources.map((source,i)=><li key={source.url||i}><a href={source.url} target="_blank" rel="noopener noreferrer">{source.title||source.source||'Quelle'} ↗</a></li>)}</ul></section>}
-   <section><h4>Passende Ansprechpartner</h4>
-    {detail.recipients?.length?<ul>{detail.recipients.slice(0,3).map(r=><li key={`${r.name}-${r.outlet}`}>{r.name}{r.outlet&&` · ${r.outlet}`}{r.reason&&<small> · {r.reason}</small>}</li>)}</ul>
-     :detail.speaker_proposal?<p>Sprecher: {detail.people.find(p=>p.id===detail.speaker_proposal.person_id)?.label}</p>:<p>{missing}</p>}
-   </section></>}
- </div>;
+export function ThemaDetails({clientId,kind,identity}){
+ const [detail,setDetail]=useState(null),[error,setError]=useState(''),[busy,setBusy]=useState(false);
+ const base=`clients/${clientId}/opportunities/${kind}/${identity}`;
+ useEffect(()=>{let active=true;request(base).then(v=>{if(active)setDetail(v);}).catch(e=>{if(active)setError(e.message);});return()=>{active=false;};},[base]);
+ async function activate(){setBusy(true);setError('');try{
+  const storyline=pitchOf(detail);
+  if(!storyline)throw new Error('Für dieses Thema fehlt noch ein Pitch.');
+  await request(`${base}/activate`,{method:'POST',body:JSON.stringify({revision:detail.revision,storyline,
+   speaker_statement_id:null,speaker_person_id:detail.speaker_person_id||null,contact_ids:detail.contact_ids})});
+  window.location.assign(`/client/${clientId}/assets?kind=${kind}&context=${identity}`);
+ }catch(e){setError(e.message);setBusy(false);}}
+ const missing=<span className="themen-empty">Noch nicht hinterlegt</span>;
+ return <section className="themen-detail-page">
+  <a href={`/client/${clientId}/themen`}>← Zurück zu den Themen</a>
+  <PageHeading eyebrow="Themendetails" title={detail?.title||'Thema'}>
+   {detail&&(detail.status==='active'?<a className="btn btn--go" href={`/client/${clientId}/assets?kind=${kind}&context=${identity}`}>Zu den Assets →</a>
+    :detail.status!=='closed'&&<button className="btn btn--go" disabled={busy||!pitchOf(detail)} onClick={activate}>Thema aktivieren</button>)}
+  </PageHeading>
+  {error&&<p role="alert">{error}</p>}
+  {!detail&&!error&&<p role="status">Details werden geladen…</p>}
+  {detail&&<article className="themen-detail">
+   {detail.deep_dive==='pending'&&<p role="status">RAUTE schreibt den Deep Dive. Bis dahin steht hier der Artikel.</p>}
+   {detail.deep_dive==='failed'&&<p role="status">Der Deep Dive konnte nicht erstellt werden.</p>}
+   <section><h2>Was ist passiert?</h2><p>{detail.situation?.trim()||missing}</p></section>
+   <section><h2>Warum ist das relevant?</h2><p>{detail.relevance?.trim()||missing}</p></section>
+   <section className="themen-detail__pitch"><h2>Pitch</h2><p>{pitchOf(detail)||missing}</p></section>
+   <section><h2>Quellen</h2>{detail.sources?.length?<ul>{detail.sources.map((source,i)=><li key={source.url||i}>
+    <a href={source.url} target="_blank" rel="noopener noreferrer">{source.title||source.source||'Quelle'} ↗</a>
+    {source.published_at&&<small> · {day(source.published_at)}</small>}</li>)}</ul>:<p>{missing}</p>}</section>
+  </article>}
+ </section>;
 }
 
 function Card({clientId,clientName,row,onActivate,busy}){
- const [open,setOpen]=useState(false);const id=`dive-${row.context_kind}-${row.context_id}`;
- const timer=useRef(null);
- const show=()=>{clearTimeout(timer.current);setOpen(true);};
- const hide=()=>{timer.current=setTimeout(()=>setOpen(false),150);};
  const o=row.occasion;
  return <article id={`thema-${row.context_kind}-${row.context_id}`} className={`themen-card${row.status==='active'?' themen-card--active':''}`}>
   <div className="themen-card__meta"><span className={`themen-tag${fromMedien(row)?' themen-tag--star':''}`}>{ORIGIN[row.origin]||'Vorschlag von RAUTE'}{row.starred_by&&` · @${row.starred_by}`}</span>
@@ -47,10 +56,8 @@ function Card({clientId,clientName,row,onActivate,busy}){
    {o&&<span className="themen-card__source">{o.source}{o.published_at&&` · ${day(o.published_at)}`}</span>}</div>
   <h2>{row.title}</h2>
   {o?.url&&<p className="themen-hint">Auslöser: <a href={o.url} target="_blank" rel="noopener noreferrer">{o.title||o.source} ↗</a></p>}
-  <div className="themen-card__acts" onMouseLeave={hide}>
-   <button type="button" className="btn btn--quiet themen-dive-trigger" aria-expanded={open} aria-describedby={open?id:undefined}
-    onMouseEnter={show} onFocus={show} onBlur={hide} onClick={()=>setOpen(!open)}>Deep Dive</button>
-   {open&&<div onMouseEnter={show}><DeepDive clientId={clientId} clientName={clientName} row={row} id={id}/></div>}
+  <div className="themen-card__acts">
+   <a className="btn btn--quiet" href={`/client/${clientId}/themen?kind=${row.context_kind}&context=${row.context_id}`}>Details ansehen</a>
    {row.status==='active'?<a className="btn" href={`/client/${clientId}/assets?kind=${row.context_kind}&context=${row.context_id}`}>Zu den Assets →</a>
     :<button type="button" className="btn btn--go" disabled={busy} onClick={()=>onActivate(row)}>Thema aktivieren</button>}
   </div>
@@ -65,17 +72,23 @@ export function Agenda({clientId}){
   <header><h2 id="agenda-title">Agenda</h2><a href={data?.href||`/client/${clientId}/plan`}>Ganze Agenda →</a></header>
   {error&&<p role="alert">{error}</p>}
   {data&&!data.items.length&&<p className="themen-empty">Noch keine Termine. Die Agenda füllt sich aus Marktsignalen und Themen.</p>}
-  {data?.items.length>0&&<ol className="themen-timeline">{data.items.map(item=><li key={item.id} tabIndex={0} className={`themen-timeline__item themen-timeline__item--${item.state}`}>
+  {data?.items.length>0&&<ol className="themen-timeline">{data.items.map(item=><li key={item.id} className={`themen-timeline__item themen-timeline__item--${item.state}`}>
    <span className="themen-timeline__dot" aria-hidden="true"/>
    <div><span className="themen-timeline__when">{when(item)}</span><a href={item.href}>{item.title||'Ohne Titel'}</a>
     <span className="themen-timeline__state">{item.state==='angenommen'?'geplant':'Vorschlag'}{item.format&&` · ${item.format}`}</span></div>
-   {item.reason&&<div className="themen-timeline__pop" role="tooltip"><strong>{item.title}</strong><p>{item.reason}</p></div>}
+   <a className="themen-agenda-detail-link" href={item.href}>Details ansehen →</a>
   </li>)}</ol>}
   <a className="btn btn--quiet themen-agenda__add" href={`/client/${clientId}/plan#agenda`}>Agenda bearbeiten</a>
  </aside>;
 }
 
 export function ThemenPage({clientId}){
+ const params=new URLSearchParams(window.location.search),kind=params.get('kind'),identity=Number(params.get('context'));
+ if(['detected','developed'].includes(kind)&&Number.isInteger(identity)&&identity>0)return <ThemaDetails clientId={clientId} kind={kind} identity={identity}/>;
+ return <ThemenList clientId={clientId}/>;
+}
+
+function ThemenList({clientId}){
  const [board,setBoard]=useState(null),[error,setError]=useState(''),[filter,setFilter]=useState('alle'),[busy,setBusy]=useState(false);
  const [developing,setDeveloping]=useState(false),[focus,setFocus]=useState('');
  const path=`clients/${clientId}/opportunities`;

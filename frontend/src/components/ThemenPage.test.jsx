@@ -1,9 +1,10 @@
 import React from 'react';
 import {render,screen,fireEvent,cleanup,waitFor} from '@testing-library/react';
-import {afterEach,it,expect,vi} from 'vitest';
+import {afterEach,beforeEach,it,expect,vi} from 'vitest';
 import {ThemenPage,Agenda,pitchOf} from './ThemenPage.jsx';
-import {AssetsPage,KINDS} from './AssetsPage.jsx';
-afterEach(()=>{cleanup();vi.unstubAllGlobals();});
+import {AssetsPage,KINDS,WritingProgress} from './AssetsPage.jsx';
+beforeEach(()=>{HTMLDialogElement.prototype.showModal=function(){this.setAttribute('open','');};HTMLDialogElement.prototype.close=function(){this.removeAttribute('open');};});
+afterEach(()=>{cleanup();vi.unstubAllGlobals();window.history.replaceState(null,'','/');});
 
 const json=body=>({ok:true,headers:{get:()=>'application/json'},json:async()=>body});
 function routes(map){
@@ -21,16 +22,16 @@ const detail={revision:2,title:'Online-Verschreibung',situation:'Der Bundestag h
  storyline:'',storylines:['Versorgungssicherheit statt Lifestyle-Debatte'],speaker_statement_id:null,speaker_person_id:null,
  speaker_proposal:{person_id:4,reason:'Themen passen'},people:[{id:4,label:'Dr. A. Beispiel'}],speakers:[],contact_ids:[],contacts:[],recipients:[]};
 
-it('filters Themen by origin and shows the Deep Dive on hover',async()=>{
+it('filters Themen and links to a dedicated detail page without hover',async()=>{
  routes({'/opportunities':board,'/opportunities/developed/7':detail,'/agenda':{items:[],total:0,href:'/client/1/plan'}});
  render(<ThemenPage clientId={1}/>);
  await screen.findByText('Online-Verschreibung');
  fireEvent.click(screen.getByRole('button',{name:'★ Aus Medien · 1'}));
  expect(screen.queryByText('Preise fallen')).toBeNull();
- fireEvent.mouseEnter(screen.getByRole('button',{name:'Deep Dive'}));
- expect(await screen.findByText('Der Bundestag hat beschlossen.')).toBeTruthy();
- expect(screen.getByText('Warum für Remexian relevant?')).toBeTruthy();
- expect(screen.getByText('Versorgungssicherheit statt Lifestyle-Debatte')).toBeTruthy();
+ const link=screen.getByRole('link',{name:'Details ansehen'});
+ fireEvent.mouseEnter(link);
+ expect(screen.queryByRole('tooltip')).toBeNull();
+ expect(link.getAttribute('href')).toBe('/client/1/themen?kind=developed&context=7');
  fireEvent.click(screen.getByRole('button',{name:'Aktiviert · 1'}));
  expect(screen.getByRole('link',{name:'Zu den Assets →'}).getAttribute('href')).toBe('/client/1/assets?kind=detected&context=3');
 });
@@ -45,12 +46,13 @@ it('activates a Thema with RAUTE pitch and speaker, then opens Assets',async()=>
  expect(sent).toMatchObject({revision:2,storyline:'Versorgungssicherheit statt Lifestyle-Debatte',speaker_person_id:null});
 });
 
-it('draws the Agenda as a timeline with a hover note',async()=>{
+it('draws the Agenda with a detail link instead of a hover note',async()=>{
  routes({'/agenda':{items:[{id:1,title:'Fachtagung',reason:'Externer Anlass',month:'2026-12',day:2,format:'',state:'angenommen',href:'/client/1/plan#monat-2026-12'}],total:1,href:'/client/1/plan'}});
  render(<Agenda clientId={1}/>);
  expect(await screen.findByRole('link',{name:'Fachtagung'})).toBeTruthy();
  expect(screen.getByText('02.12.')).toBeTruthy();
- expect(screen.getByRole('tooltip').textContent).toContain('Externer Anlass');
+ expect(screen.queryByRole('tooltip')).toBeNull();
+ expect(screen.getByRole('link',{name:'Details ansehen →'}).getAttribute('href')).toBe('/client/1/plan#monat-2026-12');
  expect(screen.getByRole('link',{name:'Ganze Agenda →'}).getAttribute('href')).toBe('/client/1/plan');
 });
 
@@ -104,4 +106,31 @@ it('offers an optional profile contact without researched free-text speakers',as
  expect(screen.getByRole('option',{name:'Keine Ansprechperson'})).toBeTruthy();
  expect(screen.getByRole('option',{name:'Anna Beispiel, Marketing'})).toBeTruthy();
  expect(screen.queryByRole('option',{name:'Die PR betreut eine Agentur'})).toBeNull();
+});
+
+it('opens a bookmarked topic detail page with sources and activation',async()=>{
+ const assign=vi.fn();
+ window.history.replaceState(null,'','/client/1/themen?kind=developed&context=7');
+ vi.stubGlobal('location',{...window.location,assign});
+ const calls=routes({'/opportunities/developed/7':{...detail,sources:[{title:'Studie',url:'https://example.org/studie'}]},
+  '/opportunities/developed/7/activate':{status:'active'}});
+ render(<ThemenPage clientId={1}/>);
+ expect(await screen.findByRole('heading',{name:'Online-Verschreibung'})).toBeTruthy();
+ expect(screen.getByText('Der Bundestag hat beschlossen.')).toBeTruthy();
+ expect(screen.getByRole('link',{name:'Studie ↗'}).getAttribute('href')).toBe('https://example.org/studie');
+ expect(screen.getByRole('link',{name:'← Zurück zu den Themen'}).getAttribute('href')).toBe('/client/1/themen');
+ expect(screen.queryByRole('tooltip')).toBeNull();
+ fireEvent.click(screen.getByRole('button',{name:'Thema aktivieren'}));
+ await waitFor(()=>expect(assign).toHaveBeenCalledWith('/client/1/assets?kind=developed&context=7'));
+ expect(JSON.parse(calls.find(c=>c.method==='POST').body).speaker_person_id).toBeNull();
+});
+
+it('shows a centered writing dialog with indeterminate progress and a background option',()=>{
+ const dismiss=vi.fn();const {unmount}=render(<WritingProgress kind="kundenmail" onDismiss={dismiss}/>);
+ expect(screen.getByRole('dialog',{name:'RAUTE schreibt Kundenmail…'})).toBeTruthy();
+ const bar=screen.getByRole('progressbar',{name:'Entwurf wird erstellt'});
+ expect(bar.getAttribute('aria-valuenow')).toBeNull();
+ fireEvent.click(screen.getByRole('button',{name:'Im Hintergrund weiterarbeiten'}));
+ expect(dismiss).toHaveBeenCalledOnce();
+ unmount();expect(screen.queryByRole('dialog')).toBeNull();
 });

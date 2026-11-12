@@ -12,6 +12,20 @@ const LABEL=Object.fromEntries(KINDS.map(([k,l])=>[k,l]));
 const NEEDS_CONTACT=new Set(['pitch']);
 const speakerValue=d=>d.speaker_person_id?`p:${d.speaker_person_id}`:'';
 
+export function WritingProgress({kind,onDismiss,error}){
+ const dialog=useRef(null);
+ useEffect(()=>{const element=dialog.current;element.showModal();return()=>{if(element.open)element.close();};},[]);
+ return <dialog ref={dialog} className="asset-writing-dialog" aria-labelledby="asset-writing-title" aria-describedby="asset-writing-description"
+  onCancel={event=>{event.preventDefault();onDismiss();}}>
+  <div className="asset-writing-symbol" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M6.1 6.1A8 8 0 0 1 20 12M4 12a8 8 0 0 0 13.9 5.9"/></svg></div>
+  <h2 id="asset-writing-title">RAUTE schreibt {LABEL[kind]||'deinen Entwurf'}…</h2>
+  <p id="asset-writing-description">Dein Entwurf entsteht aus Thema, Pitch und Kundenprofil.</p>
+  <div className="asset-writing-progress" role="progressbar" aria-label="Entwurf wird erstellt"><span/></div>
+  {error&&<p role="alert">{error}</p>}
+  <button className="btn btn--quiet" onClick={onDismiss}>Im Hintergrund weiterarbeiten</button>
+ </dialog>;
+}
+
 // Export one asset or a whole Thema: as Word or PDF, downloaded or put into
 // the shared Drive folder "7. Assets" under the client's own sub-folder.
 export function ExportBox({base,label='Exportieren'}){
@@ -111,6 +125,7 @@ function Workspace({clientId,kind,identity,initialText=''}){
  const base=`clients/${clientId}/opportunities/${kind}/${identity}`,path=`${base}/activation`;
  const [detail,setDetail]=useState(null),[data,setData]=useState(null),[error,setError]=useState(''),[busy,setBusy]=useState(false);
  const [open,setOpen]=useState(initialText);
+ const [progressHidden,setProgressHidden]=useState(false),[writingKind,setWritingKind]=useState('');
  const waiting=useRef(false);
  useEffect(()=>{request(base).then(setDetail).catch(e=>setError(e.message));request(path).then(setData).catch(e=>setError(e.message));},[base,path]);
  const running=data?.latest?.status==='running'&&Date.now()-new Date(data.latest.started_at).getTime()<1200000;
@@ -122,7 +137,7 @@ function Workspace({clientId,kind,identity,initialText=''}){
  }
  async function speaker(value){setError('');const [k,id]=value.split(':');
   try{await choose({speaker_person_id:k==='p'?Number(id):null,speaker_statement_id:null});}catch(e){setError(e.message);}}
- async function create(input){setBusy(true);setError('');try{
+ async function create(input){setBusy(true);setError('');setWritingKind(input.kind);setProgressHidden(false);try{
   if(detail.speaker_statement_id || (input.contact_id&&!detail.contact_ids.includes(input.contact_id)))await choose({contact_ids:input.contact_id?[...new Set([...detail.contact_ids,input.contact_id])]:detail.contact_ids});
   waiting.current=true;
   const job=await request(path,{method:'POST',body:JSON.stringify(input)});
@@ -143,7 +158,8 @@ function Workspace({clientId,kind,identity,initialText=''}){
    </div>
   </header>
   {error&&<p className="twin-error" role="alert">{error}</p>}
-  {data.latest&&running&&<p role="status">RAUTE schreibt {LABEL[data.latest.kind]||'den Text'}…</p>}
+  {(busy||running)&&!progressHidden&&<WritingProgress kind={busy?writingKind:data.latest.kind} error={error} onDismiss={()=>setProgressHidden(true)}/>}
+  {(busy||running)&&progressHidden&&<p role="status">RAUTE schreibt {LABEL[busy?writingKind:data.latest.kind]||'den Text'}… <button className="btn btn--quiet" onClick={()=>setProgressHidden(false)}>Fortschritt anzeigen</button></p>}
   {data.latest?.status==='failed'&&<p role="alert" className="twin-error">{data.latest.note||'Der Entwurf ist fehlgeschlagen.'}</p>}
   {data.texts.length>0&&<section aria-labelledby="assets-list-title"><h2 id="assets-list-title" className="assets-section-title">Assets zu diesem Thema</h2>
    <div className="assets-list">{data.texts.map(text=>{const key=`${text.type}-${text.id}`;return <button type="button" key={key} className="asset-card" aria-pressed={open===key} onClick={()=>setOpen(open===key?'':key)}>
