@@ -195,3 +195,32 @@ def test_closing_the_window_keeps_a_draft_without_recipient(web, monkeypatch):
     assert web.post("/api/v1/mailbox/draft", json={"subject": "Halb fertig", "html": "<p>Idee</p>"}).json() == {"draft_id": "d7"}
     parsed = email.message_from_bytes(base64.urlsafe_b64decode(kept["body"]["message"]["raw"]))
     assert parsed["To"] is None and parsed["Subject"] == "Halb fertig"
+
+
+def test_a_conversation_read_once_is_not_read_again_until_it_changes(monkeypatch):
+    mailbox.forget()
+    calls = []
+
+    def api(url, **kwargs):
+        calls.append(url)
+        if "threads?" in url:
+            return {"threads": [{"id": "t1", "historyId": history[0], "snippet": "x"}, {"id": "t2", "historyId": "5", "snippet": "y"}]}
+        if "/labels/" in url:
+            return {"threadsTotal": 2, "threadsUnread": 1}
+        return {"historyId": history[0], "messages": [{"id": "m", "labelIds": ["INBOX"], "payload": {"headers": [{"name": "Subject", "value": "S"}]}}]}
+
+    history = ["9"]
+    monkeypatch.setattr(mailbox, "_api", api)
+    first = mailbox.threads("inbox")
+    assert [r.history_id for r in first["threads"]] == ["9", "5"]
+    reads = sum("/threads/t" in c for c in calls)
+    mailbox.threads("inbox")
+    assert sum("/threads/t" in c for c in calls) == reads, "unchanged conversations come from memory"
+    history[0] = "10"
+    mailbox.threads("inbox")
+    assert sum("/threads/t1" in c for c in calls) == 2, "a changed one is read again"
+    mailbox.thread("t1")
+    before = len(calls)
+    mailbox.thread("t1", history_id="10")
+    assert len(calls) == before
+    mailbox.forget()

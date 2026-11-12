@@ -73,9 +73,9 @@ def threads(response: Response, folder: str = "inbox", client: int | None = None
 
 
 @router.get("/api/v1/mailbox/threads/{thread_id}")
-def thread(thread_id: str, response: Response):
+def thread(thread_id: str, response: Response, h: str = ""):
     response.headers["Cache-Control"] = "no-store"
-    return dict(messages=[asdict(m) for m in _guarded(lambda: mailbox.thread(thread_id))])
+    return dict(messages=[asdict(m) for m in _guarded(lambda: mailbox.thread(thread_id, history_id=h[:40]))])
 
 
 class ModifyInput(BaseModel):

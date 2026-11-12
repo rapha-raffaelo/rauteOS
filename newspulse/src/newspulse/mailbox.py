@@ -32,7 +32,11 @@ import base64
 import binascii
 import html
 import re
+import threading
+import time
 import urllib.parse
+from collections import OrderedDict
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from email.message import EmailMessage
 from email.utils import getaddresses, make_msgid, parseaddr, parsedate_to_datetime
@@ -87,6 +91,7 @@ class Summary:
     starred: bool = False
     labels: list[str] = field(default_factory=list)
     attachments: list[Attachment] = field(default_factory=list)
+    history_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -195,10 +200,71 @@ def _first_names(messages: list[dict], me: str) -> str:
 
 
 def _label_count(label: str, key: str) -> int | None:
+    held = _counts.get((label, key))
+    if held and time.monotonic() - held[0] < _COUNT_SECONDS:
+        return held[1]
     try:
-        return int(_api(f"{_API}/labels/{_quote(label)}").get(key) or 0)
+        value = int(_api(f"{_API}/labels/{_quote(label)}").get(key) or 0)
     except gmail_link.GmailError:
         return None
+    _counts[(label, key)] = (time.monotonic(), value)
+    return value
+
+
+# --- The cache ----------------------------------------------------------------------
+#
+# Gmail is slow at one thing: a page of 25 conversations is one list call and
+# then one call per conversation. A conversation only changes when its
+# ``historyId`` does, and the list call names that id, so a conversation read
+# once is not read again until something happened in it. Held in this process's
+# memory only, never on disk or in the database (DEC-6), bounded, and gone with
+# a restart. Keyed by the connected address, so a reconnected other mailbox
+# never sees the first one's mail.
+
+_SUMMARIES = 3000
+_THREADS = 150
+_COUNT_SECONDS = 20.0
+_lock = threading.Lock()
+_summaries: OrderedDict[tuple, Summary] = OrderedDict()
+_threads: OrderedDict[tuple, list] = OrderedDict()
+_counts: dict[tuple, tuple[float, int | None]] = {}
+_pool = ThreadPoolExecutor(max_workers=8, thread_name_prefix="gmail")
+
+
+def _account() -> str:
+    link = gmail_link.connected()
+    return link.email if link else ""
+
+
+def _remember(store: OrderedDict, key: tuple, value, limit: int):
+    with _lock:
+        store[key] = value
+        store.move_to_end(key)
+        while len(store) > limit:
+            store.popitem(last=False)
+    return value
+
+
+def _recall(store: OrderedDict, key: tuple):
+    with _lock:
+        value = store.get(key)
+        if value is not None:
+            store.move_to_end(key)
+        return value
+
+
+def forget(thread_ids=None) -> None:
+    """Drop what is held: for some conversations after a change, or all of it."""
+    with _lock:
+        if thread_ids is None:
+            _summaries.clear()
+            _threads.clear()
+        else:
+            wanted = set(thread_ids)
+            for store in (_summaries, _threads):
+                for key in [k for k in store if k[1] in wanted]:
+                    del store[key]
+        _counts.clear()
 
 
 def threads(folder: str = "inbox", *, query: str = "", page_token: str = "", me: str = "") -> dict:
@@ -217,23 +283,35 @@ def threads(folder: str = "inbox", *, query: str = "", page_token: str = "", me:
     fields = ("messages(id,labelIds,payload(headers,partId,filename,mimeType,body/size,"
               "parts(partId,filename,mimeType,headers,body/size,parts(partId,filename,mimeType,headers,body/size,"
               "parts(partId,filename,mimeType,headers,body/size)))))")
-    rows = []
-    for item in listing.get("threads") or ():
+    account = _account()
+
+    def summary(item: dict) -> Summary:
+        key = (account, str(item["id"]), str(item.get("historyId") or ""), me)
+        if key[2] and (held := _recall(_summaries, key)) is not None:
+            return held
         detail = _api(f"{gmail_link._THREADS_ENDPOINT}/{_quote(item['id'])}?format=full&fields={_quote(fields)}")
         messages = detail.get("messages") or [{}]
         first, last = messages[0].get("payload") or {}, messages[-1].get("payload") or {}
         labels = sorted({lab for m in messages for lab in (m.get("labelIds") or ())})
-        rows.append(Summary(
+        row = Summary(
             id=str(item["id"]), subject=_header(first.get("headers"), "Subject") or "(kein Betreff)",
             sender=_first_names(messages, me), snippet=html.unescape(str(item.get("snippet") or "")),
             date=_date(_header(last.get("headers"), "Date")), count=len(messages),
             unread="UNREAD" in labels, starred="STARRED" in labels,
             labels=[lab for lab in labels if lab in ("INBOX", "SPAM", "TRASH", "SENT", "DRAFT", "IMPORTANT")],
-            attachments=[a for m in messages for a in _attachments(m.get("payload") or {}, str(m.get("id") or ""))]))
-    total = None if query or not label else _label_count(label, "threadsTotal")
+            attachments=[a for m in messages for a in _attachments(m.get("payload") or {}, str(m.get("id") or ""))],
+            history_id=key[2])
+        return _remember(_summaries, key, row, _SUMMARIES) if key[2] else row
+
+    items = list(listing.get("threads") or ())
+    # The conversations not held yet are read side by side, not one after another.
+    rows = list(_pool.map(summary, items)) if len(items) > 1 else [summary(i) for i in items]
+    count_total = _pool.submit(_label_count, label, "threadsTotal") if label and not query else None
+    unread = _label_count("INBOX", "threadsUnread")
+    total = count_total.result() if count_total else None
     return dict(threads=rows, next_page_token=listing.get("nextPageToken") or "",
                 total=total if total is not None else int(listing.get("resultSizeEstimate") or len(rows)),
-                unread_inbox=_label_count("INBOX", "threadsUnread"))
+                unread_inbox=unread)
 
 
 def _decode(data: str) -> str:
@@ -355,8 +433,20 @@ def part_url(message_id: str, part_id: str) -> str:
     return f"/api/v1/mailbox/messages/{_quote(message_id)}/parts/{_quote(part_id)}"
 
 
-def thread(thread_id: str) -> list[Message]:
+def thread(thread_id: str, *, history_id: str = "") -> list[Message]:
+    """A whole conversation. With the ``history_id`` the list named, one read
+    before and unchanged since is answered from memory."""
+    account = _account()
+    if history_id and (held := _recall(_threads, (account, thread_id, history_id))) is not None:
+        return held
     answer = _api(f"{gmail_link._THREADS_ENDPOINT}/{_quote(thread_id)}?format=full")
+    messages = _messages(answer)
+    if answer.get("historyId"):
+        _remember(_threads, (account, thread_id, str(answer["historyId"])), messages, _THREADS)
+    return messages
+
+
+def _messages(answer: dict) -> list[Message]:
     result = []
     for raw in answer.get("messages") or ():
         payload = raw.get("payload") or {}
@@ -409,6 +499,7 @@ def modify(thread_ids: list[str], action: str) -> int:
             add, remove = ACTIONS[action]
             _api(f"{base}/modify", json_body={"addLabelIds": add, "removeLabelIds": remove},
                  what="Gmail hat die E-Mail nicht geändert")
+    forget(thread_ids)
     return len(thread_ids)
 
 

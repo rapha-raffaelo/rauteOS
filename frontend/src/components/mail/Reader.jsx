@@ -1,7 +1,7 @@
 import React,{useEffect,useRef,useState} from 'react';
-import {journalistRequest as request} from '../../journalists-api.js';
 import {Icon,IconButton} from './icons.jsx';
 import {size} from './Composer.jsx';
+import {cachedThread,loadThread,prefetchThread} from './cache.js';
 
 const escape=s=>String(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const LABELS={INBOX:'Posteingang',SPAM:'Spam',TRASH:'Papierkorb',SENT:'Gesendet',DRAFT:'Entwurf'};
@@ -76,12 +76,14 @@ function MessageView({message,me,open,onToggle,onReply,onReplyAll,onForward}){
  </section>;
 }
 
-export function Reader({id,summary,me,client,mayManage,position,onBack,onAct,onStep,onCompose,onRead}){
- const [messages,setMessages]=useState(null),[error,setError]=useState(''),[open,setOpen]=useState({});
- useEffect(()=>{setMessages(null);setError('');setOpen({});
-  request(`mailbox/threads/${encodeURIComponent(id)}`).then(v=>{setMessages(v.messages);
-   const last=v.messages.length-1;setOpen(Object.fromEntries(v.messages.map((m,i)=>[m.id,i===last||m.unread])));
-   if(mayManage&&v.messages.some(m=>m.unread))onRead?.(id);}).catch(e=>setError(e.message));},[id]);// eslint-disable-line react-hooks/exhaustive-deps
+export function Reader({id,history='',neighbours=[],summary,me,client,mayManage,position,onBack,onAct,onStep,onCompose,onRead}){
+ const unfold=list=>Object.fromEntries(list.map((m,i)=>[m.id,i===list.length-1||m.unread]));
+ const held=cachedThread(id,history);
+ const [messages,setMessages]=useState(held),[error,setError]=useState(''),[open,setOpen]=useState(held?unfold(held):{});
+ useEffect(()=>{setError('');
+  loadThread(id,history).then(list=>{setMessages(list);setOpen(o=>Object.keys(o).length?o:unfold(list));
+   if(mayManage&&list.some(m=>m.unread))onRead?.(id);}).catch(e=>setError(e.message));
+  neighbours.forEach(n=>n&&prefetchThread(n.id,n.history_id));},[id]);// eslint-disable-line react-hooks/exhaustive-deps
  const first=messages?.[0],labels=summary?.labels||[];
  function reply(message,all=false){
   const others=all?[...addresses(message.to),...addresses(message.cc)].filter(a=>emailOf(a).toLowerCase()!==String(me).toLowerCase()&&emailOf(a).toLowerCase()!==message.sender_email.toLowerCase()):[];

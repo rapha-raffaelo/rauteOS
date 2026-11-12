@@ -3,7 +3,8 @@ import {render,screen,fireEvent,cleanup,waitFor,within} from '@testing-library/r
 import {afterEach,it,expect,vi} from 'vitest';
 import {MailboxPage} from './MailboxPage.jsx';
 import {SignatureEditor} from './mail/SignatureEditor.jsx';
-afterEach(()=>{cleanup();vi.unstubAllGlobals();});
+import {forgetLists} from './mail/cache.js';
+afterEach(()=>{cleanup();vi.unstubAllGlobals();sessionStorage.clear();forgetLists();});
 const json=body=>({ok:true,headers:{get:()=>'application/json'},json:async()=>body});
 const STATUS={connected:true,email:'raphael@raute-kopf.com',may_send:true,may_manage:true,drive:true,signature:'<b>Raphael</b>',clients:[{id:1,name:'Remexian'}]};
 const THREAD={id:'t1',subject:'Statement',sender:'Lena',snippet:'Danke',date:'2026-11-12T09:00:00Z',count:2,unread:true,starred:false,labels:['INBOX'],
@@ -119,4 +120,17 @@ it('keeps a formatted signature from Settings',async()=>{
  fireEvent.click(screen.getByRole('button',{name:'Signatur speichern'}));
  await screen.findByText('Gespeichert.');
  expect(JSON.parse(calls.find(c=>c.method==='PUT').body).html).toBe('<b>Raphael Mankopf</b><br>raute+kopf');
+});
+
+it('paints a folder seen before at once and brings it up to date behind it',async()=>{
+ mailbox();
+ const first=render(<MailboxPage/>);
+ await screen.findByRole('button',{name:'Lena: Statement'});
+ first.unmount();
+ let answer;
+ vi.stubGlobal('fetch',vi.fn(url=>url.endsWith('/api/v1/mailbox')?Promise.resolve(json(STATUS)):new Promise(r=>{answer=r;})));
+ render(<MailboxPage/>);
+ expect(await screen.findByRole('button',{name:'Lena: Statement'})).toBeTruthy();
+ answer(json({threads:[{...THREAD,id:'t2',subject:'Neu'}],next_page_token:'',total:2}));
+ expect(await screen.findByRole('button',{name:'Lena: Neu'})).toBeTruthy();
 });

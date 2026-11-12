@@ -3,6 +3,7 @@ import {journalistRequest as request} from '../journalists-api.js';
 import {Icon,IconButton} from './mail/icons.jsx';
 import {Composer,DriveAssets} from './mail/Composer.jsx';
 import {Reader} from './mail/Reader.jsx';
+import {cachedList,cachedStatus,forgetThreads,prefetchThread,rememberList,rememberStatus} from './mail/cache.js';
 
 export {Composer,DriveAssets};
 
@@ -35,7 +36,7 @@ function Row({t,selected,onSelect,onOpen,onAct,mayManage}){
   <input type="checkbox" className="gm-row__check" aria-label={`${t.subject} auswählen`} checked={selected} onChange={e=>onSelect(e.target.checked)}/>
   <IconButton icon={t.starred?'star':'starOff'} label={t.starred?'Markierung entfernen':'Markieren'} size={18} className={`gm-row__star${t.starred?' is-star':''}`}
    disabled={!mayManage} onClick={()=>onAct([t.id],t.starred?'unstar':'star')}/>
-  <button type="button" className="gm-row__open" onClick={onOpen} aria-label={`${t.sender}: ${t.subject}`}>
+  <button type="button" className="gm-row__open" onClick={onOpen} onMouseEnter={()=>prefetchThread(t.id,t.history_id)} onFocus={()=>prefetchThread(t.id,t.history_id)} aria-label={`${t.sender}: ${t.subject}`}>
    <span className="gm-row__from">{t.sender}{t.count>1&&<small> {t.count}</small>}</span>
    <span className="gm-row__text"><span className="gm-row__line"><span className="gm-row__subject">{t.subject}</span><span className="gm-row__snippet"> - {t.snippet}</span></span>
     <Chips files={t.attachments}/></span>
@@ -63,14 +64,23 @@ export function MailboxPage(){
  const [list,setList]=useState(null),[pages,setPages]=useState(['']),[open,setOpen]=useState(''),[selected,setSelected]=useState([]);
  const [draft,setDraft]=useState(null),[toast,setToast]=useState(null),[unread,setUnread]=useState(null),[rev,setRev]=useState(0);
  const loading=useRef(0);
- useEffect(()=>{request('mailbox').then(setStatus).catch(e=>setError(e.message));},[]);
+ // The page paints from what it saw last, then asks Gmail what changed.
+ useEffect(()=>{const held=cachedStatus();if(held)setStatus(held);
+  request('mailbox').then(v=>{setStatus(v);rememberStatus(v);}).catch(e=>{if(!held)setError(e.message);});},[]);
  function load(token=pages[pages.length-1]){
   const ticket=++loading.current;
   const params=new URLSearchParams({folder,...(client?{client}:{}),...(search?{q:search}:{}),...(token?{page_token:token}:{})});
-  request(`mailbox/threads?${params}`).then(v=>{if(ticket!==loading.current)return;setList(v);if(v.unread_inbox!=null)setUnread(v.unread_inbox);})
-   .catch(e=>ticket===loading.current&&setError(e.message));
+  const key=params.toString(),held=cachedList(key);
+  if(held){setList(held);if(held.unread_inbox!=null)setUnread(held.unread_inbox);}
+  request(`mailbox/threads?${params}`).then(v=>{rememberList(key,v);if(ticket!==loading.current)return;setList(v);if(v.unread_inbox!=null)setUnread(v.unread_inbox);})
+   .catch(e=>ticket===loading.current&&!held&&setError(e.message));
  }
  useEffect(()=>{if(!status?.connected)return;setList(null);setSelected([]);setOpen('');setPages(['']);load('');},[status?.connected,folder,client,search]);// eslint-disable-line react-hooks/exhaustive-deps
+ // New mail without a click: on coming back to the tab, and every minute while it is open.
+ useEffect(()=>{if(!status?.connected)return undefined;
+  const refresh=()=>{if(document.visibilityState==='visible')load();};
+  const timer=setInterval(refresh,60000);document.addEventListener('visibilitychange',refresh);window.addEventListener('focus',refresh);
+  return ()=>{clearInterval(timer);document.removeEventListener('visibilitychange',refresh);window.removeEventListener('focus',refresh);};});
  if(error&&!status)return <p className="twin-error" role="alert">{error}</p>;
  if(!status)return <p role="status">Postfach wird geladen…</p>;
  if(!status.connected)return <section className="gm"><div className="gm-empty"><h1>Gmail</h1><p>Kein Postfach verbunden.</p>
@@ -81,6 +91,7 @@ export function MailboxPage(){
  async function act(ids,action,{back=false,quiet=false}={}){
   try{await request('mailbox/threads/modify',{method:'POST',body:JSON.stringify({ids,action})});}
   catch(e){setToast({text:e.message});return;}
+  forgetThreads(ids);
   if(leaves(folder,action)){setList(l=>l&&{...l,threads:l.threads.filter(t=>!ids.includes(t.id)),total:Math.max(0,(l.total||0)-ids.length)});if(back||ids.includes(open))setOpen('');}
   else if(action==='read'||action==='unread')patch(ids,{unread:action==='unread'});
   else if(action==='star'||action==='unstar')patch(ids,{starred:action==='star'});
@@ -110,7 +121,7 @@ export function MailboxPage(){
    </form>
    {!status.may_manage&&<p className="gm-banner">Archivieren, Löschen und Gelesen-Markieren brauchen einmal eine neue Verbindung mit Verwaltungsrechten. <a href="/settings#gmail">Zu den Einstellungen</a></p>}
    <div className="gm-card">
-    {open?<Reader key={`${open}-${rev}`} id={open} summary={threads[index]} me={status.email} client={client} mayManage={status.may_manage}
+    {open?<Reader key={`${open}-${rev}`} id={open} history={rev?'':threads[index]?.history_id} neighbours={[threads[index-1],threads[index+1]]} summary={threads[index]} me={status.email} client={client} mayManage={status.may_manage}
       position={index>=0?{index:start+index,total,hasPrev:index>0,hasNext:index<threads.length-1}:null}
       onBack={()=>setOpen('')} onAct={act} onStep={step=>setOpen(threads[index+step]?.id||'')} onCompose={compose}
       onRead={id=>act([id],'read',{quiet:true})}/>
@@ -146,7 +157,7 @@ export function MailboxPage(){
   </div>
   {draft&&<Composer key={draft.key} draft={draft} clients={status.clients} canSend={status.may_send} signature={status.signature||''}
    onClose={()=>setDraft(null)} onToast={text=>setToast({text})}
-   onSent={()=>{setDraft(null);setToast({text:'Nachricht gesendet.'});if(open)setRev(r=>r+1);else load();}}/>}
+   onSent={()=>{setDraft(null);setToast({text:'Nachricht gesendet.'});if(open){forgetThreads([open]);setRev(r=>r+1);}else load();}}/>}
   <Toast toast={toast} onUndo={undo} onClose={()=>setToast(null)}/>
  </section>;
 }
