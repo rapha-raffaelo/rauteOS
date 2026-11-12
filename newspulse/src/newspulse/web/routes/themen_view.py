@@ -10,12 +10,15 @@ from __future__ import annotations
 import datetime as dt
 from urllib.parse import urlencode
 
-from fastapi import APIRouter, Depends, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import RedirectResponse
-from sqlalchemy.orm import Session
+from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy import select
+from sqlalchemy.orm import Session, sessionmaker
 
-from ... import plan
-from ...models import HookState
+from ... import plan, themen, worklists
+from ...models import Analysis, Article, HookState, TopicHit
+from ..spawn import start_or_release
 from .. import frontend
 from ..app import get_db, templates
 from ..mandates import mandate_or_404
@@ -78,3 +81,62 @@ def agenda(client_id: int, response: Response, session: Session = Depends(get_db
                 href=f"/client/{client_id}/plan#monat-{month}"))
     items.sort(key=lambda item: (item["month"], item["day"] or 99))
     return dict(items=items[:AGENDA_ITEMS], total=len(items), href=f"/client/{client_id}/plan")
+
+
+# --- The star in Medien --------------------------------------------------------
+
+
+class StarInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    article_id: int = Field(gt=0)
+
+
+def _article_of(session: Session, client_id: int, article_id: int) -> Article:
+    """Only an article Medien shows for this mandate can become its Thema."""
+    article = session.get(Article, article_id)
+    shown = article is not None and (
+        session.scalar(select(Analysis.id).where(Analysis.client_id == client_id, Analysis.article_id == article_id).limit(1))
+        or session.scalar(select(TopicHit.id).where(TopicHit.client_id == client_id, TopicHit.article_id == article_id).limit(1)))
+    if not shown:
+        raise HTTPException(404, "Artikel nicht gefunden.")
+    return article
+
+
+def _deep_dive_worker(factory, workspace_id: int) -> None:
+    with factory() as session:
+        themen.deep_dive(session, workspace_id)
+
+
+@router.get("/api/v1/clients/{client_id}/themen/starred")
+def starred(client_id: int, response: Response, session: Session = Depends(get_db)):
+    mandate_or_404(session, client_id)
+    response.headers["Cache-Control"] = "no-store"
+    return {str(article_id): row for article_id, row in themen.starred(session, client_id).items()}
+
+
+@router.post("/api/v1/clients/{client_id}/themen", status_code=201)
+def star(client_id: int, body: StarInput, request: Request, session: Session = Depends(get_db)):
+    client = mandate_or_404(session, client_id)
+    article = _article_of(session, client_id, body.article_id)
+    fresh = themen._find(session, client_id, article.id) is None
+    row = themen.star(session, client, article, by=worklists.member_for(request.scope.get("user_email")) or "")
+    if fresh:
+        factory = sessionmaker(bind=session.get_bind(), expire_on_commit=False)
+        try:
+            start_or_release(_deep_dive_worker, args=(factory, row.id), name=f"themen-deep-dive-{row.id}",
+                             release=lambda: None)
+        except RuntimeError:
+            pass  # the Thema stands without its Deep Dive; the page says so
+    return dict(kind="developed", context=row.context_id, status=row.status,
+                href=f"/client/{client_id}/themen")
+
+
+@router.delete("/api/v1/clients/{client_id}/themen/{article_id}")
+def unstar(client_id: int, article_id: int, session: Session = Depends(get_db)):
+    mandate_or_404(session, client_id)
+    try:
+        if not themen.unstar(session, client_id, article_id):
+            raise HTTPException(404, "Kein Thema zu diesem Artikel.")
+    except ValueError as exc:
+        raise HTTPException(409, str(exc)) from exc
+    return dict(ok=True)

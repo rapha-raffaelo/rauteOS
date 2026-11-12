@@ -1,6 +1,53 @@
-import React from "react";
+import React, { useState } from "react";
 import { PageHeading } from "../components/PageHeading.jsx";
 import { Action, Field, Panel, Source, date, dateTime, t } from "./shared.jsx";
+// Spec 12: the star makes an article a Thema of this mandate. Set and taken
+// back in place; an activated Thema keeps its star.
+export function Star({ clientId, articleId, thema }) {
+  const [state, setState] = useState(thema || null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const on = Boolean(state);
+  async function toggle() {
+    setBusy(true);
+    setError("");
+    try {
+      const response = await fetch(
+        on ? `/api/v1/clients/${clientId}/themen/${articleId}` : `/api/v1/clients/${clientId}/themen`,
+        {
+          method: on ? "DELETE" : "POST",
+          credentials: "same-origin",
+          headers: { Accept: "application/json", "Content-Type": "application/json" },
+          body: on ? undefined : JSON.stringify({ article_id: articleId }),
+        },
+      );
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(typeof body.detail === "string" ? body.detail : t("Stern konnte nicht gesetzt werden."));
+      setState(on ? null : body);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <span className="medien-star">
+      <button
+        type="button"
+        className={`medien-star__btn${on ? " is-on" : ""}`}
+        aria-pressed={on}
+        aria-label={on ? t("Aus den Themen nehmen") : t("In Themen aufnehmen")}
+        title={on ? t("In den Themen") : t("In Themen aufnehmen")}
+        disabled={busy || state?.status === "active"}
+        onClick={toggle}
+      >
+        {on ? "★" : "☆"}
+      </button>
+      {on && <a href={`/client/${clientId}/themen`}>{t("In Themen →")}</a>}
+      {error && <span role="alert" className="medien-star__error">{error}</span>}
+    </span>
+  );
+}
 export function ArchivePage({ data: d }) {
   const client = d.client,
     clientBase = client ? `/client/${client.id}` : "",
@@ -22,6 +69,27 @@ export function ArchivePage({ data: d }) {
           </a>
         )}
       </PageHeading>
+      {client && !client.is_competitor && d.counts && (
+        <nav className="medien-views" aria-label={t("Quelle der Treffer")}>
+          <a href={base} aria-current={f.quelle !== "keywords" ? "page" : undefined}>
+            {t("Über")} {client.name} · {d.counts.kunde}
+          </a>
+          <a href={`${base}?quelle=keywords`} aria-current={f.quelle === "keywords" ? "page" : undefined}>
+            {t("Zu den Keywords")} · {d.counts.keywords}
+          </a>
+          {f.quelle === "keywords" &&
+            (d.keywords || []).map((k) => (
+              <a
+                key={k}
+                className="medien-views__keyword"
+                href={`${base}?${new URLSearchParams(f.keyword === k ? { quelle: "keywords" } : { quelle: "keywords", keyword: k })}`}
+                aria-current={f.keyword === k ? "true" : undefined}
+              >
+                {k}
+              </a>
+            ))}
+        </nav>
+      )}
       <form
         className="archive-filters archive-bar"
         method="get"
@@ -32,6 +100,8 @@ export function ArchivePage({ data: d }) {
             : null
         }
       >
+        {f.quelle === "keywords" && <input type="hidden" name="quelle" value="keywords" />}
+        {f.keyword && <input type="hidden" name="keyword" value={f.keyword} />}
         <label className="archive-search">
           <span className="sr-only">{t("Suche")}</span>
           <input
@@ -84,12 +154,14 @@ export function ArchivePage({ data: d }) {
             value={f.source}
             options={[["", "Alle Publisher"], ...d.sources]}
           />
-          <Field
-            name="category"
-            label="Kategorie"
-            value={f.category}
-            options={[["", "Alle Kategorien"], ...d.categories]}
-          />
+          {f.quelle !== "keywords" && (
+            <Field
+              name="category"
+              label="Kategorie"
+              value={f.category}
+              options={[["", "Alle Kategorien"], ...d.categories]}
+            />
+          )}
           {active && (
             <a className="archive-reset" href={base}>
               {t("Filter zurücksetzen")}
@@ -97,7 +169,7 @@ export function ArchivePage({ data: d }) {
           )}
         </div>
       </form>
-      {d.radar_count > 0 && (
+      {d.radar_count > 0 && !d.counts && (
         <p className="archive-radar">
           {d.radar_count} Beiträge aus dem Themen-Radar der letzten{" "}
           {d.radar_days} Tage: Marktmaterial, das den Mandanten nicht nennt und
@@ -112,7 +184,7 @@ export function ArchivePage({ data: d }) {
               <h2 className="archive-day__title">{dayLabel(rows[0].published_at)}</h2>
               {rows.map((row, i) => (
                 <article
-                  key={row.analysis_id || `${row.client_id}-${i}`}
+                  key={row.analysis_id || `a-${row.article_id}-${i}`}
                   className={`feed-item archive-item${row.is_alert ? " feed-item--alert" : ""}`}
                 >
                   <time className="archive-item__time" dateTime={row.published_at} title={dateTime(row.published_at)}>
@@ -130,6 +202,7 @@ export function ArchivePage({ data: d }) {
                         <span className="tag" data-category={row.category}>{label(t(row.category))}</span>
                       )}
                       {row.is_alert && <span className="tag tag--alert">Alert</span>}
+                      {row.keyword && <span className="tag">{t("Keyword")} „{row.keyword}“</span>}
                     </div>
                     <h3 className="feed-item__headline">
                       <Source url={row.url}>{headline(row)}</Source>
@@ -137,12 +210,17 @@ export function ArchivePage({ data: d }) {
                     {row.summary && <p className="feed-item__summary">{row.summary}</p>}
                   </div>
                   <div className="archive-item__side">
-                    <span
-                      className={`archive-score archive-score--${weight(row.importance)}`}
-                      title={t("Wichtigkeit für diesen Mandanten, 0–10 — vom Analysemodell vergeben")}
-                    >
-                      {row.importance}/10
-                    </span>
+                    {client && !client.is_competitor && row.article_id > 0 && (
+                      <Star clientId={client.id} articleId={row.article_id} thema={(d.starred || {})[row.article_id]} />
+                    )}
+                    {row.analysis_id && (
+                      <span
+                        className={`archive-score archive-score--${weight(row.importance)}`}
+                        title={t("Wichtigkeit für diesen Mandanten, 0–10 — vom Analysemodell vergeben")}
+                      >
+                        {row.importance}/10
+                      </span>
+                    )}
                     {row.analysis_id && (
                       <Action
                         action={`/coverage/${row.analysis_id}/dismiss`}

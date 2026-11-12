@@ -82,7 +82,7 @@ class ArchiveRow:
 
     # Carried so a row can be dismissed from here: the client's own archive is
     # where a wrong match is most obvious, since every row claims to be about them.
-    analysis_id: int
+    analysis_id: int | None
     headline: str
     url: str
     source: str
@@ -91,6 +91,10 @@ class ArchiveRow:
     category: str
     importance: int
     is_alert: bool
+    #: Spec 12: the star in Medien makes an article a Thema by its id.
+    article_id: int = 0
+    #: For a row found through the keywords: which keyword it carries.
+    keyword: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -124,6 +128,9 @@ class ArchiveFilters:
     source: str
     category: str
     search: str
+    #: Spec 12: "kunde" (coverage about the mandate) or "keywords" (the radar).
+    quelle: str = "kunde"
+    keyword: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -257,9 +264,59 @@ def _fetch_page(
             category=analysis.category.value,
             importance=analysis.importance_score,
             is_alert=analysis.is_alert,
+            article_id=article.id,
         )
         for analysis, article in session.execute(stmt).all()
     ]
+
+
+# --- Medien: the keyword half (Spec 12) ------------------------------------------
+
+
+def _keyword_terms(client: Client) -> list[str]:
+    return list(dict.fromkeys(t.strip() for t in [*(client.keywords or []), *(client.alert_topics or [])] if t and t.strip()))
+
+
+def _keyword_conditions(client: Client, date_from, date_to, source: str, search: str, keyword: str) -> list:
+    """Radar hits for the mandate that are not already its own coverage."""
+    covered = select(Analysis.article_id).where(Analysis.client_id == client.id)
+    conditions = [TopicHit.client_id == client.id, Article.id.not_in(covered)]
+    if date_from is not None:
+        conditions.append(Article.published_at >= _day_bounds_utc(date_from)[0])
+    if date_to is not None:
+        conditions.append(Article.published_at < _day_bounds_utc(date_to)[1])
+    if source:
+        conditions.append(func.lower(Article.source) == source.casefold())
+    for term in (search, keyword):
+        if term:
+            escaped = term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+            like = f"%{escaped}%"
+            conditions.append(or_(Article.title.ilike(like, escape="\\"),
+                                  Article.summary_text.ilike(like, escape="\\")))
+    return conditions
+
+
+def _keyword_count(session: Session, conditions: list) -> int:
+    stmt = (select(func.count(func.distinct(Article.id))).select_from(Article)
+            .join(TopicHit, TopicHit.article_id == Article.id).where(*conditions))
+    return session.execute(stmt).scalar_one()
+
+
+def _keyword_page(session: Session, client: Client, conditions: list, page: int) -> list[ArchiveRow]:
+    tz = _local_tz()
+    terms = _keyword_terms(client)
+    stmt = (select(Article).join(TopicHit, TopicHit.article_id == Article.id).where(*conditions)
+            .group_by(Article.id).order_by(Article.published_at.desc(), Article.id.desc())
+            .limit(_PAGE_SIZE).offset((page - 1) * _PAGE_SIZE))
+    rows = []
+    for article in session.scalars(stmt):
+        text = f"{article.title} {article.summary_text or ''}".casefold()
+        rows.append(ArchiveRow(
+            analysis_id=None, headline=article.title, url=article.url, source=article.source,
+            published_at=article.published_at.astimezone(tz), summary=article.summary_text,
+            category="", importance=0, is_alert=False, article_id=article.id,
+            keyword=next((t for t in terms if t.casefold() in text), "")))
+    return rows
 
 
 def _archive_sources(session: Session, client_id: int) -> list[str]:
@@ -294,6 +351,10 @@ def _page_url(client_id: int, filters: ArchiveFilters, page: int) -> str:
         params.append(("category", filters.category))
     if filters.search:
         params.append(("q", filters.search))
+    if filters.quelle != "kunde":
+        params.append(("quelle", filters.quelle))
+    if filters.keyword:
+        params.append(("keyword", filters.keyword))
     params.append(("page", str(page)))
     return f"/client/{client_id}/medien?{urlencode(params)}"
 
@@ -664,6 +725,8 @@ def _render_detail(
     category: str | None = None,
     q: str | None = None,
     page: int = 1,
+    quelle: str | None = None,
+    keyword: str | None = None,
 ) -> HTMLResponse:
     """Render the client page. Shared, so a POST that has something to show can
     render the same page rather than redirecting and losing it."""
@@ -674,16 +737,22 @@ def _render_detail(
     source_value = (source or "").strip()
     search_value = (q or "").strip()
 
+    view = "keywords" if quelle == "keywords" and not client.is_competitor else "kunde"
+    keyword_value = (keyword or "").strip()[:100] if view == "keywords" else ""
     conditions = _archive_conditions(
         client_id, parsed_from, parsed_to, source_value, parsed_category, search_value
     )
-    total = _count(session, conditions)
+    radar_conditions = _keyword_conditions(client, parsed_from, parsed_to, source_value, search_value, keyword_value)
+    counts = {"kunde": _count(session, _archive_conditions(client_id, None, None, "", None, "")),
+              "keywords": 0 if client.is_competitor else _keyword_count(session, _keyword_conditions(client, None, None, "", "", ""))}
+    total = _count(session, conditions) if view == "kunde" else _keyword_count(session, radar_conditions)
     # Ceil-divide without floats; at least one page so an empty archive still
     # renders "Seite 1/1". Clamp the requested page into range so ?page=0, a
     # negative, or a past-the-end value never offsets into nothing.
     total_pages = max(1, (total + _PAGE_SIZE - 1) // _PAGE_SIZE)
     current_page = min(max(page, 1), total_pages)
-    rows = _fetch_page(session, conditions, current_page)
+    rows = (_fetch_page(session, conditions, current_page) if view == "kunde"
+            else _keyword_page(session, client, radar_conditions, current_page))
 
     # Echo normalized values (parsed dates reformatted, only a valid category)
     # so a malformed query param never round-trips back into the form or links.
@@ -693,7 +762,10 @@ def _render_detail(
         source=source_value,
         category=parsed_category.value if parsed_category else "",
         search=search_value,
+        quelle=view,
+        keyword=keyword_value,
     )
+    from ... import themen
     return render_react(
         request,
         "archive",
@@ -711,6 +783,11 @@ def _render_detail(
             # was being read as a broken tool.
             "radar_count": _radar_count(session, client_id),
             "radar_days": 30,
+            # Spec 12: both halves of Medien, the keywords to filter by and
+            # which articles are already a Thema.
+            "counts": counts,
+            "keywords": _keyword_terms(client),
+            "starred": {str(k): v for k, v in themen.starred(session, client_id).items()},
             # Companies marked as competitors, and only those. Offering the other
             # mandates here invited exactly the nonsense it produced: a beauty-tech
             # startup proposed as Zalando's benchmark. A mandate is work to be done;
@@ -741,6 +818,8 @@ def client_detail(
     category: str | None = None,
     q: str | None = None,
     page: int = 1,
+    quelle: str | None = None,
+    keyword: str | None = None,
     session: Session = Depends(get_db),
 ) -> HTMLResponse:
     """Render a client's profile and their filtered, paginated archive page."""
@@ -757,6 +836,8 @@ def client_detail(
         category=category,
         q=q,
         page=page,
+        quelle=quelle,
+        keyword=keyword,
     )
 
 

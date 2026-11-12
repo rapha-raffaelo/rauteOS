@@ -1,12 +1,14 @@
 """A unified read model around detected opportunities and developed angles."""
 from __future__ import annotations
 import datetime as dt
+import logging
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from . import journalists, twin
-from .models import (Angle, Article, Asset, ClientFact, Contact, NewsjackOpportunity, OpportunityEvent, Outreach,
+from .models import (Angle, Article, Asset, Client, ClientFact, Contact, NewsjackOpportunity, OpportunityEvent, Outreach,
                      OpportunityWorkspace, Standing)
 
+_log=logging.getLogger(__name__)
 SPEAKER_KEYS={'ceo','sprecher','pressekontakt','A11.01'}
 
 
@@ -120,7 +122,22 @@ def read(session: Session,client_id,kind,identity):
         letters=[dict(id=o.id,subject=o.subject,journalist=o.journalist,outlet=o.outlet,state=o.state.value,
                       generated_at=o.generated_at,released_at=o.released_at,href=text_href(session,o,'outreach')) for o in letters],
         events=[dict(id=e.id,kind=e.kind,detail=e.detail,actor=e.actor,created_at=e.created_at) for e in events],
+        recipients=recipients(session,client_id,angle),deep_dive=info.get('deep_dive',''),
+        origin=_origin(kind,row,saved),starred_by=info.get('starred_by',''),
         legacy_href=advice_href(client_id,angle.id,f'impulse-{angle.id}') if angle else f'/client/{client_id}/gelegenheit/{identity}')
+
+
+def recipients(session,client_id,angle,limit=3):
+    """Who to talk to about this Thema: the bylines of its stories first, then
+    the outlets that cover the field (:func:`newspulse.pitch.targets_for`).
+    Never a guessed name: an outlet without a byline is named as the outlet."""
+    from . import pitch
+    try:
+        targets=pitch.targets_for(session,session.get(Client,client_id),angle)
+    except Exception:  # noqa: BLE001 - the Deep Dive reads without it
+        _log.warning('pitch targets for client %s failed',client_id,exc_info=True)
+        return []
+    return [dict(name=t.journalist or t.outlet,outlet=t.outlet if t.journalist else '',reason=t.reason) for t in targets[:limit]]
 
 
 def _origin(kind,row,workspace):
@@ -130,6 +147,7 @@ def _origin(kind,row,workspace):
     ``pitch``: a theme RAUTE developed on request. ``plan``: opened from a plan hook.
     """
     if kind=='detected':return 'anlass'
+    if workspace and (workspace.data or {}).get('origin')=='medien':return 'medien'
     if row.plan_hook_id:return 'plan'
     if workspace and (workspace.data or {}).get('development_id'):return 'pitch'
     return 'anlass'
@@ -152,6 +170,7 @@ def listings(session,client_id):
                 status='closed' if ended(row,kind,dt.datetime.now(dt.UTC)) else workspace.status if workspace else 'draft',
                 created_at=row.created_at if kind=='detected' else row.generated_at,
                 origin=_origin(kind,row,workspace),
+                starred_by=(workspace.data or {}).get('starred_by','') if workspace else '',
                 summary=(row.reason if kind=='detected' else row.message or row.context or '')[:400],
                 occasion=dict(title=occasion.title,source=occasion.source,published_at=occasion.published_at,url=occasion.url) if occasion else None))
     return sorted(result,key=lambda r:r['created_at'],reverse=True)

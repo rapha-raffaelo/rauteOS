@@ -882,3 +882,15 @@
 .gemini-spending__form label{display:grid;gap:8px}.gemini-spending__form small{color:var(--muted);line-height:1.5}
 .gemini-spending__form>button{justify-self:start}
 @media(max-width:600px){.gemini-spending__form{grid-template-columns:minmax(0,1fr)}}
+
+/* Spec 12: Medien with both halves and the star */
+.medien-views{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 14px}
+.medien-views a{min-height:34px;display:inline-flex;align-items:center;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:13px;text-decoration:none}
+.medien-views a[aria-current=page]{background:var(--ink);border-color:var(--ink);color:var(--card)}
+.medien-views__keyword{color:var(--muted)!important}
+.medien-views a.medien-views__keyword[aria-current=true]{background:var(--tint-wash);border-color:var(--tint-line-strong);color:var(--tint-ink)!important}
+.medien-star{display:inline-flex;align-items:center;gap:8px;font-size:13px}
+.medien-star__btn{width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--muted);font-size:18px;line-height:1;cursor:pointer}
+.medien-star__btn:hover{border-color:var(--warn);color:var(--warn-ink)}
+.medien-star__btn.is-on{background:var(--warn-wash);border-color:var(--warn);color:var(--warn-ink)}
+.medien-star__error{color:var(--alert-ink)}

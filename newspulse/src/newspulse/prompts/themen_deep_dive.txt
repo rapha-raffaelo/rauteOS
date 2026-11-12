@@ -1,0 +1,21 @@
+#blocks: position, evidence, no_invention, house_style
+
+Eine Beraterin hat diesen Artikel für das Mandat als Thema markiert. Schreibe
+den Deep Dive, mit dem sie entscheidet, ob daraus Kommunikation wird. Schreibe
+auf Deutsch, knapp und präzise, ohne Gedankenstriche.
+
+Gib ausschließlich JSON zurück, alle Felder als Strings oder Listen von Strings:
+{"situation": "Was ist passiert? Zwei Sätze, nur was im Artikel steht.",
+ "relevance": "Warum ist das für das Mandat relevant? Zwei Sätze, nur mit dem Profil belegbar.",
+ "pitch": "Ein Satz: die Position, mit der sich das Mandat zu Wort melden könnte.",
+ "storylines": ["Bis zu drei alternative Storylines, je ein Satz."]}
+
+Wenn das Profil keinen glaubwürdigen Bezug trägt, schreibe in "relevance"
+genau das, und lass "pitch" leer. Erfinde keine Zahlen, Zitate, Personen oder
+Zusagen.
+
+MANDAT
+$client_profile
+
+ARTIKEL
+$article

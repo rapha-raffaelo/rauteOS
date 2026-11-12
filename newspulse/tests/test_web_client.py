@@ -872,7 +872,7 @@ def _seed_radar(session, *, client_obj: Client, title: str, url: str, days_ago: 
     session.add(TopicHit(article_id=article.id, client_id=client_obj.id, found_at=at))
 
 
-def test_the_archive_names_the_radar_material_it_does_not_list(factory, client):
+def test_the_radar_material_has_its_own_view_in_medien(factory, client):
     with factory() as session:
         mandate = _seed_client(session)
         _seed_article(
@@ -890,10 +890,12 @@ def test_the_archive_names_the_radar_material_it_does_not_list(factory, client):
 
     body = rendered(client.get(f"/client/{cid}"))
 
-    assert "3 Beiträge aus dem Themen-Radar" in body
-    assert f"/client/{cid}/wettbewerb#marktumfeld" in body
-    # And it stays an archive of coverage: the radar pieces are not listed here.
+    # Spec 12: the radar's half has its own view in Medien, counted beside the
+    # coverage; the coverage view itself stays coverage only.
+    assert "Zu den Keywords · 3" in body
+    assert f"/client/{cid}/medien?quelle=keywords" in body
     assert "Etwas über das Themenfeld 0" not in body
+    assert "Etwas über das Themenfeld 0" in rendered(client.get(f"/client/{cid}/medien?quelle=keywords"))
 
 
 def test_a_mandate_with_no_radar_material_says_nothing_about_it(factory, client):
@@ -913,9 +915,8 @@ def test_a_mandate_with_no_radar_material_says_nothing_about_it(factory, client)
     assert "Themen-Radar" not in body
 
 
-def test_the_count_is_bounded_by_its_own_window(factory, client):
-    """Thirty days, and the sentence says so — a number with no window is not a
-    measurement anybody can check."""
+def test_the_keyword_view_holds_the_whole_radar_newest_first(factory, client):
+    """Spec 12: the keyword half is a list like the coverage, not a 30-day count."""
     with factory() as session:
         mandate = _seed_client(session)
         _seed_radar(session, client_obj=mandate, title="Frisch", url="https://ex.de/n", days_ago=2)
@@ -923,9 +924,9 @@ def test_the_count_is_bounded_by_its_own_window(factory, client):
         session.commit()
         cid = mandate.id
 
-    body = rendered(client.get(f"/client/{cid}"))
-
-    assert "1 Beiträge aus dem Themen-Radar der letzten 30 Tage" in body
+    assert "Zu den Keywords · 2" in rendered(client.get(f"/client/{cid}"))
+    body = rendered(client.get(f"/client/{cid}/medien?quelle=keywords"))
+    assert body.index("Frisch") < body.index("Alt")
 
 
 def test_media_tab_reuses_customer_history_and_filters(factory, client):
