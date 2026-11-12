@@ -2,6 +2,7 @@ import {AiSettings} from "./AiSettings.jsx";
 import {MediaReload} from "./MediaReload.jsx";
 import React, { useState, useEffect, useRef } from "react";
 import { PageHeading } from "../components/PageHeading.jsx";
+import { SignatureEditor } from "../components/mail/SignatureEditor.jsx";
 import {
   Action,
   Field,
@@ -554,6 +555,12 @@ export function SettingsPage({ data: d, onData }) {
                   <li key={w}>{t(w)}</li>
                 ))}
               </ul>
+              {d.gmail.may_send && !d.gmail.may_manage && (
+                <Notice>
+                  Für Archivieren, Löschen und Gelesen-Markieren im Gmail-Bereich
+                  einmal trennen und neu verbinden.
+                </Notice>
+              )}
               {!d.gmail.may_send && (
                 <Notice>
                   Nur zum Lesen verbunden. Für das Senden einmal trennen und mit
@@ -594,6 +601,9 @@ export function SettingsPage({ data: d, onData }) {
               </Source>
             </p>
           )}
+        </Panel>
+        <Panel title="Signatur" id="signatur">
+          <SignatureEditor initialHtml={d.mail_signature ?? ""} />
         </Panel>
         <Panel title="Google Drive" id="drive">
           <Notice>{driveNotices[d.drive?.notice]}</Notice>

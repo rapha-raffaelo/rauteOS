@@ -20,7 +20,7 @@ _MODEL_FIELDS = {
 _PROPERTIES = {
     'newspulse.profile.Proposal': 'from_person',
     'newspulse.profile.Checked': 'never as_age',
-    'newspulse.gmail_link.Link': 'is_connected may_send scope_words',
+    'newspulse.gmail_link.Link': 'is_connected may_send may_manage scope_words',
     'newspulse.themes.ThemeProbe': 'usable',
     'newspulse.industry.Candidate': 'usable',
     'newspulse.web.routes.settings.RunView': 'is_running',

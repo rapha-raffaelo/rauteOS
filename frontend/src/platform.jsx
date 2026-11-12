@@ -8,6 +8,7 @@ import { LinkedInPage, SalesPage } from "./platform/WorklistPages.jsx";
 import { TasksPage } from "./platform/TaskManager.jsx";
 import "./twin.css";
 import "./platform/platform.css";
+import "./mailbox.css";
 const root = document.getElementById("react-platform");
 function Platform() {
   const [data, setData] = useState(

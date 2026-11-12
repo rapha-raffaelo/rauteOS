@@ -172,8 +172,9 @@ def test_the_token_file_sits_beside_the_database(volume):
 # --- The consent screen ---------------------------------------------------------
 
 
-def test_consent_asks_for_exactly_the_two_scopes_dec_4_licenses(volume):
-    """DEC-4 locked "lesen und senden". Not modify, not mail.google.com.
+def test_consent_asks_for_exactly_the_scopes_dec_4_licenses(volume):
+    """DEC-4 locked "lesen und senden", widened on 12.11.2026 by modify for the
+    Gmail page (archive, Papierkorb, read, star). Still not mail.google.com.
 
     ``gmail.compose`` and not ``gmail.send``: Google documents the latter as
     "send messages only, no read or modify privileges" and it covers exactly
@@ -184,6 +185,7 @@ def test_consent_asks_for_exactly_the_two_scopes_dec_4_licenses(volume):
     assert query["scope"][0].split() == [
         "https://www.googleapis.com/auth/gmail.readonly",
         "https://www.googleapis.com/auth/gmail.compose",
+        "https://www.googleapis.com/auth/gmail.modify",
     ]
 
 

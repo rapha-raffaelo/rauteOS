@@ -95,9 +95,17 @@ _DEFAULT_ACCOUNT = "0"
 # :attr:`Link.may_send` is what notices, so the card disables the action and says
 # why rather than failing with a 403 after the confirmation was clicked. The
 # operator-facing consent screen has to list the same two scopes.
+#
+# Widened on 12.11.2026 by `gmail.modify`, at Raphael's request: the Gmail page
+# (:mod:`newspulse.mailbox`) archives, deletes into the Papierkorb, marks read
+# and stars, which is relabelling and nothing `gmail.compose` covers. Still not
+# `mail.google.com`: the permanent delete stays out of reach. A mailbox
+# connected before this has to be connected again for those actions; reading
+# and sending keep working until then.
 SCOPES: tuple[str, ...] = (
     "https://www.googleapis.com/auth/gmail.readonly",
     "https://www.googleapis.com/auth/gmail.compose",
+    "https://www.googleapis.com/auth/gmail.modify",
 )
 
 # Any one of these covers `drafts.create`, `drafts.update` and `drafts.send`.
@@ -111,6 +119,10 @@ _SEND_CAPABLE_SCOPES: frozenset[str] = frozenset(
         "https://www.googleapis.com/auth/gmail.modify",
         "https://mail.google.com/",
     }
+)
+
+_MANAGE_SCOPES: frozenset[str] = frozenset(
+    {"https://www.googleapis.com/auth/gmail.modify", "https://mail.google.com/"}
 )
 
 # The same permissions in words, because "gmail.readonly" is not a sentence a
@@ -316,6 +328,11 @@ class Link:
         moment in this tool where the reader must know what happened.
         """
         return self.is_connected and bool(_SEND_CAPABLE_SCOPES & set(self.scopes))
+
+    @property
+    def may_manage(self) -> bool:
+        """Whether the grant covers relabelling: archive, Papierkorb, read, star."""
+        return self.is_connected and bool(_MANAGE_SCOPES & set(self.scopes))
 
     @property
     def scope_words(self) -> list[str]:
