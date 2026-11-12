@@ -381,9 +381,13 @@ def _steps_aside(exc: Exception) -> bool:
     if isinstance(exc, NotConnected) or is_quota_error(exc):
         return True
     text = str(exc)
+    auth_expired = any(marker in text.lower() for marker in (
+        "failed to authenticate", "login reached its time limit", "oauth session expired",
+        "not logged in", "authentication token has expired", "refresh token has expired",
+    ))
     # "401 Unauthorized" is how the Codex CLI reports an expired login.
     return (any(f"HTTP {code}" in text for code in (401, 403)) or "unreachable" in text
-            or "401 Unauthorized" in text)
+            or "401 Unauthorized" in text or auth_expired)
 
 
 def ask(role: str, prompt: str, *, timeout: float, session=None, providers: list[str] | None = None) -> str:

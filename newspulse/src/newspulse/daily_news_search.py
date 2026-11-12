@@ -12,7 +12,7 @@ from pathlib import Path
 import sqlite3
 from urllib.parse import urlsplit, urlunsplit
 
-from . import analyzer, config
+from . import analyzer, config, websearch
 from .ingest import FeedItem
 
 _log = logging.getLogger(__name__)
@@ -113,13 +113,13 @@ def _prompt(client, since, now):
     )
 
 
-def harvest(clients, since, *, fetched_at, search=None, ledger_path=None):
-    """Return (items, errors), solely using the Claude subscription web transport.
+def harvest(clients, since, *, fetched_at, search=None, ledger_path=None, retry_failed=False):
+    """Return (items, errors) using grounded research with the configured fallback.
 
     Successful research is reused on reruns and filtered against their watermark.
-    Failed/interrupted calls are reported, not silently retried or billed elsewhere.
+    Failed calls are retried only when explicitly requested; running claims are never stolen.
     """
-    search = search or (lambda prompt: analyzer.invoke_claude_search(prompt, require_web_search=True))
+    search = search or (lambda prompt: websearch.search(prompt, require_web_search=True))
     ledger_path = ledger_path or config.DATABASE_PATH.parent / 'daily-news-search.sqlite3'
     day = fetched_at.astimezone(config.local_zone()).date().isoformat()
     # The supplement covers the past day; older backfills remain the APIs' job.
@@ -131,6 +131,13 @@ def harvest(clients, since, *, fetched_at, search=None, ledger_path=None):
                 continue
             key = (day, client.id)
             row = conn.execute('SELECT status,articles,error FROM web_research WHERE day=? AND client_id=?', key).fetchone()
+            retry_claimed = False
+            if row is not None and row[0] == 'failed' and retry_failed:
+                retry_claimed = bool(conn.execute("UPDATE web_research SET status='running',error='' WHERE day=? AND client_id=? AND status='failed'", key).rowcount)
+                conn.commit()
+                if not retry_claimed:
+                    continue
+                row = None
             if row is not None:
                 if row[0] != 'ready':
                     errors.append(row[2] or f'Claude web research for client {client.id}: incomplete attempt')
@@ -140,7 +147,7 @@ def harvest(clients, since, *, fetched_at, search=None, ledger_path=None):
                     if window <= value['published_at'] <= fetched_at:
                         items.append(FeedItem(**value))
                 continue
-            claimed = conn.execute("INSERT OR IGNORE INTO web_research(day,client_id,status) VALUES(?,?,'running')",key).rowcount
+            claimed = retry_claimed or conn.execute("INSERT OR IGNORE INTO web_research(day,client_id,status) VALUES(?,?,'running')",key).rowcount
             conn.commit()
             if not claimed:
                 continue

@@ -80,3 +80,28 @@ def test_local_day_boundary_uses_berlin_date(tmp_path):
     path=tmp_path/'news.db'
     news.harvest([client()],early-dt.timedelta(days=1),fetched_at=early,search=lambda p:('{"articles":[]}',[]),ledger_path=path)
     with sqlite3.connect(path) as conn:assert conn.execute('SELECT day FROM web_research').fetchone()[0]=='2026-11-06'
+
+
+def test_explicit_retry_recovers_failed_research_without_repeating_success(tmp_path):
+    calls=[]
+    def search(prompt):
+        calls.append(prompt)
+        if len(calls)==1: raise RuntimeError('expired login')
+        return answer(), [(URL,'Recovered article')]
+    args=dict(fetched_at=NOW,search=search,ledger_path=tmp_path/'retry.db')
+    assert news.harvest([client()],NOW-dt.timedelta(days=1),**args)[1]
+    items, errors=news.harvest([client()],NOW-dt.timedelta(days=1),retry_failed=True,**args)
+    assert len(items)==1 and not errors
+    news.harvest([client()],NOW-dt.timedelta(days=1),retry_failed=True,**args)
+    assert len(calls)==2
+
+
+def test_daily_research_uses_grounded_fallback(tmp_path,monkeypatch):
+    calls=[]
+    def search(prompt,**kwargs):
+        calls.append(kwargs)
+        return answer(), [(URL,'Grounded')]
+    monkeypatch.setattr(news.websearch,'search',search)
+    items, errors=news.harvest([client()],NOW-dt.timedelta(days=1),fetched_at=NOW,ledger_path=tmp_path/'fallback.db')
+    assert len(items)==1 and not errors
+    assert calls==[{'require_web_search':True}]

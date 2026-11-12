@@ -18,10 +18,10 @@ from . import analyzer, config, gemini
 _log = logging.getLogger(__name__)
 
 
-def search(prompt: str) -> tuple[str, list[tuple[str, str]]]:
+def search(prompt: str, *, require_web_search: bool = False) -> tuple[str, list[tuple[str, str]]]:
     """``(text, [(url, title), ...])`` for one research prompt."""
     try:
-        return analyzer.invoke_claude_search(prompt)
+        return analyzer.invoke_claude_search(prompt, require_web_search=True) if require_web_search else analyzer.invoke_claude_search(prompt)
     except analyzer.BackendError as exc:
         if "timed out" in str(exc) or not config.review_configured():
             raise

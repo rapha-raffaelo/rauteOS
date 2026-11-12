@@ -282,3 +282,15 @@ def test_role_model_form_reaches_storage(web, factory):
     assert result.status_code == 303
     with factory() as session:
         assert ai_models.model_for(session, 'openai', 'designer') == 'selected-model'
+
+
+def test_expired_claude_login_uses_configured_fallback(session, monkeypatch):
+    calls = []
+    def fake(session, provider, prompt, **kwargs):
+        calls.append(provider)
+        if provider == 'claude':
+            raise BackendError('Failed to authenticate: this login reached its time limit and cannot be renewed')
+        return 'ok'
+    monkeypatch.setattr(ai_models, 'call', fake)
+    assert ai_models.ask('designer', 'test', timeout=1, session=session) == 'ok'
+    assert calls == ['claude', 'gemini']
