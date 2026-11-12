@@ -876,3 +876,9 @@
 .gemini-cash__form{display:flex;flex-wrap:wrap;align-items:end;gap:12px;margin-top:16px}
 .gemini-cash__form .platform-field{flex:1;min-width:120px}
 .gemini-cash__form [role=alert]{width:100%;color:var(--alert)}
+.gemini-spending__form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:18px;margin-top:20px}
+.gemini-spending__form>p{grid-column:1/-1;line-height:1.6}
+.gemini-spending__form input{width:100%;min-height:42px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);font:inherit}
+.gemini-spending__form label{display:grid;gap:8px}.gemini-spending__form small{color:var(--muted);line-height:1.5}
+.gemini-spending__form>button{justify-self:start}
+@media(max-width:600px){.gemini-spending__form{grid-template-columns:minmax(0,1fr)}}

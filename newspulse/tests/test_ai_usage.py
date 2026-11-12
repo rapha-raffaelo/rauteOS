@@ -111,10 +111,10 @@ def test_manual_cash_is_independent_of_monthly_usage(factory, monkeypatch):
     ai_usage.record_gemini({'usageMetadata':{'promptTokenCount':12}})
     monkeypatch.setattr(ai_usage,'_now',lambda:dt.datetime(2030,1,1,tzinfo=dt.UTC))
     with factory() as s:
-        assert ai_usage.overview(s)['gemini']['cash']==saved
+        assert ai_usage._load(s, 'gemini_cash')==saved
         for amount,currency in [('NaN','EUR'),('1.234','EUR'),('12','BAD')]:
             with pytest.raises(ValueError): ai_usage.save_gemini_cash(s,amount,currency)
-        assert ai_usage.overview(s)['gemini']['cash']==saved
+        assert ai_usage._load(s, 'gemini_cash')==saved
         assert ai_usage.save_gemini_cash(s,'0','USD')['amount']=='0.00'
 
 def test_claude_extra_credits_do_not_hide_available_subscription(factory):

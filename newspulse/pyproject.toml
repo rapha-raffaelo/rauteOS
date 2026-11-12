@@ -27,6 +27,7 @@ dependencies = [
     "pypdf>=5.0",
     "reportlab>=5.0.1",
     "cryptography>=43",
+    "google-cloud-bigquery>=3.30,<4",
 ]
 
 [project.scripts]

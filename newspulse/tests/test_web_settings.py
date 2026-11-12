@@ -511,3 +511,10 @@ def test_manual_gemini_cash_route(client):
     assert response.json()['amount']=='40.25'
     assert response.json()['updated_at']
     assert client.post('/settings/ai/gemini/cash',data={'amount':'NaN','currency':'EUR'}).status_code==422
+
+def test_gemini_spending_routes_require_valid_scoped_source(client, monkeypatch):
+    from newspulse import gemini_spending
+    assert client.get('/settings/ai/gemini/spending').json()['state']=='not_configured'
+    assert client.post('/settings/ai/gemini/spending/config',data={'table':'bad','project':'gemini-project','services':'ABC','location':'EU'}).status_code==422
+    response=client.post('/settings/ai/gemini/spending/config',data={'table':'billing-project.costs.export_table','project':'gemini-project','services':'ABC','location':'EU'})
+    assert response.status_code==200 and response.json()['state']=='pending'

@@ -232,6 +232,7 @@ def record_gemini_refusal(message: str) -> None:
 
 def overview(session) -> dict[str, dict]:
     """Per provider what the settings show: windows, or this month's count."""
+    from . import gemini_spending
     gemini = _load(session, "gemini")
     month = _now().strftime("%Y-%m")
     if gemini.get("month") != month:
@@ -243,7 +244,7 @@ def overview(session) -> dict[str, dict]:
     return {
         "claude": {"kind": "windows", **_load(session, "claude")},
         "openai": {"kind": "windows", **openai},
-        "gemini": {"kind": "budget", "billing_url": GEMINI_BILLING_URL, **gemini, "cash": _load(session, "gemini_cash")},
+        "gemini": {"kind": "budget", "billing_url": GEMINI_BILLING_URL, **gemini, "spending": gemini_spending.view(session)},
     }
 
 

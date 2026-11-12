@@ -2072,3 +2072,19 @@ def save_gemini_cash_route(amount: str = Form(...), currency: str = Form(...), s
     except ValueError as exc:
         return JSONResponse({'message': str(exc)}, status_code=422)
     return JSONResponse(result, headers={'Cache-Control': 'no-store'})
+
+
+@router.get('/settings/ai/gemini/spending')
+def gemini_spending_read(session: Session = Depends(get_db)):
+    from ... import gemini_spending
+    return JSONResponse(gemini_spending.refresh(session), headers={'Cache-Control':'no-store'})
+
+
+@router.post('/settings/ai/gemini/spending/config')
+def gemini_spending_config(table: str = Form(...), project: str = Form(...), services: str = Form(...),
+                           location: str = Form(...), session: Session = Depends(get_db)):
+    from ... import gemini_spending
+    try:
+        return JSONResponse(gemini_spending.save_config(session, table, project, services, location))
+    except ValueError as exc:
+        return JSONResponse({'message':str(exc)}, status_code=422)
