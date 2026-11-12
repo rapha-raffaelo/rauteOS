@@ -660,3 +660,29 @@ def test_a_failed_briefing_is_a_502_and_the_desk_keeps_its_own(web, clean_brief,
     assert response.status_code == 502
     assert "CLI nicht angemeldet" in response.json()["detail"]
     assert web.get("/api/v1/desk").json()["briefing_ai"] is None
+
+def test_personal_tasks_and_overdue_are_scoped_to_signed_in_user(session, web, monkeypatch):
+    from newspulse import worklists, desk_brief
+    from newspulse.models import Task
+    today=dt.date(2026,11,12)
+    rows=[Task(title='Raphael overdue',assignees=['raphael'],status='in_arbeit',priority='hoch',due_on=today-dt.timedelta(days=1)),
+          Task(title='Lucas only',assignees=['lucas'],due_on=today-dt.timedelta(days=2)),
+          Task(title='Shared today',assignees=['raphael','lucas'],due_on=today),
+          Task(title='Unassigned',assignees=[],due_on=today-dt.timedelta(days=1)),
+          Task(title='Done',assignees=['raphael'],status='erledigt',due_on=today-dt.timedelta(days=1))]
+    session.add_all(rows);session.commit()
+    assert [t.title for t in worklists.overdue_for(session,'raphael',today=today)]==['Raphael overdue']
+    assert worklists.overdue_for(session,None,today=today)==[]
+    board=desk.build(session,member='raphael',now=dt.datetime(2026,11,12,tzinfo=dt.UTC))
+    assert {t.title for t in board.tasks}=={'Raphael overdue','Shared today'}
+    assert board.tasks_open==2 and board.tasks_due==2
+    assert board.tasks[0].status=='in_arbeit'
+    monkeypatch.setattr(worklists,'member_for',lambda email:'raphael')
+    response=web.get('/api/v1/desk?person=lucas').json()
+    assert {t['title'] for t in response['tasks']}=={'Raphael overdue','Shared today'}
+    assert response['tasks'][0]['status']=='in_arbeit'
+    reminders=web.get('/api/v1/tasks/overdue?member=lucas').json()
+    assert reminders['member']=='raphael'
+    assert all(t['title']!='Lucas only' for t in reminders['tasks'])
+    desk_brief.write(board,invoke=lambda *a,**kw:'Raphael briefing',key='raphael')
+    assert desk_brief.cached(key='lucas') is None

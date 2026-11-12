@@ -543,3 +543,15 @@ def pipeline(rows: list[Deal]) -> list[dict]:
                  deals=[d for d in rows if d.stage == s],
                  value=sum(d.value_eur or 0 for d in rows if d.stage == s))
             for s in DEAL_STAGES]
+
+
+def overdue_for(session, member, *, today=None):
+    """Only assigned, unfinished tasks, from the calendar day after their deadline."""
+    import datetime as dt
+    from zoneinfo import ZoneInfo
+    if member not in TEAM_KEYS:
+        return []
+    today = today or dt.datetime.now(ZoneInfo('Europe/Zurich')).date()
+    return [task for task in open_tasks(session)
+            if member in (task.assignees or []) and task.due_on and task.due_on < today
+            and task.source_open is not False]

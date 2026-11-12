@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { fetchDesk, writeBriefing } from '../api.js';
 
 // What the Desk calls each kind of decision, in a list and in the briefing.
+const PRIORITY = {niedrig:'Niedrig',mittel:'Mittel',hoch:'Hoch',urgent:'Urgent'};
+const STATUS = {offen:'Offen',in_arbeit:'In Arbeit',review:'Review',erledigt:'Done'};
 const KIND = {kundenfreigabe: 'Kundenfreigabe', freigabe: 'Freigabe', impuls: 'Impuls', profil: 'Profil'};
 const WAITS = {kundenfreigabe: 'wartet auf eine Kundenfreigabe', freigabe: 'wartet auf die Freigabe',
   impuls: 'hat einen neuen Impuls', profil: 'braucht eine Profil-Entscheidung'};
@@ -139,6 +141,7 @@ export function DeskPage({ translations = {}, language = 'de' }) {
           {tasks.map((x) => <div className="task" key={`task-${x.id}`}>
             <a className="task__b task__link" href={x.href}><span className="task__t" title={x.title}>{x.title}</span>
               <span className="task__m">{x.client?.name || t('Intern')}{(x.assignees || []).length ? ` · ${x.assignees.map((a) => '@' + a).join(', ')}` : ''}{x.due_on ? ` · ${t('fällig')} ${date(x.due_on + 'T12:00:00Z')}` : ''} · {t('Aufgabe')}</span></a>
+            <div className="task__badges"><span className={`task__priority task__priority--${x.priority}`}>⚑ {t(PRIORITY[x.priority] || x.priority)}</span><span className="task__status">{t(STATUS[x.status] || 'Offen')}</span></div>
           </div>)}
           {board.decisions.slice(0, Math.max(0, 6 - tasks.length)).map((item, index) => <a className="task" href={item.href} key={`${item.href}-${index}`}>
             <span className="task__b"><span className="task__t" title={item.title}>{item.title}</span>

@@ -4,11 +4,11 @@ from __future__ import annotations
 import datetime as dt
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
-from ... import config, desk, desk_brief
+from ... import config, desk, desk_brief, worklists
 from ...analyzer import AnalyzerError
 from ..app import get_db
 
@@ -67,6 +67,7 @@ class TaskSummary(ReadModel):
     client: ClientSummary | None
     title: str
     priority: str
+    status: str = "offen"
     due_on: dt.date | None
     href: str
     assignees: list[str] = []
@@ -110,21 +111,29 @@ class DeskResponse(ReadModel):
 
 
 @router.get("/desk", response_model=DeskResponse)
-def read_desk(response: Response, session: Session = Depends(get_db)) -> DeskResponse:
+def read_desk(request: Request, response: Response, session: Session = Depends(get_db)) -> DeskResponse:
     response.headers["Cache-Control"] = "no-store"
-    board = desk.build(session)
+    member = worklists.member_for(request.scope.get("user_email")) or ""
+    board = desk.build(session, member=member)
     # No dataclasses.asdict(): a Client contains private notes and strategy.
     values = {name: getattr(board, name) for name in DeskResponse.model_fields
               if name not in ("timezone", "briefing_ai")}
     return DeskResponse.model_validate({**values, "timezone": str(config.local_zone()),
-                                        "briefing_ai": desk_brief.cached()})
+                                        "briefing_ai": desk_brief.cached(key=_brief_key(member, board))})
 
 
 @router.post("/desk/briefing")
-def write_briefing(response: Response, session: Session = Depends(get_db)) -> dict:
+def write_briefing(request: Request, response: Response, session: Session = Depends(get_db)) -> dict:
     """One model call that phrases today's briefing from the Desk's figures."""
     response.headers["Cache-Control"] = "no-store"
     try:
-        return desk_brief.write(desk.build(session))
+        member = worklists.member_for(request.scope.get("user_email")) or ""
+        board = desk.build(session, member=member)
+        return desk_brief.write(board, key=_brief_key(member, board))
     except AnalyzerError as exc:
         raise HTTPException(status_code=502, detail=f"Das Briefing konnte nicht formuliert werden: {exc}") from exc
+
+
+def _brief_key(member, board):
+    import hashlib
+    return member + ':' + hashlib.sha256(desk_brief.facts(board).encode()).hexdigest()

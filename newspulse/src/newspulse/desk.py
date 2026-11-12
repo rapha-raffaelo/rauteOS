@@ -202,6 +202,7 @@ class TaskItem:
     href: str
     #: Who does it, as team member names ("Lucas").
     assignees: tuple[str, ...] = ()
+    status: str = "offen"
 
 
 @dataclass(frozen=True, slots=True)
@@ -516,7 +517,7 @@ def _in_flight(session: Session, clients: dict[int, Client]) -> list[InFlight]:
 # --- The page ----------------------------------------------------------------------
 
 
-def build(session: Session, *, now: dt.datetime | None = None) -> Desk:
+def build(session: Session, *, now: dt.datetime | None = None, member: str | None = None) -> Desk:
     """Assemble the whole morning page in one pass.
 
     Mandates only. A competitor is tracked so a mandate can be compared against
@@ -534,7 +535,7 @@ def build(session: Session, *, now: dt.datetime | None = None) -> Desk:
         .order_by(Client.name)
     ).all()
     by_id = {client.id: client for client in mandates}
-    open_tasks = _open_tasks(session)
+    open_tasks = _open_tasks(session, member=member)
     if not by_id:
         return Desk(generated_at=moment, tasks=open_tasks[:TASKS_SHOWN], tasks_open=len(open_tasks),
                     tasks_due=_due(open_tasks, moment), all_tasks=open_tasks)
@@ -563,7 +564,7 @@ def build(session: Session, *, now: dt.datetime | None = None) -> Desk:
     ]
     return Desk(
         rows=rows,
-        decisions=_decisions(session, by_id),
+        decisions=_personal_decisions(session, _decisions(session, by_id), member),
         in_flight=_in_flight(session, by_id),
         chances=_chances(session, by_id, listed=listed),
         tasks=open_tasks[:TASKS_SHOWN],
@@ -583,15 +584,25 @@ def _due(tasks: list["TaskItem"], moment: dt.datetime) -> int:
     return sum(1 for t in tasks if t.due_on and t.due_on <= today)
 
 
-def _open_tasks(session: Session) -> list[TaskItem]:
+def _open_tasks(session: Session, *, member: str | None = None) -> list[TaskItem]:
     """Open tasks, due first (spec 10): the same order as the Aufgaben page."""
     from . import worklists
 
     names = {key: name for key, name, _ in worklists.TEAM}
-    return [TaskItem(id=t.id, client=t.client, title=t.title, priority=t.priority, due_on=t.due_on,
+    return [TaskItem(id=t.id, client=t.client, title=t.title, priority=t.priority, due_on=t.due_on, status=t.status,
                      href=t.context_href or f"/aufgaben?aufgabe={t.id}",
                      assignees=tuple(names.get(a, a) for a in (t.assignees or [])))
-            for t in worklists.open_tasks(session) if not t.source_key]
+            for t in worklists.open_tasks(session) if not t.source_key
+            and (member is None or member in (t.assignees or []))]
+
+
+def _personal_decisions(session, decisions, member):
+    if member is None:
+        return decisions
+    from .models import Task
+    assigned_elsewhere = {t.source_key for t in session.scalars(select(Task).where(Task.source_key.is_not(None)))
+                          if t.assignees and member not in t.assignees}
+    return [d for d in decisions if d.source_key not in assigned_elsewhere]
 
 
 #: How many open opportunities the Desk lists. The count beside it is the

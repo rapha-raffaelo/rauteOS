@@ -144,3 +144,8 @@ describe('KI-Briefing', () => {
     expect(screen.getByRole('button', {name: 'Neu formulieren'})).toBeTruthy();
   });
 });
+it('shows task priority and status on the prioritized card',async()=>{
+ vi.stubGlobal('fetch',vi.fn().mockResolvedValue(reply({...empty,rows:[row],clients_active:1,tasks:[{id:1,title:'Meine Aufgabe',priority:'hoch',status:'review',assignees:['Raphael'],href:'/aufgaben?aufgabe=1'}]})));
+ render(<DeskPage/>);await screen.findByText('Meine Aufgabe');
+ expect(screen.getByText('⚑ Hoch')).toBeTruthy();expect(screen.getByText('Review')).toBeTruthy();
+});

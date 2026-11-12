@@ -70,14 +70,14 @@ Angaben:
 {facts(board)}"""
 
 
-def cached() -> dict | None:
+def cached(*, key="") -> dict | None:
     """Today's briefing if one was written, with when."""
     with _lock:
-        hit = _cache.get(_today())
+        hit = _cache.get(_today() + ":" + key)
     return dict(text=hit[0], written_at=hit[1]) if hit else None
 
 
-def write(board, *, invoke=None) -> dict:
+def write(board, *, invoke=None, key="") -> dict:
     """Ask the model once and keep the answer for today.
 
     Raises :class:`AnalyzerError` when the model fails or answers with
@@ -94,6 +94,8 @@ def write(board, *, invoke=None) -> dict:
         text = cut[: cut.rfind(".") + 1] or cut.rsplit(" ", 1)[0] + " …"
     written = dt.datetime.now(dt.UTC)
     with _lock:
-        _cache.clear()  # only today matters
-        _cache[_today()] = (text, written)
+        for expired in list(_cache):
+            if not expired.startswith(_today() + ":"):
+                del _cache[expired]
+        _cache[_today() + ":" + key] = (text, written)
     return dict(text=text, written_at=written)

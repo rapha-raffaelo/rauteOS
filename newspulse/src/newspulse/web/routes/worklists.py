@@ -460,3 +460,15 @@ def delete_deal(deal_id: int, session: Session = Depends(get_db)) -> Response:
     session.delete(_row_or_404(session, Deal, deal_id))
     session.commit()
     return RedirectResponse("/sales", status_code=_SEE_OTHER)
+
+
+@router.get('/api/v1/tasks/overdue')
+def overdue_tasks(request: Request, session: Session = Depends(get_db)):
+    import datetime as dt
+    from zoneinfo import ZoneInfo
+    member = worklists.member_for(request.scope.get('user_email'))
+    today = dt.datetime.now(ZoneInfo('Europe/Zurich')).date()
+    rows = worklists.overdue_for(session, member, today=today)
+    return JSONResponse({'member':member, 'day':today.isoformat(), 'tasks':[
+        {'id':t.id, 'title':t.title, 'due_on':t.due_on.isoformat(), 'days_overdue':(today-t.due_on).days,
+         'href':f'/aufgaben?aufgabe={t.id}'} for t in rows]}, headers={'Cache-Control':'no-store'})

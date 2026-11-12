@@ -1,3 +1,4 @@
+import OverdueTasks from './components/OverdueTasks.jsx';
 import ClaudeLogin from './components/ClaudeLogin.jsx';
 import React, { useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
@@ -353,6 +354,7 @@ export function Shell({ data, portals = true }) {
       {createPortal(sidebar, document.getElementById("react-sidebar"))}
       {createPortal(topbar, document.getElementById("react-topbar"))}
       <ClaudeLogin />
+      <OverdueTasks />
     </>
   );
 }

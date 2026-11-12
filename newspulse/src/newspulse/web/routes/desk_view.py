@@ -18,7 +18,7 @@ from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from sqlalchemy.orm import Session
 
-from ... import desk
+from ... import desk, worklists
 from ...models import Client, ClientAction
 from .. import frontend, redirects
 from ..app import get_db, templates, translator
@@ -34,7 +34,7 @@ _SEE_OTHER = 303
 def desk_view(request: Request, session: Session = Depends(get_db)) -> HTMLResponse:
     """The morning page. Every figure on it is read from rows written elsewhere."""
     assets = frontend.desk_assets() if request.query_params.get("view") != "classic" else None
-    board = None if assets else desk.build(session)
+    board = None if assets else desk.build(session, member=worklists.member_for(request.scope.get("user_email")) or "")
     return templates.TemplateResponse(
         request,
         "desk_react.html" if assets else "desk.html",
