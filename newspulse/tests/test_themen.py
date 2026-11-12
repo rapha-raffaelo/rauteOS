@@ -212,6 +212,25 @@ def test_an_asset_downloads_as_word_and_pdf(web, session, mandate):
     assert web.get(f"/api/v1/clients/{mandate.id}/assets/asset/{asset.id}/export.txt").status_code == 422
 
 
+def test_the_chosen_logo_heads_the_word_and_pdf(web, session, mandate):
+    import base64 as b64
+
+    from PIL import Image
+
+    png = io.BytesIO()
+    Image.new("RGB", (40, 10), "red").save(png, format="PNG")
+    mandate.logo_url = "data:image/png;base64," + b64.b64encode(png.getvalue()).decode()
+    session.commit()
+    article = _article(session, "Bundestag schränkt Medizinalcannabis ein", "https://ex.de/radar-017", radar=mandate)
+    row = themen.star(session, mandate, article)
+    asset = _asset(session, mandate, row.context_id)
+    base = f"/api/v1/clients/{mandate.id}/assets/asset/{asset.id}"
+    media = lambda r: [n for n in zipfile.ZipFile(io.BytesIO(r.content)).namelist() if n.startswith("word/media/")]
+    assert media(web.get(f"{base}/export.docx?logo=kunde")) and media(web.get(f"{base}/export.docx?logo=raute"))
+    assert not media(web.get(f"{base}/export.docx"))
+    assert b"/Subtype /Image" in web.get(f"{base}/export.pdf?logo=kunde").content
+
+
 def test_a_thema_exports_with_its_deep_dive(web, session, mandate):
     article = _article(session, "Bundestag schränkt Medizinalcannabis ein", "https://ex.de/radar-008", radar=mandate)
     row = themen.star(session, mandate, article)

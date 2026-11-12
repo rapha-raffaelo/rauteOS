@@ -28,10 +28,10 @@ export function WritingProgress({kind,onDismiss,error}){
 
 // Export one asset or a whole Thema: as Word or PDF, downloaded or put into
 // the shared Drive folder "7. Assets" under the client's own sub-folder.
-export function ExportBox({base,label='Exportieren'}){
+export function ExportBox({base,label='Exportieren',logo='keiner'}){
  const [open,setOpen]=useState(false),[format,setFormat]=useState('docx'),[busy,setBusy]=useState(false),[result,setResult]=useState(null),[error,setError]=useState('');
  async function drive(){setBusy(true);setError('');setResult(null);
-  try{setResult(await request(base.replace('/api/v1/','')+'/drive',{method:'POST',body:JSON.stringify({format})}));}
+  try{setResult(await request(base.replace('/api/v1/','')+'/drive',{method:'POST',body:JSON.stringify({format,logo})}));}
   catch(e){setError(e.message);}finally{setBusy(false);}}
  return <div className="asset-export">
   <button type="button" className="btn btn--quiet" aria-expanded={open} onClick={()=>setOpen(!open)}>{label}</button>
@@ -41,7 +41,7 @@ export function ExportBox({base,label='Exportieren'}){
     <label><input type="radio" name={`fmt-${base}`} checked={format==='pdf'} onChange={()=>setFormat('pdf')}/> PDF</label>
    </fieldset>
    <div className="asset-export__acts">
-    <a className="btn btn--quiet" href={`${base}/export.${format}`} download>Herunterladen</a>
+    <a className="btn btn--quiet" href={`${base}/export.${format}${logo!=='keiner'?`?logo=${logo}`:''}`} download>Herunterladen</a>
     <button type="button" className="btn" disabled={busy} onClick={drive}>{busy?'Wird abgelegt…':'In Drive ablegen'}</button>
    </div>
    {result&&<p role="status">Abgelegt in {result.folder}. <a href={result.url} target="_blank" rel="noreferrer">In Drive öffnen ↗</a></p>}
@@ -50,19 +50,40 @@ export function ExportBox({base,label='Exportieren'}){
  </div>;
 }
 
-export function Editor({text,path,onSaved,exportBase,onCheck,checking=false}){
+// Which logo heads a document: the client's, raute+kopf's, or none. Kept per
+// asset in this browser, so the choice holds when the page is opened again.
+export const LOGOS=[['keiner','Ohne'],['raute','raute+kopf'],['kunde','Kunden-Logo']];
+const RAUTE_LOGO='/static/brand/raute-kopf.jpg';
+function storedLogo(key,fallback){try{return window.localStorage.getItem(key)||fallback;}catch{return fallback;}}
+function keepLogo(key,value){try{window.localStorage.setItem(key,value);}catch{/* a blocked storage only forgets the choice */}}
+
+// A text field that grows with its text, so the sheet reads like a page.
+function Grow({className,...props}){
+ const node=useRef(null);
+ useEffect(()=>{const el=node.current;if(!el)return;el.style.height='auto';el.style.height=`${el.scrollHeight}px`;},[props.value]);
+ return <textarea ref={node} className={className} rows={1} {...props}/>;
+}
+
+export function Editor({text,path,onSaved,exportBase,onCheck,checking=false,client={}}){
  const [title,setTitle]=useState(text.title),[body,setBody]=useState(text.body);
  const [error,setError]=useState(''),[notice,setNotice]=useState(''),[saving,setSaving]=useState(false);
+ const logoKey=`asset-logo:${text.type}-${text.id}`;
+ const [logo,setLogo]=useState(()=>storedLogo(logoKey,text.kind==='pressemitteilung'?(client.logo?'kunde':'raute'):'keiner'));
  const dirty=title!==text.title||body!==text.body;
  const released=Boolean(text.released_at);
+ const label=LABEL[text.kind]||text.kind_label||text.kind;
  async function save(){setSaving(true);setError('');setNotice('');try{onSaved(await request(`${path}/${text.type}/${text.id}`,{method:'PUT',body:JSON.stringify({digest:text.digest,title,body})}));setNotice('Gespeichert.');}catch(e){setError(e.message);}finally{setSaving(false);}}
  async function copy(){try{await navigator.clipboard.writeText(title?`${title}\n\n${body}`:body);setNotice('Text kopiert.');}catch{setNotice('Bitte den Text im Feld markieren und kopieren.');}}
- return <article className="asset-editor" aria-label={`${LABEL[text.kind]||text.kind} bearbeiten`}>
+ function pickLogo(value){setLogo(value);keepLogo(logoKey,value);}
+ const logoSrc=logo==='kunde'?client.logo:logo==='raute'?RAUTE_LOGO:'';
+ return <article className="asset-editor" aria-label={`${label} bearbeiten`}>
   <header className="asset-editor__bar">
-   <div><h2>{LABEL[text.kind]||text.kind_label||text.kind}</h2>
+   <div><h2>{label}</h2>
     <span className={`themen-tag${released?' themen-tag--on':' themen-tag--star'}`}>{released?'Freigegeben':dirty?'Ungespeicherte Änderungen':'Entwurf'}</span></div>
    <div className="asset-editor__acts">
-    {exportBase&&<ExportBox base={exportBase}/>}
+    <div className="asset-logo-switch" role="group" aria-label="Logo">{LOGOS.map(([key,name])=>
+     <button key={key} type="button" aria-pressed={logo===key} onClick={()=>pickLogo(key)}>{name}</button>)}</div>
+    {exportBase&&<ExportBox base={exportBase} logo={logo}/>}
     {!released&&onCheck&&<button type="button" className="btn btn--quiet" disabled={dirty||checking} title={dirty?'Erst speichern, dann prüfen':''} onClick={()=>onCheck(text)}>{checking?'Wird geprüft…':'Aussagen prüfen'}</button>}
     <button type="button" className="btn btn--quiet" onClick={copy}>Kopieren</button>
     <button type="button" className="btn" disabled title="Kommt später">Senden · bald</button>
@@ -70,9 +91,14 @@ export function Editor({text,path,onSaved,exportBase,onCheck,checking=false}){
    </div>
   </header>
   {error&&<p className="twin-error" role="alert">{error}</p>}{notice&&<p role="status">{notice}</p>}
-  <div className="asset-editor__sheet">
-   <label>Betreff oder Titel<input aria-label="Titel" value={title} onChange={e=>setTitle(e.target.value)} disabled={released}/></label>
-   <label>Text<textarea aria-label="Text" value={body} onChange={e=>setBody(e.target.value)} disabled={released} rows={18}/></label>
+  <div className="asset-doc">
+   <div className="asset-doc__head">
+    {logo==='keiner'?<span/>:logoSrc?<img className="asset-doc__logo" src={logoSrc} alt={logo==='kunde'?`Logo ${client.name||''}`:'raute+kopf'}/>
+     :<span className="asset-doc__logo-missing">Kein Kunden-Logo hinterlegt</span>}
+    <span className="asset-doc__kicker">{label.toUpperCase()} · {new Date().toLocaleDateString('de-DE')}</span>
+   </div>
+   <Grow className="asset-doc__title" aria-label="Titel" placeholder="Titel" value={title} onChange={e=>setTitle(e.target.value)} disabled={released}/>
+   <Grow className="asset-doc__body" aria-label="Text" placeholder="Text" value={body} onChange={e=>setBody(e.target.value)} disabled={released}/>
   </div>
   {text.quality&&<aside className="asset-editor__evidence" aria-label="Belegprüfung"><EvidenceReview text={{...text,quality_stale:text.quality_stale||dirty}}/></aside>}
  </article>;
@@ -115,13 +141,13 @@ export function AssetsPage({clientId,params=new URLSearchParams(window.location.
     {!active.length&&<p className="themen-empty">Noch kein Thema aktiviert.</p>}
     <a href={`/client/${clientId}/themen`}>Themen aktivieren →</a>
    </aside>
-   <main>{selected?<Workspace key={`${selected.kind}-${selected.id}`} clientId={clientId} kind={selected.kind} identity={selected.id} initialText={params.get('text')||''}/>
+   <main>{selected?<Workspace key={`${selected.kind}-${selected.id}`} clientId={clientId} client={board.client} kind={selected.kind} identity={selected.id} initialText={params.get('text')||''}/>
     :<p className="themen-empty">Wähle links ein aktiviertes Thema oder aktiviere eines unter Themen.</p>}</main>
   </div>}
  </section>;
 }
 
-function Workspace({clientId,kind,identity,initialText=''}){
+function Workspace({clientId,client={},kind,identity,initialText=''}){
  const base=`clients/${clientId}/opportunities/${kind}/${identity}`,path=`${base}/activation`;
  const [detail,setDetail]=useState(null),[data,setData]=useState(null),[error,setError]=useState(''),[busy,setBusy]=useState(false);
  const [open,setOpen]=useState(initialText);
@@ -165,7 +191,7 @@ function Workspace({clientId,kind,identity,initialText=''}){
    <div className="assets-list">{data.texts.map(text=>{const key=`${text.type}-${text.id}`;return <button type="button" key={key} className="asset-card" aria-pressed={open===key} onClick={()=>setOpen(open===key?'':key)}>
     <span>{LABEL[text.kind]||text.kind}<em className={`themen-tag${text.released_at?' themen-tag--on':''}`}>{text.released_at?'Freigegeben':'Entwurf'}</em></span>
     <strong>{text.title||'Ohne Titel'}</strong></button>;})}</div></section>}
-  {current&&<Editor key={`${open}-${current.digest}`} text={current} path={path} exportBase={exportBase(current)} onSaved={setData}
+  {current&&<Editor key={`${open}-${current.digest}`} client={client} text={current} path={path} exportBase={exportBase(current)} onSaved={setData}
    checking={running} onCheck={async t=>{setError('');try{const job=await request(`${path}/${t.type}/${t.id}/check`,{method:'POST'});setData(v=>({...v,latest:{...job,kind:t.kind,started_at:new Date().toISOString()}}));}catch(e){setError(e.message);}}}/>}
   <NewAsset detail={detail} running={running||busy} onCreate={create}/>
  </div>;

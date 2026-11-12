@@ -7,7 +7,11 @@ already existed under "Aktivitäten", which now redirects here.
 """
 from __future__ import annotations
 
+import base64
+import binascii
+import dataclasses
 import datetime as dt
+from pathlib import Path
 from typing import Literal
 from urllib.parse import quote, urlencode
 
@@ -216,6 +220,41 @@ def _thema_document(session: Session, client, kind: str, identity: int):
     return asset_export.Document(title=detail["title"], client=client.name, sections=sections)
 
 
+Logo = Literal["kunde", "raute", "keiner"]
+RAUTE_LOGO = Path(__file__).resolve().parents[1] / "static" / "brand" / "raute-kopf.jpg"
+
+
+def _logo(client, choice: str) -> bytes | None:
+    """The logo chosen for the head of the document: the client's, raute+kopf's, or none.
+
+    A client's logo is kept as a ``data:`` URI (see :mod:`newspulse.logos`);
+    an https URL an operator pasted is fetched through the same guarded fetch.
+    """
+    if choice == "raute":
+        try:
+            return RAUTE_LOGO.read_bytes()
+        except OSError:
+            return None
+    if choice != "kunde":
+        return None
+    raw = (client.logo_url or "").strip()
+    if raw.startswith("data:image/") and ";base64," in raw:
+        try:
+            return base64.b64decode(raw.split(",", 1)[1], validate=True)
+        except (binascii.Error, ValueError):
+            return None
+    if raw.startswith("https://"):
+        from ... import logos
+
+        found = logos._get(raw)
+        return found[0] if found else None
+    return None
+
+
+def _with_logo(document, client, choice: str):
+    return dataclasses.replace(document, logo=_logo(client, choice)) if choice != "keiner" else document
+
+
 def _download(document, fmt: str) -> Response:
     from ... import asset_export
 
@@ -238,31 +277,32 @@ def _to_drive(document, fmt: str) -> dict:
 class DriveInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
     format: Fmt = "docx"
+    logo: Logo = "keiner"
 
 
 @router.get("/api/v1/clients/{client_id}/assets/{text_type}/{text_id}/export.{fmt}")
 def export_text(client_id: int, text_type: Literal["asset", "outreach"], text_id: int, fmt: Fmt,
-                session: Session = Depends(get_db)):
+                logo: Logo = "keiner", session: Session = Depends(get_db)):
     client = mandate_or_404(session, client_id)
-    return _download(_text_document(session, client, text_type, text_id), fmt)
+    return _download(_with_logo(_text_document(session, client, text_type, text_id), client, logo), fmt)
 
 
 @router.post("/api/v1/clients/{client_id}/assets/{text_type}/{text_id}/drive")
 def drive_text(client_id: int, text_type: Literal["asset", "outreach"], text_id: int, body: DriveInput,
                session: Session = Depends(get_db)):
     client = mandate_or_404(session, client_id)
-    return _to_drive(_text_document(session, client, text_type, text_id), body.format)
+    return _to_drive(_with_logo(_text_document(session, client, text_type, text_id), client, body.logo), body.format)
 
 
 @router.get("/api/v1/clients/{client_id}/themen/{kind}/{identity}/export.{fmt}")
 def export_thema(client_id: int, kind: Literal["detected", "developed"], identity: int, fmt: Fmt,
-                 session: Session = Depends(get_db)):
+                 logo: Logo = "keiner", session: Session = Depends(get_db)):
     client = mandate_or_404(session, client_id)
-    return _download(_thema_document(session, client, kind, identity), fmt)
+    return _download(_with_logo(_thema_document(session, client, kind, identity), client, logo), fmt)
 
 
 @router.post("/api/v1/clients/{client_id}/themen/{kind}/{identity}/drive")
 def drive_thema(client_id: int, kind: Literal["detected", "developed"], identity: int, body: DriveInput,
                 session: Session = Depends(get_db)):
     client = mandate_or_404(session, client_id)
-    return _to_drive(_thema_document(session, client, kind, identity), body.format)
+    return _to_drive(_with_logo(_thema_document(session, client, kind, identity), client, body.logo), body.format)

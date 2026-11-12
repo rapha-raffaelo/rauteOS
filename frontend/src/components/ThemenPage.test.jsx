@@ -146,3 +146,17 @@ it('opens the Deep Dive on the card on hover, with the fitting contacts',async()
  expect(screen.getByText('Anna Muster')).toBeTruthy();
  expect(screen.getByRole('tooltip').textContent).toContain('Versorgungssicherheit statt Lifestyle-Debatte');
 });
+
+it('shows a press release as its page with the client logo, and exports with the chosen logo',async()=>{
+ const {Editor}=await import('./AssetsPage.jsx');
+ localStorage.clear();
+ const text={id:8,type:'asset',kind:'pressemitteilung',title:'Remexian fordert Übergangsregel',body:'Text',digest:'d',released_at:null};
+ render(<Editor text={text} path="p" exportBase="/api/v1/clients/1/assets/asset/8" client={{name:'Remexian',logo:'data:image/png;base64,AAAA'}} onSaved={()=>{}}/>);
+ expect(screen.getByRole('img',{name:'Logo Remexian'})).toBeTruthy();
+ expect(screen.getByRole('button',{name:'Kunden-Logo'}).getAttribute('aria-pressed')).toBe('true');
+ fireEvent.click(screen.getByRole('button',{name:'raute+kopf'}));
+ expect(screen.getByRole('img',{name:'raute+kopf'})).toBeTruthy();
+ fireEvent.click(screen.getByRole('button',{name:'Exportieren'}));
+ expect(screen.getByRole('link',{name:'Herunterladen'}).getAttribute('href')).toBe('/api/v1/clients/1/assets/asset/8/export.docx?logo=raute');
+ expect(localStorage.getItem('asset-logo:asset-8')).toBe('raute');
+});

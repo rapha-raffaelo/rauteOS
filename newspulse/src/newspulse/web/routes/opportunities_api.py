@@ -1,6 +1,7 @@
 """Unified opportunity workspace and explicit idea development requests."""
 import datetime as dt
 from typing import Literal
+from ..app import logo_src
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select, update
@@ -47,7 +48,7 @@ def listing(client_id:int,response:Response,session:Session=Depends(get_db)):
     reaction = dict(crisis=dict(title=crisis_article.title if crisis_article else 'Aktive Krise',
         href=f'/client/{client_id}/krise') if active_crisis else None,
         issues=[dict(id=row.id,title=row.title,href=f'/client/{client_id}/issues') for row in issues.open_issues(session,client)])
-    return dict(reaction=reaction,client=dict(id=client.id,name=client.name),opportunities=workspaces.listings(session,client_id),
+    return dict(reaction=reaction,client=dict(id=client.id,name=client.name,logo=logo_src(client.logo_url)),opportunities=workspaces.listings(session,client_id),
                 development=development_data(job) if job else None)
 
 
