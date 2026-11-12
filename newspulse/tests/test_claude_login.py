@@ -55,3 +55,9 @@ def test_pty_login_roundtrip(monkeypatch):
     while login.poll(session['id'],'alice')['state']=='checking' and time.monotonic()<deadline: time.sleep(.02)
     assert login.poll(session['id'],'alice')['state']=='connected'
     assert login.poll(session['id'],'alice')['url'] is None
+
+
+def test_current_cli_terminal_hyperlink():
+    url='https://claude.com/cai/oauth/authorize?code_challenge=abc&state=xyz'
+    output='If the browser did not open: \x1b]8;;'+url+'\x07'+url+'\x1b]8;;\x07'
+    assert login.login_url(output)==url

@@ -20,15 +20,19 @@ ANSI = re.compile(r'\x1b\[[0-?]*[ -/]*[@-~]')
 
 
 def login_url(output):
-    for raw in re.findall(r'https://[^\s\x1b]+', ANSI.sub('', output)):
+    for raw in re.findall(r'https://[^\s\x00-\x1f\x7f]+', ANSI.sub('', output)):
         url = raw.rstrip(').,')
         try:
             parsed = urlsplit(url)
             port = parsed.port
         except ValueError:
             continue
-        if (parsed.hostname in {'claude.ai', 'console.anthropic.com', 'platform.claude.com'}
-                and parsed.path == '/oauth/authorize' and not parsed.username and port in (None,443)):
+        if ((parsed.hostname, parsed.path) in {
+                ('claude.ai', '/oauth/authorize'),
+                ('console.anthropic.com', '/oauth/authorize'),
+                ('platform.claude.com', '/oauth/authorize'),
+                ('claude.com', '/cai/oauth/authorize'),
+            } and not parsed.username and port in (None,443)):
             return url
     return None
 
