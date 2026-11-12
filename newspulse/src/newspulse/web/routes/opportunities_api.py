@@ -107,8 +107,8 @@ def save_choices(session,client_id,kind,identity,body,actor,activate=False):
     if body.speaker_statement_id and body.speaker_statement_id not in {r.id for r in workspaces.speakers(session,client_id)}:
         raise HTTPException(422,'Sprecher ist nicht im verwendbaren Profil hinterlegt.')
     from ... import people
-    if body.speaker_person_id and body.speaker_person_id not in {p.id for p in people.media(session,client_id)}:
-        raise HTTPException(422,'Diese Person ist kein Medienansprechpartner im Profil.')
+    if body.speaker_person_id and body.speaker_person_id not in {p.id for p in people.book(session,client_id)}:
+        raise HTTPException(422,'Diese Ansprechperson ist nicht im Kundenprofil hinterlegt.')
     contacts=set(session.scalars(select(Contact.id).where(Contact.id.in_(body.contact_ids))))
     blocked=set(session.scalars(select(JournalistProfile.contact_id).where(JournalistProfile.contact_id.in_(body.contact_ids),
         JournalistProfile.relationship_status=='Nicht kontaktieren')))

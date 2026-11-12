@@ -75,7 +75,7 @@ def test_raute_proposes_the_media_contact_whose_topics_fit_and_the_writer_quotes
     _add(web, name="Dora Intern", media_contact="", topics="Kredite, Finanzierung, Mittelstand")
     read = web.get("/api/v1/clients/1/opportunities/developed/1").json()
     anna = db.scalar(select(ClientPerson).where(ClientPerson.name == "Anna Berg"))
-    assert [p["label"] for p in read["people"]] == ["Anna Berg, CFO", "Carla Produkt, CPO"]
+    assert [p["label"] for p in read["people"]] == ["Anna Berg, CFO", "Carla Produkt, CPO", "Dora Intern, CFO"]
     assert read["speaker_proposal"]["person_id"] == anna.id
     assert read["speaker_proposal"]["reason"] == "Themenverantwortung passt: Finanzierung, Kredite"
 
@@ -89,8 +89,16 @@ def test_raute_proposes_the_media_contact_whose_topics_fit_and_the_writer_quotes
     assert activation.writing_facts(db, workspace, context)["ceo"].value == "Anna Berg, CFO"
 
 
-def test_only_a_media_contact_of_this_mandate_can_be_the_speaker(web, db):
+def test_an_internal_profile_contact_is_optional_and_not_a_quotable_speaker(web, db):
     _add(web, name="Dora Intern", media_contact="")
     dora = db.scalar(select(ClientPerson))
     body = dict(revision=0, storyline="x", speaker_person_id=dora.id, contact_ids=[])
-    assert web.put("/api/v1/clients/1/opportunities/developed/1", json=body).status_code == 422
+    assert web.put("/api/v1/clients/1/opportunities/developed/1", json=body).status_code == 200
+    workspace = db.scalar(select(OpportunityWorkspace))
+    context, _ = activation.context_for(db, workspace)
+    assert context['speaker']['media_contact'] is False
+    assert 'ceo' not in activation.writing_facts(db, workspace, context)
+    body.update(revision=1, speaker_person_id=None)
+    assert web.put("/api/v1/clients/1/opportunities/developed/1", json=body).status_code == 200
+    context, _ = activation.context_for(db, workspace)
+    assert context['speaker'] is None

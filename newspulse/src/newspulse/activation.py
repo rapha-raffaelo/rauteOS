@@ -35,9 +35,9 @@ def context_for(session,workspace,*,contact_id=None,instruction=''):
     from . import people
     spokesperson=None
     if workspace.speaker_person_id:
-        spokesperson={p.id:p for p in people.media(session,client.id)}.get(workspace.speaker_person_id)
+        spokesperson={p.id:p for p in people.book(session,client.id)}.get(workspace.speaker_person_id)
         if spokesperson is None:
-            raise ValueError('Der gewählte Sprecher ist kein Medienansprechpartner mehr. Auswahl im Workspace prüfen.')
+            raise ValueError('Die gewählte Ansprechperson ist nicht mehr im Kundenprofil vorhanden. Bitte Auswahl prüfen.')
     target=None;person=None
     if contact_id:
         contact=session.get(Contact,contact_id)
@@ -69,22 +69,25 @@ def context_for(session,workspace,*,contact_id=None,instruction=''):
 
 
 def person_speaker(person):
-    """A phone-book media contact in the shape the writer reads a speaker in:
+    """A profile contact in the shape the writer reads a speaker in:
     the client's own entry, for outside use."""
     from . import people
     return dict(id=None,person_id=person.id,key='ceo',value=people.label(person),topics=person.topics,
-        evidence_type='Client Statement',external_use='Allowed')
+        evidence_type='Client Statement',external_use='Allowed' if person.media_contact else 'Internal Only', media_contact=person.media_contact)
 
 
 def writing_facts(session,workspace,context):
     facts=profile.stored(session,workspace.client_id)
     for key,row in list(facts.items()):
         if twin.externally_blocked(row):del facts[key]
-    if context['speaker'] and context['speaker'].get('person_id'):
+    if context['speaker'] and context['speaker'].get('person_id') and context['speaker'].get('media_contact'):
         # Not added to the session: it names the speaker for this draft only.
         facts['ceo']=ClientFact(client_id=workspace.client_id,key='ceo',value=context['speaker']['value'])
-    elif context['speaker']:
+    elif context['speaker'] and not context['speaker'].get('person_id'):
         facts['ceo']=session.get(ClientFact,context['speaker']['id'])
+    else:
+        facts.pop('ceo', None)
+        facts.pop('sprecher', None)
     return facts
 
 def writing_context(context):
@@ -94,7 +97,7 @@ def writing_context(context):
         and r['external_use']!='Internal Only' and r['confidentiality'] not in
         {'Client Confidential','RAUTE Internal','Highly Restricted'}]
     data={**context,'statements':allowed}
-    return ('WORKSPACE-AUFTRAG\nDie gewählte Storyline und der gewählte Sprecher gelten für diesen Entwurf. '
+    return ('WORKSPACE-AUFTRAG\nDie gewählte Storyline gilt für diesen Entwurf. Die Ansprechperson ist optional. Ohne Auswahl keine Person oder Zitate automatisch ergänzen. Eine Ansprechperson ohne media_contact=true dient nur der internen Abstimmung und darf nicht als zitierfähiger Sprecher dargestellt werden. '
         'Journalistenangaben dienen der konkreten Ansprache. Keine fehlende Veröffentlichung behaupten. '
         'Twin-Aussagen behalten Herkunft, Status und Freigabegrenzen. Vertrauliche oder rein interne Aussagen '
         'nicht aus einer Gelegenheit rekonstruieren. Kundenmail: Vorschlag zur Freigabe, keine behauptete Zusage.\n'

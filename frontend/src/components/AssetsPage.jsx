@@ -10,7 +10,7 @@ export const KINDS=[['kundenmail','Kundenmail','Abstimmung mit dem Kunden'],['st
  ['pitch','Pitch','An eine:n Journalist:in'],['custom','Custom','Eigene Vorgabe, eigenes Format']];
 const LABEL=Object.fromEntries(KINDS.map(([k,l])=>[k,l]));
 const NEEDS_CONTACT=new Set(['pitch']);
-const speakerValue=d=>d.speaker_person_id?`p:${d.speaker_person_id}`:d.speaker_statement_id?`f:${d.speaker_statement_id}`:'';
+const speakerValue=d=>d.speaker_person_id?`p:${d.speaker_person_id}`:'';
 
 // Export one asset or a whole Thema: as Word or PDF, downloaded or put into
 // the shared Drive folder "7. Assets" under the client's own sub-folder.
@@ -117,13 +117,13 @@ function Workspace({clientId,kind,identity,initialText=''}){
  useEffect(()=>{if(!running)return;const timer=setInterval(()=>request(path).then(v=>{setData(v);
   if(v.latest?.status!=='running'&&waiting.current){waiting.current=false;if(v.latest?.status==='complete'&&v.texts[0])setOpen(`${v.texts[0].type}-${v.texts[0].id}`);}}).catch(e=>setError(e.message)),2500);return()=>clearInterval(timer);},[path,running]);
  async function choose(changes){
-  const next={revision:detail.revision,storyline:detail.storyline,speaker_statement_id:detail.speaker_statement_id,speaker_person_id:detail.speaker_person_id,contact_ids:detail.contact_ids,...changes};
+  const next={revision:detail.revision,storyline:detail.storyline,speaker_statement_id:null,speaker_person_id:detail.speaker_person_id,contact_ids:detail.contact_ids,...changes};
   const value=await request(base,{method:'PUT',body:JSON.stringify(next)});setDetail(value);return value;
  }
  async function speaker(value){setError('');const [k,id]=value.split(':');
-  try{await choose({speaker_person_id:k==='p'?Number(id):null,speaker_statement_id:k==='f'?Number(id):null});}catch(e){setError(e.message);}}
+  try{await choose({speaker_person_id:k==='p'?Number(id):null,speaker_statement_id:null});}catch(e){setError(e.message);}}
  async function create(input){setBusy(true);setError('');try{
-  if(input.contact_id&&!detail.contact_ids.includes(input.contact_id))await choose({contact_ids:[...detail.contact_ids,input.contact_id]});
+  if(detail.speaker_statement_id || (input.contact_id&&!detail.contact_ids.includes(input.contact_id)))await choose({contact_ids:input.contact_id?[...new Set([...detail.contact_ids,input.contact_id])]:detail.contact_ids});
   waiting.current=true;
   const job=await request(path,{method:'POST',body:JSON.stringify(input)});
   setData(v=>({...v,latest:{...job,kind:input.kind,started_at:new Date().toISOString()}}));
@@ -136,10 +136,10 @@ function Workspace({clientId,kind,identity,initialText=''}){
    <div><span className="themen-tag themen-tag--on">Thema aktiv</span><h2>{detail.title}</h2>{detail.storyline&&<p>Pitch: {detail.storyline}</p>}</div>
    <div className="assets-workspace__side">
    <ExportBox base={`/api/v1/clients/${clientId}/themen/${kind}/${identity}`} label="Thema exportieren"/>
-   <label className="assets-speaker">Sprecher<select aria-label="Sprecher" value={speakerValue(detail)} onChange={e=>speaker(e.target.value)}>
-    <option value="">Noch nicht gewählt</option>
+   <label className="assets-speaker">Ansprechperson (optional)<select aria-label="Ansprechperson (optional)" value={speakerValue(detail)} onChange={e=>speaker(e.target.value)}>
+    <option value="">Keine Ansprechperson</option>
     {(detail.people||[]).map(p=><option key={`p${p.id}`} value={`p:${p.id}`}>{p.label}</option>)}
-    {detail.speakers.map(s=><option key={`f${s.id}`} value={`f:${s.id}`}>{s.value}</option>)}</select></label>
+    </select></label>
    </div>
   </header>
   {error&&<p className="twin-error" role="alert">{error}</p>}

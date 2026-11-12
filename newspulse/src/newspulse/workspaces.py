@@ -59,10 +59,9 @@ def speakers(session,client_id):
 
 
 def speaker_people(session,client_id,title,about,saved):
-    """The media contacts on offer, and the one RAUTE proposes while nobody has
-    been chosen yet."""
+    """Profile contacts on offer; recommendations remain limited to media contacts."""
     from . import people
-    offered=[dict(id=p.id,label=people.label(p),topics=p.topics) for p in people.media(session,client_id)]
+    offered=[dict(id=p.id,label=people.label(p),topics=p.topics) for p in people.book(session,client_id)]
     chosen=saved is not None and (saved.speaker_person_id or saved.speaker_statement_id)
     found=None if chosen else people.proposal(session,client_id,f"{title} {about}")
     return offered,(dict(person_id=found[0].id,reason=found[1]) if found else None)

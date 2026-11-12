@@ -101,7 +101,7 @@ export function ThemenPage({clientId}){
    const storyline=pitchOf(detail)||(row.summary||'').trim();
    if(!storyline)throw new Error('Für dieses Thema fehlt noch ein Pitch. Bitte im Deep Dive ergänzen.');
    await request(`${base}/activate`,{method:'POST',body:JSON.stringify({revision:detail.revision,storyline,
-    speaker_statement_id:detail.speaker_statement_id,speaker_person_id:detail.speaker_person_id||detail.speaker_proposal?.person_id||null,
+    speaker_statement_id:null,speaker_person_id:detail.speaker_person_id||null,
     contact_ids:detail.contact_ids})});
    window.location.assign(`/client/${clientId}/assets?kind=${row.context_kind}&context=${row.context_id}`);
   }catch(e){setError(e.message);setBusy(false);}

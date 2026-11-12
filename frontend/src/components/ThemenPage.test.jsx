@@ -42,7 +42,7 @@ it('activates a Thema with RAUTE pitch and speaker, then opens Assets',async()=>
  fireEvent.click(await screen.findByRole('button',{name:'Thema aktivieren'}));
  await waitFor(()=>expect(assign).toHaveBeenCalledWith('/client/1/assets?kind=developed&context=7'));
  const sent=JSON.parse(calls.find(c=>c.url.endsWith('/activate')).body);
- expect(sent).toMatchObject({revision:2,storyline:'Versorgungssicherheit statt Lifestyle-Debatte',speaker_person_id:4});
+ expect(sent).toMatchObject({revision:2,storyline:'Versorgungssicherheit statt Lifestyle-Debatte',speaker_person_id:null});
 });
 
 it('draws the Agenda as a timeline with a hover note',async()=>{
@@ -90,4 +90,18 @@ it('requests an automatic recent-news proposal and links the triggering report',
  expect(await screen.findByRole('link',{name:'Neue Studie ↗'})).toHaveProperty('href','https://example.org/studie');
  expect(await screen.findByRole('status')).toHaveProperty('textContent','Noch keine neuen Meldungen');
  expect(calls.some(c=>c.url.endsWith('/themen/suggestions')&&c.method==='POST')).toBe(true);
+});
+
+it('offers an optional profile contact without researched free-text speakers',async()=>{
+ routes({'/opportunities':{...board,opportunities:[{...board.opportunities[1]}]},
+  '/opportunities/detected/3':{...detail,storyline:'Ein Thema',speaker_statement_id:99,
+    speakers:[{id:99,value:'Die PR betreut eine Agentur'}],people:[{id:4,label:'Anna Beispiel, Marketing'}]},
+  '/opportunities/detected/3/activation':{formats:[],texts:[],latest:null}});
+ window.history.replaceState(null,'','/client/1/assets?kind=detected&context=3');
+ render(<AssetsPage clientId={1}/>);
+ const select=await screen.findByRole('combobox',{name:'Ansprechperson (optional)'});
+ expect(select.value).toBe('');
+ expect(screen.getByRole('option',{name:'Keine Ansprechperson'})).toBeTruthy();
+ expect(screen.getByRole('option',{name:'Anna Beispiel, Marketing'})).toBeTruthy();
+ expect(screen.queryByRole('option',{name:'Die PR betreut eine Agentur'})).toBeNull();
 });

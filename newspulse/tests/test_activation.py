@@ -167,3 +167,13 @@ def test_released_text_and_its_checks_are_immutable(web,db):
     assert db.get(Asset,1).review=='Original release review'
     assert db.get(OpportunityAssetRun,identity).status=='stale'
     assert web.post(path()+'/asset/1/check').status_code==409
+
+
+def test_asset_can_be_created_without_an_optional_contact(web, db):
+    workspace = db.scalar(select(OpportunityWorkspace))
+    workspace.speaker_statement_id = None
+    workspace.speaker_person_id = None
+    db.commit()
+    identity = launch(web)
+    activation.run(db, identity, invoke=draft, review_invoke=reviewer)
+    assert db.get(OpportunityAssetRun, identity).status == 'complete'
