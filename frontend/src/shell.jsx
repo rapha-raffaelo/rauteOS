@@ -211,8 +211,8 @@ export function Shell({ data, portals = true }) {
         <div className="side__sect">{t("Arbeitsplatz")}</div>
         {link("/desk", "Desk", "desk")}
         {link("/aufgaben", "Aufgaben", "tasks", data.tasks_open)}
-        {link("/gmail", "Gmail", "media")}
         {link("/clients", "Kunden", "clients")}
+        {link("/gmail", "Gmail", "media")}
         <div className="side__sect">{t("Kommunikation")}</div>
         {link("/today", "Intelligence", "intel")}
         {link("/assets", "Stories & Content", "stories")}
