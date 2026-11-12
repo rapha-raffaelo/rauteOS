@@ -1,4 +1,4 @@
-import React,{useEffect,useState} from 'react';
+import React,{useEffect,useRef,useState} from 'react';
 import {PageHeading} from './PageHeading.jsx';
 import {journalistRequest as request} from '../journalists-api.js';
 
@@ -41,11 +41,45 @@ export function ThemaDetails({clientId,kind,identity}){
    <section><h2>Was ist passiert?</h2><p>{detail.situation?.trim()||missing}</p></section>
    <section><h2>Warum ist das relevant?</h2><p>{detail.relevance?.trim()||missing}</p></section>
    <section className="themen-detail__pitch"><h2>Pitch</h2><p>{pitchOf(detail)||missing}</p></section>
+   <section><h2>Passende Ansprechpartner</h2><Recipients list={detail.recipients}/></section>
    <section><h2>Quellen</h2>{detail.sources?.length?<ul>{detail.sources.map((source,i)=><li key={source.url||i}>
     <a href={source.url} target="_blank" rel="noopener noreferrer">{source.title||source.source||'Quelle'} ↗</a>
     {source.published_at&&<small> · {day(source.published_at)}</small>}</li>)}</ul>:<p>{missing}</p>}</section>
   </article>}
  </section>;
+}
+
+// Who to talk to: bylines from the stories, else the outlets that cover the
+// field. Never an invented name (workspaces.recipients).
+export function Recipients({list}){
+ if(!list?.length)return <p className="themen-empty">Noch keine passenden Medien gefunden.</p>;
+ return <ul className="themen-recipients">{list.map((r,i)=><li key={i}><strong>{r.name}</strong>{r.outlet&&` · ${r.outlet}`}{r.reason&&<small>{r.reason}</small>}</li>)}</ul>;
+}
+
+const details=new Map();
+function loadDetail(path){if(!details.has(path))details.set(path,request(path).catch(e=>{details.delete(path);throw e;}));return details.get(path);}
+
+// The Deep Dive on the card, as in the mockup: it opens while the pointer or
+// the keyboard focus is on "Deep Dive", and is read once.
+export function DeepDive({clientId,clientName,row}){
+ const path=`clients/${clientId}/opportunities/${row.context_kind}/${row.context_id}`;
+ const [open,setOpen]=useState(false),[detail,setDetail]=useState(null),[error,setError]=useState('');
+ const timer=useRef(0);
+ function show(){clearTimeout(timer.current);setOpen(true);if(!detail)loadDetail(path).then(setDetail).catch(e=>setError(e.message));}
+ function hide(){clearTimeout(timer.current);timer.current=setTimeout(()=>setOpen(false),150);}
+ const missing=<span className="themen-empty">bitte ergänzen</span>;
+ return <div className="themen-dive" onMouseEnter={show} onMouseLeave={hide} onFocus={show} onBlur={hide}>
+  <button type="button" className="btn btn--quiet themen-dive__trigger" aria-expanded={open} onClick={()=>open?setOpen(false):show()}>Deep Dive</button>
+  {open&&<div className="themen-dive__pop" role="tooltip">
+   {error?<p role="alert">{error}</p>:!detail?<p role="status">Deep Dive wird geladen…</p>:<>
+    {detail.deep_dive==='pending'&&<p role="status" className="themen-hint">RAUTE schreibt den Deep Dive noch.</p>}
+    <section><h3>Was ist passiert?</h3><p>{detail.situation?.trim()||missing}</p></section>
+    <section><h3>Warum für {clientName} relevant?</h3><p>{detail.relevance?.trim()||missing}</p></section>
+    <section className="themen-dive__pitch"><h3>Pitch</h3><p>{pitchOf(detail)||missing}</p></section>
+    <section><h3>Passende Ansprechpartner</h3><Recipients list={detail.recipients}/></section>
+   </>}
+  </div>}
+ </div>;
 }
 
 function Card({clientId,clientName,row,onActivate,busy}){
@@ -57,7 +91,8 @@ function Card({clientId,clientName,row,onActivate,busy}){
   <h2>{row.title}</h2>
   {o?.url&&<p className="themen-hint">Auslöser: <a href={o.url} target="_blank" rel="noopener noreferrer">{o.title||o.source} ↗</a></p>}
   <div className="themen-card__acts">
-   <a className="btn btn--quiet" href={`/client/${clientId}/themen?kind=${row.context_kind}&context=${row.context_id}`}>Details ansehen</a>
+   <span className="themen-card__left"><DeepDive clientId={clientId} clientName={clientName} row={row}/>
+    <a className="themen-card__more" href={`/client/${clientId}/themen?kind=${row.context_kind}&context=${row.context_id}`}>Details ansehen</a></span>
    {row.status==='active'?<a className="btn" href={`/client/${clientId}/assets?kind=${row.context_kind}&context=${row.context_id}`}>Zu den Assets →</a>
     :<button type="button" className="btn btn--go" disabled={busy} onClick={()=>onActivate(row)}>Thema aktivieren</button>}
   </div>

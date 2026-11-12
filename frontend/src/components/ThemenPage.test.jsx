@@ -134,3 +134,15 @@ it('shows a centered writing dialog with indeterminate progress and a background
  expect(dismiss).toHaveBeenCalledOnce();
  unmount();expect(screen.queryByRole('dialog')).toBeNull();
 });
+
+it('opens the Deep Dive on the card on hover, with the fitting contacts',async()=>{
+ routes({'/opportunities':board,'/opportunities/developed/7':{...detail,recipients:[{name:'Anna Muster',outlet:'Ärzte Zeitung',reason:'schrieb zuletzt darüber'}]},
+  '/opportunities/detected/3':detail,'/themen/suggestions':{status:'empty'},'/agenda':{items:[]}});
+ render(<ThemenPage clientId={1}/>);
+ const [trigger]=await screen.findAllByRole('button',{name:'Deep Dive'});
+ fireEvent.mouseEnter(trigger.parentElement);
+ expect(await screen.findByText('Der Bundestag hat beschlossen.')).toBeTruthy();
+ expect(screen.getByText('Warum für Remexian relevant?')).toBeTruthy();
+ expect(screen.getByText('Anna Muster')).toBeTruthy();
+ expect(screen.getByRole('tooltip').textContent).toContain('Versorgungssicherheit statt Lifestyle-Debatte');
+});
