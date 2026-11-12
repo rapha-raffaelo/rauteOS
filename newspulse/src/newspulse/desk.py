@@ -376,7 +376,7 @@ def _opportunity_counts(session: Session, now: dt.datetime, listed: dict[int, li
     return {cid: len(rows) for cid, rows in listed.items() if rows}
 
 
-def _decisions(session: Session, clients: dict[int, Client]) -> list[Decision]:
+def _decisions(session: Session, clients: dict[int, Client], *, hide_settled: bool = True) -> list[Decision]:
     """Everything standing still until somebody decides, newest need first.
 
     Three kinds, and they are three because each has a different answer:
@@ -439,13 +439,27 @@ def _decisions(session: Session, clients: dict[int, Client]) -> list[Decision]:
             )
         )
 
+    # The Desk counts what the board "Offene Entscheidungen" shows: a decision
+    # whose task was deleted there, or moved to Erledigt, is settled for the
+    # team even though the letter itself is still waiting. Counting it anyway
+    # left a "1 offene Entscheidung" nobody could find.
+    from .models import DismissedTaskSource, Task
+
+    keys = [d.source_key for d in pending if d.source_key]
+    if keys and hide_settled:
+        settled = set(session.scalars(
+            select(DismissedTaskSource.source_key).where(DismissedTaskSource.source_key.in_(keys))))
+        settled |= set(session.scalars(
+            select(Task.source_key).where(Task.source_key.in_(keys), Task.status == "erledigt")))
+        pending = [d for d in pending if d.source_key not in settled]
+
     # Oldest first: a decision that has been waiting three weeks is more urgent
     # than one raised this morning, and a list sorted the other way buries it.
     pending.sort(key=lambda d: (d.since is None, d.since))
     return pending
 
 
-def open_decisions(session: Session, client_id: int | None = None) -> list[Decision]:
+def open_decisions(session: Session, client_id: int | None = None, *, hide_settled: bool = True) -> list[Decision]:
     """The Desk's open decisions, for pages other than the Desk.
 
     The same rows "Entscheidungen offen" counts, so the Aufgaben page lists
@@ -455,7 +469,7 @@ def open_decisions(session: Session, client_id: int | None = None) -> list[Decis
     if client_id is not None:
         query = query.where(Client.id == client_id)
     by_id = {client.id: client for client in session.scalars(query)}
-    return _decisions(session, by_id) if by_id else []
+    return _decisions(session, by_id, hide_settled=hide_settled) if by_id else []
 
 
 def _in_flight(session: Session, clients: dict[int, Client]) -> list[InFlight]:

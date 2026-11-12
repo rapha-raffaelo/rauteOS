@@ -94,7 +94,7 @@ def _tasks_page(request: Request, session: Session, *, error: str = "", draft: d
     raw = request.query_params.get("client", "")
     client_id = int(raw) if raw.isdigit() else None
     boards = worklists.task_boards(session)
-    worklists.sync_decision_tasks(session, desk.open_decisions(session), boards)
+    worklists.sync_decision_tasks(session, desk.open_decisions(session, hide_settled=False), boards)
     rows = worklists.tasks(session, status=status, client_id=client_id)
     everything = worklists.open_tasks(session)
     me = worklists.member_for(request.scope.get("user_email"))

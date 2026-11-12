@@ -84,10 +84,15 @@ def _prompt(client, since, now) -> str:
     context = {"company": client.name, "aliases": client.aliases, "industry": client.industry,
                "keywords": client.keywords, "alert_topics": client.alert_topics,
                "website": getattr(client, "website", None)}
+    names = [client.name, *(client.aliases or [])]
+    queries = [f'"{name}"' for name in names if name] + [
+        f'"{term}"' for term in [*(client.keywords or []), *(client.alert_topics or [])] if term]
     return (
-        "Suche mit der Google-Suche nach neuen Veröffentlichungen über dieses Mandat: einmal nach "
-        "dem Unternehmensnamen und seinen Aliassen, dann nach jedem Keyword im Zusammenhang mit der "
-        "Branche des Unternehmens. Gesucht sind Nachrichten, Fachmedien, Regionalmedien, Blogs, "
+        "Suche mit der Google-Suche nach neuen Veröffentlichungen über dieses Mandat. Stelle jede "
+        "der folgenden Suchanfragen einzeln, nie mehrere Begriffe in einer Anfrage, denn jeder Begriff "
+        "für sich ist ein Treffer: " + "; ".join(dict.fromkeys(queries)) + ". "
+        "Bei einem Keyword zählt ein Artikel nur, wenn er zur Branche oder zum Unternehmen passt. "
+        "Gesucht sind Nachrichten, Fachmedien, Regionalmedien, Blogs, "
         "Verbands- und Presseportale im deutschsprachigen Raum. "
         f"Berücksichtige ausschließlich Veröffentlichungen zwischen {since.isoformat()} und {now.isoformat()}. "
         "Keine erfundenen Ereignisse, Quellen oder Datumsangaben. Keine Startseiten, Suchseiten, "

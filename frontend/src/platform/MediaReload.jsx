@@ -1,5 +1,13 @@
 import React, {useEffect, useState} from 'react';
 const iso = date => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+// Each term on its own: the name or any one keyword is a hit. Quoting them all
+// side by side asked Google for pages that carry every keyword at once, which
+// on most days is none.
+function googleLink(client, pref, days) {
+  const terms = [...(pref.company ? [client.name] : []), ...pref.keywords].map(term => `"${term}"`);
+  const range = days.length ? [`after:${days[0]}`, `before:${iso(new Date(new Date(days[days.length - 1] + 'T12:00:00').getTime() + 86400000))}`] : [];
+  return 'https://www.google.com/search?q=' + encodeURIComponent([terms.length > 1 ? `(${terms.join(' OR ')})` : terms.join(''), ...range].join(' ').trim());
+}
 export function MediaReload({data:d}) {
  const today=iso(new Date());
  const clients=d.clients.filter(c=>c.active && !c.is_competitor);
@@ -42,7 +50,7 @@ export function MediaReload({data:d}) {
     </div>
     <div>
      <details className="media-client-picker"><summary>Kunden auswählen · {selected.length} von {clients.length}</summary><button type="button" className="btn btn--quiet" onClick={()=>setSelected(clients.map(c=>c.id))}>Alle auswählen</button><button type="button" className="btn btn--quiet" onClick={()=>setSelected([])}>Alle abwählen</button>{clients.map(c=><label key={c.id}><input type="checkbox" checked={selected.includes(c.id)} onChange={e=>setSelected(p=>e.target.checked?[...p,c.id]:p.filter(id=>id!==c.id))}/>{c.name}</label>)}</details>
-     {clients.filter(c=>selected.includes(c.id)).map(c=><details key={c.id} className="media-client-config"><summary>{c.name} · Suche anpassen</summary><label><input type="checkbox" checked={prefs[c.id].company} onChange={e=>change(c.id,{company:e.target.checked})}/>Unternehmensname und Aliasse</label><p>Keywords aus dem Kundenprofil</p>{(c.keywords || []).map(keyword=><label key={keyword}><input type="checkbox" checked={prefs[c.id].keywords.includes(keyword)} onChange={e=>change(c.id,{keywords:e.target.checked?[...prefs[c.id].keywords,keyword]:prefs[c.id].keywords.filter(k=>k!==keyword)})}/>{keyword}</label>)}<a href={`/client/${c.id}/twin`}>Keywords im Profil bearbeiten →</a><p><a target="_blank" rel="noreferrer" href={'https://www.google.com/search?q='+encodeURIComponent([c.name,...prefs[c.id].keywords.map(k=>'"'+k+'"'),...(days.length?['after:'+days[0],'before:'+iso(new Date(new Date(days[days.length-1]+'T12:00:00').getTime()+86400000))]:[])].join(' '))}>Auch direkt bei Google ansehen ↗</a></p></details>)}
+     {clients.filter(c=>selected.includes(c.id)).map(c=><details key={c.id} className="media-client-config"><summary>{c.name} · Suche anpassen</summary><label><input type="checkbox" checked={prefs[c.id].company} onChange={e=>change(c.id,{company:e.target.checked})}/>Unternehmensname und Aliasse</label><p>Keywords aus dem Kundenprofil</p>{(c.keywords || []).map(keyword=><label key={keyword}><input type="checkbox" checked={prefs[c.id].keywords.includes(keyword)} onChange={e=>change(c.id,{keywords:e.target.checked?[...prefs[c.id].keywords,keyword]:prefs[c.id].keywords.filter(k=>k!==keyword)})}/>{keyword}</label>)}<a href={`/client/${c.id}/twin`}>Keywords im Profil bearbeiten →</a><p><a target="_blank" rel="noreferrer" href={googleLink(c, prefs[c.id], days)}>Auch direkt bei Google ansehen ↗</a></p></details>)}
     </div>
    </div>
    {error&&<p role="alert">{error}</p>}

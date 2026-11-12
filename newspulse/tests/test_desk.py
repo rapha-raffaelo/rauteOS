@@ -372,6 +372,32 @@ def test_the_oldest_decision_is_first(session):
     assert titles[0] == "Vor drei Wochen"
 
 
+def test_a_decision_settled_on_the_board_is_not_counted_on_the_desk(session):
+    """Deleting the mirrored task, or moving it to Erledigt, settles it for the
+    team. The Desk counted it anyway: "1 offene Entscheidung" nobody could find."""
+    from newspulse import worklists
+    from newspulse.models import DismissedTaskSource, Task
+
+    client = _mandate(session)
+    angle = _angle(session, client)
+    deleted = _letter(session, client, angle, subject="Gelöscht")
+    done = _letter(session, client, angle, subject="Erledigt")
+    _letter(session, client, angle, subject="Offen")
+    worklists.sync_decision_tasks(session, desk.open_decisions(session, hide_settled=False),
+                                  worklists.task_boards(session))
+    session.merge(DismissedTaskSource(source_key=f"outreach:{deleted.id}"))
+    session.query(Task).filter(Task.source_key == f"outreach:{deleted.id}").delete()
+    task = session.query(Task).filter(Task.source_key == f"outreach:{done.id}").one()
+    worklists.set_task_status(task, "erledigt")
+    session.commit()
+
+    page = desk.build(session, now=_NOW)
+    assert [d.title for d in page.decisions] == ["Offen"] and page.decisions_open == 1
+    worklists.sync_decision_tasks(session, desk.open_decisions(session, hide_settled=False),
+                                  worklists.task_boards(session))
+    assert session.get(Task, task.id).source_open, "the letter still waits; the task just sits in Erledigt"
+
+
 # --- The page and the ledger form ----------------------------------------------------
 
 
