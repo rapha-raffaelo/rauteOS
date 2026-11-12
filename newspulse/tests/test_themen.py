@@ -282,8 +282,7 @@ def test_suggestions_use_recent_client_news_once_and_keep_sources(session, manda
         calls.append(prompt)
         assert 'Neue Versorgungsstudie' in prompt
         assert 'Alte Studie' not in prompt
-        return json.dumps(dict(worth_sending=True, subject='Versorgung einordnen', message='Ein Vorschlag',
-                               evidence=[0], context='Die neue Studie', credibility='Versorgung', thesis='These'))
+        return json.dumps(dict(topics=[dict(title='Versorgung einordnen', pitch='Ein Vorschlag', evidence=[0], situation='Die neue Studie', relevance='Versorgung')]))
     lease = topic_suggestions.claim(session, mandate.id)
     assert lease and topic_suggestions.claim(session, mandate.id) is None
     topic_suggestions.generate(session, mandate.id, lease, invoke=invoke)
@@ -317,7 +316,19 @@ def test_suggestions_do_not_invent_news_and_report_model_failure(session, mandat
 def test_suggestions_retry_a_malformed_model_reply_once(session, mandate):
     from newspulse import topic_suggestions
     _article(session, 'Neue Studie', 'https://ex.de/retry-study', radar=mandate)
-    replies = iter(['{}\n{}', json.dumps(dict(worth_sending=True, subject='Thema', message='Pitch', evidence=[0]))])
+    replies = iter(['{}\n{}', json.dumps(dict(topics=[dict(title='Thema', pitch='Pitch', evidence=[0], situation='Die Studie', relevance='Bezug')]))])
     lease = topic_suggestions.claim(session, mandate.id)
     topic_suggestions.generate(session, mandate.id, lease, invoke=lambda *a, **kw: next(replies))
     assert topic_suggestions.state(session, mandate.id)['status'] == 'ready'
+
+
+@pytest.mark.parametrize('evidence,expected', [([0], 2), ([999], 0)])
+def test_suggestions_limit_two_ideas_and_require_real_sources(session, mandate, evidence, expected):
+    from newspulse import topic_suggestions
+    _article(session, 'Neue Studie', 'https://ex.de/source-study', radar=mandate)
+    payload = {'topics': [dict(title=title, pitch='Eine offene Frage', situation='Neue Studie',
+        relevance='Bezug und offene Recherche', evidence=evidence) for title in ['Thema eins', 'Thema zwei']]}
+    lease = topic_suggestions.claim(session, mandate.id)
+    topic_suggestions.generate(session, mandate.id, lease, invoke=lambda *a, **kw: json.dumps(payload))
+    assert session.query(Angle).count() == expected
+    assert topic_suggestions.state(session, mandate.id)['status'] == ('ready' if expected else 'failed')

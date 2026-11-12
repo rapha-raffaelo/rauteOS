@@ -2,15 +2,37 @@
 import datetime as dt
 import json
 import logging
+from importlib import resources
+from string import Template
+
+from pydantic import BaseModel, Field, StrictInt
 
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 
-from . import angles
+from . import angles, brain, guide, quoting, prose
 from .models import Angle, Article, Client, OpportunityWorkspace, Setting, TopicHit, Analysis
 
 log = logging.getLogger(__name__)
 WINDOW = dt.timedelta(days=28)
+
+
+class TopicIdea(BaseModel):
+    title: str = Field(min_length=1, max_length=500)
+    situation: str = Field(min_length=1, max_length=3000)
+    relevance: str = Field(min_length=1, max_length=3000)
+    pitch: str = Field(min_length=1, max_length=3000)
+    evidence: list[StrictInt] = Field(min_length=1, max_length=10)
+
+
+class Suggestions(BaseModel):
+    topics: list[TopicIdea] = Field(max_length=2)
+    note: str = ''
+
+
+def _parse(raw):
+    from .analyzer import strip_code_fence
+    return Suggestions.model_validate_json(strip_code_fence(raw))
 
 
 def key(client_id):
@@ -75,30 +97,34 @@ def generate(session, client_id, lease, *, invoke=None):
         linked = select(TopicHit.article_id).where(TopicHit.client_id == client_id).union(
             select(Analysis.article_id).where(Analysis.client_id == client_id, Analysis.is_relevant.is_(True), Analysis.dismissed_at.is_(None)))
         articles = list(session.scalars(select(Article).where(Article.id.in_(linked), Article.id.not_in(used),
-            Article.published_at >= now - WINDOW, Article.published_at <= now).order_by(Article.published_at.desc()).limit(50)))
+            Article.published_at >= now - WINDOW, Article.published_at <= now).order_by(Article.published_at.desc()).limit(100)))
         if not articles:
             finish(session, client_id, lease, 'empty', 'Noch keine neuen Meldungen der letzten vier Wochen für einen weiteren Themenvorschlag.')
             return
-        from .analyzer import ParseError, invoke_with_fallback
-        def validated_invoke(prompt, **kwargs):
-            call = invoke or invoke_with_fallback
-            raw = call(prompt, **kwargs)
-            try:
-                angles._parse(raw)
-            except ParseError:
-                raw = call(prompt + "\n\nFORMAT: Antworte ausschließlich mit genau einem JSON-Objekt nach dem Schema. Keine weiteren Objekte, keine Erläuterung außerhalb des JSON.", **kwargs)
-            return raw
-        notes = []
-        result = angles.suggest(session, client, [(a, a.source) for a in articles], note=notes.append,
-                                invoke=validated_invoke)
-        if result is None:
-            finish(session, client_id, lease, 'empty', notes[-1] if notes else 'Aus den aktuellen Meldungen ergibt sich noch kein belastbares Thema.')
+        from .analyzer import invoke_with_fallback
+        written_under = brain.version(session)
+        template = resources.files('newspulse').joinpath('prompts/topic_suggestions.txt').read_text('utf-8')
+        material = '\n'.join(f'[{i}] {a.published_at:%d.%m.%Y} | {a.source}: {a.title}\n{(a.summary_text or "")[:800]}'
+                             for i, a in enumerate(articles))
+        prompt = Template(brain.compose(template)).substitute(profile=angles._client_profile(client),
+            guide=guide.for_prompt(client), articles=quoting.fence(material, label='MELDUNGEN'))
+        call = invoke or invoke_with_fallback
+        try:
+            result = _parse(call(prompt, timeout=300))
+        except ValueError:
+            result = _parse(call(prompt + "\nFORMAT: Genau ein JSON-Objekt nach dem Schema, mit topics und note, ohne weiteren Text.", timeout=300))
+        if not result.topics:
+            finish(session, client_id, lease, 'empty', result.note or 'Aus den aktuellen Meldungen ergibt sich noch kein belastbares Thema.')
             return
-        draft, numbered = result
-        # angles.suggest strips invented citation IDs. No citation means no proposal.
-        if not draft.evidence:
-            raise ValueError('Proposal has no valid source references')
-        angles.store(session, client, draft, numbered)
+        # Validate every citation before saving any of the proposals.
+        if any(any(i < 0 or i >= len(articles) for i in idea.evidence) for idea in result.topics):
+            raise ValueError('Proposal contains an unknown source reference')
+        for idea in result.topics:
+            session.add(Angle(client_id=client_id, subject=prose.plain(idea.title),
+                message=prose.plain(idea.pitch), thesis=prose.plain(idea.pitch),
+                context=prose.plain(idea.situation), credibility=prose.plain(idea.relevance),
+                statements=[prose.plain(idea.pitch)], article_ids=list(dict.fromkeys(articles[i].id for i in idea.evidence)),
+                brain_version=brain.stamp(written_under, what='this automatic topic suggestion')))
         finish(session, client_id, lease, 'ready', '')
     except Exception:
         session.rollback()
