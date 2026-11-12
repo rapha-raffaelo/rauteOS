@@ -16,6 +16,8 @@ and reading it would be worse than none.
 
 from __future__ import annotations
 
+import re
+
 import datetime as dt
 import logging
 import threading
@@ -322,11 +324,36 @@ def advice_view(
     format or triggers generation.
     """
     client = mandate_or_404(session, client_id)
+    if request.headers.get("sec-fetch-mode") == "navigate" and not request.headers.get("hx-request"):
+        return RedirectResponse(new_flow_href(session, client.id, eintrag), status_code=303)
     return templates.TemplateResponse(
         request,
         "advice.html",
         _advice_context(session, client, eintrag=eintrag, preselect=format_key),
     )
+
+
+def new_flow_href(session: Session, client_id: int, eintrag: str = "") -> str:
+    """Where an old Impuls link belongs since Spec 12: its Thema, or its Assets once active.
+
+    The Impuls page stacked occasion, analysis, texts and the send on one long
+    page, which Lucas found confusing (12.11.2026). A person who opens an old
+    link (Medien, Desk, a bookmark, a redirect after an action) lands in the
+    new flow instead. Only a top-level navigation is sent on, so the page's
+    own fragments, which other code still fetches, keep answering.
+    """
+    from ... import workspaces
+    from ...models import Angle
+
+    base = f"/client/{client_id}"
+    match = re.fullmatch(r"anlass-(\d+)", eintrag or "")
+    angle = session.get(Angle, int(match.group(1))) if match else None
+    if angle is None or angle.client_id != client_id:
+        return f"{base}/themen"
+    kind, identity = ("detected", angle.newsjack_id) if angle.newsjack_id else ("developed", angle.id)
+    workspace = workspaces.stored(session, client_id, kind, identity)
+    page = "assets" if workspace is not None and workspace.status == "active" else "themen"
+    return f"{base}/{page}?kind={kind}&context={identity}"
 
 
 # One impulse at a time, process-wide: the draft shells out to `claude` and a

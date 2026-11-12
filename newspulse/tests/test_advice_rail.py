@@ -225,3 +225,21 @@ def test_the_client_report_still_counts_a_declined_draft(factory):
 
     assert [a.id for a in shown] == [older]
     assert {a.id for a in counted} == {older, newer}
+
+
+def test_opening_an_old_impuls_link_lands_in_themen_or_assets(web, factory):
+    """Since Spec 12 the Impuls page is not where a person reads an occasion:
+    a browser navigation goes to its Thema, or to its Assets once active. The
+    page's own fragments still answer, so nothing that fetches them breaks."""
+    from newspulse.models import OpportunityWorkspace
+
+    client_id, older, newer = _mandate_with_two_occasions(factory)
+    navigate = {"Sec-Fetch-Mode": "navigate"}
+    land = lambda q: web.get(f"/client/{client_id}/advice{q}", headers=navigate, follow_redirects=False).headers["location"]
+    assert land(f"?eintrag=anlass-{older}") == f"/client/{client_id}/themen?kind=developed&context={older}"
+    assert land("") == f"/client/{client_id}/themen"
+    with factory() as session:
+        session.add(OpportunityWorkspace(client_id=client_id, context_kind="developed", context_id=newer, status="active"))
+        session.commit()
+    assert land(f"?eintrag=anlass-{newer}") == f"/client/{client_id}/assets?kind=developed&context={newer}"
+    assert web.get(f"/client/{client_id}/advice", headers={**navigate, "HX-Request": "true"}).status_code == 200

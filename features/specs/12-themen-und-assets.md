@@ -156,3 +156,19 @@ Alle sechs Phasen sind gebaut. Abweichungen und Entscheidungen beim Bauen:
 - **Senden** ist sichtbar und gesperrt.
 - **Belegprüfung** („Aussagen prüfen“) ist aus dem alten Panel in den Editor
   unter Assets übernommen.
+
+## Nachgezogen (12.11.2026, abends)
+
+Abgleich mit dem Mockup, die Lücken geschlossen:
+
+- **Deep Dive auf der Karte** beim Darüberfahren und per Fokus, wie im Mockup,
+  mit „Passende Ansprechpartner“ (`workspaces.recipients`). Die Detailseite
+  („Details ansehen“) bleibt für den ganzen Text und die Quellen.
+- **Editor als Seite:** Logo, Rubrik mit Datum, Titel und Text auf einem Blatt.
+  Umschalter Ohne · raute+kopf · Kunden-Logo, je Asset im Browser gemerkt;
+  Word und PDF tragen das gewählte Logo im Kopf (`?logo=` bzw. `logo` beim
+  Drive-Export).
+- **Alte Impuls-Seite** (`/client/{id}/advice`): Ein Aufruf im Browser landet
+  im Thema bzw. in dessen Assets (`advisory.new_flow_href`). Die Seite selbst
+  und ihre Fragmente bestehen noch für den Code, der sie abruft; entfernen
+  ist der nächste Schritt.
