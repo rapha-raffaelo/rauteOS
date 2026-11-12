@@ -157,7 +157,7 @@ def test_the_empty_register_is_a_statement_not_a_missing_page(web, mandate):
 
 def test_the_tab_stands_in_the_workspace_strip(web, mandate):
     page = web.get(f"/client/{mandate.id}/opportunities")
-    assert f'href="/client/{mandate.id}/opportunities" class="active"' in rendered(page)
+    assert f'href="/client/{mandate.id}/themen" class="active"' in rendered(page)
     assert "issues" in web.get(f"/api/v1/clients/{mandate.id}/opportunities").json()["reaction"]
 
 

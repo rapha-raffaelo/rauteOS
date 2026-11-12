@@ -382,20 +382,21 @@ def _strip(html: str) -> str:
 
 
 def test_the_primary_tabs_are_consolidated(web, mandate):
-    """Spec 09: the prototype's tabs, five since the Redaktionsplan moved under Aktivitäten."""
+    """Spec 12: Medien → Themen → Assets; the Agenda belongs to the Themen."""
     strip = _strip(rendered(web.get(f"/client/{mandate.id}/heute")))
     assert re.findall(r'<a [^>]+>([^<]+)</a>', strip) == [
-        "Überblick", "Kundenprofil", "Strategie", "Aktivitäten", "Monitoring"]
+        "Überblick", "Kundenprofil", "Strategie", "Medien", "Themen", "Assets", "Monitoring"]
     assert "subtabs-legacy" not in strip
-    for suffix in ("/overview", "/twin", "/guide", "/opportunities", "/ki"):
+    for suffix in ("/overview", "/twin", "/guide", "/medien", "/themen", "/assets", "/ki"):
         assert f'href="/client/{mandate.id}{suffix}"' in strip
 
 
 @pytest.mark.parametrize("suffix,parent", [
     ("/overview", "/overview"), ("/twin", "/twin"), ("/profil", "/twin"),
     ("/guide", "/guide"), ("/wettbewerb", "/guide"), ("/market", "/guide"), ("/map", "/guide"),
-    ("/opportunities", "/opportunities"), ("/issues", "/opportunities"), ("/heute", "/overview"),
-    ("/plan", "/opportunities"), ("/advice", "/opportunities"),
+    ("/opportunities", "/themen"), ("/themen", "/themen"), ("/assets", "/assets"),
+    ("/issues", "/themen"), ("/heute", "/overview"),
+    ("/plan", "/themen"), ("/advice", "/themen"),
     # Monitoring opens on KI-Sichtbarkeit; the news moved into the Überblick.
     ("/ki", "/ki"), ("/berichte", "/ki"), ("", "/ki"),
 ])

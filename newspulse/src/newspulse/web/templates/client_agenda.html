@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}{{ translator(request)("Agenda") }} · {{ client.name }} · RauteOS{% endblock %}
+{% block pagetitle %}{{ translator(request)("Agenda") }}{% endblock %}
+{% block content %}
+{% set t = translator(request) %}{% set active = 'plan' %}
+{% include '_client_tabs.html' %}
+<section class="activities-plan" id="agenda" aria-label="{{ t('Agenda') }}">
+{% include 'partials/plan_body.html' %}
+</section>
+{% endblock %}

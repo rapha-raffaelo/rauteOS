@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}{{ page_title }} · {{ client.name }} · RauteOS{% endblock %}
+{% block pagetitle %}{{ page_title }}{% endblock %}
+{% block content %}
+{% set t = translator(request) %}
+{% include '_client_tabs.html' %}
+{% if frontend %}
+{% for href in frontend.css %}<link rel="stylesheet" href="{{ href }}">{% endfor %}
+<div id="react-{{ page }}" data-client-id="{{ client.id }}" data-client-name="{{ client.name }}"><p role="status">{{ page_title }} werden geladen…</p></div>
+<script type="module" src="{{ frontend.script }}"></script>
+{% else %}<p>Diese Seite ist gerade nicht verfügbar. Bitte später neu laden.</p>{% endif %}
+{% endblock %}

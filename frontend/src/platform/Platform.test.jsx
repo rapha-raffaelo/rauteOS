@@ -10,17 +10,17 @@ beforeEach(() => {
   };
 });
 afterEach(() => vi.unstubAllGlobals());
-it("shows the six workspace tabs of the prototype with the views of the open one", () => {
+it("shows the workspace tabs with Medien, Themen and Assets and the views of the open one", () => {
   const data = {
     client: { id: 1, name: "Alpha" },
-    active: "opportunities",
+    active: "themen",
     crisis: { has_history: false },
   };
   const { rerender } = render(
-    <ClientTabs data={data} path="/client/1/opportunities" />,
+    <ClientTabs data={data} path="/client/1/themen" />,
   );
   expect(within(screen.getByRole("navigation", {name:"Mandant"})).getAllByRole("link").map((l) => l.textContent)).toEqual([
-    "Überblick", "Kundenprofil", "Strategie", "Medien", "Aktivitäten", "Monitoring",
+    "Überblick", "Kundenprofil", "Strategie", "Medien", "Themen", "Assets", "Monitoring",
   ]);
   expect(screen.queryByRole("navigation", {name:"Ansicht"})).toBeNull();
   rerender(<ClientTabs data={{ ...data, active: "twin" }} path="/client/1/twin" />);
@@ -30,9 +30,9 @@ it("shows the six workspace tabs of the prototype with the views of the open one
   rerender(<ClientTabs data={{ ...data, active: "map" }} path="/client/1/map" />);
   expect(screen.getByRole("link", { name: "Strategie" }).getAttribute("aria-current")).toBe("page");
   expect(screen.getByRole("link", { name: "Kommunikations-Guide" }).getAttribute("href")).toBe("/client/1/guide");
-  // The Redaktionsplan is part of Aktivitäten; there is no Umsetzung tab.
+  // The Agenda (formerly Redaktionsplan) belongs to the Themen.
   rerender(<ClientTabs data={{ ...data, active: "plan" }} path="/client/1/plan" />);
-  expect(screen.getByRole("link", { name: "Aktivitäten" }).getAttribute("aria-current")).toBe("page");
+  expect(screen.getByRole("link", { name: "Themen" }).getAttribute("aria-current")).toBe("page");
   expect(screen.queryByRole("link", { name: "Umsetzung" })).toBeNull();
 });
 it("uses client path boundaries and exposes exactly one assistant and Contacts link", () => {

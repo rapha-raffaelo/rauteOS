@@ -1,9 +1,9 @@
-{# The Redaktionsplan, at the bottom of Aktivitäten (the page under
-   /client/<id>/plan redirects there). Every hook links to the stored row it
+{# The Agenda (formerly Redaktionsplan) on its own page, /client/<id>/plan;
+   the Themen show its next dates as a timeline. Every hook links to the stored row it
    was built from; a hook whose row is gone says so and carries no link. #}
 <div class="planhead">
   <div>
-    <h2 class="pagetitle">{{ t("Redaktionsplan") }}</h2>
+    <h2 class="pagetitle">{{ t("Agenda") }}</h2>
     <p class="planhead__d">
       {{ t("%(n)s Monate voraus, gebaut aus datierten Marktsignalen, geprüften Themen und dem, was das Archiv im selben Monat des Vorjahres getragen hat. Jeder Haken hängt an einer gespeicherten Zeile. Kein Datum wird geraten.") | format(n=plan_months) }}
     </p>

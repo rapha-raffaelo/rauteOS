@@ -592,7 +592,7 @@ def test_the_deep_dive_is_where_the_competitors_and_the_workspace_live(factory, 
 
     body = rendered(client.get(f"/client/{a_id}"))
     assert "Beta AG" in body                      # share of voice
-    assert f"/client/{a_id}/opportunities" in body
+    assert f"/client/{a_id}/themen" in body
     # The workbook is no longer a trailing link in the strip — a download is not
     # a place, and beside ten tabs it read as an eleventh that had slipped. It
     # sits on this page, which is the one holding the coverage it exports.

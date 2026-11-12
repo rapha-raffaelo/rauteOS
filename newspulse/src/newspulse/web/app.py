@@ -364,7 +364,7 @@ def create_app() -> FastAPI:
     # modules import ``get_db``/``templates`` from this module.
     from .routes import (
         advisory, archive, assets_view, custom_drafts, assistant, client, contacts, workbench,
-        crisis_view, desk_api, desk_view, twin_api, twin_view, journalists_api, journalists_view, opportunities_api, opportunities_view, activation_api, guide_routes, issues_view,
+        crisis_view, desk_api, desk_view, twin_api, twin_view, journalists_api, journalists_view, opportunities_api, themen_view, activation_api, guide_routes, issues_view,
         language, login,
         opportunity_view,
         plan_view, profile as profile_routes, report as report_routes,
@@ -389,7 +389,7 @@ def create_app() -> FastAPI:
     app.include_router(journalists_api.router)
     app.include_router(journalists_view.router)
     app.include_router(opportunities_api.router)
-    app.include_router(opportunities_view.router)
+    app.include_router(themen_view.router)
     app.include_router(activation_api.router)
     app.include_router(today.router)
     app.include_router(client.router)

@@ -293,8 +293,8 @@ def test_the_tab_strip_links_to_the_plan_page(web, session, mandate):
     page = _at(web, mandate)
 
     assert page.status_code == 200
-    assert f'href="/client/{mandate.id}/opportunities"' in rendered(page)
-    assert "Redaktionsplan" in _text(rendered(page))
+    assert f'href="/client/{mandate.id}/themen"' in rendered(page)
+    assert "Agenda" in _text(rendered(page))
 
 
 def test_a_benchmark_has_no_plan_page(web, session):
@@ -1036,7 +1036,7 @@ def test_the_document_says_an_empty_month_is_empty_rather_than_skipping_it(
 def test_the_document_wears_the_mandates_own_identity(web, session, mandate):
     body = rendered(_at(web, mandate, "/plan.html"))
 
-    assert "Redaktionsplan: Solarhaus AG" in _text(body)
+    assert "Agenda: Solarhaus AG" in _text(body)
     # The monogram stands in for a logo the mandate has not uploaded, the same
     # way the report and the Pressespiegel do it.
     assert "brandmark--mono" in body
@@ -1094,7 +1094,7 @@ def test_the_page_switches_language_with_the_cookie(web, session, mandate):
 
     words = _text(rendered(_at(web, mandate)))
 
-    assert "Editorial plan" in words
+    assert "Agenda" in words
     assert "Recompute" in words
 
 
@@ -1142,28 +1142,31 @@ def _no_prose(prompt: str, **kwargs) -> str:
 # --- The plan under Aktivitäten ---------------------------------------------------
 
 
-def test_the_plan_lives_under_aktivitaeten_and_every_click_comes_back_there(
+def test_the_agenda_has_its_own_page_and_every_click_comes_back_there(
     web, session, mandate
 ):
-    """Umsetzung is gone: /plan redirects, and so does every action on a hook."""
+    """Spec 12: the Agenda (formerly Redaktionsplan) is /plan again; the Themen
+    show its next dates, and every action on a hook returns to the Agenda."""
     signal = _signal(session, mandate, effective_at=_NOW + dt.timedelta(days=30))
     hook = _hook(
         session, mandate, source_kind=HookSource.MARKTSIGNAL, source_id=signal.id,
         month=_window()[1],
     )
 
-    page = web.get(f"/client/{mandate.id}/opportunities").text
-    assert 'id="redaktionsplan"' in page
+    page = web.get(f"/client/{mandate.id}/plan").text
+    assert 'id="agenda"' in page
     assert f'id="haken-{hook.id}"' in page
-    # An open workspace is about one opportunity: no plan beneath it.
-    assert 'id="redaktionsplan"' not in web.get(
-        f"/client/{mandate.id}/opportunities?kind=detected&context=1").text
-
-    old = web.get(f"/client/{mandate.id}/plan", follow_redirects=False)
-    assert old.status_code == 303
-    assert old.headers["location"] == f"/client/{mandate.id}/opportunities#redaktionsplan"
     assert web.get(f"/client/999/plan", follow_redirects=False).status_code == 404
+
+    agenda = web.get(f"/api/v1/clients/{mandate.id}/agenda").json()
+    assert [item["id"] for item in agenda["items"]] == [hook.id]
+    assert agenda["href"] == f"/client/{mandate.id}/plan"
+
+    old = web.get(f"/client/{mandate.id}/opportunities", follow_redirects=False)
+    assert old.headers["location"] == f"/client/{mandate.id}/themen"
+    one = web.get(f"/client/{mandate.id}/opportunities?kind=detected&context=1", follow_redirects=False)
+    assert one.headers["location"] == f"/client/{mandate.id}/assets?kind=detected&context=1"
 
     posted = web.post(f"/client/{mandate.id}/plan/{hook.id}/verwerfen", follow_redirects=False)
     assert posted.headers["location"] == (
-        f"/client/{mandate.id}/opportunities#monat-{_window()[1]}")
+        f"/client/{mandate.id}/plan#monat-{_window()[1]}")

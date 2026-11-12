@@ -19,6 +19,8 @@ export default defineConfig({
         opportunities: fileURLToPath(
           new URL("./src/opportunities.jsx", import.meta.url),
         ),
+        themen: fileURLToPath(new URL("./src/themen.jsx", import.meta.url)),
+        assets: fileURLToPath(new URL("./src/assets.jsx", import.meta.url)),
         journalists: fileURLToPath(
           new URL("./src/journalists.jsx", import.meta.url),
         ),

@@ -724,16 +724,18 @@ def _page_context(session: Session, client: Client, *, now: dt.datetime) -> dict
 
 
 @router.get("/client/{client_id}/plan")
-def plan_view(client_id: int, session: Session = Depends(get_db)) -> Response:
-    """The plan lives at the bottom of Aktivitäten now; old links land there."""
-    mandate_or_404(session, client_id)
-    return RedirectResponse(f"/client/{client_id}/opportunities#redaktionsplan", status_code=_SEE_OTHER)
+def plan_view(client_id: int, request: Request, session: Session = Depends(get_db)) -> Response:
+    """The whole Agenda (formerly Redaktionsplan). The Themen show its next
+    dates as a timeline and link here."""
+    client = mandate_or_404(session, client_id)
+    return templates.TemplateResponse(request, "client_agenda.html",
+                                      _page_context(session, client, now=dt.datetime.now(dt.UTC)))
 
 
 def _back(client_id: int, month: str = "") -> RedirectResponse:
-    """Back to the plan under Aktivitäten, at the month that was acted on."""
-    anchor = f"#monat-{month}" if month else "#redaktionsplan"
-    return RedirectResponse(f"/client/{client_id}/opportunities{anchor}", status_code=_SEE_OTHER)
+    """Back to the Agenda, at the month that was acted on."""
+    anchor = f"#monat-{month}" if month else "#agenda"
+    return RedirectResponse(f"/client/{client_id}/plan{anchor}", status_code=_SEE_OTHER)
 
 
 @router.post("/client/{client_id}/plan/neu")

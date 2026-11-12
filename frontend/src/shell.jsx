@@ -45,8 +45,10 @@ export function ClientTabs({ data, path = window.location.pathname }) {
     client_overview: ["client_overview", "heute"],
     wissen: ["twin", "profile"],
     strategie: ["guide", "rivals", "market", "map"],
-    // The Redaktionsplan sits at the bottom of Aktivitäten; /plan redirects there.
-    chancen: ["opportunities", "issues", "krise", "texte", "plan"],
+    // Spec 12: Medien → Themen → Assets. The Agenda (formerly Redaktionsplan)
+    // and the crisis pages belong to the Themen.
+    themen: ["themen", "opportunities", "issues", "krise", "texte", "plan"],
+    assets: ["assets"],
     medien: ["media", "overview"],
     wirkung: ["visibility", "berichte", "monitoring_social", "monitoring_kpis"],
   };
@@ -57,7 +59,8 @@ export function ClientTabs({ data, path = window.location.pathname }) {
     ["wissen", "/twin", "Kundenprofil"],
     ["strategie", "/guide", "Strategie"],
     ["medien", "/medien", "Medien"],
-    ["chancen", "/opportunities", "Aktivitäten"],
+    ["themen", "/themen", "Themen"],
+    ["assets", "/assets", "Assets"],
     ["wirkung", "/ki", "Monitoring"],
   ];
   const views = {
@@ -83,7 +86,7 @@ export function ClientTabs({ data, path = window.location.pathname }) {
             aria-current={key === group ? "page" : undefined}
           >
             {t(label)}
-            {key === "chancen" && crisis?.open_id && (
+            {key === "themen" && crisis?.open_id && (
               <span className="workspace-crisis">{t("Krise offen")}</span>
             )}
           </a>
@@ -153,7 +156,7 @@ export function Shell({ data, portals = true }) {
   };
   const params = new URLSearchParams(assistant);
   const current = new URLSearchParams(query);
-  if (path.endsWith("/opportunities") && current.get("context")) {
+  if (/\/(opportunities|assets)$/.test(path) && current.get("context")) {
     params.set("scope", "opportunity");
     params.set("opportunity_kind", current.get("kind") || "developed");
     params.set("opportunity_id", current.get("context"));

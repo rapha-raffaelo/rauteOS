@@ -2143,6 +2143,7 @@ _EN: dict[str, str] = {
     # resolving to a stored row.
     "Plan": "Plan",
     "Redaktionsplan": "Editorial plan",
+    "Agenda": "Agenda",
     "%(n)s Monate voraus, gebaut aus datierten Marktsignalen, geprüften Themen und dem, was das Archiv im selben Monat des Vorjahres getragen hat. Jeder Haken hängt an einer gespeicherten Zeile. Kein Datum wird geraten.":
         "%(n)s months ahead, built from dated market signals, checked themes and "
         "what the archive carried in the same month a year ago. Every hook hangs "
