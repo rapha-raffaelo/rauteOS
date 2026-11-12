@@ -38,6 +38,7 @@ Client anlegen
 | 06 | Generate Asset / Activation | [06-asset-activation.md](06-asset-activation.md) |
 | 07 | Media & Journalist Intelligence | [07-journalist-intelligence.md](07-journalist-intelligence.md) |
 | 08 | Quality / Evidence Light | [08-quality-evidence.md](08-quality-evidence.md) |
+| 12 | Medien → Themen → Assets | [12-themen-und-assets.md](12-themen-und-assets.md) |
 | 09 | UI-Umbau nach dem rauteOS-Prototyp (Hell / Dunkel) | [09-ui-umbau.md](09-ui-umbau.md) |
 | 10 | Aufgaben, LinkedIn und Sales CRM | [10-aufgaben-linkedin-sales.md](10-aufgaben-linkedin-sales.md) |
 
