@@ -1801,7 +1801,10 @@ def test_ai_route(request: Request, provider: str = Form(...), session: Session 
             return JSONResponse({"ok": False, "message": message}, status_code=422)
         return _render_ai(request, session, error=f"{label} antwortet nicht: {str(exc)[:200]}")
     if inline:
-        return JSONResponse({"ok": True, "message": f"{label} antwortet", "model": ai_models.model_for(session, provider) or "Standard des Abos",
+        from ... import ai_usage
+        session.expire_all()
+        usage = ai_usage._load(session, provider)
+        return JSONResponse({"ok": True, "usage": usage, "message": f"{label} antwortet", "model": ai_models.model_for(session, provider) or "Standard des Abos",
                              "seconds": round(time.monotonic() - started, 1)})
     return _render_ai(request, session, notice=f"{label} antwortet.")
 

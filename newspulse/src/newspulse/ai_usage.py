@@ -93,7 +93,8 @@ def record_claude(info: dict) -> None:
             shown.append(_window(label, 100 * float(w["utilization"]), w.get("resetsAt"), minutes))
     if not shown and info.get("resetsAt"):
         shown.append(_window(str(info.get("rateLimitType") or "Kontingent"), None, info.get("resetsAt")))
-    record = {"windows": shown, "status": info.get("status"), "seen_at": _now().isoformat()}
+    record = {"windows": shown, "status": info.get("status"), "seen_at": _now().isoformat(),
+              "extra_usage_exhausted": info.get("overageDisabledReason") == "out_of_credits"}
     _store("claude", lambda _old: record)
 
 

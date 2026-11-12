@@ -82,6 +82,7 @@ export function Usage({usage: u}) {
         {w.resets_at && <small>Setzt sich zurück am {when(w.resets_at)}</small>}
       </div>;
     }) : <p className="settings-caption">Noch keine Angaben. Sie erscheinen nach dem nächsten Aufruf über dieses Abo.</p>}
+    {u.extra_usage_exhausted && <p className="ai-usage__warn">Zusatzguthaben laut Claude aufgebraucht</p>}
     {u.blocked && <p className="ai-usage__warn">Das Abo lässt gerade keine Nutzung zu</p>}
     {u.error && <p className="ai-usage__warn">{u.error}</p>}
     {u.seen_at && <p className="settings-caption">Stand {since(u.seen_at)}</p>}
@@ -90,6 +91,7 @@ export function Usage({usage: u}) {
 
 function Provider({provider: p}) {
   const [connected, setConnected] = useState(p.connected);
+  const [usage, setUsage] = useState(p.usage || {});
   useEffect(() => {
     if (p.key !== 'claude') return;
     function update(event) {
@@ -112,7 +114,10 @@ function Provider({provider: p}) {
         headers: {Accept: 'application/json'}, body: new URLSearchParams({provider: p.key}), signal: controller.signal});
       const result = await response.json();
       if (!response.ok && !result.message) throw new Error();
-      if (result.ok) setConnected(true);
+      if (result.ok) {
+        setConnected(true);
+        if (result.usage) setUsage(previous => ({...previous, ...result.usage}));
+      }
       setTest({...result, message: result.message || 'Verbindung konnte nicht geprüft werden'});
     } catch { setTest({ok: false, message: 'Keine Antwort erhalten – bitte erneut testen'}); }
     finally {clearTimeout(timeout);}
@@ -125,7 +130,7 @@ function Provider({provider: p}) {
       <span className={`settings-status ${connected ? 'is-connected' : 'is-disconnected'}`}>{connected ? 'Verbunden' : 'Getrennt'}</span>
       <button type="button" className="btn" disabled={!connected || test?.busy} onClick={check}>{test?.busy ? 'Wird getestet…' : 'Verbindung testen'}</button>
     </div>
-    {connected && <Usage usage={p.usage || {}} />}
+    {connected && <Usage usage={usage} />}
     {test && <div role="status" className={`settings-test ${test.ok ? 'is-success' : test.busy ? '' : 'is-error'}`}>
       <strong>{test.busy ? '◌ ' : test.ok ? '✓ ' : '! '}{test.message}</strong>
       {test.ok && <span>{test.model} · {test.seconds} s</span>}

@@ -116,3 +116,13 @@ def test_manual_cash_is_independent_of_monthly_usage(factory, monkeypatch):
             with pytest.raises(ValueError): ai_usage.save_gemini_cash(s,amount,currency)
         assert ai_usage.overview(s)['gemini']['cash']==saved
         assert ai_usage.save_gemini_cash(s,'0','USD')['amount']=='0.00'
+
+def test_claude_extra_credits_do_not_hide_available_subscription(factory):
+    ai_usage.record_claude({**EVENT['rate_limit_info'],'overageDisabledReason':'out_of_credits'})
+    with factory() as s:
+        data=ai_usage.overview(s)['claude']
+        assert data['extra_usage_exhausted'] is True
+        assert len(data['windows'])==2
+    ai_usage.record_claude(EVENT['rate_limit_info'])
+    with factory() as s:
+        assert ai_usage.overview(s)['claude']['extra_usage_exhausted'] is False

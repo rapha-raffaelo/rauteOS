@@ -63,3 +63,10 @@ it('saves a manual Gemini balance with currency and timestamp',async()=>{
  expect(screen.getByText(/Manuell hinterlegt.*Stand/)).toBeTruthy();
  expect(screen.queryByRole('button',{name:'Guthaben speichern'})).toBeNull();
 });
+it('refreshes allowance and extra-credit status after testing the connection',async()=>{
+ vi.stubGlobal('fetch',vi.fn(async()=>({ok:true,json:async()=>({ok:true,message:'Claude antwortet',usage:{windows:[{name:'5 Stunden',used_percent:7}],extra_usage_exhausted:true}})})));
+ render(<AiSettings data={data}/>);
+ fireEvent.click(screen.getAllByRole('button',{name:'Verbindung testen'})[0]);
+ await screen.findByText('93 % frei');
+ expect(screen.getByText(/Zusatzguthaben laut Claude aufgebraucht/)).toBeTruthy();
+});
