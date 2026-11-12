@@ -11,9 +11,9 @@ export function ClientsPage({clients}){
  <div className="client-card-top"><ClientLogo id={row.client.id} size="md"/><span className={`client-status client-status--${row.status}`}>{row.status==='krise'?'Krise':row.status==='aktiv'?'In Arbeit':'Im Überblick'}</span></div>
  <h2><a href={`/client/${row.client.id}/overview`}>{row.client.name}<span aria-hidden="true">↗</span></a></h2><p className="client-industry">{row.client.industry||'Branche noch offen'}</p>
  <div className="client-completeness"><div><span>Profilwissen</span><strong>{row.twin.percent} %</strong></div><progress aria-label={`Profilvollständigkeit ${row.client.name}`} value={row.twin.percent} max="100"/></div>
- <dl className="client-card-metrics"><div><dt>Opportunities</dt><dd>{row.opportunities}</dd></div><div><dt>Im Quartal geliefert</dt><dd>{row.actions_quarter.total}{row.promised_quarter!=null&&<small> / {row.promised_quarter}</small>}</dd></div></dl>
+ <dl className="client-card-metrics"><div><dt>Themen</dt><dd>{row.opportunities}</dd></div><div><dt>Im Quartal geliefert</dt><dd>{row.actions_quarter.total}{row.promised_quarter!=null&&<small> / {row.promised_quarter}</small>}</dd></div></dl>
  <div className="client-card-footer"><ClientActions client={row.client}/><span>{row.promised_quarter==null?'Zusage offen':`${row.promised_quarter} zugesagt`}</span></div>
  </article>)}</div>
- {!visible.length&&<EmptyState title={clients.length?'Keine passenden Mandanten':'Dein erster Mandant'}>{clients.length?'Versuche einen anderen Suchbegriff.':'Lege einen Mandanten an, um Profilwissen und Opportunities aufzubauen.'}</EmptyState>}
+ {!visible.length&&<EmptyState title={clients.length?'Keine passenden Mandanten':'Dein erster Mandant'}>{clients.length?'Versuche einen anderen Suchbegriff.':'Lege einen Mandanten an, um Profilwissen und Themen aufzubauen.'}</EmptyState>}
  </section>;
 }
