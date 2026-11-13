@@ -1,3 +1,4 @@
+import './workspace-navigation.css';
 import OverdueTasks from './components/OverdueTasks.jsx';
 import ClaudeLogin from './components/ClaudeLogin.jsx';
 import React, { useState, useEffect, useRef } from "react";
@@ -77,7 +78,7 @@ export function ClientTabs({ data, path = window.location.pathname }) {
   const current = active === "market" ? "rivals" : active === "berichte" ? "overview" : active;
   return (
     <>
-      <nav className="subtabs" aria-label={t("Mandant")}>
+      <nav className="subtabs workspace-tabs" aria-label={t("Mandant")}>
         {tabs.map(([key, suffix, label]) => (
           <a
             key={key}
@@ -93,7 +94,8 @@ export function ClientTabs({ data, path = window.location.pathname }) {
         ))}
       </nav>
       {views && (
-        <nav className="workspace-links" aria-label={t("Ansicht")}>
+        <nav className="workspace-links workspace-subnav" aria-label={t("Ansicht")}>
+          <span className="workspace-subnav__label">{t(tabs.find(([key])=>key===group)?.[2] || "Ansicht")}</span>
           {views.map(([key, suffix, label]) => <a key={key} href={base + suffix} aria-current={key === current ? 'page' : undefined}>{t(label)}</a>)}
         </nav>
       )}
