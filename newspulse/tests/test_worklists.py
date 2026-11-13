@@ -518,3 +518,22 @@ def _now_for_boards():
     import datetime as dt
 
     return dt.datetime(2026, 11, 12, 9, 0, tzinfo=dt.UTC)
+
+
+def test_done_tasks_archive_at_ten_days_and_reopening_resets_clock(factory, monkeypatch):
+    now=dt.datetime(2026,11,13,12,tzinfo=dt.UTC)
+    monkeypatch.setattr(worklists,'_now',lambda:now)
+    with factory() as session:
+        old=Task(title='Old',status='erledigt',done_at=now-dt.timedelta(days=10))
+        recent=Task(title='Recent',status='erledigt',done_at=now-dt.timedelta(days=10)+dt.timedelta(seconds=1))
+        no_date=Task(title='Undated',status='erledigt')
+        session.add_all([old,recent,no_date]);session.commit()
+        assert worklists.task_archived(old)
+        assert not worklists.task_archived(recent)
+        assert not worklists.task_archived(no_date)
+        assert old not in worklists.tasks(session)
+        assert old in worklists.tasks(session,include_archived=True)
+        worklists.set_task_status(old,'offen');session.commit()
+        assert old.done_at is None and old in worklists.tasks(session)
+        worklists.set_task_status(old,'erledigt');session.commit()
+        assert old.done_at==now and not worklists.task_archived(old)

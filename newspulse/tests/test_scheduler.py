@@ -299,3 +299,10 @@ def test_two_local_slots_survive_restart_and_dst(session, monkeypatch, month):
     assert scheduler._due(session, at(16))
     _run(session, at(16).astimezone(dt.UTC))
     assert not scheduler._due(session, at(17))
+
+
+def test_default_daily_slots_are_eight_and_thirteen(monkeypatch):
+    from newspulse import config
+    monkeypatch.delenv('NEWSPULSE_DAILY_TIMES',raising=False)
+    monkeypatch.delenv(config.ENV_DAILY_AT,raising=False)
+    assert config.daily_run_times()==[(8,0),(13,0)]

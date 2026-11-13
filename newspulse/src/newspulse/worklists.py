@@ -258,13 +258,19 @@ def set_task_status(task: Task, status: str) -> None:
     task.status = status
 
 
-def tasks(session: Session, *, status: str = "", client_id: int | None = None) -> list[Task]:
+def task_archived(task: Task, *, now: dt.datetime | None = None) -> bool:
+    """Ten full days after completion, retained in the archive until reopened."""
+    return bool(task.status == "erledigt" and task.done_at is not None
+                and task.done_at <= (now or _now()) - dt.timedelta(days=10))
+
+
+def tasks(session: Session, *, status: str = "", client_id: int | None = None, include_archived: bool = False) -> list[Task]:
     stmt = select(Task)
     if status:
         stmt = stmt.where(Task.status == status)
     if client_id:
         stmt = stmt.where(Task.client_id == client_id)
-    rows = list(session.scalars(stmt))
+    rows = [task for task in session.scalars(stmt) if include_archived or not task_archived(task)]
     order = {p: i for i, p in enumerate(TASK_PRIORITIES)}
     far = dt.date.max
     # Open work first, then by date due (none last), then priority.

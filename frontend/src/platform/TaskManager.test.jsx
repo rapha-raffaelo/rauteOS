@@ -181,3 +181,15 @@ it('checks subtasks on the board and updates progress without opening details',a
   expect(screen.getByText('☑ 0/1 Unteraufgaben')).toBeTruthy();
  } finally {vi.unstubAllGlobals();}
 });
+
+it('hides archived tasks from Done and makes them available in Archive',()=>{
+ const data={...base,tasks:base.tasks.map(t=>t.id===3?{...t,archived:true}:t)};
+ const first=render(<TasksPage data={data}/>);
+ expect(screen.queryByText('Alt')).toBeNull();
+ first.unmount();
+ window.history.replaceState(null,'','/aufgaben?liste=archiv&ansicht=liste');
+ render(<TasksPage data={data}/>);
+ expect(screen.getByRole('link',{name:'Alt'})).toBeTruthy();
+ expect(screen.queryByRole('link',{name:'Pitch Qonto'})).toBeNull();
+ expect(screen.getByRole('combobox',{name:'Ansicht filtern'}).value).toBe('archiv');
+});

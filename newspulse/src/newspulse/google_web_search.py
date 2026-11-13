@@ -1,4 +1,4 @@
-"""Google web search per mandate, at every sweep slot (08:00 and 16:00).
+"""Google web search per mandate, at every sweep slot (08:00 and 13:00).
 
 Google News is already asked twice per sweep (the name search in
 :func:`newspulse.gnews.client_feeds`, the keyword radar in

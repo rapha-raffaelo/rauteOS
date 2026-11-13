@@ -24,6 +24,8 @@ const shortDay = (iso) => {
 const SMART = [["heute","Heute"],["geplant","Geplant"],["wichtig","Wichtig"],["alle","Alle"],["erledigt","Erledigt"]];
 
 function belongs(list, x, me) {
+  if (list === "archiv") return !!x.archived;
+  if (x.archived) return false;
   const open = x.status !== "erledigt";
   const today = isoToday();
   if (list === "erledigt") return !open;
@@ -320,7 +322,7 @@ export function TasksPage({ data: d }) {
     return rows;
   }, [tasks, list, me, query, sort, filters]);
   // A list other than "Erledigt" keeps its finished tasks below, on request.
-  const finished = list === "erledigt" ? [] : tasks.filter((x) => x.status === "erledigt" && matches(x) && belongs(list, { ...x, status: "offen" }, me));
+  const finished = ["erledigt", "archiv"].includes(list) ? [] : tasks.filter((x) => x.status === "erledigt" && matches(x) && belongs(list, { ...x, status: "offen" }, me));
   const selected = tasks.find((x) => x.id === selectedId);
   useEffect(() => { document.getElementById(`task-${selectedId}`)?.scrollIntoView?.({ block: "nearest" }); }, [selectedId]);
 
@@ -357,6 +359,7 @@ export function TasksPage({ data: d }) {
         </div>
         <TaskFilters filters={filters} onChange={changeFilters} team={d.team} clients={d.clients} />
         <Notice>{d.error}</Notice>
+        {list === "archiv" && <p className="tm-empty">Aufgaben werden zehn Tage nach Done automatisch archiviert. Zum Wiederöffnen den Status ändern.</p>}
         {!board && createStatus && <CreateTask d={d} list={list} filters={filters} status={createStatus} onClose={() => setCreateStatus(null)} />}
         {board ? <Board tasks={[...shown, ...finished]} d={d} list={list} selectedId={selectedId} createStatus={createStatus} onCreate={setCreateStatus} filters={filters} onSubtasksChange={(id,rows)=>setSubtaskUpdates(prev=>({...prev,[id]:rows}))} /> : <TaskList tasks={shown} d={d} list={list} selectedId={selectedId} />}
         {!board && !shown.length && <p className="tm-empty">{t(list === "erledigt" ? "Noch keine erledigten Aufgaben" : "Keine offenen Aufgaben")}</p>}

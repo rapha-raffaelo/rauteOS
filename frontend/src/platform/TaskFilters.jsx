@@ -12,7 +12,7 @@ export const EMPTY_FILTERS = {view:"alle", person:"", area:"", client:"", from:"
 export function readTaskFilters(params) {
   const old = params.get("liste") || "alle";
   const filters = {
-    view: ["heute","geplant","erledigt"].includes(old) ? old : "alle",
+    view: ["heute","geplant","erledigt","archiv"].includes(old) ? old : "alle",
     priority: params.get("prioritaet") || (old === "wichtig" ? "hoch" : ""),
     favorite: params.get("favoriten") === "1" ? "1" : "",
     person: params.get("person") || (old.startsWith("person:") ? old.slice(7) : ""),
@@ -127,7 +127,7 @@ export function TaskFilters({ filters, onChange, team, clients }) {
   const active=Object.entries(filters).some(([key,value])=>key==="view" ? value!=="alle" : !!value);
   return <div className="tm-filters" aria-label="Aufgabenfilter">
     <label><span>Ansicht</span><select aria-label="Ansicht filtern" value={filters.view} onChange={e=>onChange({view:e.target.value,...(e.target.value==="heute" ? {from:"",to:""} : {})})}>
-      <option value="alle">Alle Aufgaben</option><option value="heute">Heute & überfällig</option><option value="geplant">Mit Fälligkeit</option><option value="erledigt">Erledigt</option>
+      <option value="alle">Alle Aufgaben</option><option value="heute">Heute & überfällig</option><option value="geplant">Mit Fälligkeit</option><option value="erledigt">Erledigt</option><option value="archiv">Archiv</option>
     </select></label>
     <label><span>Person</span><select aria-label="Person filtern" value={filters.person} onChange={e=>onChange({person:e.target.value})}>
       <option value="">Alle Personen</option>{team.map(person=><option key={person.key} value={person.key}>{person.name}</option>)}

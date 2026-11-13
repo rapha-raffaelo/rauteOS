@@ -40,7 +40,7 @@ def _task(t: Task) -> dict:
                 board_id=t.board_id, source_key=t.source_key, source_kind=t.source_kind, source_open=t.source_open,
                 due_on=t.due_on, owner=t.owner, context_href=t.context_href, assignees=list(t.assignees or []),
                 client=dict(id=t.client.id, name=t.client.name) if t.client else None,
-                created_at=t.created_at, done_at=t.done_at, subtasks=_subtasks(t))
+                created_at=t.created_at, done_at=t.done_at, archived=worklists.task_archived(t), subtasks=_subtasks(t))
 
 
 def _post(session: Session, p: LinkedInPost) -> dict:
@@ -95,7 +95,7 @@ def _tasks_page(request: Request, session: Session, *, error: str = "", draft: d
     client_id = int(raw) if raw.isdigit() else None
     boards = worklists.task_boards(session)
     worklists.sync_decision_tasks(session, desk.open_decisions(session, hide_settled=False), boards)
-    rows = worklists.tasks(session, status=status, client_id=client_id)
+    rows = worklists.tasks(session, status=status, client_id=client_id, include_archived=True)
     everything = worklists.open_tasks(session)
     me = worklists.member_for(request.scope.get("user_email"))
     raw_board = request.query_params.get("board", "")

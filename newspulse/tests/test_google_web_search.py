@@ -30,7 +30,7 @@ def resolve(url):
 
 def test_the_slot_is_the_last_sweep_time_in_berlin():
     assert google.slot(MORNING) == "2026-11-11 08:00"
-    assert google.slot(AFTERNOON) == "2026-11-11 16:00"
+    assert google.slot(AFTERNOON) == "2026-11-11 13:00"
     assert google.slot(dt.datetime(2026, 11, 11, 5, 0, tzinfo=dt.UTC)) == "2026-11-11 00:00"
 
 
