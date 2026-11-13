@@ -1648,8 +1648,8 @@ def create_client_from_mask(
         created = create_client(session, **fields, commit=False)
         created.website = site
         created.legal_name = legal
-        for key, value in contact.model_dump().items():
-            setattr(created, key, value)
+        from ... import people
+        people.update_onboarding_contact(session, created, contact.model_dump())
         onboarding_workflow.enqueue(session, created)
         session.commit()
     except (ValueError, ValidationError) as exc:

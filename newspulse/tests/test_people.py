@@ -102,3 +102,37 @@ def test_an_internal_profile_contact_is_optional_and_not_a_quotable_speaker(web,
     assert web.put("/api/v1/clients/1/opportunities/developed/1", json=body).status_code == 200
     context, _ = activation.context_for(db, workspace)
     assert context['speaker'] is None
+
+
+def test_onboarding_contact_is_one_real_person_and_edits_keep_id(web, db):
+    contact=dict(contact_name='Roland Schneller', contact_email='roland@example.org',
+                 contact_role='Geschäftsführung', contact_phone='+49 1234')
+    assert web.put('/client/1/onboarding-contact', json=contact).status_code == 200
+    person=people.book(db,1)[0]
+    pid=person.id
+    assert person.name=='Roland Schneller' and person.email=='roland@example.org'
+    assert person.position=='Geschäftsführung' and person.phone=='+49 1234'
+    assert not person.media_contact
+    person.topics='Finanzen'; person.media_contact=True; db.commit()
+    contact.update(contact_name='Roland Neu',contact_email='neu@example.org')
+    assert web.put('/client/1/onboarding-contact',json=contact).status_code==200
+    people.sync_onboarding_contact(db,db.get(Client,1)); db.commit()
+    rows=people.book(db,1)
+    assert len(rows)==1 and rows[0].id==pid
+    assert rows[0].email=='neu@example.org' and rows[0].name=='Roland Neu'
+    assert rows[0].media_contact and rows[0].topics=='Finanzen'
+    assert people.book(db,2)==[]
+
+
+def test_backfill_matches_existing_email_without_overwriting_richer_details(db):
+    client=db.get(Client,1)
+    client.contact_name='Roland'; client.contact_email='ROLAND@example.org'
+    client.contact_role='CEO'; client.contact_phone='+49 123'
+    existing=ClientPerson(client_id=1,name='Dr. Roland',email='roland@example.org',position='Geschäftsführer',phone='',topics='Cannabis',media_contact=True)
+    db.add(existing); db.commit()
+    for _ in range(2):
+        people.sync_onboarding_contact(db,client); db.commit()
+    rows=people.book(db,1)
+    assert len(rows)==1
+    assert rows[0].name=='Dr. Roland' and rows[0].position=='Geschäftsführer'
+    assert rows[0].phone=='+49 123' and rows[0].topics=='Cannabis' and rows[0].media_contact

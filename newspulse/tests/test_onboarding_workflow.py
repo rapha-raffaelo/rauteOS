@@ -134,6 +134,10 @@ def test_create_research_link_customer_answer_end_to_end(setup):
     create(web)
     with factory() as s:
         assert s.get(Client,1).contact_email=='alex@example.org'
+        from newspulse import people
+        contacts = people.book(s, 1)
+        assert len(contacts) == 1
+        assert (contacts[0].name, contacts[0].email, contacts[0].position, contacts[0].phone) == ('Alex Beispiel', 'alex@example.org', 'CEO', '+49 123')
         assert s.get(CustomerOnboardingJob,1).status=='queued'
         claimed=flow.claim(s)
     flow.work(factory,*claimed,crawl=lambda site:[{'url':site,'text':'Public website'}],research=researched)

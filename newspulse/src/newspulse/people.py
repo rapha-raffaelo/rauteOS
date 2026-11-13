@@ -37,6 +37,53 @@ def book(session: Session, client_id: int) -> list[ClientPerson]:
     return sorted(rows, key=lambda p: (not p.media_contact, p.name.casefold()))
 
 
+CONTACT_FIELDS = {'contact_name': 'name', 'contact_email': 'email',
+                  'contact_role': 'position', 'contact_phone': 'phone'}
+
+
+def _contact_person(rows, values):
+    email = (values.get('contact_email') or '').strip().casefold()
+    name = (values.get('contact_name') or '').strip().casefold()
+    if email:
+        found = next((p for p in rows if p.email.strip().casefold() == email), None)
+        if found:
+            return found
+    return next((p for p in rows if name and p.name.strip().casefold() == name
+                 and (not email or not p.email.strip())), None)
+
+
+def sync_onboarding_contact(session: Session, client: Client, previous=None):
+    """Join the entered onboarding contact to the real phone book, in this transaction.
+
+    Existing people keep their media permission, topics and LinkedIn details.
+    Backfills only fill missing fields; subsequent onboarding edits change only
+    the fields that the user changed in that form.
+    """
+    values = {key: getattr(client, key) or '' for key in CONTACT_FIELDS}
+    if not values['contact_name'].strip():
+        return None
+    rows = book(session, client.id)
+    person = _contact_person(rows, values)
+    if person is None and previous:
+        person = _contact_person(rows, previous)
+    new = person is None
+    if new:
+        person = ClientPerson(client_id=client.id, media_contact=False)
+        session.add(person)
+    for source, target in CONTACT_FIELDS.items():
+        if new or not getattr(person, target) or (previous is not None and values[source] != previous[source]):
+            setattr(person, target, values[source].strip()[:200 if target in {'name', 'position'} else 320 if target == 'email' else 80])
+    session.flush()
+    return person
+
+
+def update_onboarding_contact(session: Session, client: Client, values):
+    previous = {key: getattr(client, key) or '' for key in CONTACT_FIELDS}
+    for key in CONTACT_FIELDS:
+        setattr(client, key, values.get(key, ''))
+    return sync_onboarding_contact(session, client, previous)
+
+
 def media(session: Session, client_id: int) -> list[ClientPerson]:
     return [p for p in book(session, client_id) if p.media_contact]
 

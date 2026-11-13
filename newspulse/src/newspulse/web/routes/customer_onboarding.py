@@ -332,7 +332,8 @@ def workflow_link(client_id: int, request: Request, session: Session = Depends(g
 @router.put('/client/{client_id}/onboarding-contact')
 def workflow_contact(client_id: int, data: ContactInput, session: Session = Depends(get_db)):
     client = mandate_or_404(session, client_id)
-    for key, value in data.model_dump().items(): setattr(client, key, value)
+    from ... import people
+    people.update_onboarding_contact(session, client, data.model_dump())
     session.commit()
     return result(data.model_dump())
 
