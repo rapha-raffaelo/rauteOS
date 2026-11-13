@@ -224,3 +224,88 @@ def test_a_conversation_read_once_is_not_read_again_until_it_changes(monkeypatch
     mailbox.thread("t1", history_id="10")
     assert len(calls) == before
     mailbox.forget()
+
+
+def test_accounts_are_isolated_through_authenticated_requests(web, monkeypatch, tmp_path):
+    import json
+    from newspulse import config, mail_identity
+    from newspulse.web import google_auth
+    monkeypatch.setattr(config, 'DATABASE_PATH', tmp_path / 'test.db')
+    monkeypatch.setattr(google_auth, 'is_configured', lambda: True)
+    monkeypatch.setattr(google_auth, 'read_session', lambda cookie: {'r':'r.mankopf@raute-kopf.com','l':'l.neurauter@raute-kopf.com'}.get(cookie))
+    monkeypatch.setattr(google_auth, 'session_name', lambda _: '')
+    for owner, email in [('raphael','r.mankopf@raute-kopf.com'),('lucas','l.neurauter@raute-kopf.com')]:
+        token=mail_identity.owner.set(owner)
+        try:
+            gmail_link._write({'email':email,'refresh_token':'test-'+owner,'scopes':list(gmail_link.SCOPES),'connected_at':'2026-11-13T00:00:00+00:00'})
+        finally:
+            mail_identity.owner.reset(token)
+    for cookie,email in [('r','r.mankopf@raute-kopf.com'),('l','l.neurauter@raute-kopf.com')]:
+        web.cookies.set(google_auth.SESSION_COOKIE,cookie)
+        assert web.get('/api/v1/mailbox').json()['email']==email
+        assert web.put('/api/v1/mailbox/signature',json={'html':email}).status_code==200
+    web.cookies.set(google_auth.SESSION_COOKIE,'r')
+    assert 'r.mankopf' in web.get('/api/v1/mailbox/signature').json()['html']
+    assert mail_identity.owner.get()==''
+    assert gmail_link.connected() is None, 'unscoped jobs cannot use personal credentials'
+    # A callback started in Lucas's session cannot connect into Raphael's session.
+    web.cookies.set('newspulse_gmail_state','lucas.test')
+    exchange=__import__('unittest.mock',fromlist=['Mock']).Mock()
+    monkeypatch.setattr(gmail_link,'exchange',exchange)
+    web.get('/settings/gmail/callback?state=lucas.test&code=test',follow_redirects=False)
+    exchange.assert_not_called()
+
+
+def test_mail_worker_threads_keep_the_request_owner(monkeypatch):
+    from newspulse import mail_identity
+    from contextvars import copy_context
+    from concurrent.futures import ThreadPoolExecutor
+    def listing(owner):
+        token=mail_identity.owner.set(owner)
+        try:
+            return mailbox.threads('inbox')
+        finally:
+            mail_identity.owner.reset(token)
+    def api(url, **kwargs):
+        owner=mail_identity.owner.get()
+        assert owner in {'raphael','lucas'}
+        if '/threads?' in url:
+            return {'threads':[{'id':'1'},{'id':'2'}]}
+        if '/threads/' in url:
+            return {'messages':[{'payload':{'headers':[{'name':'Subject','value':owner}]}}]}
+        return {'threadsTotal':2,'threadsUnread':0}
+    monkeypatch.setattr(mailbox,'_api',api)
+    monkeypatch.setattr(mailbox,'_account',lambda:mail_identity.owner.get())
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results=list(pool.map(listing,['raphael','lucas']))
+    assert [r['threads'][0].subject for r in results]==['raphael','lucas']
+
+
+def test_token_use_disconnect_and_wrong_account_consent_are_scoped(monkeypatch, tmp_path):
+    from newspulse import config, mail_identity
+    import datetime as dt
+    monkeypatch.setattr(config, 'DATABASE_PATH', tmp_path / 'test.db')
+    for name,address in [('raphael','r.mankopf@raute-kopf.com'),('lucas','l.neurauter@raute-kopf.com')]:
+        token=mail_identity.owner.set(name)
+        try:
+            gmail_link._write({'email':address,'refresh_token':'refresh-'+name,'access_token':'access-'+name,
+                'expires_at':(dt.datetime.now(dt.UTC)+dt.timedelta(hours=1)).isoformat()})
+            observed=[]
+            gmail_link._api('https://gmail.googleapis.com/test',what='test',fetch=lambda url,**kw: observed.append(kw['token']) or {})
+            assert observed == ['access-'+name]
+        finally:
+            mail_identity.owner.reset(token)
+    token=mail_identity.owner.set('raphael')
+    try:
+        def wrong_google(url,**kw):
+            if url==gmail_link._TOKEN_ENDPOINT:
+                return {'access_token':'new','refresh_token':'new'}
+            return {'emailAddress':'l.neurauter@raute-kopf.com'}
+        with pytest.raises(gmail_link.GmailError,match='eigene Google-Konto'):
+            gmail_link.exchange('code',fetch=wrong_google)
+        assert gmail_link._read()['access_token']=='access-raphael'
+        gmail_link.disconnect(fetch=lambda *a,**k:{})
+        assert gmail_link.connected() is None
+        assert (tmp_path/'gmail_token_lucas.json').exists()
+    finally:
+        mail_identity.owner.reset(token)

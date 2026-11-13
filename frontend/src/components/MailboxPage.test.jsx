@@ -122,7 +122,7 @@ it('keeps a formatted signature from Settings',async()=>{
  expect(JSON.parse(calls.find(c=>c.method==='PUT').body).html).toBe('<b>Raphael Mankopf</b><br>raute+kopf');
 });
 
-it('paints a folder seen before at once and brings it up to date behind it',async()=>{
+it('does not show a previous mailbox before the current session loads',async()=>{
  mailbox();
  const first=render(<MailboxPage/>);
  await screen.findByRole('button',{name:'Lena: Statement'});
@@ -130,7 +130,8 @@ it('paints a folder seen before at once and brings it up to date behind it',asyn
  let answer;
  vi.stubGlobal('fetch',vi.fn(url=>url.endsWith('/api/v1/mailbox')?Promise.resolve(json(STATUS)):new Promise(r=>{answer=r;})));
  render(<MailboxPage/>);
- expect(await screen.findByRole('button',{name:'Lena: Statement'})).toBeTruthy();
+ await waitFor(()=>expect(answer).toBeTruthy());
+ expect(screen.queryByRole('button',{name:'Lena: Statement'})).toBeNull();
  answer(json({threads:[{...THREAD,id:'t2',subject:'Neu'}],next_page_token:'',total:2}));
  expect(await screen.findByRole('button',{name:'Lena: Neu'})).toBeTruthy();
 });

@@ -139,7 +139,12 @@ class BasicAuthMiddleware(BaseHTTPMiddleware):
                 request.scope["user_email"] = email
                 request.scope["user_name"] = google_auth.session_name(
                     request.cookies.get(google_auth.SESSION_COOKIE))
-                return await call_next(request)
+                from .. import mail_identity
+                token = mail_identity.owner.set(mail_identity.key_for(email))
+                try:
+                    return await call_next(request)
+                finally:
+                    mail_identity.owner.reset(token)
             return _sign_in_required(request)
 
         if not is_configured():

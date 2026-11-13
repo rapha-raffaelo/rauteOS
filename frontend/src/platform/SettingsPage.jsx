@@ -542,7 +542,8 @@ export function SettingsPage({ data: d, onData }) {
       <div hidden={section !== "roles"}><AiSettings data={d.ai} roles/></div>
       <div hidden={section !== "general"}>
       <div className="platform-columns">
-        <Panel title="Postfach" id="gmail">
+        <Panel title="Mein Postfach" id="gmail">
+          <p>Diese Verbindung gilt nur für dein angemeldetes rauteOS-Konto</p>
           <Notice>{gmailNotices[d.gmail_notice]}</Notice>
           {d.gmail?.is_connected ? (
             <>

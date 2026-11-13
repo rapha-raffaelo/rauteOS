@@ -48,7 +48,7 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
-from . import config
+from . import config, mail_identity
 
 _log = logging.getLogger(__name__)
 
@@ -359,6 +359,13 @@ def token_path() -> Path:
     import, so the deployment's volume path and a test's tmp directory are both
     simply "wherever the database is".
     """
+    owner = mail_identity.owner.get()
+    if owner:
+        return config.DATABASE_PATH.parent / f"gmail_token_{owner}.json"
+    # No background job or unauthenticated request inherits a person's mailbox.
+    from .web import google_auth
+    if google_auth.is_configured():
+        return config.DATABASE_PATH.parent / "gmail_token_unassigned.json"
     return config.DATABASE_PATH.parent / _TOKEN_FILENAME
 
 
@@ -384,7 +391,12 @@ def _read() -> dict[str, Any]:
     except json.JSONDecodeError:
         _log.warning("Gmail token file at %s is not readable JSON", token_path())
         return {}
-    return stored if isinstance(stored, dict) else {}
+    if not isinstance(stored, dict):
+        return {}
+    owner = mail_identity.owner.get()
+    if owner and stored.get("email") and mail_identity.key_for(stored["email"]) != owner:
+        return {}
+    return stored
 
 
 def _write(data: dict[str, Any]) -> None:
@@ -640,6 +652,9 @@ def exchange(code: str, *, fetch: Fetch | None = None) -> Link:
     now = _now()
     found = _profile(access, fetch=call)
     scopes = _granted_scopes(payload)
+    owner = mail_identity.owner.get()
+    if owner and mail_identity.key_for(found.email) != owner:
+        raise GmailError("Bitte das eigene Google-Konto verbinden, das zu deinem rauteOS-Benutzer gehört")
     _write(
         {
             "refresh_token": refresh,

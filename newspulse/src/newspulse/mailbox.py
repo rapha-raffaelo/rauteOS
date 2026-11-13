@@ -45,7 +45,8 @@ from html.parser import HTMLParser
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from . import gmail_link
+from contextvars import copy_context
+from . import gmail_link, mail_identity
 from .models import Client, Setting
 
 FOLDERS = {"inbox": "INBOX", "starred": "STARRED", "sent": "SENT", "drafts": "DRAFT",
@@ -233,7 +234,7 @@ _pool = ThreadPoolExecutor(max_workers=8, thread_name_prefix="gmail")
 
 def _account() -> str:
     link = gmail_link.connected()
-    return link.email if link else ""
+    return f"{mail_identity.owner.get()}:{link.email}" if link else ""
 
 
 def _remember(store: OrderedDict, key: tuple, value, limit: int):
@@ -305,8 +306,9 @@ def threads(folder: str = "inbox", *, query: str = "", page_token: str = "", me:
 
     items = list(listing.get("threads") or ())
     # The conversations not held yet are read side by side, not one after another.
-    rows = list(_pool.map(summary, items)) if len(items) > 1 else [summary(i) for i in items]
-    count_total = _pool.submit(_label_count, label, "threadsTotal") if label and not query else None
+    jobs = [_pool.submit(copy_context().run, summary, item) for item in items]
+    rows = [job.result() for job in jobs]
+    count_total = _pool.submit(copy_context().run, _label_count, label, "threadsTotal") if label and not query else None
     unread = _label_count("INBOX", "threadsUnread")
     total = count_total.result() if count_total else None
     return dict(threads=rows, next_page_token=listing.get("nextPageToken") or "",
@@ -506,16 +508,21 @@ def modify(thread_ids: list[str], action: str) -> int:
 # --- The signature ------------------------------------------------------------------
 
 
+def _signature_key() -> str:
+    owner = mail_identity.owner.get()
+    return f"{SIGNATURE_KEY}:{owner}" if owner else SIGNATURE_KEY
+
+
 def signature(session: Session) -> str:
-    row = session.get(Setting, SIGNATURE_KEY)
+    row = session.get(Setting, _signature_key())
     return (row.value or "") if row else ""
 
 
 def save_signature(session: Session, markup: str) -> str:
     cleaned = clean_html(markup).strip()
-    row = session.get(Setting, SIGNATURE_KEY)
+    row = session.get(Setting, _signature_key())
     if row is None:
-        session.add(Setting(key=SIGNATURE_KEY, value=cleaned))
+        session.add(Setting(key=_signature_key(), value=cleaned))
     else:
         row.value = cleaned
     session.commit()

@@ -1951,7 +1951,9 @@ def gmail_start_route(request: Request) -> Response:
         # The panel never renders the button in this state; a hand-typed URL
         # lands here and is told the same thing the panel says.
         return _back_to_panel(GmailNotice.FAILED)
-    state = gmail_link.new_state()
+    from ... import mail_identity
+    owner = mail_identity.owner.get()
+    state = (owner + "." if owner else "") + gmail_link.new_state()
     # The address this person signed in to RauteOS with, so Google opens on that
     # account rather than whichever one the browser was last used for. Empty
     # under basic auth, where nobody has told us who is asking.
@@ -2009,7 +2011,9 @@ def gmail_callback_route(
         response = RedirectResponse(f"/settings?drive={notice}#drive", status_code=_SEE_OTHER)
         response.delete_cookie(_GMAIL_STATE_COOKIE, path="/settings")
         return response
-    if not _state_matches(state, expected):
+    from ... import mail_identity
+    owner = mail_identity.owner.get()
+    if not _state_matches(state, expected) or (owner and not state.startswith(owner + ".")):
         _log.warning("Gmail callback refused: state did not match")
         response = _back_to_panel(GmailNotice.STATE)
     elif error:
