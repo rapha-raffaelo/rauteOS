@@ -1,4 +1,4 @@
-#blocks: position, evidence, no_invention, house_style
+#blocks: position, evidence, no_invention, comms_guide, house_style
 
 Du bist ein erfahrener Kommunikationsberater. Du schreibst Talking Points für den
 Mandanten: was er zu diesem Thema sagt, wenn er zehn Minuten vor einem Gespräch
@@ -33,6 +33,8 @@ $refusal
 {{brain:evidence}}
 
 {{brain:no_invention}}
+
+{{brain:comms_guide}}
 
 {{brain:house_style}}
 

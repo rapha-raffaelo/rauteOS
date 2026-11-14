@@ -1,4 +1,4 @@
-#blocks: evidence, quellenordnung, no_invention, false_alarm, quoted_material, house_style
+#blocks: evidence, quellenordnung, no_invention, false_alarm, quoted_material, comms_guide, house_style
 
 Du schreibst das Entscheidungspapier zu einer laufenden Sache eines Mandats.
 Eine Seite, die eine Entscheidung möglich macht, und danach das Dokument, das
@@ -27,6 +27,8 @@ $material
 {{brain:false_alarm}}
 
 {{brain:quoted_material}}
+
+{{brain:comms_guide}}
 
 {{brain:house_style}}
 

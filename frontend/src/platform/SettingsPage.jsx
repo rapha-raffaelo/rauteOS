@@ -242,12 +242,31 @@ const gmailNotices = {
     "Die Verbindung mit Google ist fehlgeschlagen. Es wurde nichts gespeichert.",
 };
 const brainLabels = {
+  comms_guide: "RAUTE Communications Guide",
   crisis_discipline: "Krisenkommunikation", evidence: "Belege & Nachweise", false_alarm: "Fehlalarme vermeiden",
   house_style: "Sprache & Hausstil", journalistic_value: "Journalistischer Mehrwert", no_invention: "Fakten statt Erfindungen",
   pitch_angle: "Blickwinkel für Pitches", pitch_shape: "Aufbau von Pitches", position: "Positionierung",
   press_relevance: "Presserelevanz", quellenordnung: "Quellenordnung", quoted_material: "Zitate & Fremdmaterial",
   refusal: "Grenzen & Ablehnung", scenario_discipline: "Szenarien", standing: "Haltung & Glaubwürdigkeit"
 };
+// Which part of the RAUTE Communications Guide (features/communications-guide/)
+// each block carries, so the panel reads as the guide sorted into its areas.
+const brainSources = {
+  comms_guide: "Arbeitsweise für jeden Text, jedes Format und jedes Modell · Communication Asset Engine",
+  crisis_discipline: "Reputation & Crisis Engine",
+  evidence: "Quality & Verification Engine · Claims, Zahlen, Studien",
+  false_alarm: "Quality & Verification Engine · Befunde einordnen",
+  house_style: "Quality & Verification Engine · KI-Sprache, Werblichkeit",
+  journalistic_value: "Market & Opportunity Engine · Warum jetzt, warum dieser Absender",
+  no_invention: "Communication Asset Engine · Quality & Verification Engine",
+  pitch_angle: "Market & Opportunity Engine · Spannungsfelder",
+  pitch_shape: "Communication Asset Engine · Betreffzeile, Nachfassen",
+  position: "Positioning Engine · Kernbotschaften",
+  quellenordnung: "Quality & Verification Engine · Primärquellen",
+  quoted_material: "Quality & Verification Engine · Zitat- und Urheberrecht",
+  refusal: "Communication Asset Engine · Assets priorisieren",
+};
+const guideFirst = (a, b) => (b.key === "comms_guide") - (a.key === "comms_guide");
 function RuleDialog({title, error, children}) {
   const ref = useRef(null);
   useEffect(() => {ref.current?.showModal();}, []);
@@ -439,11 +458,12 @@ export function SettingsPage({ data: d, onData }) {
       <div hidden={section !== "text"}>
       <Panel title={`Format & Text · Fassung ${d.brain_version}`} id="brain">
         <p>
-          Die gemeinsamen Regeln für erzeugte Texte. Änderungen gelten für alle
-          Prompts, die den jeweiligen Block verwenden.
+          Der RAUTE Communications Guide, aufgeteilt in seine Bereiche. Jedes
+          Modell schreibt jeden Text in RauteOS danach. Änderungen gelten ab dem
+          nächsten Text für alle Prompts, die den jeweiligen Bereich verwenden.
         </p>
         <Notice>{d.brain_error}</Notice>
-        {d.brain_blocks.map((b) => (
+        {[...d.brain_blocks].sort(guideFirst).map((b) => (
           <article
             key={b.key}
             id={`brain-${b.key}`}
@@ -470,6 +490,7 @@ export function SettingsPage({ data: d, onData }) {
                 {t(d.brain_open === b.key ? "Schließen" : "Bearbeiten")}
               </a>
             </header>
+            {brainSources[b.key] && <p className="settings-rule__source">{brainSources[b.key]}</p>}
             <p>
               {b.changed_at
                 ? `${date(b.changed_at)} · ${b.changed_by_is_sentinel ? t(b.changed_by) : b.changed_by} · Fassung ${b.version}`

@@ -1,4 +1,4 @@
-#blocks: journalistic_value, pitch_angle, pitch_shape, position, house_style, evidence, no_invention, quoted_material
+#blocks: journalistic_value, pitch_angle, pitch_shape, position, comms_guide, house_style, evidence, no_invention, quoted_material
 
 Du bist ein erfahrener Kommunikationsberater. Der Mandant hat eine Position zu
 einer Marktentwicklung. Du schreibst daraus die Nachricht, mit der diese Position
@@ -37,6 +37,8 @@ Hier heißt das: Beide Lesarten stehen oben schon fest, du formulierst keine
 neue. Die Nachricht steht auf der belastbaren These. Die pauschale ist die
 Falle: Wenn deine Nachricht sie behauptet, hast du die Position verfehlt, und
 sie kommt in der Nachricht auch nicht als Abgrenzung vor.
+
+{{brain:comms_guide}}
 
 {{brain:house_style}}
 

@@ -2,3 +2,8 @@ WANN EIN BEFUND KEINER IST
 
 Eine Prüfung, die immer etwas findet, wird nach dem dritten Mal ignoriert und
 ist dann schlechter als keine. Ist etwas in Ordnung, sag das.
+
+Wer prüft, trennt, was er findet: einen Fehler, der vor der Freigabe behoben
+sein muss, ein Risiko, das jemand abwägen sollte, eine Verbesserung, die den
+Text besser macht, und eine Geschmacksfrage, die niemand ändern muss. Nur so
+sieht der Mensch, was wirklich zu tun ist.

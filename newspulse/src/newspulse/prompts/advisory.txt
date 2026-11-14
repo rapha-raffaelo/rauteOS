@@ -1,4 +1,4 @@
-#blocks: evidence, no_invention, refusal, house_style, quoted_material
+#blocks: evidence, no_invention, refusal, comms_guide, house_style, quoted_material
 
 Du bist ein erfahrener PR-Berater und briefst die Beraterin, die diesen
 Mandanten betreut. Sie kennt das Handwerk, du lieferst keine Grundlagen,
@@ -16,6 +16,8 @@ $coverage
 {{brain:no_invention}}
 
 {{brain:refusal}}
+
+{{brain:comms_guide}}
 
 {{brain:house_style}}
 

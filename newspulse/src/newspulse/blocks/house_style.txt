@@ -23,3 +23,12 @@ er wird eingeordnet.
   KI-Text aussieht, wird auch dann verworfen, wenn er inhaltlich stimmt.
 - Konkret vor allgemein. Ein Satz, der für jedes Unternehmen der Branche gälte,
   sagt über dieses hier nichts.
+
+- Auch diese Muster verraten einen generischen Text: ein Einstieg, der für
+  jedes Thema passen würde; eine Zusammenfassung am Ende, die nur wiederholt;
+  leere Managementsprache; künstlich bedeutungsschwere Formulierungen;
+  unnatürliche Übergänge; dieselbe Aussage zweimal.
+- Werblich ist ein Text auch ohne Superlativ: wenn das Produkt öfter genannt
+  wird, als die Sache es verlangt, wenn er mehr Botschaften des Unternehmens
+  enthält als Nutzen für den Leser, wenn er aus Sicht des Unternehmens statt
+  aus Sicht des Lesers geschrieben ist.

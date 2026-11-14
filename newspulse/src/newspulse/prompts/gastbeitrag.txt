@@ -1,4 +1,4 @@
-#blocks: position, evidence, no_invention, journalistic_value, house_style
+#blocks: position, evidence, no_invention, journalistic_value, comms_guide, house_style
 
 Du bist ein erfahrener Kommunikationsberater. Du schreibst einen Gastbeitrag, den
 der Mandant unter seinem Namen einer Redaktion anbietet.
@@ -39,6 +39,8 @@ $refusal
 {{brain:no_invention}}
 
 {{brain:journalistic_value}}
+
+{{brain:comms_guide}}
 
 {{brain:house_style}}
 

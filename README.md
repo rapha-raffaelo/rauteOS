@@ -41,7 +41,14 @@ Node-Version im `PATH` stehen. Externe KI-Aufrufe werden in der Testsuite ersetz
 - `frontend/`: React-Oberflächen und Komponententests.
 - `newspulse/`: Backend, Datenmodell, Migrationen und Tests.
 - `features/`: fachliche Spezifikationen und Referenzentwürfe.
-- `deploy/`: Deployment-Konfiguration; benötigt separat eingerichtete Secrets.
+  - `features/specs/`: die aktuellen Spezifikationen des Umbaus, nummeriert.
+  - `features/communications-guide/`: der RAUTE Communications Guide (die neun
+    Engine-Dokumente). Seine Schreibregeln stehen als Bausteine in
+    `newspulse/src/newspulse/blocks/` und unter Einstellungen → Format & Text.
+  - `features/sources/`: Ausgangsmaterial wie die RAUTE-OS-Input-Tabelle.
+- `deploy/`: Deployment auf dem eigenen Server (Hetzner, Compose und Caddy);
+  benötigt separat eingerichtete Secrets.
+- `website/`: die statische Seite raute-kopf.com, ausgeliefert von Caddy.
 
 Lokale Datenbanken, Zugangsdaten, Logs und Testausgaben gehören nicht ins Repository.
 Der Datenbestand wird mit Alembic migriert; eine neue Installation enthält keine

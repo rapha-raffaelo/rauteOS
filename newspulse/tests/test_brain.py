@@ -633,12 +633,27 @@ ADDED_IN_MIGRATION = {
     },
 }
 
+#: The RAUTE Communications Guide (``blocks/comms_guide.txt``), distilled from
+#: the agency's nine engine documents in ``features/communications-guide/``. It
+#: is how RAUTE writes, so it goes to exactly the prompts that write prose for a
+#: reader, and those are exactly the ones that already carry house_style: the
+#: guide says what a press release, a statement or a Q&A has to do, the house
+#: style says how its sentences sound. One decision for eighteen prompts,
+#: written down once here rather than eighteen times above, and held by
+#: ``test_every_prompt_that_writes_prose_follows_the_communications_guide``.
+for _name, _keys in CARRIED_BEFORE.items():
+    if "house_style" in _keys | ADDED_IN_MIGRATION.get(_name, set()):
+        ADDED_IN_MIGRATION[_name] = ADDED_IN_MIGRATION.get(_name, set()) | {"comms_guide"}
+
 #: Phrases that only appear in a prompt if somebody wrote a standard out again
 #: instead of including it. Deliberately whole rule clauses rather than single
 #: words: `crosscheck.txt` has to be able to *name* the thing it checks for
 #: ("4. WERBESPRACHE") without that counting as restating the rule. A label
 #: points at a standard; a clause restates one.
 RESTATEMENT_TELLS = {
+    "comms_guide": ["LinkedIn ist keine kurze Pressemitteilung", "Zitate sind Entwürfe",
+                    "Warum würde ein Journalist das löschen",
+                    "Ein sichtbares Loch ist ehrlicher"],
     "house_style": ["Keine Superlative", "keine Werbesprache", "Keine Gedankenstriche",
                     "Erkennungszeichen maschinell", "keine Floskeln", "Selbstlob"],
     "position": ["beobachten die Entwicklung aufmerksam", "eigene Übertreibung",
@@ -868,6 +883,16 @@ def test_composed_prompt_carries_no_clause_its_own_task_contradicts(path: Path):
         assert _flat(clause) not in composed, (
             f"{path.name} composes {clause!r}, which its own task contradicts"
         )
+
+
+def test_every_prompt_that_writes_prose_follows_the_communications_guide():
+    """The guide is the default for every text RauteOS writes, whichever model
+    writes it. A new writing prompt that carries the house style but forgets
+    the guide would write without it, so the two travel together."""
+    for path in _prompt_files():
+        declared = set(brain.declared(path.read_text("utf-8")))
+        if "house_style" in declared:
+            assert "comms_guide" in declared, f"{path.name} writes prose without the guide"
 
 
 def test_every_block_is_included_by_at_least_one_prompt():

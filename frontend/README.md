@@ -99,7 +99,7 @@ browser checks cover real form submissions and responsive layout.
 
 The separate `/onboarding#<personal-token>` React page targets a five-minute CEO
 onboarding: one public company summary to confirm or correct, followed by five
-questions from `RAUTE_OS_INPUT-Master.xlsx` about ambition, positioning, boldness,
+questions from `features/sources/RAUTE_OS_INPUT-Master.xlsx` about ambition, positioning, boldness,
 market beliefs and confidential plans. Stable field IDs and copy live in
 `newspulse/customer_onboarding.py`. Public information is not asked again.
 

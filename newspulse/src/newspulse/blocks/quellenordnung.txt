@@ -11,3 +11,7 @@ obere; wo sie sich widersprechen, ist die obere die stärkere Seite.
 
 Nenne bei jeder gestützten Aussage die Zeile, auf die sie sich stützt. Zeigt
 eine Aussage auf keine benannte Zeile, führst du sie nicht als gestützt.
+
+Wo möglich, zählt die Primärquelle: der Gesetzestext statt des Berichts über
+das Gesetz, die Originalstudie statt ihrer Zusammenfassung, der
+Unternehmensbericht statt der Meldung darüber.

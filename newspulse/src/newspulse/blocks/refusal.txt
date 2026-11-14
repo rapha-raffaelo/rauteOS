@@ -10,3 +10,6 @@ Nichts zu liefern ist ein Ergebnis, keine Fehlleistung.
 - Wo Schweigen oder reines Beobachten die bessere Option ist, ist genau das die
   Empfehlung, mit Begründung. Einen Text zu erfinden, den niemand senden soll,
   wäre schlimmer als ein leeres Feld.
+
+- Nicht jeder Anlass braucht jedes Format. Ziel ist sinnvolle Kommunikation,
+  nicht eine möglichst große Zahl an Texten.

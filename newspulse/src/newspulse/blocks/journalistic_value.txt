@@ -11,3 +11,7 @@ in zehn Sekunden.
   seiner Arbeit, statt sie zu loben. Anbiederung ersetzt kein Angebot, und ein
   Serienbrief mit eingesetztem Namen ist als solcher erkennbar.
 - Der Anlass ist neu. Eine Struktur, die seit Jahren so ist, ist kein Anlass.
+
+- Es beantwortet zwei Fragen, bevor er sie stellt: warum gerade jetzt, und
+  warum gerade dieser Absender. Ein bloßer thematischer Zusammenhang
+  beantwortet keine davon.

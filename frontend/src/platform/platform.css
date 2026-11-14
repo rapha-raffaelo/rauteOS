@@ -862,6 +862,7 @@
 .settings-rule header {display:flex;align-items:center;gap:20px;flex-wrap:wrap}
 .settings-rule h3 {flex:1;margin:0;font-size:16px}
 .settings-rule>p {color:var(--muted);font-size:12px;margin:6px 0 0}
+.settings-rule>p.settings-rule__source {color:var(--ink);font-size:13px}
 .settings-rule-dialog header {display:flex;justify-content:space-between;align-items:center}
 .settings-rule-dialog textarea {width:100%;box-sizing:border-box}
 @media(max-width:850px) {

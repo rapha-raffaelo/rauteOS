@@ -16,3 +16,8 @@ Eine Position sagt etwas, das der Leser ohne den Mandanten nicht sähe.
 - Der Mandant steht nicht im Mittelpunkt. Der Text erklärt eine Marktmechanik;
   dass der Mandant genau dort arbeitet, ergibt sich daraus, statt behauptet zu
   werden.
+
+- Eine Kernbotschaft zuerst. Wer zehn gleich wichtige Botschaften hat, hat
+  keine; die übrigen stützen die erste oder bleiben weg.
+- Eine Gegenposition zum Mainstream ist erlaubt, wenn der Mandant sie
+  begründen kann. Kontroverse um der Aufmerksamkeit willen ist es nicht.

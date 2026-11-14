@@ -65,6 +65,14 @@ def test_the_prompt_carries_the_strategy_frame_and_the_coverage():
     assert "BISHERIGES GESPRÄCH" not in prompt
 
 
+def test_a_draft_from_the_drawer_follows_the_communications_guide():
+    """Ask RAUTE writes and rewrites on request; the guide is the default for
+    every text RauteOS writes, so it is in this prompt too."""
+    prompt = _build_prompt("Schreib mir ein Statement", "Zalando", "[0] Eine Meldung", [])
+    assert "RAUTE COMMUNICATIONS GUIDE" in prompt
+    assert "HAUS-STIL UND TONALITÄT" in prompt
+
+
 def test_the_prompt_includes_prior_turns_when_there_are_any():
     prompt = _build_prompt(
         "Und dann?", "Zalando", "[0] Eine Meldung",

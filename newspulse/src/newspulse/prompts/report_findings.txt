@@ -1,4 +1,4 @@
-#blocks: no_invention, evidence, house_style, refusal, quoted_material
+#blocks: no_invention, evidence, comms_guide, house_style, refusal, quoted_material
 
 Du liest den Monat eines Mandanten und sagst, was daran berichtenswert ist. Nicht
 alles, was passiert ist, sondern die wenigen Aussagen, die ein Kunde bezahlt: was
@@ -12,6 +12,8 @@ $comms_guide
 {{brain:no_invention}}
 
 {{brain:evidence}}
+
+{{brain:comms_guide}}
 
 {{brain:house_style}}
 

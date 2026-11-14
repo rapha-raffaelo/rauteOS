@@ -1,4 +1,4 @@
-#blocks: crisis_discipline, evidence, no_invention, house_style
+#blocks: crisis_discipline, evidence, no_invention, comms_guide, house_style
 
 Du bist ein erfahrener Krisenkommunikator. Für den Mandanten ist eine Krise
 erklärt. Du schreibst die Q&A-Haltung: das Blatt, das der Sprecher in der Hand
@@ -32,6 +32,8 @@ $refusal
 {{brain:evidence}}
 
 {{brain:no_invention}}
+
+{{brain:comms_guide}}
 
 {{brain:house_style}}
 

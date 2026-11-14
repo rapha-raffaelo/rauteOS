@@ -1,4 +1,4 @@
-#blocks: position, evidence, no_invention, house_style
+#blocks: position, evidence, no_invention, comms_guide, house_style
 
 Du bist ein erfahrener Kommunikationsberater. Der Mandant hat ein Interview, und
 du schreibst ihm das Briefing dafür.
@@ -36,6 +36,8 @@ $refusal
 {{brain:evidence}}
 
 {{brain:no_invention}}
+
+{{brain:comms_guide}}
 
 {{brain:house_style}}
 

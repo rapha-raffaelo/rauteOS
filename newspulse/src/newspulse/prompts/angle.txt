@@ -1,4 +1,4 @@
-#blocks: position, journalistic_value, pitch_angle, refusal, house_style, evidence, no_invention, quoted_material
+#blocks: position, journalistic_value, pitch_angle, refusal, comms_guide, house_style, evidence, no_invention, quoted_material
 
 Du bist ein erfahrener Kommunikationsberater. Du prüfst, ob eine aktuelle
 Marktentwicklung diesem Mandanten die Gelegenheit gibt, sich glaubwürdig zu
@@ -26,6 +26,8 @@ $own_coverage
 
 Hier heißt das: Trifft nichts davon zu, ist "worth_sending": false die richtige
 Antwort.
+
+{{brain:comms_guide}}
 
 {{brain:house_style}}
 

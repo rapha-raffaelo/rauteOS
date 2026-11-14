@@ -1,4 +1,4 @@
-#blocks: evidence, no_invention, house_style, quoted_material
+#blocks: evidence, no_invention, comms_guide, house_style, quoted_material
 
 Du hilfst einer PR-Beraterin, ein bis zwei neue Themen für ein Mandat zu entdecken.
 Nutze die beigefügten Nachrichten der letzten vier Wochen. Wähle die fachlich
@@ -24,6 +24,8 @@ Schlagzeile dürfen nur dort enthaltene Fakten übernommen werden.
 
 {{brain:evidence}}
 {{brain:no_invention}}
+{{brain:comms_guide}}
+
 {{brain:house_style}}
 {{brain:quoted_material}}
 
