@@ -23,8 +23,7 @@ def generate(provider: str, prompt: str, *, timeout: float = 180) -> str:
     elif provider == 'codex':
         argv = ['codex', 'exec', '--skip-git-repo-check', '--ephemeral',
                 '--sandbox', 'read-only', '-c', 'approval_policy="never"',
-                '-c', 'forced_login_method="chatgpt"', '-c', 'features.shell_tool=false',
-                '-c', 'features.view_image=false', '-c', 'web_search="disabled"', '-']
+                '-c', 'forced_login_method="chatgpt"']  # lean options added in the workdir below
         # Do not inherit app secrets, API credentials or a developer's config.
         env = {k: os.environ[k] for k in ('PATH', 'HOME', 'LANG', 'SSL_CERT_FILE', 'SSL_CERT_DIR') if k in os.environ}
         env['CODEX_HOME'] = str(codex_home())
@@ -33,6 +32,9 @@ def generate(provider: str, prompt: str, *, timeout: float = 180) -> str:
     try:
         # An empty working directory keeps project instructions out of data-only jobs.
         with tempfile.TemporaryDirectory(prefix='rauteos-news-') as workdir:
+            if provider == 'codex':
+                from . import codex_cli
+                argv = [*argv, *codex_cli.lean_args(workdir), '-']
             completed = subprocess.run(argv, input=prompt, capture_output=True, text=True,
                                        timeout=timeout, check=False, shell=False, env=env, cwd=workdir)
     except (OSError, subprocess.TimeoutExpired) as exc:

@@ -58,6 +58,45 @@ def env() -> dict[str, str]:
     return environment
 
 
+#: Short standing instructions in place of Codex's own agent prompt.
+INSTRUCTIONS = (
+    "Du arbeitest für RauteOS, die Kommunikationsplattform der Agentur RAUTE. "
+    "Befolge die Aufgabe im Prompt genau und antworte nur im verlangten Format."
+)
+
+#: Agent tools a text job never uses. Set through ``-c features.<name>=false``
+#: rather than ``--disable``: the CLI refuses an unknown ``--disable`` name
+#: outright, so one renamed feature in an update would stop every call, while
+#: an unknown config key is ignored.
+_UNUSED_FEATURES = (
+    "shell_tool", "unified_exec", "view_image", "multi_agent", "goals",
+    "image_generation", "apps", "plugins", "computer_use", "browser_use",
+)
+
+
+def lean_args(workdir: str) -> list[str]:
+    """The options that make ``codex exec`` a text job rather than an agent session.
+
+    Measured on codex-cli 0.169 against a local capture of the request: a
+    one-line prompt went out as 39,744 bytes (agent instructions, nine tool
+    definitions, the skills list), about 10,000 tokens, and as 4,569 with these.
+    The instructions file is written into ``workdir``, which the caller removes.
+    """
+    instructions = Path(workdir) / "instructions.txt"
+    instructions.write_text(INSTRUCTIONS, encoding="utf-8")
+    args = [
+        "--ignore-user-config", "--ignore-rules",
+        "-c", f"model_instructions_file={json.dumps(str(instructions))}",
+        "-c", 'web_search="disabled"',
+        "-c", "project_doc_max_bytes=0",
+        "-c", "skills.include_instructions=false",
+        "-c", 'model_reasoning_summary="none"',
+    ]
+    for feature in _UNUSED_FEATURES:
+        args += ["-c", f"features.{feature}=false"]
+    return args
+
+
 def run(prompt: str, *, timeout: float = _TIMEOUT_SECONDS, model: str = "") -> str:
     """The model's final answer to ``prompt``. Raises ``BackendError``."""
     from .analyzer import BackendError
@@ -71,6 +110,7 @@ def run(prompt: str, *, timeout: float = _TIMEOUT_SECONDS, model: str = "") -> s
             "-c", 'forced_login_method="chatgpt"',
             "--cd", workdir,
             "--output-last-message", str(answer),
+            *lean_args(workdir),
         ]
         if model:
             argv += ["--model", model]

@@ -134,6 +134,8 @@ def test_openai_runs_codex_read_only_without_any_api_key(session, tmp_path, monk
 
     def fake_run(argv, *, input, env, **kwargs):
         seen.update(argv=argv, prompt=input, env=env)
+        instructions = next(a for a in argv if a.startswith("model_instructions_file="))
+        seen["instructions"] = open(json.loads(instructions.split("=", 1)[1]), encoding="utf-8").read()
         out = argv[argv.index("--output-last-message") + 1]
         with open(out, "w", encoding="utf-8") as handle:
             handle.write("ok\n")
@@ -145,6 +147,11 @@ def test_openai_runs_codex_read_only_without_any_api_key(session, tmp_path, monk
     assert argv[:2] == ["codex", "exec"] and argv[-1] == "-" and seen["prompt"] == "hallo"
     assert argv[argv.index("--sandbox") + 1] == "read-only" and "--ephemeral" in argv
     assert 'forced_login_method="chatgpt"' in argv
+    # A text job, not an agent: own short instructions, no tools, no skills list.
+    assert "RauteOS" in seen["instructions"]
+    for option in ("--ignore-user-config", 'web_search="disabled"', "features.shell_tool=false",
+                   "skills.include_instructions=false"):
+        assert option in argv
     assert "OPENAI_API_KEY" not in seen["env"] and seen["env"]["CODEX_HOME"] == str(tmp_path)
 
 
