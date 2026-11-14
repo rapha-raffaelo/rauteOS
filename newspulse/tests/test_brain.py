@@ -645,15 +645,28 @@ for _name, _keys in CARRIED_BEFORE.items():
     if "house_style" in _keys | ADDED_IN_MIGRATION.get(_name, set()):
         ADDED_IN_MIGRATION[_name] = ADDED_IN_MIGRATION.get(_name, set()) | {"comms_guide"}
 
+#: The guide's format rules (``blocks/comms_formats.txt``) go only to the prompts
+#: that write one of those formats, and to the crosscheck that reads them. A
+#: pitch, an impulse or a topic list has no use for the Q&A rule, and carrying
+#: it cost every one of those calls a few hundred tokens.
+FORMAT_PROMPTS = {
+    "gastbeitrag.txt", "holding_statement.txt", "interview_briefing.txt", "krisen_qa.txt",
+    "pressemitteilung.txt", "qa.txt", "statement.txt", "talking_points.txt",
+    "workspace_asset.txt", "crosscheck.txt",
+}
+for _name in FORMAT_PROMPTS:
+    ADDED_IN_MIGRATION[_name] = ADDED_IN_MIGRATION.get(_name, set()) | {"comms_formats"}
+
 #: Phrases that only appear in a prompt if somebody wrote a standard out again
 #: instead of including it. Deliberately whole rule clauses rather than single
 #: words: `crosscheck.txt` has to be able to *name* the thing it checks for
 #: ("4. WERBESPRACHE") without that counting as restating the rule. A label
 #: points at a standard; a clause restates one.
 RESTATEMENT_TELLS = {
-    "comms_guide": ["LinkedIn ist keine kurze Pressemitteilung", "Zitate sind Entwürfe",
-                    "Warum würde ein Journalist das löschen",
+    "comms_guide": ["Zitate sind Entwürfe", "Warum würde ein Journalist das löschen",
                     "Ein sichtbares Loch ist ehrlicher"],
+    "comms_formats": ["LinkedIn ist keine kurze Pressemitteilung",
+                      "wird neu geschrieben, nicht abgeschnitten"],
     "house_style": ["Keine Superlative", "keine Werbesprache", "Keine Gedankenstriche",
                     "Erkennungszeichen maschinell", "keine Floskeln", "Selbstlob"],
     "position": ["beobachten die Entwicklung aufmerksam", "eigene Übertreibung",
@@ -893,6 +906,12 @@ def test_every_prompt_that_writes_prose_follows_the_communications_guide():
         declared = set(brain.declared(path.read_text("utf-8")))
         if "house_style" in declared:
             assert "comms_guide" in declared, f"{path.name} writes prose without the guide"
+
+
+def test_only_the_format_prompts_carry_the_format_rules():
+    for path in _prompt_files():
+        declared = set(brain.declared(path.read_text("utf-8")))
+        assert ("comms_formats" in declared) == (path.name in FORMAT_PROMPTS), path.name
 
 
 def test_every_block_is_included_by_at_least_one_prompt():

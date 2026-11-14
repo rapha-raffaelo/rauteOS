@@ -27,6 +27,7 @@ import json
 import logging
 import os
 import subprocess
+import tempfile
 from pathlib import Path
 from collections.abc import Sequence
 from importlib import resources
@@ -348,6 +349,45 @@ def claude_env() -> dict[str, str]:
     return env
 
 
+#: What every ``claude -p`` call in RauteOS is: a text job for a model, not a
+#: coding session for an agent. Without these the CLI sends its whole agent
+#: setup with each prompt (system prompt, every tool definition, MCP servers,
+#: skills, user settings and memory), measured at 57,343 input tokens for a
+#: one-line prompt against 280 with them. The subscription login is untouched:
+#: it lives in CLAUDE_CONFIG_DIR, not in the settings skipped here.
+CLAUDE_SYSTEM_PROMPT = (
+    "Du arbeitest für RauteOS, die Kommunikationsplattform der Agentur RAUTE. "
+    "Befolge die Aufgabe im Prompt genau und antworte nur im verlangten Format."
+)
+
+
+def claude_argv(*, tools: str = "", model: str = "", partial: bool = False) -> list[str]:
+    """The argv for one headless ``claude -p`` call; the prompt goes on stdin.
+
+    ``tools`` is the CLI's built-in tool list, empty for a pure text job.
+    """
+    argv = [
+        "claude", "-p", "--output-format", "stream-json", "--verbose",
+        "--tools", tools,
+        "--strict-mcp-config", "--disable-slash-commands", "--setting-sources=",
+        "--no-session-persistence", "--system-prompt", CLAUDE_SYSTEM_PROMPT,
+    ]
+    if tools:
+        argv += ["--allowedTools", tools]
+    if partial:
+        argv.append("--include-partial-messages")
+    if model:
+        argv += ["--model", model]
+    return argv
+
+
+def claude_workdir() -> str:
+    """An empty working directory, so no project file is read as an instruction."""
+    path = Path(tempfile.gettempdir()) / "rauteos-claude"
+    path.mkdir(mode=0o700, exist_ok=True)
+    return str(path)
+
+
 def invoke_claude_cli(prompt: str, *, timeout: float = _SUBPROCESS_TIMEOUT_SECONDS,
                       use_shared_knowledge: bool = True, model: str = "") -> str:
     """Run one ``claude -p`` call and return the model's text.
@@ -361,9 +401,7 @@ def invoke_claude_cli(prompt: str, *, timeout: float = _SUBPROCESS_TIMEOUT_SECON
         prompt = shared_guides.enrich_prompt(prompt, channel="claude_cli")
     # The stream rather than the single envelope: it carries the subscription's
     # rate-limit windows, which Einstellungen › KI-Verbindungen shows.
-    argv = ["claude", "-p", "--output-format", "stream-json", "--verbose"]
-    if model:
-        argv.extend(["--model", model])
+    argv = claude_argv(model=model)
     try:
         completed = subprocess.run(  # noqa: S603 - fixed argv, no shell, prompt uses stdin
             argv,
@@ -374,6 +412,7 @@ def invoke_claude_cli(prompt: str, *, timeout: float = _SUBPROCESS_TIMEOUT_SECON
             check=False,
             shell=False,  # explicit: the prompt is input data, never a shell command
             env=claude_env(),
+            cwd=claude_workdir(),
         )
     except subprocess.TimeoutExpired as exc:
         raise BackendError(f"claude -p timed out after {timeout}s") from exc
@@ -434,10 +473,7 @@ def invoke_claude_search(
     open web, and nothing in it may run a command.
     """
     prompt = shared_guides.enrich_prompt(prompt, channel="claude_search")
-    argv = [
-        "claude", "-p", "--output-format", "stream-json", "--verbose",
-        "--tools", "WebSearch,WebFetch", "--allowedTools", "WebSearch,WebFetch",
-    ]
+    argv = claude_argv(tools="WebSearch,WebFetch")
     try:
         completed = subprocess.run(  # noqa: S603 - fixed argv, no shell, prompt uses stdin
             argv,
@@ -448,6 +484,7 @@ def invoke_claude_search(
             check=False,
             shell=False,
             env=claude_env(),
+            cwd=claude_workdir(),
         )
     except subprocess.TimeoutExpired as exc:
         raise BackendError(f"claude -p timed out after {timeout}s") from exc
@@ -519,7 +556,10 @@ class ClaudeCodeAnalyzer(_BaseClaudeAnalyzer):
         self.timeout = timeout
 
     def _invoke(self, prompt: str) -> str:
-        return invoke_claude_cli(prompt, timeout=self.timeout)
+        # Sorting the morning's articles needs the mandate and the articles, not
+        # the shared PR reference passages, which cost up to 6,000 characters a
+        # batch and only matched words in the headlines.
+        return invoke_claude_cli(prompt, timeout=self.timeout, use_shared_knowledge=False)
 
 
 class ClaudeApiAnalyzer(_BaseClaudeAnalyzer):
@@ -549,7 +589,6 @@ class ClaudeApiAnalyzer(_BaseClaudeAnalyzer):
                 "ClaudeApiAnalyzer requires the 'anthropic' package (metered backend)"
             ) from exc
         try:
-            prompt = shared_guides.enrich_prompt(prompt, channel="claude_api")
             client = anthropic.Anthropic()
             message = client.messages.create(
                 model=self.model,
@@ -673,7 +712,8 @@ class GeminiAnalyzer(_BaseClaudeAnalyzer):
     def _invoke(self, prompt: str) -> str:
         from . import gemini
 
-        return gemini.generate(prompt, timeout=self.timeout, model=self.model)
+        return gemini.generate(prompt, timeout=self.timeout, model=self.model,
+                               use_shared_knowledge=False)
 
 
 class FallbackAnalyzer:

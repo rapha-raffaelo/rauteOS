@@ -41,7 +41,7 @@ claiming that an unattended task consulted the knowledge base.
              if len(word) >= 4 and word not in _STOP]
     # The complete task is considered, not just its boilerplate first 32 words.
     terms = [word for word, _ in Counter(words).most_common(256)]
-    hits = search(terms, budget=10000, max_terms=256)
+    hits = search(terms, budget=6000, max_terms=256)
     _log.info("shared_knowledge channel=%s prompt=%s status=%s sources=%s",
               channel, fingerprint, "attached" if hits else "no_matches",
               json.dumps([{ "id": hit["id"], "sha256": hit["metadata"]["sha256"],
@@ -133,7 +133,7 @@ def search(terms: list[str], *, budget: int = 12000, max_terms: int = 32) -> lis
             continue
         results.append(result)
         budget -= size
-        if len(results) == 6:
+        if len(results) == 4:
             break
     return results
 

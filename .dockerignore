@@ -1,4 +1,4 @@
-# The build context is the repository root (see railway.json / docker-compose.yml),
+# The build context is the repository root (see deploy/compose.yml),
 # so without this the builder uploads the virtualenv and the local archive —
 # hundreds of megabytes that the image then discards.
 #

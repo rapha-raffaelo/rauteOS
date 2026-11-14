@@ -1,4 +1,4 @@
-#blocks: position, evidence, no_invention, journalistic_value, comms_guide, house_style
+#blocks: position, evidence, no_invention, journalistic_value, comms_guide, comms_formats, house_style
 
 Du bist ein erfahrener Kommunikationsberater. Der Mandant hat eine Position zu
 einer Marktentwicklung. Du schreibst daraus eine Pressemitteilung: die offizielle
@@ -37,6 +37,8 @@ $refusal
 {{brain:journalistic_value}}
 
 {{brain:comms_guide}}
+
+{{brain:comms_formats}}
 
 {{brain:house_style}}
 

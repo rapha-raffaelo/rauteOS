@@ -35,10 +35,7 @@ RUN npm install -g @anthropic-ai/claude-code @openai/codex && npm cache clean --
  && node --version && claude --version && codex --version
 
 # This file lives at the repository root, and the app lives in newspulse/, hence
-# the prefixed COPY paths. It sits here so a PaaS that auto-detects a Dockerfile
-# finds it with no configuration at all: an earlier layout kept it beside the app
-# and depended on railway.json to point at it, which fails silently if the
-# platform doesn't read that file. Building must not depend on config discovery.
+# the prefixed COPY paths. Building must not depend on config discovery.
 # See .dockerignore for what the repo-root context excludes.
 WORKDIR /app
 COPY newspulse/pyproject.toml newspulse/uv.lock newspulse/README.md ./
@@ -50,20 +47,16 @@ COPY newspulse/alembic.ini ./
 RUN pip install --no-cache-dir uv && uv sync --frozen --no-dev
 
 # The database is a single SQLite file and must outlive the container.
-# Both the database and the CLI login live under one mount: a platform that
-# gives a service a single volume (Railway) cannot attach two, and nothing is
+# Both the database and the CLI login live under one mount: nothing is
 # gained by separating them — they are lost together or kept together.
 ENV NEWSPULSE_DATABASE_PATH=/data/newspulse.db \
     NEWSPULSE_WEB_HOST=0.0.0.0 \
     NEWSPULSE_CLAUDE_CONFIG_DIR=/data/claude \
     CODEX_HOME=/data/codex
 
-# Deliberately no `VOLUME /data`: Railway rejects the instruction outright
-# ("docker VOLUME is not supported, use Railway Volumes") and the build fails to
-# parse. It bought nothing anyway — an unmounted VOLUME creates an anonymous
+# Deliberately no `VOLUME /data`: an unmounted VOLUME creates an anonymous
 # volume that is just as lost as a plain directory, only harder to find. The
-# mount is declared where it is actually configured: a Railway volume at /data,
-# or the bind mount in docker-compose.yml.
+# mount is declared where it is actually configured: the bind mount in deploy/compose.yml.
 #
 # The directory is created here so that an unmounted run still starts rather
 # than failing on a missing path. That persists nothing — mount /data.

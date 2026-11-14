@@ -1224,7 +1224,7 @@ def test_a_failing_issue_link_does_not_cost_the_other_mandates(
 
 # --- The paid news APIs in the sweep ---------------------------------------------
 #
-# "zudem habe ich dir API keys auf Railway gegeben … integriere sie doch."
+# "zudem habe ich dir API keys auf dem Server gegeben … integriere sie doch."
 #
 # They join the registry's items before matching, because they are the same kind
 # of thing: coverage nobody has sorted yet. What these tests hold is that the

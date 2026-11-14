@@ -468,7 +468,7 @@ def forwarded_allow_ips(host: str) -> str | None:
     """Which upstreams may set ``X-Forwarded-Proto``, given the bind address.
 
     uvicorn trusts those headers only from ``127.0.0.1`` by default. Behind a
-    TLS-terminating proxy that is not loopback — Railway's router, or Caddy in
+    TLS-terminating proxy that is not loopback, such as Caddy in
     front of the compose stack — the header is therefore ignored, the app
     believes it is serving plain http, and every absolute URL it generates comes
     out as ``http://``. On an https page the browser blocks those as mixed

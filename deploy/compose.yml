@@ -1,10 +1,9 @@
-# RauteOS on its own server (Hetzner): the Railway setup, one-to-one.
+# RauteOS on its own server (Hetzner).
 #
 # One app container with the daily sweep as a thread inside it (the scheduler is
-# on by default, exactly as on Railway), and Caddy in front for HTTPS, which
+# on by default), and Caddy in front for HTTPS, which
 # also serves the raute-kopf.com website straight from website/public. The
-# database and the `claude` login live in /srv/rauteos/data, the same single
-# /data mount Railway gave the service, so moving between the two is a copy.
+# database and the `claude` login live in /srv/rauteos/data, mounted at /data.
 #
 # Deployed by .github/workflows/deploy.yml on every push to main.
 services:

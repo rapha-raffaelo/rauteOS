@@ -26,7 +26,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 
 from . import config
-from .analyzer import claude_env
+from .analyzer import claude_argv, claude_env, claude_workdir
 from .quota import is_quota_error
 
 _log = logging.getLogger(__name__)
@@ -160,13 +160,9 @@ def stream_claude(
     from . import shared_guides
 
     prompt = shared_guides.enrich_prompt(prompt, channel="claude_stream")
-    argv = [
-        "claude", "-p", prompt,
-        "--output-format", "stream-json",
-        # stream-json requires it; without it the CLI refuses to start.
-        "--verbose",
-        "--include-partial-messages",
-    ]
+    # The lean text-job argv every claude call uses, the prompt last: it follows
+    # a plain switch, so no list-valued option can swallow it.
+    argv = [*claude_argv(partial=True), prompt]
     process = None
     try:
         process = subprocess.Popen(  # noqa: S603 - fixed argv, no shell
@@ -176,6 +172,7 @@ def stream_claude(
             text=True,
             bufsize=1,  # line buffered: the whole point is not to wait for EOF
             env=claude_env(),
+            cwd=claude_workdir(),
             shell=False,
         )
     except FileNotFoundError:

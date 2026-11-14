@@ -177,7 +177,7 @@ def redirect_uri(base: str | None = None) -> str:
 
 
 def secret_path() -> Path:
-    """Beside the database, which on Railway is the mounted volume.
+    """Beside the database, which on the server is the mounted /data volume.
 
     Next to the data rather than in it: a database copy pulled down for local
     work then cannot mint session cookies for production.

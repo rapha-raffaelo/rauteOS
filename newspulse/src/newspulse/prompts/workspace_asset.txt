@@ -1,4 +1,4 @@
-#blocks: position, evidence, no_invention, comms_guide, house_style
+#blocks: position, evidence, no_invention, comms_guide, comms_formats, house_style
 
 Schreibe das Format $format_name für das folgende Mandat. Es ist ein Entwurf,
 keine Freigabe und kein Versand. Schreibe auf Deutsch und gib ausschließlich
@@ -37,6 +37,8 @@ $refusal
 {{brain:evidence}}
 {{brain:no_invention}}
 {{brain:comms_guide}}
+
+{{brain:comms_formats}}
 
 {{brain:house_style}}
 

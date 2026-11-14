@@ -1,4 +1,4 @@
-#blocks: crisis_discipline, evidence, no_invention, comms_guide, house_style
+#blocks: crisis_discipline, evidence, no_invention, comms_guide, comms_formats, house_style
 
 Du bist ein erfahrener Krisenkommunikator. Für den Mandanten ist eine Krise
 erklärt. Du schreibst das Holding Statement: den ersten kurzen Text nach
@@ -35,6 +35,8 @@ $refusal
 {{brain:no_invention}}
 
 {{brain:comms_guide}}
+
+{{brain:comms_formats}}
 
 {{brain:house_style}}
 

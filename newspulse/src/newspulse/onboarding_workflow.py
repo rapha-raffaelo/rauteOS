@@ -55,7 +55,7 @@ class Superseded(Exception):
 
 
 def signing_key():
-    # Lives beside SQLite on Railway's persistent volume, never in the browser.
+    # Lives beside SQLite on the persistent /data volume, never in the browser.
     path = Path(config.DATABASE_PATH).parent / '.onboarding-link-key'
     if not path.exists():
         with tempfile.NamedTemporaryFile(dir=path.parent, prefix='.onboarding-key-', delete=False) as file:

@@ -103,7 +103,14 @@ def test_claude_code_invocation_shape_is_subprocess_only():
     argv = run.call_args.args[0]
     assert argv[0] == "claude"
     assert argv[1] == "-p"
-    assert argv[2:] == ["--output-format", "stream-json", "--verbose"]
+    assert argv[2:5] == ["--output-format", "stream-json", "--verbose"]
+    # A text job, not an agent session: no tools, MCP servers, skills, user
+    # settings or Claude Code system prompt ride along (57k tokens against 280).
+    assert argv[argv.index("--tools") + 1] == ""
+    for flag in ("--strict-mcp-config", "--disable-slash-commands",
+                 "--setting-sources=", "--no-session-persistence", "--system-prompt"):
+        assert flag in argv
+    assert run.call_args.kwargs["cwd"]
     assert "Beispiel AG" in run.call_args.kwargs["input"]
     # A timeout is always set so one hung call can never stall the sweep.
     assert run.call_args.kwargs.get("timeout")
@@ -434,5 +441,5 @@ def test_large_prompt_is_sent_intact_over_stdin_without_argument_size_limit():
         assert invoke_claude_cli(prompt) == 'done'
         assert run.call_args.kwargs['input'] == prompt
         assert len(prompt.encode()) > 131072
-        assert max(len(arg.encode()) for arg in run.call_args.args[0]) < 100
+        assert max(len(arg.encode()) for arg in run.call_args.args[0]) < 500
         assert run.call_args.kwargs['shell'] is False

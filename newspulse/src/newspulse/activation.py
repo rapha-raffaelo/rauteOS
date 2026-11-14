@@ -4,7 +4,7 @@ import datetime as dt
 import hashlib
 import json
 from sqlalchemy import select,update
-from . import asset_evidence,assets,journalists,outreach,profile,quoting,twin,workspaces
+from . import asset_evidence,assets,gemini,journalists,outreach,profile,quoting,twin,workspaces
 from .analyzer import invoke_with_fallback
 from .models import (Angle,Asset,Client,ClientFact,ClientPerson,Contact,JournalistProfile,OpportunityAssetRun,OpportunityEvent,
                      OpportunityWorkspace,Outreach)
@@ -141,8 +141,11 @@ def run(session,identity,*,invoke=invoke_with_fallback,review_invoke=None):
         session.commit()
         return invoke(prompt,**kwargs)
     def call_reviewer(prompt,**kwargs):
+        # Always the second model, never the one that wrote the text: a model
+        # reading its own draft reliably answers "looks good". Without a
+        # reviewer configured this raises, and the text stays marked unchecked.
         session.commit()
-        return (review_invoke or invoke)(prompt,**kwargs)
+        return (review_invoke or gemini.reviewer())(prompt,**kwargs)
     if context['operation']=='check':
         row=text_row(session,job)
         if row is None:raise ValueError('Text nicht mehr vorhanden.')
@@ -178,6 +181,8 @@ def run(session,identity,*,invoke=invoke_with_fallback,review_invoke=None):
         session.commit()  # Preserve a paid-for draft even if its checker fails.
     try:
         quality=asset_evidence.review(title,body,context,invoke=call_reviewer)
+    except RuntimeError as exc:
+        quality=dict(status='failed',findings=[],warnings=None,note=f'{exc} Text ist ungeprüft.')
     except Exception:
         quality=dict(status='failed',findings=[],warnings=None,note='Aussagenprüfung konnte nicht abgeschlossen werden. Text ist ungeprüft.')
     session.expire_all()

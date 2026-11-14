@@ -24,7 +24,7 @@ def _clear_zone_env(monkeypatch) -> None:
 def test_defaults_to_berlin_when_nothing_is_configured(monkeypatch):
     """The regression: an unconfigured host must not fall back to its own clock.
 
-    Railway (like every PaaS image) runs UTC, so "the machine's zone" meant the
+    A container image runs UTC, so "the machine's zone" meant the
     header, the article times and the day boundary were all an hour or two off.
     The default is where the reader is, not where the container is.
     """

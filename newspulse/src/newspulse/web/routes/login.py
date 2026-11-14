@@ -32,7 +32,7 @@ _HOME = "/"
 def _is_secure(request: Request) -> bool:
     """Whether to mark cookies Secure.
 
-    Behind Railway's proxy the app speaks plain HTTP, so ``request.url.scheme``
+    Behind Caddy the app speaks plain HTTP, so ``request.url.scheme``
     says "http" while the browser is on HTTPS. The forwarded header is what the
     browser actually used, and marking the cookie Secure on a real HTTPS site is
     what keeps it off a plaintext connection.

@@ -49,7 +49,7 @@ contact book. Four constraints shape how, and none of them is a preference:
 - **Credentials from the environment.** `config.py` sources every secret from
   `NEWSPULSE_*` env vars and never from the database. A refresh token cannot
   follow that rule, because it is obtained at runtime. It goes to a file on the
-  Railway volume beside the database, mode 0600, and never into a table, so that
+  server volume beside the database, mode 0600, and never into a table, so that
   neither a database copy nor the Excel export can carry it out of the machine.
 
 It also removes a quiet data-loss bug on the way. `outreach.store()` currently
@@ -227,7 +227,7 @@ lesen" there means the consent screen Google shows says read-only.
 The client id and secret come from `NEWSPULSE_GMAIL_CLIENT_ID` and
 `NEWSPULSE_GMAIL_CLIENT_SECRET` the same way `GEMINI_API_KEY` does. The refresh
 token cannot: it is obtained at runtime, so it is written to a file beside the
-SQLite database on the Railway volume with mode 0600, never to a table.
+SQLite database on the server volume with mode 0600, never to a table.
 
 **Changes:**
 - Add the Gmail env vars and a `gmail_configured()` predicate to `src/newspulse/config.py`, deriving the redirect URI from the existing `BASE_URL`

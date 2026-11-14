@@ -320,7 +320,7 @@ def test_today_uses_the_configured_display_zone(monkeypatch):
 def test_header_run_time_is_shown_in_the_reader_zone(factory, client, monkeypatch):
     """Regression: the header showed the run time in the container's zone (UTC).
 
-    A sweep at 10:00 Berlin was rendered "Letzter Lauf 08:00 Uhr" on Railway,
+    A sweep at 10:00 Berlin was rendered "Letzter Lauf 08:00 Uhr" on the server,
     because the timestamp is stored UTC and nothing converted it for display.
     """
     monkeypatch.setattr(config, "LOCAL_ZONE", ZoneInfo("Europe/Berlin"))

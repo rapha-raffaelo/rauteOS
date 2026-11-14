@@ -5,7 +5,7 @@
 # request, which is worse than no auth because it looks like protection.
 services:
   web:
-    # Context is the repository root, matching Railway — the Dockerfile's COPY
+    # Context is the repository root, matching deploy/compose.yml: the Dockerfile's COPY
     # paths are written against it, and one context for every route means a
     # build that works here cannot fail there for a path reason.
     build: &build

@@ -17,7 +17,8 @@ nächsten erzeugten Text.
 
 | Baustein (Einstellungen) | Datei | Aus dem Guide |
 | --- | --- | --- |
-| RAUTE Communications Guide | `comms_guide.txt` | Communication Asset Engine: Vorgehen vor dem Schreiben, Platzhalter, Corporate Language, Sprecherton, Formatlogik, Pressemitteilung, Statement, Q&A, Gastbeitrag, Briefing, Zitate als Entwürfe, journalistisches Red Team |
+| RAUTE Communications Guide | `comms_guide.txt` | Communication Asset Engine: Vorgehen vor dem Schreiben, Platzhalter, Corporate Language, Sprecherton, Zielgruppen, Zitate als Entwürfe, journalistisches Red Team |
+| Formate | `comms_formats.txt` | Communication Asset Engine: Formatlogik, Pressemitteilung, Statement, Q&A, Gastbeitrag, Briefing. Nur in den Prompts, die eines dieser Formate schreiben, und im Gegenlesen |
 | Sprache & Hausstil | `house_style.txt` | Quality & Verification: KI-Sprache, Werblichkeit |
 | Belege & Nachweise | `evidence.txt` | Quality & Verification: Claims, Superlative, Zahlen, Studien, Kausalität, heikle Claims |
 | Fakten statt Erfindungen | `no_invention.txt` | Quality & Verification: Widersprüche nicht still auflösen, Fakten nicht still ändern |
@@ -52,3 +53,6 @@ die Prompt-Goldens neu erzeugt:
 
 Der Test `test_every_prompt_that_writes_prose_follows_the_communications_guide`
 sorgt dafür, dass ein neuer Schreib-Prompt den Guide nicht vergessen kann.
+`test_only_the_format_prompts_carry_the_format_rules` hält die Formatregeln
+aus allen anderen Prompts heraus: Ein Pitch braucht die Q&A-Regel nicht, und
+jeder Aufruf bezahlt jedes Wort in Tokens.

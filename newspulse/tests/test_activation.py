@@ -113,7 +113,7 @@ def test_edit_invalidates_check_and_stale_editor_cannot_overwrite(web,db):
     assert response.json()['texts'][0]['quality_stale']
     assert web.put(edit_path,json=body).status_code==409
     assert web.post(edit_path+'/check').status_code==202
-    activation.run(db,2,invoke=reviewer)
+    activation.run(db,2,invoke=draft,review_invoke=reviewer)
     assert web.get(path()).json()['texts'][0]['quality_stale'] is False
 
 
@@ -177,3 +177,19 @@ def test_asset_can_be_created_without_an_optional_contact(web, db):
     identity = launch(web)
     activation.run(db, identity, invoke=draft, review_invoke=reviewer)
     assert db.get(OpportunityAssetRun, identity).status == 'complete'
+
+
+def test_without_a_second_model_the_writer_never_checks_its_own_text(web,db,monkeypatch):
+    """Every asset has a designer and a reviewer. With no reviewer connected the
+    draft is kept but stays unchecked; the model that wrote it is never asked."""
+    from newspulse import gemini
+    def no_reviewer():
+        raise RuntimeError('Kein Zweitmodell verbunden.')
+    monkeypatch.setattr(gemini,'reviewer',no_reviewer)
+    calls=[]
+    def write(prompt,**kwargs):
+        calls.append(prompt);return draft()
+    identity=launch(web);activation.run(db,identity,invoke=write)
+    row=db.get(OpportunityAssetRun,identity)
+    assert len(calls)==1 and row.asset_id
+    assert row.quality['status']=='failed' and 'Kein Zweitmodell' in row.quality['note']

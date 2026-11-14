@@ -149,7 +149,7 @@ def test_the_base_url_falls_back_to_the_bind(monkeypatch):
 
 
 def test_the_platform_injected_port_is_respected(monkeypatch):
-    """Railway, Render and Heroku inject PORT and route to exactly it. Binding
+    """Render, Heroku and the like inject PORT and route to exactly it. Binding
     something else means the platform sends traffic to a closed socket."""
     import importlib
 
@@ -180,7 +180,7 @@ def test_an_explicit_port_still_wins_over_the_platform(monkeypatch):
 
 # --- Reverse-proxy awareness -----------------------------------------------
 #
-# Regression: served behind Railway's TLS-terminating router the dashboard came
+# Regression: served behind a TLS-terminating proxy the dashboard came
 # up unstyled and inert. `url_for` builds an *absolute* URL, uvicorn trusts
 # X-Forwarded-Proto only from 127.0.0.1, so every asset link was emitted as
 # http:// on an https page and the browser blocked the stylesheet and htmx as

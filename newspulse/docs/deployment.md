@@ -29,12 +29,14 @@ Back up `data/guide-originals/` as well as the application database. The shared
 index can be regenerated from those originals and their manifest. Existing
 database-only backup jobs do not include the original documents.
 
-Shared knowledge is also retrieved immediately before outbound AI calls: Claude
-CLI/API, Claude web research and streaming, Gemini generation/review, streaming
-and grounded search. This covers scheduled daily analyses, crisis monitoring,
-newsjacking, impulse drafts, profile research and report findings through the same
-provider paths as interactive requests. Each call adds at most six matching
-passages within a 10,000-character result budget. Customer instructions and the
+Shared knowledge is also retrieved immediately before outbound AI calls that
+write or advise: Claude CLI/API, Claude web research and streaming, Gemini
+generation, streaming and grounded search. This covers crisis monitoring,
+newsjacking, impulse drafts, profile research and report findings through the
+same provider paths as interactive requests. Each call adds at most four matching
+passages within a 6,000-character result budget. Two kinds of call opt out to
+save tokens: sorting the daily articles (the analyzer), and every reviewer check,
+which judges a text against the sources it is handed. Customer instructions and the
 requested output schema retain priority. Raw visibility measurement questions
 explicitly opt out so internal knowledge cannot bias the measurement.
 
@@ -76,78 +78,6 @@ Trade-off: available only while the Mac is awake and the tunnel is running.
 
 ---
 
-## Route B — Railway (managed, deploys on push)
-
-Right when you already have Railway capacity. It builds from the Dockerfile,
-redeploys on every push, and keeps a volume across deploys.
-
-1. **New project → Deploy from GitHub repo.** No build configuration needed:
-   the `Dockerfile` is at the repository root, where Railway auto-detects it.
-
-   **Leave Root Directory unset.** It must stay empty for the root `Dockerfile`
-   to be found, and Railway reads `railway.json` from the repository root
-   regardless — it [does not apply Root Directory to that
-   file](https://docs.railway.com/deployments/monorepo), so setting one breaks
-   detection without moving the config to match.
-
-   The Dockerfile sits at the root rather than beside the app so that the build
-   never depends on the config file being read at all: `railway.json` only adds
-   the healthcheck and restart policy. Its `COPY` paths are therefore prefixed
-   with `newspulse/`, and compose builds from the same repo-root context, so a
-   build that works locally cannot fail here for a path reason.
-
-2. **Attach a volume at `/data`.** One mount holds both the archive and the
-   `claude` login — Railway gives a service one volume, and there is nothing to
-   gain from separating two things that are lost together anyway.
-
-3. **Variables** (Settings → Variables):
-
-   ```
-   NEWSPULSE_AUTH_USER=lucas
-   NEWSPULSE_AUTH_PASSWORD=<long and random>
-   NEWSPULSE_BASE_URL=https://<your>.up.railway.app
-   NEWSPULSE_CLAUDE_CONFIG_DIR=/data/claude
-   ```
-
-   Railway injects `PORT`; the app binds it automatically. Do not set
-   `NEWSPULSE_WEB_PORT` — it would override the platform and the router would
-   reach a closed socket.
-
-   Displayed times default to `Europe/Berlin`, so nothing has to be set for a
-   German reader. Set `NEWSPULSE_TIMEZONE=<IANA name>` if the reader is
-   elsewhere. Do **not** leave it to the container's own clock: that is UTC on
-   Railway, which is what once rendered a 10:00 sweep as "Letzter Lauf 08:00
-   Uhr".
-
-4. **Log the CLI in, once, inside the running service.** This cannot be done
-   from your Mac: on macOS the Claude credentials live in the **Keychain**, not
-   in `~/.claude`, so there is no file to copy. It has to be a device flow on
-   the host.
-
-   ```sh
-   railway ssh
-   CLAUDE_CONFIG_DIR=/data/claude claude login
-   ```
-
-   The credentials land on the volume and survive redeploys. **They do not
-   survive deleting the volume** — if you ever recreate it, repeat this step, and
-   until you do, analysis and Captain Comms both fail.
-
-5. **The daily sweep** as a second service from the same repo, with a cron
-   schedule and the start command:
-
-   ```sh
-   uv run newspulse run && uv run newspulse digest
-   ```
-
-   It needs the same variables and the same volume.
-
-   **Railway's cron is UTC**, and `NEWSPULSE_TIMEZONE` does not change that — it
-   is a display setting, not the container's clock. Convert the time you want by
-   hand: `10 4 * * *` is 06:10 in Berlin summer time, `10 5 * * *` in winter.
-   Pick one and accept the hour of drift across the DST switch, or shift it twice
-   a year.
-
 **Cost note.** The sweep spends most of its wall-clock waiting on `claude -p`,
 so it is cheap; the dashboard is idle almost all day. The thing to watch is not
 CPU but the volume, since the archive grows with every run.
@@ -157,7 +87,10 @@ spends at most **one extra call per mandate** — the positioning draft, and onl
 for a mandate whose topic radar found something new that morning. A mandate with
 no keywords and no alert topics has no radar and costs nothing extra.
 
-## Route C — a small always-on host (Docker)
+## Route B — a small always-on host (Docker)
+
+This is how RauteOS runs (Hetzner, `deploy/compose.yml`, deployed by
+`.github/workflows/deploy.yml` on every push to `main`).
 
 Any €5/month VPS. Everything needed is in the repo.
 
@@ -305,25 +238,17 @@ Four steps, and the third is the one everybody forgets.
    everyone *signs in* — two unrelated decisions behind one switch, with the
    surprise landing on whoever is locked out.
 
-   Sharing one client is still fine and costs one line. On Railway, reference
-   the mailbox variables instead of pasting the secret twice:
-
-   ```
-   NEWSPULSE_GOOGLE_CLIENT_ID=${{GMAIL_CLIENT_ID}}
-   NEWSPULSE_GOOGLE_CLIENT_SECRET=${{GMAIL_CLIENT_SECRET}}
-   ```
+   Sharing one client is still fine: set both pairs to the same values.
 
    The unprefixed `GMAIL_CLIENT_ID` / `GMAIL_CLIENT_SECRET` spellings are read
    for the *mailbox* alongside the prefixed ones, because that is how the
    credential is named in this deployment.
 
-`NEWSPULSE_BASE_URL` decides the redirect URI the app sends. On Railway it is
-derived from `RAILWAY_PUBLIC_DOMAIN` when unset, so it usually needs no
-configuring; anywhere else, set it, or the app will hand Google its bind address
-and every sign-in will fail.
+`NEWSPULSE_BASE_URL` decides the redirect URI the app sends. Set it, or the app
+will hand Google its bind address and every sign-in will fail.
 
 Sessions are cookies signed with a key kept beside the database
-(`.session-secret`, mode 600), generated on first use. On Railway that is the
+(`.session-secret`, mode 600), generated on first use. On the server that is the
 mounted volume, so it survives a redeploy and nobody is signed out by one. It is
 next to the database rather than inside it so a database copy pulled down for
 local work cannot mint production sessions.
@@ -470,7 +395,7 @@ Under **Authorised redirect URIs**, add exactly:
 <NEWSPULSE_BASE_URL>/settings/gmail/callback
 ```
 
-e.g. `https://newspulse.up.railway.app/settings/gmail/callback`. Google matches
+e.g. `https://os.raute-kopf.com/settings/gmail/callback`. Google matches
 this character for character. The app derives its own copy from
 `NEWSPULSE_BASE_URL`, so the two cannot drift — but **changing that variable
 means re-registering the URI**, or the next connection attempt dies at Google

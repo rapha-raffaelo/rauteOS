@@ -62,7 +62,7 @@ _TIMEOUT = 25.0
 # Sent on every request. mediastack sits behind Cloudflare and answered HTTP 403
 # ``error code: 1010`` to urllib's default agent — a blocked client, not a bad
 # key, and indistinguishable from one in the response body.
-_USER_AGENT = "RauteOS/1.0 (+https://pr-scanner-production.up.railway.app)"
+_USER_AGENT = "RauteOS/1.0 (+https://os.raute-kopf.com)"
 
 #: HTTPS verified against the configured subscription on 10 September 2026.
 #: The access key is a query parameter, so transport encryption is required.

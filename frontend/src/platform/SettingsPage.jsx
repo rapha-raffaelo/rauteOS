@@ -242,7 +242,7 @@ const gmailNotices = {
     "Die Verbindung mit Google ist fehlgeschlagen. Es wurde nichts gespeichert.",
 };
 const brainLabels = {
-  comms_guide: "RAUTE Communications Guide",
+  comms_guide: "RAUTE Communications Guide", comms_formats: "Formate",
   crisis_discipline: "Krisenkommunikation", evidence: "Belege & Nachweise", false_alarm: "Fehlalarme vermeiden",
   house_style: "Sprache & Hausstil", journalistic_value: "Journalistischer Mehrwert", no_invention: "Fakten statt Erfindungen",
   pitch_angle: "Blickwinkel für Pitches", pitch_shape: "Aufbau von Pitches", position: "Positionierung",
@@ -252,7 +252,8 @@ const brainLabels = {
 // Which part of the RAUTE Communications Guide (features/communications-guide/)
 // each block carries, so the panel reads as the guide sorted into its areas.
 const brainSources = {
-  comms_guide: "Arbeitsweise für jeden Text, jedes Format und jedes Modell · Communication Asset Engine",
+  comms_guide: "Arbeitsweise für jeden Text und jedes Modell · Communication Asset Engine",
+  comms_formats: "Communication Asset Engine · Pressemitteilung, Statement, Q&A, Gastbeitrag, Briefing",
   crisis_discipline: "Reputation & Crisis Engine",
   evidence: "Quality & Verification Engine · Claims, Zahlen, Studien",
   false_alarm: "Quality & Verification Engine · Befunde einordnen",
@@ -266,7 +267,9 @@ const brainSources = {
   quoted_material: "Quality & Verification Engine · Zitat- und Urheberrecht",
   refusal: "Communication Asset Engine · Assets priorisieren",
 };
-const guideFirst = (a, b) => (b.key === "comms_guide") - (a.key === "comms_guide");
+// The guide first, its format rules right under it, then the other areas.
+const guideRank = (key) => ({comms_guide: 2, comms_formats: 1})[key] || 0;
+const guideFirst = (a, b) => guideRank(b.key) - guideRank(a.key);
 function RuleDialog({title, error, children}) {
   const ref = useRef(null);
   useEffect(() => {ref.current?.showModal();}, []);

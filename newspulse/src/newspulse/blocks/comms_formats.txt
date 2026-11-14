@@ -1,0 +1,20 @@
+FORMATE NACH DEM RAUTE COMMUNICATIONS GUIDE
+
+Jedes Format hat seine eigene Logik. LinkedIn ist keine kurze Pressemitteilung,
+ein Gastbeitrag kein langer Blogtext, Talking Points sind kein Q&A. Eine kürzere
+Fassung wird neu geschrieben, nicht abgeschnitten.
+- Pressemitteilung: Die Nachricht steht in Headline und Lead, das Wichtigste
+  zuerst. Zitate sagen etwas, das nicht schon im Text steht. Keine
+  Marketingpassage, eine aktuelle Boilerplate.
+- Statement: eine klare Haltung, eine neue Information statt einer
+  Wiederholung, in einem Satz zitierfähig, passend zum Sprecher, belegbar.
+- Q&A: auch die unangenehmen Fragen, nach Preis, Verantwortung, Wettbewerb,
+  Kritik, früheren Aussagen und Risiken. Eine Antwort nennt den bestätigten
+  Fakt, macht Unsicherheit offen, nennt Maßnahme und nächsten Schritt und zieht
+  eine klare Grenze, wo etwas nicht beantwortet werden kann.
+- Gastbeitrag: ein echter Gedanke mit These, Argumenten, Gegenargument und
+  konkreten Beispielen. Das Unternehmen kommt höchstens beiläufig vor; ein
+  Gastbeitrag, der wie Werbung wirkt, wird abgelehnt.
+- Interview-Briefing und Talking Points: nach Wichtigkeit geordnet, kurze
+  Antworten auf die schwierigen Fragen, Brücken zur Kernbotschaft, die nicht
+  ausweichend wirken.

@@ -72,12 +72,14 @@ def test_provider_prompt_has_bounded_quoted_sources_and_audit(package, caplog):
     assert enriched.startswith(task)
     assert "<<<ZITAT GEMEINSAME PR-WISSENSQUELLEN" in enriched
     assert "drive-source" in enriched
-    assert len(enriched) - len(task) < 11500
+    assert len(enriched) - len(task) < 7500
     assert "status=attached" in caplog.text
     assert "Prüfe das" not in caplog.text
 
 
-def test_scheduled_analysis_reaches_cli_with_shared_knowledge(package, monkeypatch):
+def test_scheduled_analysis_sorts_articles_without_reference_passages(package, monkeypatch):
+    """Token budget: deciding whether an article concerns a mandate needs the
+    mandate and the article, not PR reference passages matched on its words."""
     from types import SimpleNamespace
     from newspulse import analyzer
     from test_analyzer import make_client, make_article, _cli_stdout, _verdict
@@ -91,7 +93,24 @@ def test_scheduled_analysis_reaches_cli_with_shared_knowledge(package, monkeypat
         return SimpleNamespace(returncode=0, stdout=_cli_stdout([_verdict(0)]), stderr="")
     monkeypatch.setattr(analyzer.subprocess, "run", run)
     assert analyzer.ClaudeCodeAnalyzer().analyze(make_client(), [article])
-    assert "drive-source" in captured[0]
+    assert "drive-source" not in captured[0]
+
+
+def test_the_reviewer_reads_without_reference_passages(package, monkeypatch):
+    """The reviewer checks a text against the sources it is handed; reference
+    passages are not evidence for that. The designer still gets them."""
+    from newspulse import ai_models, analyzer
+
+    shared_guides.import_sources(package)
+    seen = {}
+    def cli(prompt, **kwargs):
+        seen[kwargs.get("use_shared_knowledge")] = prompt
+        return "ok"
+    monkeypatch.setattr(analyzer, "invoke_claude_cli", cli)
+    session = ai_models._NoSettings()
+    ai_models.call(session, "claude", "Exklusivitätsfenster", timeout=5, role="reviewer")
+    ai_models.call(session, "claude", "Exklusivitätsfenster", timeout=5, role="designer")
+    assert set(seen) == {False, True}
 
 
 @pytest.mark.parametrize("method", ["generate", "stream", "search"])
@@ -147,7 +166,9 @@ def test_claude_search_and_api_attach_references(package, monkeypatch):
     monkeypatch.setitem(sys.modules, "anthropic", fake)
     analyzer.ClaudeApiAnalyzer()._invoke("Exklusivitätsfenster")
     assert len(captured) == 2
-    assert all("drive-source" in prompt for prompt in captured)
+    # Research gets the references; sorting articles (the analyzer) does not.
+    assert "drive-source" in captured[0]
+    assert "drive-source" not in captured[1]
 
 
 def test_claude_stream_attaches_references(package, monkeypatch):
@@ -162,7 +183,7 @@ def test_claude_stream_attaches_references(package, monkeypatch):
         def wait(self, timeout): return 0
         def poll(self): return 0
     def popen(argv, **kwargs):
-        captured.append(argv[2])
+        captured.append(argv[-1])
         return Process()
     monkeypatch.setattr(streaming.subprocess, "Popen", popen)
     assert list(streaming.stream_claude("Exklusivitätsfenster"))[-1].kind == "done"

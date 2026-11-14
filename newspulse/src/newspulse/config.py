@@ -209,7 +209,7 @@ _ENV_SMTP_STARTTLS = "NEWSPULSE_SMTP_STARTTLS"
 # and the morning digest. Stored timestamps stay UTC; this is a display setting.
 #
 # A named zone with a default, rather than the host's own zone, because the host
-# is a container: Railway (and every other PaaS image) runs UTC, so deriving the
+# is a container: every container image runs UTC, so deriving the
 # zone from /etc/localtime showed a Berlin reader every time two hours early and
 # rolled the day over at 02:00 local. The reader's zone is a property of the
 # reader, not of the machine that happens to serve them — so it is configuration,
@@ -235,7 +235,7 @@ def _load_dotenv() -> None:
 
     There has been a ``.env.example`` in this repo since the first week and
     nothing ever read the file it describes: every setting came from a real
-    environment variable, which is right on Railway (the platform injects them)
+    environment variable, which is right on the server (compose injects them)
     and wrong on a laptop, where the operator does exactly what the example file
     invites — *"ich kann dir hier in's .env file einen Gemini Key legen"* — and
     nothing happens.
@@ -329,7 +329,7 @@ PROFILE_REFRESH_PER_RUN: int = _env_int(
 )
 WEB_HOST: str = os.environ.get(_ENV_WEB_HOST, _DEFAULT_WEB_HOST)
 # NEWSPULSE_WEB_PORT wins, then PORT, then the default. PORT is what a PaaS
-# injects (Railway, Render, Heroku) and the app must bind exactly it or the
+# injects (Render, Heroku and the like) and the app must bind exactly it or the
 # platform routes traffic to a closed socket — the explicit name still takes
 # precedence so a local override is never silently ignored.
 WEB_PORT: int = _env_int(_ENV_WEB_PORT, _env_int("PORT", _DEFAULT_WEB_PORT))
@@ -770,9 +770,8 @@ def gmail_redirect_uri() -> str:
 def base_url() -> str:
     """The address links in outgoing mail should point at.
 
-    Three sources, in order. An explicit NEWSPULSE_BASE_URL wins. Failing that,
-    the platform's own public hostname, because the bind address is useless
-    here: a container listens on 0.0.0.0, and "http://0.0.0.0:8080" is not an
+    An explicit NEWSPULSE_BASE_URL wins, and on the server it must be set,
+    because the bind address is useless there: a container listens on 0.0.0.0, and "http://0.0.0.0:8080" is not an
     address anything can come back to. That mattered little while this only
     signed the links in outgoing mail; it decides whether sign-in works at all,
     because Google compares the redirect URI it is given against the one
@@ -780,9 +779,6 @@ def base_url() -> str:
     """
     if BASE_URL:
         return BASE_URL
-    public = os.environ.get("RAILWAY_PUBLIC_DOMAIN", "").strip()
-    if public:
-        return f"https://{public.rstrip('/')}"
     return f"http://{WEB_HOST}:{WEB_PORT}"
 
 

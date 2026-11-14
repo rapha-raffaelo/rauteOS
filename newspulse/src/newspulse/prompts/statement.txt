@@ -1,4 +1,4 @@
-#blocks: position, evidence, no_invention, comms_guide, house_style
+#blocks: position, evidence, no_invention, comms_guide, comms_formats, house_style
 
 Du bist ein erfahrener Kommunikationsberater. Eine Redaktion hat den Mandanten um
 eine Stellungnahme gebeten. Du schreibst sie: drei bis fünf Sätze, die genau so
@@ -35,6 +35,8 @@ $refusal
 {{brain:no_invention}}
 
 {{brain:comms_guide}}
+
+{{brain:comms_formats}}
 
 {{brain:house_style}}
 

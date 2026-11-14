@@ -125,7 +125,7 @@ facts are preserved. Skipped questions are distinct from answers; review and
 completion resume from the database. Audio uses MediaRecorder and Deepgram Nova-3; see the storage modes below. Use HTTPS in production. Failed saves retain the current input.
 The five-minute duration is a design target, not a measured CEO usability result.
 
-### Automatic Railway workflow
+### Automatic onboarding workflow
 
 Creating a mandate at `/mandant/neu` persists company details, the contact and a
 queued job in one transaction, then opens **Profile → Kunden-Onboarding**.
@@ -147,7 +147,7 @@ completion, revoke links and renew expired ones while retaining customer answers
 No email is sent automatically. Contact details can be edited in the same panel.
 
 The link signing key is generated with mode 0600 beside the SQLite database
-(`/data/.onboarding-link-key` on Railway). Preserve it with the database during
+(`/data/.onboarding-link-key` on the server). Preserve it with the database during
 volume moves/restores; redeploys retain it on the existing `/data` volume. Only
 token hashes are stored in invite rows. Browser links carry the token in their
 fragment and use a scoped header for the customer API. Agency routes retain the
@@ -155,7 +155,7 @@ existing Google allowlist authentication. Do not copy production keys into Git.
 
 ### Onboarding audio (Nova-3)
 
-`DEEPGRAM_API_KEY` is a Railway server secret (alternatively
+`DEEPGRAM_API_KEY` is a server secret in the compose `.env` (alternatively
 `NEWSPULSE_DEEPGRAM_API_KEY`). It never enters the frontend. The worker uses
 Deepgram's prerecorded `/v1/listen` endpoint, `model=nova-3`, multilingual speech,
 smart formatting, company-name keyterms, and model-improvement opt-out.

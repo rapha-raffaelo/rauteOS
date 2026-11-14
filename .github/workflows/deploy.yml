@@ -1,6 +1,6 @@
 name: Deploy RauteOS
 
-# Every push to main goes live, as it did on Railway. The server builds the
+# Every push to main goes live. The server builds the
 # image itself, so nothing is pushed to a registry.
 on:
   push:

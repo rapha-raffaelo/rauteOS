@@ -16,7 +16,7 @@ def codex_home() -> Path:
 def generate(provider: str, prompt: str, *, timeout: float = 180) -> str:
     prompt = shared_guides.enrich_prompt(prompt, channel=f'daily_news_{provider}')
     if provider == 'claude':
-        argv = ['claude', '-p', '--output-format', 'json', '--tools', '']
+        argv = analyzer.claude_argv()
         env = analyzer.claude_env()
         for key in ('ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN'):
             env.pop(key, None)
@@ -41,7 +41,7 @@ def generate(provider: str, prompt: str, *, timeout: float = 180) -> str:
         # CLI stderr can contain login/session details. Keep it out of app logs.
         raise analyzer.BackendError(f'{provider}: subscription call failed (exit {completed.returncode}); check login or quota')
     if provider == 'claude':
-        return analyzer._extract_cli_result(completed.stdout)
+        return analyzer._extract_cli_result(analyzer._result_line(completed.stdout))
     text = completed.stdout.strip()
     if not text:
         raise analyzer.BackendError('codex: empty subscription response')

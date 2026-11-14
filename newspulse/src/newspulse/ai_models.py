@@ -340,6 +340,9 @@ def call(session, provider: str, prompt: str, *, timeout: float, role: str | Non
 
     key = api_key(session, provider, role)
     model = model_for(session, provider, role)
+    # The reviewer judges a finished text against the sources it is handed.
+    # Reference passages are not evidence for that, and they cost tokens.
+    knowledge = role != "reviewer"
     if provider == "gemini":
         # Without a key of its own, the configured fallback resolves its key
         # inside gemini.generate, as it did before roles existed.
@@ -347,23 +350,27 @@ def call(session, provider: str, prompt: str, *, timeout: float, role: str | Non
             raise NotConnected("Gemini ist nicht verbunden.")
         from . import gemini
 
-        return gemini.generate(prompt, timeout=timeout, model=model, api_key=key or None)
+        return gemini.generate(prompt, timeout=timeout, model=model, api_key=key or None,
+                               use_shared_knowledge=knowledge)
     if provider == "claude" and not key:
         # The subscription, exactly as before this page existed.
         from . import analyzer
 
-        return analyzer.invoke_claude_cli(prompt, timeout=timeout, model=model)
+        return analyzer.invoke_claude_cli(prompt, timeout=timeout, model=model,
+                                          use_shared_knowledge=knowledge)
     if provider == "openai":
         # The ChatGPT subscription through the Codex CLI; never an API key.
         from . import codex_cli
 
         if not codex_cli.logged_in():
             raise NotConnected("OpenAI ist nicht angemeldet: auf dem Server codex login --device-auth ausführen.")
-        return codex_cli.run(shared_guides.enrich_prompt(prompt, channel="openai_codex"),
-                             timeout=timeout, model=model)
+        if knowledge:
+            prompt = shared_guides.enrich_prompt(prompt, channel="openai_codex")
+        return codex_cli.run(prompt, timeout=timeout, model=model)
     if not key:
         raise NotConnected(f"{PROVIDERS[provider]['label']} ist nicht verbunden.")
-    prompt = shared_guides.enrich_prompt(prompt, channel=f"{provider}_api")
+    if knowledge:
+        prompt = shared_guides.enrich_prompt(prompt, channel=f"{provider}_api")
     payload = _post("https://api.anthropic.com/v1/messages",
                     {"model": model, "max_tokens": 8192, "messages": [{"role": "user", "content": prompt}]},
                     {"x-api-key": key, "anthropic-version": "2023-06-01"}, timeout, "Claude")
