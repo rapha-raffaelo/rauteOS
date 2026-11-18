@@ -128,8 +128,8 @@ class ArchiveFilters:
     source: str
     category: str
     search: str
-    #: Spec 12: "kunde" (coverage about the mandate) or "keywords" (the radar).
-    quelle: str = "kunde"
+    #: "all" combines coverage and radar; either source remains filterable.
+    quelle: str = "all"
     keyword: str = ""
 
 
@@ -319,6 +319,27 @@ def _keyword_page(session: Session, client: Client, conditions: list, page: int)
     return rows
 
 
+def _combined_page(session, client, conditions, radar_conditions, page):
+    own = select(Article.id).join(Analysis,Analysis.article_id==Article.id).where(*conditions)
+    radar = select(Article.id).join(TopicHit,TopicHit.article_id==Article.id).where(*radar_conditions)
+    ids = own.union(radar)
+    articles = list(session.scalars(select(Article).where(Article.id.in_(ids))
+        .order_by(Article.published_at.desc(),Article.id.desc()).limit(_PAGE_SIZE).offset((page-1)*_PAGE_SIZE)))
+    analyses = {a.article_id:a for a in session.scalars(select(Analysis).where(
+        Analysis.client_id==client.id,Analysis.article_id.in_([a.id for a in articles]),visible_coverage()))}
+    rows = []
+    for article in articles:
+        analysis = analyses.get(article.id)
+        text = f'{article.title} {article.summary_text or ""}'.casefold()
+        rows.append(ArchiveRow(analysis_id=analysis.id if analysis else None,headline=article.title,
+            url=article.url,source=article.source,published_at=article.published_at.astimezone(_local_tz()),
+            summary=analysis.summary if analysis else article.summary_text,
+            category=analysis.category.value if analysis else '',importance=analysis.importance_score if analysis else 0,
+            is_alert=analysis.is_alert if analysis else False,article_id=article.id,
+            keyword='' if analysis else next((term for term in _keyword_terms(client) if term.casefold() in text),'')))
+    return rows
+
+
 def _archive_sources(session: Session, client_id: int) -> list[str]:
     """Distinct sources across this client's whole archive for the filter dropdown.
 
@@ -351,7 +372,7 @@ def _page_url(client_id: int, filters: ArchiveFilters, page: int) -> str:
         params.append(("category", filters.category))
     if filters.search:
         params.append(("q", filters.search))
-    if filters.quelle != "kunde":
+    if filters.quelle != "all":
         params.append(("quelle", filters.quelle))
     if filters.keyword:
         params.append(("keyword", filters.keyword))
@@ -737,7 +758,7 @@ def _render_detail(
     source_value = (source or "").strip()
     search_value = (q or "").strip()
 
-    view = "keywords" if quelle == "keywords" and not client.is_competitor else "kunde"
+    view = "kunde" if client.is_competitor else quelle if quelle in {"kunde","keywords"} else "all"
     keyword_value = (keyword or "").strip()[:100] if view == "keywords" else ""
     conditions = _archive_conditions(
         client_id, parsed_from, parsed_to, source_value, parsed_category, search_value
@@ -745,14 +766,19 @@ def _render_detail(
     radar_conditions = _keyword_conditions(client, parsed_from, parsed_to, source_value, search_value, keyword_value)
     counts = {"kunde": _count(session, _archive_conditions(client_id, None, None, "", None, "")),
               "keywords": 0 if client.is_competitor else _keyword_count(session, _keyword_conditions(client, None, None, "", "", ""))}
-    total = _count(session, conditions) if view == "kunde" else _keyword_count(session, radar_conditions)
+    counts['all'] = counts['kunde'] + counts['keywords']
+    if view == 'all' and parsed_category is not None:
+        # Keyword hits have no analysed category; a category filter must remain exact.
+        radar_conditions.append(Article.id < 0)
+    total = (_count(session, conditions) if view in {'kunde','all'} else 0) + (_keyword_count(session, radar_conditions) if view in {'keywords','all'} else 0)
     # Ceil-divide without floats; at least one page so an empty archive still
     # renders "Seite 1/1". Clamp the requested page into range so ?page=0, a
     # negative, or a past-the-end value never offsets into nothing.
     total_pages = max(1, (total + _PAGE_SIZE - 1) // _PAGE_SIZE)
     current_page = min(max(page, 1), total_pages)
     rows = (_fetch_page(session, conditions, current_page) if view == "kunde"
-            else _keyword_page(session, client, radar_conditions, current_page))
+            else _keyword_page(session, client, radar_conditions, current_page) if view=='keywords'
+            else _combined_page(session,client,conditions,radar_conditions,current_page))
 
     # Echo normalized values (parsed dates reformatted, only a valid category)
     # so a malformed query param never round-trips back into the form or links.
@@ -773,7 +799,7 @@ def _render_detail(
             "client": _profile(client),
             "rows": rows,
             "filters": filters,
-            "sources": _archive_sources(session, client_id),
+            "sources": sorted(set(_archive_sources(session, client_id)) | (set(session.scalars(select(Article.source).join(TopicHit,TopicHit.article_id==Article.id).where(TopicHit.client_id==client_id))) if not client.is_competitor else set())),
             "categories": [category.value for category in Category],
             "pagination": _paginate(
                 client_id, filters, current_page, total_pages, total

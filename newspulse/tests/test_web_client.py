@@ -394,7 +394,7 @@ def test_zero_relevance_row_is_excluded(factory, client):
 
     body = rendered(client.get(f"/client/{client_id}"))
     assert "NOISE Nicht relevant" not in body
-    assert "Noch keine Berichterstattung" in body  # empty state
+    assert "Keine Artikel für die gewählten Filter" in body  # combined empty state
 
 
 def test_unknown_client_returns_404(client):
@@ -890,11 +890,11 @@ def test_the_radar_material_has_its_own_view_in_medien(factory, client):
 
     body = rendered(client.get(f"/client/{cid}"))
 
-    # Spec 12: the radar's half has its own view in Medien, counted beside the
-    # coverage; the coverage view itself stays coverage only.
+    # Both sources appear by default; explicit filters remain available.
     assert "Zu den Keywords · 3" in body
     assert f"/client/{cid}/medien?quelle=keywords" in body
-    assert "Etwas über das Themenfeld 0" not in body
+    assert "Etwas über das Themenfeld 0" in body
+    assert "Etwas über das Themenfeld 0" not in rendered(client.get(f"/client/{cid}/medien?quelle=kunde"))
     assert "Etwas über das Themenfeld 0" in rendered(client.get(f"/client/{cid}/medien?quelle=keywords"))
 
 

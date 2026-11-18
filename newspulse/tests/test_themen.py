@@ -99,7 +99,10 @@ def test_medien_lists_the_keyword_hits_beside_the_coverage(web, session, mandate
     _article(session, "Bundestag schränkt Medizinalcannabis ein", "https://ex.de/radar-001", radar=mandate)
     _article(session, "Etwas anderes im Feld", "https://ex.de/radar-002", radar=mandate)
 
-    own = rendered(web.get(f"/client/{mandate.id}/medien"))
+    combined = rendered(web.get(f"/client/{mandate.id}/medien"))
+    assert "Remexian erweitert Lieferprogramm" in combined and "Bundestag schränkt" in combined
+    assert "Alle · 3" in combined
+    own = rendered(web.get(f"/client/{mandate.id}/medien?quelle=kunde"))
     assert "Remexian erweitert Lieferprogramm" in own and "Bundestag schränkt" not in own
     assert "Zu den Keywords · 2" in own
 

@@ -71,7 +71,8 @@ export function ArchivePage({ data: d }) {
       </PageHeading>
       {client && !client.is_competitor && d.counts && (
         <nav className="medien-views" aria-label={t("Quelle der Treffer")}>
-          <a href={base} aria-current={f.quelle !== "keywords" ? "page" : undefined}>
+          <a href={base} aria-current={f.quelle === "all" ? "page" : undefined}>{t("Alle")} · {d.counts.all ?? d.counts.kunde+d.counts.keywords}</a>
+          <a href={`${base}?quelle=kunde`} aria-current={f.quelle === "kunde" ? "page" : undefined}>
             {t("Über")} {client.name} · {d.counts.kunde}
           </a>
           <a href={`${base}?quelle=keywords`} aria-current={f.quelle === "keywords" ? "page" : undefined}>
@@ -100,7 +101,7 @@ export function ArchivePage({ data: d }) {
             : null
         }
       >
-        {f.quelle === "keywords" && <input type="hidden" name="quelle" value="keywords" />}
+        {f.quelle && <input type="hidden" name="quelle" value={f.quelle} />}
         {f.keyword && <input type="hidden" name="keyword" value={f.keyword} />}
         <label className="archive-search">
           <span className="sr-only">{t("Suche")}</span>
@@ -202,6 +203,8 @@ export function ArchivePage({ data: d }) {
                         <span className="tag" data-category={row.category}>{label(t(row.category))}</span>
                       )}
                       {row.is_alert && <span className="tag tag--alert">Alert</span>}
+                      {client && f.quelle === "all" && row.analysis_id && <span className="tag">{t("Kundennews")}</span>}
+                      {client && !row.analysis_id && !row.keyword && <span className="tag">{t("Keyword-Treffer")}</span>}
                       {row.keyword && <span className="tag">{t("Keyword")} „{row.keyword}“</span>}
                     </div>
                     <h3 className="feed-item__headline">
@@ -236,10 +239,10 @@ export function ArchivePage({ data: d }) {
         </div>
         {!d.rows.length && (
           <div className="empty-state">
-            <p>{client && f.quelle !== 'keywords' && !d.counts?.kunde
+            <p>{client && f.quelle === 'kunde' && !d.counts?.kunde
               ? `Noch keine Berichterstattung über ${client.name} gespeichert.`
               : t("Keine Artikel für die gewählten Filter.")}</p>
-            {client && f.quelle !== 'keywords' && d.counts?.keywords > 0 &&
+            {client && f.quelle === 'kunde' && d.counts?.keywords > 0 &&
               <p><a href={`${base}?quelle=keywords`}>{d.counts.keywords} Meldungen zu den Keywords ansehen →</a></p>}
           </div>
         )}
