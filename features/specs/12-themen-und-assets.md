@@ -172,3 +172,56 @@ Abgleich mit dem Mockup, die Lücken geschlossen:
   im Thema bzw. in dessen Assets (`advisory.new_flow_href`). Die Seite selbst
   und ihre Fragmente bestehen noch für den Code, der sie abruft; entfernen
   ist der nächste Schritt.
+
+## Themenworkflow (18.11.2026)
+
+Die Themendetailseite trägt jetzt den Ablauf aus Lucas’ Entwurf innerhalb der
+bestehenden Kundennavigation: Deep Dive → Blickwinkel → Assets → Freigabe →
+Journalisten → Pitches → Follow-up → Ergebnis. Themenkarten öffnen den nächsten
+Arbeitsschritt; abgeschlossene Themen bleiben über einen eigenen Filter erreichbar.
+
+- Bis zu zwei Blickwinkel und der gemeinsame Pitch werden im Workspace gespeichert
+  und an die vorhandene Texterstellung übergeben. Assets bleiben auch im bisherigen
+  Assets-Reiter erreichbar. Vorbereitete Texte ohne Activation-Job sind einbezogen.
+- Freigabestand, Kundennachweis und Änderungswünsche sind pro Textfassung erfasst.
+  Eine Änderung oder Neugenerierung macht die frühere Freigabe ungültig.
+- Kontakte, Master-Pitch und individuelle Entwürfe bleiben am Thema. LinkedIn,
+  Interviewangebot und Gesprächsbriefing nutzen die vorhandenen Format-Engines.
+- Pitch-Freigabe und bereits erfolgter Versand können ausdrücklich dokumentiert
+  werden. Diese Aktionen versenden keine E-Mail. Ein Versandnachweis setzt eine
+  passende Kundenfreigabe voraus und schreibt in das bestehende Outreach-Ledger.
+- Follow-up-Notizen, Wiedervorlagen und bestätigte Rückmeldungen beziehen sich auf
+  tatsächlich als versendet erfasste Anschreiben. Auswertung und Abschluss werden
+  gespeichert; ein Thema lässt sich wieder öffnen.
+
+Die Erweiterung nutzt `OpportunityWorkspace.data` und `OpportunityEvent`, benötigt
+also keine Schema-Migration. Schreibzugriffe prüfen Mandant, Thema und Revision;
+Freigaben prüfen zusätzlich die Textfassung. Workflow-Notizen verändern nicht den
+inhaltlichen Prüfkontext eines bereits geprüften Assets.
+
+Die Zeitreisen, erfundenen Antworten und Beispiel-Erfolge des HTML-Prototyps sind
+nicht Teil der Anwendung.
+
+### Automatisierung und Versand
+
+- Der Scheduler recherchiert nach zwei Tagen ohne erfasste Rückmeldung automatisch
+  je Empfänger. Er verwendet die konfigurierten Nachrichtenanbieter, speichert
+  Quellen seit Versand, Suchabdeckung und Fehlerzustände und aktualisiert frühestens
+  nach 24 Stunden. Geschlossene Follow-ups, beantwortete Pitches und durch weitere
+  Anschreiben überholte Aufgaben werden ausgelassen. Neustarts erhalten die Claims.
+- Ein neuer Quellenbezug lässt sich mit Empfänger in die vorhandene Pitch-Erstellung
+  übernehmen. Schreiben, Bearbeiten, Aussagenprüfung und erneute Freigabe bleiben
+  im regulären Editor. Der erste versendete Text bleibt unverändert erhalten.
+- Gmail-Versand erfordert Kundenfreigabe der exakten Fassung, Eingabe der aktuellen
+  Empfängeradresse und explizite Versandbestätigung. Ein persistierter Claim
+  verhindert Wiederholungen; bei unklarem Providerstatus bleibt der Versand gesperrt.
+- Exklusivität wird vor dem ersten Versand festgelegt. Die Frist läuft 24 Stunden
+  ab Versand. Weitere Empfänger bleiben bis zur ausdrücklichen Freigabe nach Ablauf
+  gesperrt. Verlängerung um 24 Stunden ist möglich; es gibt keinen automatischen
+  Massenversand. Exklusivität wird serverseitig auch im alten Versandpfad geprüft.
+- Die Auswertung wird mit realen Zahlen vorbelegt. Menschlich bestätigte Ergebnisse
+  abgeschlossener Themen werden in folgenden Entwürfen desselben Mandats als interne
+  Erfahrung berücksichtigt, nicht als unabhängig belegte Tatsachen.
+- Der zentrale Schalter `NEWSPULSE_SCHEDULER=0` deaktiviert auch diese Recherche.
+  Ohne konfigurierte Rechercheanbieter wird die fehlende Abdeckung angezeigt.
+  Für den direkten Versand braucht das verbundene Gmail-Postfach Sendeberechtigung.

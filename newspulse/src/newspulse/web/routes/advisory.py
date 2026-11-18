@@ -790,6 +790,15 @@ def release_letter(
     # and a letter the mandate never saw must not be recordable either.
     if row.client_ok_at is None:
         raise HTTPException(status_code=400, detail=NO_CLIENT_OK)
+    from ...topic_automation import gate
+    try:
+        gate(session,row)
+    except ValueError as exc:
+        raise HTTPException(409,str(exc))
+    from ...models import OpportunityWorkspace
+    managed=session.scalar(select(OpportunityWorkspace).where(OpportunityWorkspace.client_id==client_id, OpportunityWorkspace.angle_id==row.angle_id))
+    if managed and (managed.data or {}).get('workflow'):
+        raise HTTPException(409,'Bitte den Versand im Themenworkflow erfassen.')
     outreach.release(session, row, released_by=released_by)
     _log.info("outreach %d released by %r", row.id, row.released_by)
     return RedirectResponse(
@@ -822,6 +831,11 @@ def _refuse_unsendable(session: Session, row: Outreach) -> Recipient:
     put a second copy of the same pitch in the journalist's inbox — the one
     irreversible harm the two-click confirmation exists to prevent.
     """
+    from ...topic_automation import gate
+    try:
+        gate(session, row)
+    except ValueError as exc:
+        raise HTTPException(409, str(exc))
     link = gmail_link.connected()
     if link is None or not link.is_connected:
         raise HTTPException(status_code=400, detail="Kein Postfach verbunden.")
@@ -887,6 +901,10 @@ def send_through_gmail(
     _refuse_foreign_origin(request)
     row = _letter(session, client_id, outreach_id)
     _last_gmail_error.pop(client_id, None)
+    from ...models import OpportunityWorkspace
+    managed = session.scalar(select(OpportunityWorkspace).where(OpportunityWorkspace.client_id==client_id, OpportunityWorkspace.angle_id==row.angle_id))
+    if managed and (managed.data or {}).get('workflow'):
+        raise HTTPException(409,'Bitte im Themenworkflow versenden, damit Freigabe und Exklusivität geprüft werden.')
     recipient = _refuse_unsendable(session, row)
 
     try:

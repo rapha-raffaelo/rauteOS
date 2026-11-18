@@ -596,7 +596,7 @@ def test_the_deep_dive_is_where_the_competitors_and_the_workspace_live(factory, 
     # The workbook is no longer a trailing link in the strip — a download is not
     # a place, and beside ten tabs it read as an eleventh that had slipped. It
     # sits on this page, which is the one holding the coverage it exports.
-    tabs = body.split('class="subtabs"', 1)[1].split("</nav>", 1)[0]
+    tabs = body.split('aria-label="Mandant"', 1)[1].split("</nav>", 1)[0]
     assert f"/client/{a_id}/export.xlsx" not in tabs
     assert f"/client/{a_id}/export.xlsx" in body
     # The Coverage Map moved into the Wettbewerb tab, where the question it
@@ -822,7 +822,7 @@ def test_a_benchmark_gets_no_workspace_and_no_strip_pointing_at_one(factory, cli
     assert page.status_code == 200
     assert client.get(f"/client/{rival_id}/wettbewerb").status_code == 200
     # And it carries no strip: every tab on it would now be a dead link.
-    assert 'class="subtabs"' not in rendered(page)
+    assert 'aria-label="Mandant"' not in rendered(page)
     assert "Vergleichsunternehmen" in rendered(page)
 
 

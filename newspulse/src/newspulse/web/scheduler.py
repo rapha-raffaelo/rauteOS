@@ -389,6 +389,16 @@ def _linkedin_loop(stop: threading.Event) -> None:
             _log.exception("the LinkedIn tick failed; the cadence stands")
 
 
+def _topic_loop(stop):
+    from .. import topic_automation
+    while not stop.wait(_TICK_SECONDS):
+        try:
+            with get_session() as session:
+                topic_automation.tick(session)
+        except Exception:
+            _log.exception("Topic follow-up research failed; retry on next tick")
+
+
 def start() -> threading.Event | None:
     """Start all three clocks. Returns the stop event they share, or ``None``
     if off.
@@ -432,6 +442,7 @@ def start() -> threading.Event | None:
         target=_linkedin_loop, args=(stop,), daemon=True, name="newspulse-linkedin"
     ).start()
     threading.Thread(target=_condense_at_start, daemon=True, name="newspulse-condense").start()
+    threading.Thread(target=_topic_loop, args=(stop,), daemon=True, name="newspulse-topics").start()
     return stop
 
 

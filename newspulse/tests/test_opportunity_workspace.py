@@ -88,7 +88,7 @@ def test_selection_rejects_foreign_or_restricted_speaker_and_unknown_contact(web
     assert db.scalar(select(func.count()).select_from(OpportunityWorkspace))==0
 
 
-def test_detected_activation_reuses_the_existing_angle_and_refuses_closed_window(web,db):
+def test_detected_activation_reuses_angle_and_retains_active_theme_after_news_window(web,db):
     now=dt.datetime.now(dt.UTC)
     article=Article(title='A regulation',url='https://example.org/regulation',source='Paper',published_at=now,title_hash='regulation')
     db.add(article);db.flush()
@@ -102,7 +102,12 @@ def test_detected_activation_reuses_the_existing_angle_and_refuses_closed_window
     assert db.scalar(select(func.count()).select_from(Angle).where(Angle.newsjack_id==opp.id))==1
     opp.window_ends_at=now-dt.timedelta(days=1);db.commit()
     assert web.post(path,json=body).status_code==409
-    assert web.get(base()+f'/detected/{opp.id}').json()['status']=='closed'
+    current=web.get(base()+f'/detected/{opp.id}').json()
+    assert current['status']=='active'
+    body['revision']=current['revision']
+    assert web.post(path,json=body).status_code==200
+    opp.dismissed_at=now;db.commit()
+    assert web.post(path,json=body).status_code==409
 
 
 def test_develops_without_any_news_and_preserves_twin_provenance(web,db,monkeypatch):

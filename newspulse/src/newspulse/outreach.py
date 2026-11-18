@@ -71,6 +71,7 @@ from .models import (
     Angle,
     Article,
     Client,
+    Contact,
     Outreach,
     OutreachReply,
     OutreachState,
@@ -370,6 +371,9 @@ def _message_fields(
         "subject": prose.plain(message.subject),
         "message": prose.plain(message.message),
         "hook": message.hook.strip(),
+        # A customer approved a particular wording, never future redrafts.
+        "client_ok_at": None,
+        "client_ok_by": "",
         "review": review_text,
         "reviewed_by": reviewed_by if review else "",
         "review_ok": review.send if review else True,
@@ -540,6 +544,8 @@ def store(
     fields = _message_fields(
         message, review, reviewed_by, guide_verdict, guide_checked_by
     )
+    if target and target.contact_id:
+        fields['contact_id'] = target.contact_id
     draft_row = session.scalars(
         select(Outreach)
         .where(
@@ -559,6 +565,12 @@ def store(
         .order_by(Outreach.id.desc())
     ).first()
     if draft_row is not None:
+        from .models import OpportunityWorkspace
+        for workspace in session.scalars(select(OpportunityWorkspace).where(OpportunityWorkspace.client_id==client.id, OpportunityWorkspace.angle_id==angle.id)):
+            if (workspace.data or {}).get('workflow',{}).get('sending',{}).get(str(draft_row.id)):
+                raise ValueError('Versand bereits gestartet. Entwurf ist gesperrt.')
+            workspace.revision += 1
+        session.flush()
         # The freeze holds in the database, not in the copy this session read:
         # the WHERE repeats the draft test so a release committed since the
         # SELECT makes this match zero rows instead of rewriting a released
@@ -652,7 +664,7 @@ def release(
     # Resolved once, here, rather than matched again on every read. Left null
     # when the book has no entry: the letter still names its recipient in its own
     # ``journalist``/``outlet``, and a guessed link is worse than none.
-    match = contacts.find(session, row.journalist, row.outlet)
+    match = session.get(Contact, row.contact_id) if row.contact_id else contacts.find(session, row.journalist, row.outlet)
     session.execute(
         update(Outreach)
         .where(Outreach.id == row.id, Outreach.released_at.is_(None))

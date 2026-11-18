@@ -10,7 +10,7 @@
 }
 .raute-ui .subtabs.workspace-tabs > a:hover { background:var(--fill-3, var(--line)); color:var(--ink); }
 .raute-ui .subtabs.workspace-tabs > a.active {
-  background:var(--tint); border-color:var(--tint); color:#fff;
+  background:var(--tint); border-color:var(--tint); color:var(--on-fill);
   box-shadow:0 2px 5px rgb(0 0 0 / 10%);
 }
 .raute-ui .workspace-links.workspace-subnav {

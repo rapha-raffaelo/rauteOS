@@ -359,12 +359,17 @@ def test_redrafting_a_draft_still_overwrites_it(session):
     """Unchanged behaviour while nothing has left the house: two drafts at the
     same journalist are two attempts, not two pitches."""
     client, angle = _mandate(session)
-    _write(session, client, angle, message="Erster Versuch.")
-    _write(session, client, angle, message="Zweiter Versuch.")
+    first = _write(session, client, angle, message="Erster Versuch.")
+    first.client_ok_at = dt.datetime.now(dt.UTC)
+    first.client_ok_by = "Frau Berg"
+    session.commit()
+    _write(session, client, angle, message="Zweiter Versuch.", client_ok=False)
 
     rows = session.scalars(select(Outreach)).all()
     assert len(rows) == 1
     assert rows[0].message == "Zweiter Versuch."
+    assert rows[0].client_ok_at is None
+    assert rows[0].client_ok_by == ""
 
 
 def test_redrafting_after_a_release_makes_a_new_row(session):
@@ -409,7 +414,8 @@ def test_a_release_landing_in_stores_read_write_window_is_not_overwritten(
     outreach.release(session, released)
 
     stale_read = types.SimpleNamespace(first=lambda: released)
-    monkeypatch.setattr(session, "scalars", lambda *a, **k: stale_read)
+    original_scalars = session.scalars
+    monkeypatch.setattr(session, "scalars", lambda statement, *a, **k: stale_read if statement.column_descriptions[0].get("entity") is Outreach else original_scalars(statement, *a, **k))
     redraft = PersonalMessage(
         subject="Neuer Betreff", message="Der neue Versuch.", hook="weil",
         brain_version=brain.version(session),

@@ -1,4 +1,4 @@
-import React,{useEffect,useRef,useState} from 'react';
+import React,{useEffect,useId,useRef,useState} from 'react';
 import {PageHeading} from './PageHeading.jsx';
 import {journalistRequest as request} from '../journalists-api.js';
 import {EvidenceReview} from './ActivationPanel.jsx';
@@ -7,9 +7,10 @@ import {EvidenceReview} from './ActivationPanel.jsx';
 // Thema, pitch and profile; the text is edited in place. Sending comes later.
 export const KINDS=[['kundenmail','Kundenmail','Abstimmung mit dem Kunden'],['statement','Statement','Zitierfähige Position'],
  ['pressemitteilung','Pressemitteilung','Mit Kunden-Logo'],['gastbeitrag','Gastbeitrag','Für ein Fachmedium'],
- ['pitch','Pitch','An eine:n Journalist:in'],['custom','Custom','Eigene Vorgabe, eigenes Format']];
+ ['pitch','Pitch','An eine:n Journalist:in'],['linkedin','LinkedIn-Post','Für Profil oder Unternehmensseite'],
+ ['interviewangebot','Interviewangebot','Mit konkretem Gesprächsanlass'],['interview_briefing','Gesprächsbriefing','Vorbereitung für die Sprecherperson'],['custom','Custom','Eigene Vorgabe, eigenes Format']];
 const LABEL=Object.fromEntries(KINDS.map(([k,l])=>[k,l]));
-const NEEDS_CONTACT=new Set(['pitch']);
+const NEEDS_CONTACT=new Set(['pitch','interviewangebot','interview_briefing']);
 const speakerValue=d=>d.speaker_person_id?`p:${d.speaker_person_id}`:'';
 
 export function WritingProgress({kind,onDismiss,error}){
@@ -64,13 +65,13 @@ function Grow({className,...props}){
  return <textarea ref={node} className={className} rows={1} {...props}/>;
 }
 
-export function Editor({text,path,onSaved,exportBase,onCheck,checking=false,client={}}){
+export function Editor({text,path,onSaved,exportBase,onCheck,checking=false,client={},readOnly=false}){
  const [title,setTitle]=useState(text.title),[body,setBody]=useState(text.body);
  const [error,setError]=useState(''),[notice,setNotice]=useState(''),[saving,setSaving]=useState(false);
  const logoKey=`asset-logo:${text.type}-${text.id}`;
  const [logo,setLogo]=useState(()=>storedLogo(logoKey,text.kind==='pressemitteilung'?(client.logo?'kunde':'raute'):'keiner'));
  const dirty=title!==text.title||body!==text.body;
- const released=Boolean(text.released_at);
+ const released=Boolean(text.released_at),locked=released||readOnly;
  const label=LABEL[text.kind]||text.kind_label||text.kind;
  async function save(){setSaving(true);setError('');setNotice('');try{onSaved(await request(`${path}/${text.type}/${text.id}`,{method:'PUT',body:JSON.stringify({digest:text.digest,title,body})}));setNotice('Gespeichert.');}catch(e){setError(e.message);}finally{setSaving(false);}}
  async function copy(){try{await navigator.clipboard.writeText(title?`${title}\n\n${body}`:body);setNotice('Text kopiert.');}catch{setNotice('Bitte den Text im Feld markieren und kopieren.');}}
@@ -79,15 +80,15 @@ export function Editor({text,path,onSaved,exportBase,onCheck,checking=false,clie
  return <article className="asset-editor" aria-label={`${label} bearbeiten`}>
   <header className="asset-editor__bar">
    <div><h2>{label}</h2>
-    <span className={`themen-tag${released?' themen-tag--on':' themen-tag--star'}`}>{released?'Freigegeben':dirty?'Ungespeicherte Änderungen':'Entwurf'}</span></div>
+    <span className={`themen-tag${released?' themen-tag--on':' themen-tag--star'}`}>{released?'Freigegeben':readOnly?'Abgeschlossen':dirty?'Ungespeicherte Änderungen':'Entwurf'}</span></div>
    <div className="asset-editor__acts">
     <div className="asset-logo-switch" role="group" aria-label="Logo">{LOGOS.map(([key,name])=>
      <button key={key} type="button" aria-pressed={logo===key} onClick={()=>pickLogo(key)}>{name}</button>)}</div>
     {exportBase&&<ExportBox base={exportBase} logo={logo}/>}
-    {!released&&onCheck&&<button type="button" className="btn btn--quiet" disabled={dirty||checking} title={dirty?'Erst speichern, dann prüfen':''} onClick={()=>onCheck(text)}>{checking?'Wird geprüft…':'Aussagen prüfen'}</button>}
+    {!locked&&onCheck&&<button type="button" className="btn btn--quiet" disabled={dirty||checking} title={dirty?'Erst speichern, dann prüfen':''} onClick={()=>onCheck(text)}>{checking?'Wird geprüft…':'Aussagen prüfen'}</button>}
     <button type="button" className="btn btn--quiet" onClick={copy}>Kopieren</button>
     <button type="button" className="btn" disabled title="Kommt später">Senden · bald</button>
-    <button type="button" className="btn btn--go" disabled={released||!dirty||saving} onClick={save}>{saving?'Wird gespeichert…':'Speichern'}</button>
+    <button type="button" className="btn btn--go" disabled={locked||!dirty||saving} onClick={save}>{saving?'Wird gespeichert…':'Speichern'}</button>
    </div>
   </header>
   {error&&<p className="twin-error" role="alert">{error}</p>}{notice&&<p role="status">{notice}</p>}
@@ -97,25 +98,28 @@ export function Editor({text,path,onSaved,exportBase,onCheck,checking=false,clie
      :<span className="asset-doc__logo-missing">Kein Kunden-Logo hinterlegt</span>}
     <span className="asset-doc__kicker">{label.toUpperCase()} · {new Date().toLocaleDateString('de-DE')}</span>
    </div>
-   <Grow className="asset-doc__title" aria-label="Titel" placeholder="Titel" value={title} onChange={e=>setTitle(e.target.value)} disabled={released}/>
-   <Grow className="asset-doc__body" aria-label="Text" placeholder="Text" value={body} onChange={e=>setBody(e.target.value)} disabled={released}/>
+   <Grow className="asset-doc__title" aria-label="Titel" placeholder="Titel" value={title} onChange={e=>setTitle(e.target.value)} disabled={locked}/>
+   <Grow className="asset-doc__body" aria-label="Text" placeholder="Text" value={body} onChange={e=>setBody(e.target.value)} disabled={locked}/>
   </div>
   {text.quality&&<aside className="asset-editor__evidence" aria-label="Belegprüfung"><EvidenceReview text={{...text,quality_stale:text.quality_stale||dirty}}/></aside>}
  </article>;
 }
 
-function NewAsset({detail,running,onCreate}){
- const [kind,setKind]=useState(''),[contact,setContact]=useState(''),[instruction,setInstruction]=useState('');
+function NewAsset({detail,running,onCreate,allowedKinds,initialInstruction='',initialContact=''}){
+ const headingId=useId();
+ const [kind,setKind]=useState(''),[contact,setContact]=useState(''),[instruction,setInstruction]=useState(initialInstruction);
+ useEffect(()=>setInstruction(initialInstruction),[initialInstruction]);
+ useEffect(()=>{if(initialContact){setContact(String(initialContact));setKind('pitch');}},[initialContact,initialInstruction]);
  const needsContact=NEEDS_CONTACT.has(kind);
- return <section className="asset-new" aria-labelledby="asset-new-title">
-  <h2 id="asset-new-title">Neues Asset</h2>
+ return <section className="asset-new" aria-labelledby={headingId}>
+  <h2 id={headingId}>Neues Asset</h2>
   <p>RAUTE schreibt einen Entwurf aus Thema, Pitch und Kundenprofil. Du bearbeitest ihn direkt im Fenster.</p>
-  <div className="asset-kinds" role="group" aria-label="Asset wählen">{KINDS.map(([key,label,note])=>
+  <div className="asset-kinds" role="group" aria-label="Asset wählen">{KINDS.filter(([key])=>!allowedKinds||allowedKinds.includes(key)).map(([key,label,note])=>
    <button key={key} type="button" className={`asset-kind${key==='custom'?' asset-kind--custom':''}`} aria-pressed={kind===key} disabled={running} onClick={()=>setKind(key)}>
     <strong>{label}</strong><span>{note}</span></button>)}</div>
   {kind&&<form className="asset-new__form" onSubmit={e=>{e.preventDefault();onCreate({kind,contact_id:needsContact&&contact?Number(contact):null,instruction});}}>
    {needsContact&&<label>Journalist:in<select aria-label="Journalist:in" required value={contact} onChange={e=>setContact(e.target.value)}>
-    <option value="">Bitte wählen</option>{detail.contacts.map(c=><option key={c.id} value={c.id}>{c.name}{c.outlet?` · ${c.outlet}`:''}</option>)}</select></label>}
+    <option value="">Bitte wählen</option>{(detail.contacts||[]).filter(c=>!allowedKinds||detail.contact_ids.includes(c.id)||String(c.id)===String(initialContact)).map(c=><option key={c.id} value={c.id}>{c.name}{c.outlet?` · ${c.outlet}`:''}</option>)}</select></label>}
    <label>{kind==='custom'?'Dein Auftrag':'Zusätzlicher Auftrag (optional)'}<textarea aria-label="Auftrag" required={kind==='custom'} value={instruction} onChange={e=>setInstruction(e.target.value)}
     placeholder={kind==='custom'?'Was soll der Text sagen, und für wen?':'Zum Beispiel: kürzer, mit Fokus auf Apotheken'}/></label>
    <button className="btn btn--go" disabled={running||(needsContact&&!contact)}>{running?'RAUTE schreibt…':`${LABEL[kind]} schreiben lassen`}</button>
@@ -147,19 +151,20 @@ export function AssetsPage({clientId,params=new URLSearchParams(window.location.
  </section>;
 }
 
-function Workspace({clientId,client={},kind,identity,initialText=''}){
+export function Workspace({clientId,client={},kind,identity,initialText='',embedded=false,allowedKinds,onCompleted,initialInstruction='',initialContact='',visible=true,contextRevision}){
+ const listId=useId();
  const base=`clients/${clientId}/opportunities/${kind}/${identity}`,path=`${base}/activation`;
  const [detail,setDetail]=useState(null),[data,setData]=useState(null),[error,setError]=useState(''),[busy,setBusy]=useState(false);
  const [open,setOpen]=useState(initialText);
  const [progressHidden,setProgressHidden]=useState(false),[writingKind,setWritingKind]=useState('');
  const waiting=useRef(false);
- useEffect(()=>{request(base).then(setDetail).catch(e=>setError(e.message));request(path).then(setData).catch(e=>setError(e.message));},[base,path]);
+ useEffect(()=>{if(!visible)return;let active=true;request(base).then(v=>{if(active)setDetail(v);}).catch(e=>{if(active)setError(e.message);});request(path).then(v=>{if(active)setData(v);}).catch(e=>{if(active)setError(e.message);});return()=>{active=false;};},[base,path,visible,contextRevision]);
  const running=data?.latest?.status==='running'&&Date.now()-new Date(data.latest.started_at).getTime()<1200000;
  useEffect(()=>{if(!running)return;const timer=setInterval(()=>request(path).then(v=>{setData(v);
-  if(v.latest?.status!=='running'&&waiting.current){waiting.current=false;if(v.latest?.status==='complete'&&v.texts[0])setOpen(`${v.texts[0].type}-${v.texts[0].id}`);}}).catch(e=>setError(e.message)),2500);return()=>clearInterval(timer);},[path,running]);
+  if(v.latest?.status!=='running'&&waiting.current){waiting.current=false;if(v.latest?.status==='complete'&&v.texts[0])setOpen(`${v.texts[0].type}-${v.texts[0].id}`);onCompleted?.();}}).catch(e=>setError(e.message)),2500);return()=>clearInterval(timer);},[path,running]);
  async function choose(changes){
   const next={revision:detail.revision,storyline:detail.storyline,speaker_statement_id:null,speaker_person_id:detail.speaker_person_id,contact_ids:detail.contact_ids,...changes};
-  const value=await request(base,{method:'PUT',body:JSON.stringify(next)});setDetail(value);return value;
+  const value=await request(base,{method:'PUT',body:JSON.stringify(next)});setDetail(value);onCompleted?.();return value;
  }
  async function speaker(value){setError('');const [k,id]=value.split(':');
   try{await choose({speaker_person_id:k==='p'?Number(id):null,speaker_statement_id:null});}catch(e){setError(e.message);}}
@@ -170,11 +175,12 @@ function Workspace({clientId,client={},kind,identity,initialText=''}){
   setData(v=>({...v,latest:{...job,kind:input.kind,started_at:new Date().toISOString()}}));
  }catch(e){waiting.current=false;setError(e.message);}finally{setBusy(false);}}
  if(!detail||!data)return error?<p className="twin-error" role="alert">{error}</p>:<p role="status">Thema wird geladen…</p>;
+ const closed=Boolean(detail.workflow?.completed_at);
  const current=data.texts.find(t=>`${t.type}-${t.id}`===open);
  const exportBase=text=>`/api/v1/clients/${clientId}/assets/${text.type}/${text.id}`;
  return <div className="assets-workspace">
-  <header className="assets-workspace__head">
-   <div><span className="themen-tag themen-tag--on">Thema aktiv</span><h2>{detail.title}</h2>{detail.storyline&&<p>Pitch: {detail.storyline}</p>}</div>
+  {!embedded&&<header className="assets-workspace__head">
+   <div><span className="themen-tag themen-tag--on">{closed?'Abgeschlossen':'Thema aktiv'}</span><h2>{detail.title}</h2>{detail.storyline&&<p>Pitch: {detail.storyline}</p>}</div>
    <div className="assets-workspace__side">
    <ExportBox base={`/api/v1/clients/${clientId}/themen/${kind}/${identity}`} label="Thema exportieren"/>
    <label className="assets-speaker">Ansprechperson (optional)<select aria-label="Ansprechperson (optional)" value={speakerValue(detail)} onChange={e=>speaker(e.target.value)}>
@@ -182,17 +188,17 @@ function Workspace({clientId,client={},kind,identity,initialText=''}){
     {(detail.people||[]).map(p=><option key={`p${p.id}`} value={`p:${p.id}`}>{p.label}</option>)}
     </select></label>
    </div>
-  </header>
+  </header>}
   {error&&<p className="twin-error" role="alert">{error}</p>}
-  {(busy||running)&&!progressHidden&&<WritingProgress kind={busy?writingKind:data.latest.kind} error={error} onDismiss={()=>setProgressHidden(true)}/>}
+  {visible&&(busy||running)&&!progressHidden&&<WritingProgress kind={busy?writingKind:data.latest.kind} error={error} onDismiss={()=>setProgressHidden(true)}/>}
   {(busy||running)&&progressHidden&&<p role="status">RAUTE schreibt {LABEL[busy?writingKind:data.latest.kind]||'den Text'}… <button className="btn btn--quiet" onClick={()=>setProgressHidden(false)}>Fortschritt anzeigen</button></p>}
   {data.latest?.status==='failed'&&<p role="alert" className="twin-error">{data.latest.note||'Der Entwurf ist fehlgeschlagen.'}</p>}
-  {data.texts.length>0&&<section aria-labelledby="assets-list-title"><h2 id="assets-list-title" className="assets-section-title">Assets zu diesem Thema</h2>
-   <div className="assets-list">{data.texts.map(text=>{const key=`${text.type}-${text.id}`;return <button type="button" key={key} className="asset-card" aria-pressed={open===key} onClick={()=>setOpen(open===key?'':key)}>
+  {data.texts.length>0&&<section aria-labelledby={listId}><h2 id={listId} className="assets-section-title">Assets zu diesem Thema</h2>
+   <div className="assets-list">{data.texts.filter(text=>!allowedKinds||allowedKinds.includes(text.kind)).map(text=>{const key=`${text.type}-${text.id}`;return <button type="button" key={key} className="asset-card" aria-pressed={open===key} onClick={()=>setOpen(open===key?'':key)}>
     <span>{LABEL[text.kind]||text.kind}<em className={`themen-tag${text.released_at?' themen-tag--on':''}`}>{text.released_at?'Freigegeben':'Entwurf'}</em></span>
     <strong>{text.title||'Ohne Titel'}</strong></button>;})}</div></section>}
-  {current&&<Editor key={`${open}-${current.digest}`} client={client} text={current} path={path} exportBase={exportBase(current)} onSaved={setData}
+  {current&&<Editor key={`${open}-${current.digest}`} client={client} readOnly={closed} text={current} path={path} exportBase={exportBase(current)} onSaved={value=>{setData(value);onCompleted?.();}}
    checking={running} onCheck={async t=>{setError('');try{const job=await request(`${path}/${t.type}/${t.id}/check`,{method:'POST'});setData(v=>({...v,latest:{...job,kind:t.kind,started_at:new Date().toISOString()}}));}catch(e){setError(e.message);}}}/>}
-  <NewAsset detail={detail} running={running||busy} onCreate={create}/>
+  {closed?<p className="topic-notice">Dieses Thema ist abgeschlossen. <a href={`/client/${clientId}/themen?kind=${kind}&context=${identity}&step=ergebnis`}>Ergebnis ansehen oder wieder öffnen →</a></p>:<NewAsset detail={detail} running={running||busy} onCreate={create} allowedKinds={allowedKinds} initialInstruction={initialInstruction} initialContact={initialContact}/>}
  </div>;
 }

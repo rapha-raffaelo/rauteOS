@@ -1,5 +1,7 @@
 """Create or review drafts in an opportunity; never sends a message."""
 import datetime as dt
+from types import SimpleNamespace
+from sqlalchemy.orm.exc import StaleDataError
 from typing import Literal
 from fastapi import APIRouter,Depends,HTTPException,Response
 from pydantic import BaseModel,ConfigDict,Field
@@ -79,7 +81,8 @@ def read(client_id:int,kind:Kind,identity:int,response:Response,session:Session=
 def generate(client_id:int,kind:Kind,identity:int,body:DraftInput,session:Session=Depends(get_db)):
     workspace=workspace_or_404(session,client_id,kind,identity)
     anchor=workspaces.anchor(session,client_id,kind,identity)
-    if workspaces.ended(anchor,kind,dt.datetime.now(dt.UTC)):raise HTTPException(409,'Gelegenheit ist abgeschlossen.')
+    if workspaces.ended(anchor,kind,dt.datetime.now(dt.UTC),active=workspace.status=='active'):raise HTTPException(409,'Gelegenheit ist abgeschlossen.')
+    if (workspace.data or {}).get('workflow',{}).get('completed_at'):raise HTTPException(409,'Das Thema ist abgeschlossen. Bitte zuerst wieder öffnen.')
     if body.kind not in dict(activation.FORMATS):raise HTTPException(422,'Unbekanntes Format.')
     if workspace.angle_id is None:raise HTTPException(409,'Bitte die Gelegenheit zuerst aktivieren.')
     if body.kind=='custom' and not body.instruction:raise HTTPException(422,'Bitte den eigenen Auftrag beschreiben.')
@@ -106,13 +109,19 @@ def linked_text(session,workspace,text_type,text_id):
     job=session.scalar(select(OpportunityAssetRun).where(OpportunityAssetRun.workspace_id==workspace.id,column==text_id)
                        .order_by(OpportunityAssetRun.id.desc()).limit(1))
     row=activation.text_row(session,job) if job else None
-    if row is None or row.client_id!=workspace.client_id:raise HTTPException(404,'Text nicht gefunden.')
+    if row is None and workspace.angle_id:
+        row=session.get(Asset if text_type=='asset' else Outreach,text_id)
+        if row is not None and row.client_id==workspace.client_id and row.angle_id==workspace.angle_id:
+            job=SimpleNamespace(kind=row.kind if text_type=='asset' else 'pitch',context={'contact_id':getattr(row,'contact_id',None)})
+        else:row=None
+    if row is None or row.client_id!=workspace.client_id or row.angle_id!=workspace.angle_id:raise HTTPException(404,'Text nicht gefunden.')
     return job,row
 
 
 @router.post('/{text_type}/{text_id}/check',status_code=202)
 def recheck(client_id:int,kind:Kind,identity:int,text_type:Literal['asset','outreach'],text_id:int,session:Session=Depends(get_db)):
     workspace=workspace_or_404(session,client_id,kind,identity)
+    if (workspace.data or {}).get('workflow',{}).get('completed_at'):raise HTTPException(409,'Das Thema ist abgeschlossen. Bitte zuerst wieder öffnen.')
     previous,row=linked_text(session,workspace,text_type,text_id)
     if row.released_at:raise HTTPException(409,'Ein freigegebener Text ist unveränderlich.')
     return launch(session,workspace,previous.kind,dict(operation='check',contact_id=previous.context.get('contact_id')),
@@ -122,8 +131,17 @@ def recheck(client_id:int,kind:Kind,identity:int,text_type:Literal['asset','outr
 @router.put('/{text_type}/{text_id}')
 def edit(client_id:int,kind:Kind,identity:int,text_type:Literal['asset','outreach'],text_id:int,body:TextInput,session:Session=Depends(get_db)):
     workspace=workspace_or_404(session,client_id,kind,identity)
+    if (workspace.data or {}).get('workflow',{}).get('completed_at'):raise HTTPException(409,'Das Thema ist abgeschlossen. Bitte zuerst wieder öffnen.')
     previous,row=linked_text(session,workspace,text_type,text_id)
     if row.released_at:raise HTTPException(409,'Ein freigegebener Text ist unveränderlich.')
+    if text_type=='outreach' and (workspace.data or {}).get('workflow',{}).get('sending',{}).get(str(row.id)):
+        raise HTTPException(409,'Ein Versand wurde bereits gestartet. Text ist gesperrt.')
+    workspace.revision += 1
+    try:
+        session.flush()
+    except StaleDataError:
+        session.rollback()
+        raise HTTPException(409,'Das Thema wurde inzwischen geändert. Bitte neu laden.')
     title,content=activation.text_parts(row)
     if asset_evidence.digest(title,content)!=body.digest:raise HTTPException(409,'Text wurde inzwischen geändert. Neu laden und vergleichen.')
     # Compare both text columns in the UPDATE, so a concurrently finishing
@@ -133,7 +151,7 @@ def edit(client_id:int,kind:Kind,identity:int,text_type:Literal['asset','outreac
             title=prose.plain(body.title),body=prose.plain(body.body),edited_at=dt.datetime.now(dt.UTC),review='',reviewed_by='',guide_review='',guide_reviewed_by='')
     else:
         stmt=update(Outreach).where(Outreach.id==row.id,Outreach.subject==title,Outreach.message==content,Outreach.released_at.is_(None)).values(
-            subject=prose.plain(body.title),message=prose.plain(body.body),review='',reviewed_by='',guide_review=[],guide_reviewed_by='')
+            subject=prose.plain(body.title),message=prose.plain(body.body),client_ok_at=None,client_ok_by='',review='',reviewed_by='',guide_review=[],guide_reviewed_by='')
     if session.execute(stmt.execution_options(synchronize_session=False)).rowcount!=1:
         session.rollback();raise HTTPException(409,'Text wurde inzwischen geändert. Neu laden und vergleichen.')
     session.add(OpportunityEvent(workspace_id=workspace.id,kind='text_edited',detail=dict(type=text_type,id=text_id)))

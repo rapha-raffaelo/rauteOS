@@ -1,6 +1,6 @@
 """Unified opportunity workspace and explicit idea development requests."""
 import datetime as dt
-from typing import Literal
+from typing import Annotated, Literal
 from ..app import logo_src
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, ConfigDict, Field
@@ -8,7 +8,7 @@ from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.orm.exc import StaleDataError
-from ... import opportunity_development, workspaces, crisis, issues
+from ... import opportunity_development, workspaces, crisis, issues, topic_workflow
 from ...models import Contact, JournalistProfile, OpportunityDevelopment, OpportunityEvent, OpportunityWorkspace, Article
 from ..app import get_db
 from ..mandates import mandate_or_404
@@ -26,6 +26,7 @@ class Choices(BaseModel):
     speaker_statement_id:int|None=Field(default=None,gt=0)
     speaker_person_id:int|None=Field(default=None,gt=0)
     contact_ids:list[int]=Field(default_factory=list,max_length=30)
+    selected_storylines:list[Annotated[str,Field(min_length=1,max_length=5000)]]|None=Field(default=None,max_length=2)
 
 
 class DevelopInput(BaseModel):
@@ -100,9 +101,12 @@ def save_choices(session,client_id,kind,identity,body,actor,activate=False):
     client=mandate_or_404(session,client_id)
     anchor=workspaces.anchor(session,client_id,kind,identity)
     if anchor is None:raise HTTPException(404,'Gelegenheit nicht gefunden.')
-    if workspaces.ended(anchor,kind,dt.datetime.now(dt.UTC)):
+    row=workspaces.stored(session,client_id,kind,identity)
+    if workspaces.ended(anchor,kind,dt.datetime.now(dt.UTC),active=bool(row and row.status=='active')):
         raise HTTPException(409,'Diese Gelegenheit ist abgeschlossen.')
     row=workspaces.stored(session,client_id,kind,identity)
+    if row and (row.data or {}).get('workflow',{}).get('completed_at'):
+        raise HTTPException(409,'Das Thema ist abgeschlossen. Bitte zuerst wieder öffnen.')
     if (row.revision if row else 0)!=body.revision:
         raise HTTPException(409,'Workspace wurde inzwischen geändert. Neu laden und vergleichen.')
     if body.speaker_statement_id and body.speaker_statement_id not in {r.id for r in workspaces.speakers(session,client_id)}:
@@ -129,6 +133,10 @@ def save_choices(session,client_id,kind,identity,body,actor,activate=False):
     if row is None:
         row=OpportunityWorkspace(client_id=client_id,context_kind=kind,context_id=identity)
         session.add(row)
+    if body.selected_storylines is not None:
+        selected=list(dict.fromkeys(value.strip() for value in body.selected_storylines if value.strip()))
+        if any(len(value)>5000 for value in selected):raise HTTPException(422,'Blickwinkel ist zu lang.')
+        row.data={**(row.data or {}),'selected_storylines':selected}
     row.storyline=body.storyline
     # One speaker: a person from the phone book replaces a profile statement.
     row.speaker_person_id=body.speaker_person_id
@@ -156,3 +164,41 @@ def update_workspace(client_id:int,kind:Kind,identity:int,body:Choices,request:R
 @router.post('/{kind}/{identity}/activate')
 def activate_workspace(client_id:int,kind:Kind,identity:int,body:Choices,request:Request,session:Session=Depends(get_db)):
     return save_choices(session,client_id,kind,identity,body,str(request.scope.get('user_email') or 'mensch')[:200],activate=True)
+
+
+class WorkflowInput(BaseModel):
+    model_config=ConfigDict(extra='forbid',str_strip_whitespace=True)
+    revision:int=Field(ge=1)
+    action:Literal['approval','followup','outcome','complete','reopen','pitch_plan','pitch_approval','sent','exclusive','exclusive_release','exclusive_extend','send','send_reconcile']
+    text_id:int|None=Field(default=None,gt=0)
+    digest:str=Field(default='',max_length=64)
+    status:str=Field(default='',max_length=40)
+    reviewer:str=Field(default='',max_length=200)
+    note:str=Field(default='',max_length=10000)
+    due_date:dt.date|None=None
+
+
+@router.put('/{kind}/{identity}/workflow')
+def update_workflow(client_id:int,kind:Kind,identity:int,body:WorkflowInput,request:Request,session:Session=Depends(get_db)):
+    mandate_or_404(session,client_id)
+    if workspaces.anchor(session,client_id,kind,identity) is None:
+        raise HTTPException(404,'Thema nicht gefunden.')
+    row=workspaces.stored(session,client_id,kind,identity)
+    if row is None or row.revision!=body.revision:
+        raise HTTPException(409,'Das Thema wurde inzwischen geändert. Bitte neu laden und vergleichen.')
+    actor=str(request.scope.get('user_email') or 'mensch')[:200]
+    try:
+        if body.action in {'send','send_reconcile'}:
+            from ... import topic_automation
+            operation=topic_automation.send if body.action=='send' else topic_automation.reconcile
+            operation(session,row,body,actor)
+        else:
+            topic_workflow.record(session,row,body,actor)
+        session.commit()
+    except ValueError as exc:
+        session.rollback()
+        raise HTTPException(422,str(exc))
+    except (IntegrityError,StaleDataError):
+        session.rollback()
+        raise HTTPException(409,'Das Thema wurde inzwischen geändert. Bitte neu laden und vergleichen.')
+    return workspaces.read(session,client_id,kind,identity)

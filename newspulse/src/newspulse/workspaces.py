@@ -2,9 +2,10 @@
 from __future__ import annotations
 import datetime as dt
 import logging
+from collections import defaultdict
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-from . import journalists, twin
+from . import journalists, twin, topic_workflow
 from .models import (Angle, Article, Asset, Client, ClientFact, Contact, NewsjackOpportunity, OpportunityEvent, Outreach,
                      OpportunityWorkspace, Standing)
 
@@ -67,8 +68,9 @@ def speaker_people(session,client_id,title,about,saved):
     return offered,(dict(person_id=found[0].id,reason=found[1]) if found else None)
 
 
-def ended(row,kind,now):
-    return bool(row.dismissed_at or (kind=='detected' and row.window_ends_at<=now))
+def ended(row,kind,now,*,active=False):
+    # The news window limits starting a theme, not following up an active one.
+    return bool(row.dismissed_at or (kind=='detected' and row.window_ends_at<=now and not active))
 
 
 def read(session: Session,client_id,kind,identity):
@@ -95,8 +97,12 @@ def read(session: Session,client_id,kind,identity):
     storyline=saved.storyline if saved else angle.thesis if angle else ''
     about=' '.join([storyline,row.message if kind=='developed' else row.reason,info.get('situation','')])
     people_offered,proposed=speaker_people(session,client_id,title,about,saved)
-    status='closed' if ended(row,kind,now) else saved.status if saved else 'draft'
+    status='closed' if ended(row,kind,now,active=bool(saved and saved.status=='active')) else saved.status if saved else 'draft'
+    from . import contacts as contact_book
+    recipients_by_letter={o.id:(session.get(Contact,o.contact_id) if o.contact_id else contact_book.find(session,o.journalist,o.outlet)) for o in letters}
     return dict(client_id=client_id,context_kind=kind,context_id=identity,id=saved.id if saved else None,
+        workflow=topic_workflow.read(session,saved,assets=assets),workflow_summary=topic_workflow.summary(session,saved,assets=assets,letters=letters),
+        selected_storylines=info.get('selected_storylines',[]),
         title=title,revision=saved.revision if saved else 0,status=status,angle_id=angle.id if angle else None,
         evidence_type=info.get('evidence_type','External Observation' if kind=='detected' else 'RAUTE Hypothesis'),
         situation=info.get('situation',article.title if article else row.context if kind=='developed' else row.reason),
@@ -116,9 +122,10 @@ def read(session: Session,client_id,kind,identity):
         sources=sources,research=info.get('research',[]),research_at=info.get('research_at'),
         proof_points=[twin.snapshot(r) for r in session.scalars(select(ClientFact).where(ClientFact.client_id==client_id,
             ClientFact.id.in_(info.get('proof_statement_ids',[]))))],
-        assets=[dict(id=a.id,kind=a.kind,title=a.title,generated_at=a.generated_at,released_at=a.released_at,
+        assets=[dict(id=a.id,kind=a.kind,title=a.title,digest=topic_workflow.digest(a),generated_at=a.generated_at,released_at=a.released_at,
                      href=advice_href(client_id,angle.id,f'asset-text-{a.id}')) for a in assets],
-        letters=[dict(id=o.id,subject=o.subject,journalist=o.journalist,outlet=o.outlet,state=o.state.value,
+        letters=[dict(id=o.id,subject=o.subject,message=o.message,digest=topic_workflow.digest(o),journalist=o.journalist,outlet=o.outlet,state=o.state.value,
+                      email=recipients_by_letter[o.id].email if recipients_by_letter[o.id] else '',contact_id=recipients_by_letter[o.id].id if recipients_by_letter[o.id] else None,outcome_note=o.outcome_note,outcome_at=o.outcome_at,
                       generated_at=o.generated_at,released_at=o.released_at,href=text_href(session,o,'outreach')) for o in letters],
         events=[dict(id=e.id,kind=e.kind,detail=e.detail,actor=e.actor,created_at=e.created_at) for e in events],
         recipients=recipients(session,client_id,angle),deep_dive=info.get('deep_dive',''),
@@ -155,6 +162,11 @@ def _origin(kind,row,workspace):
 def listings(session,client_id):
     result=[]
     workspaces={(w.context_kind,w.context_id):w for w in session.scalars(select(OpportunityWorkspace).where(OpportunityWorkspace.client_id==client_id))}
+    assets_by_angle=defaultdict(list);letters_by_angle=defaultdict(list)
+    for asset in session.scalars(select(Asset).where(Asset.client_id==client_id)):
+        assets_by_angle[asset.angle_id].append(asset)
+    for letter in session.scalars(select(Outreach).where(Outreach.client_id==client_id)):
+        letters_by_angle[letter.angle_id].append(letter)
     for kind,model,order in [('detected',NewsjackOpportunity,NewsjackOpportunity.created_at),('developed',Angle,Angle.generated_at)]:
         stmt=select(model).where(model.client_id==client_id)
         if kind=='detected':stmt=stmt.where(model.standing==Standing.BELEGT)
@@ -166,7 +178,8 @@ def listings(session,client_id):
             # first market report an impulse cites. Shown on the card's hover.
             occasion=article or (session.get(Article,row.article_ids[0]) if kind=='developed' and row.article_ids else None)
             result.append(dict(context_kind=kind,context_id=row.id,title=article.title if article else row.reason if kind=='detected' else row.subject,
-                status='closed' if ended(row,kind,dt.datetime.now(dt.UTC)) else workspace.status if workspace else 'draft',
+                status='closed' if ended(row,kind,dt.datetime.now(dt.UTC),active=bool(workspace and workspace.status=='active')) else workspace.status if workspace else 'draft',
+                workflow_summary=topic_workflow.summary(session,workspace,assets=assets_by_angle[workspace.angle_id] if workspace else [],letters=letters_by_angle[workspace.angle_id] if workspace else []),
                 created_at=row.created_at if kind=='detected' else row.generated_at,
                 origin=_origin(kind,row,workspace),
                 starred_by=(workspace.data or {}).get('starred_by','') if workspace else '',

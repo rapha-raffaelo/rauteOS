@@ -53,7 +53,7 @@ def mandate(session) -> Client:
 def test_themen_and_assets_are_pages_under_their_own_tab(web, mandate, page, title):
     body = rendered(web.get(f"/client/{mandate.id}/{page}"))
     assert f'id="react-{page}"' in body
-    strip = body.split('class="subtabs"', 1)[1].split("</nav>", 1)[0]
+    strip = body.split('aria-label="Mandant"', 1)[1].split("</nav>", 1)[0]
     assert f'href="/client/{mandate.id}/{page}" class="active"' in strip
 
 

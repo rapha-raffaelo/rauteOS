@@ -328,12 +328,12 @@ def test_the_report_is_reachable_from_the_texte_tab_not_a_tab_of_its_own(http, s
     # On the href, not on the word: "Berichte" is a substring of
     # "Berichterstattung", which the same page prints for its own reasons.
     strip = rendered(http.get(f"/client/{client_id}/guide"))
-    tabs = strip.split('class="subtabs"', 1)[1].split("</nav>", 1)[0]
+    tabs = strip.split('aria-label="Mandant"', 1)[1].split("</nav>", 1)[0]
     assert f'/client/{client_id}/berichte' not in tabs, "no tab of its own any more"
     # Spec 09: reports are a view of Wirkung, beside KI-Sichtbarkeit.
     assert ">Monitoring<" in tabs
     assert f'href="/client/{client_id}/ki"' in tabs
-    views = rendered(http.get(f"/client/{client_id}/ki")).split('class="workspace-links"', 1)[1].split("</nav>", 1)[0]
+    views = rendered(http.get(f"/client/{client_id}/ki")).split('aria-label="Ansicht"', 1)[1].split("</nav>", 1)[0]
     assert f'/client/{client_id}/monitoring/kpis' in views
 
     rail = rendered(http.get(f"/client/{client_id}/advice"))

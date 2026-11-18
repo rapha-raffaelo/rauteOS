@@ -32,18 +32,16 @@ it('filters Themen and links to a dedicated detail page without hover',async()=>
  fireEvent.mouseEnter(link);
  expect(screen.queryByRole('tooltip')).toBeNull();
  expect(link.getAttribute('href')).toBe('/client/1/themen?kind=developed&context=7');
- fireEvent.click(screen.getByRole('button',{name:'Aktiviert · 1'}));
- expect(screen.getByRole('link',{name:'Zu den Assets →'}).getAttribute('href')).toBe('/client/1/assets?kind=detected&context=3');
+ fireEvent.click(screen.getByRole('button',{name:'In Bearbeitung · 1'}));
+ expect(screen.getByRole('link',{name:'Weiterarbeiten →'}).getAttribute('href')).toBe('/client/1/themen?kind=detected&context=3&step=assets');
 });
 
-it('activates a Thema with RAUTE pitch and speaker, then opens Assets',async()=>{
- const assign=vi.fn();vi.stubGlobal('location',{...window.location,assign});
- const calls=routes({'/opportunities':board,'/opportunities/developed/7':detail,'/opportunities/developed/7/activate':{...detail,status:'active'},'/agenda':{items:[],total:0}});
+it('opens the angle selection before activating a topic',async()=>{
+ const calls=routes({'/opportunities':board,'/agenda':{items:[],total:0}});
  render(<ThemenPage clientId={1}/>);
- fireEvent.click(await screen.findByRole('button',{name:'Thema aktivieren'}));
- await waitFor(()=>expect(assign).toHaveBeenCalledWith('/client/1/assets?kind=developed&context=7'));
- const sent=JSON.parse(calls.find(c=>c.url.endsWith('/activate')).body);
- expect(sent).toMatchObject({revision:2,storyline:'Versorgungssicherheit statt Lifestyle-Debatte',speaker_person_id:null});
+ const link=await screen.findByRole('link',{name:'Thema entwickeln →'});
+ expect(link.getAttribute('href')).toBe('/client/1/themen?kind=developed&context=7&step=blickwinkel');
+ expect(calls.some(c=>c.url.endsWith('/activate'))).toBe(false);
 });
 
 it('draws the Agenda with a detail link instead of a hover note',async()=>{
@@ -108,21 +106,16 @@ it('offers an optional profile contact without researched free-text speakers',as
  expect(screen.queryByRole('option',{name:'Die PR betreut eine Agentur'})).toBeNull();
 });
 
-it('opens a bookmarked topic detail page with sources and activation',async()=>{
- const assign=vi.fn();
+it('opens a bookmarked topic with all workflow steps and sources',async()=>{
  window.history.replaceState(null,'','/client/1/themen?kind=developed&context=7');
- vi.stubGlobal('location',{...window.location,assign});
- const calls=routes({'/opportunities/developed/7':{...detail,sources:[{title:'Studie',url:'https://example.org/studie'}]},
-  '/opportunities/developed/7/activate':{status:'active'}});
+ routes({'/opportunities/developed/7':{...detail,sources:[{title:'Studie',url:'https://example.org/studie'}]}});
  render(<ThemenPage clientId={1}/>);
  expect(await screen.findByRole('heading',{name:'Online-Verschreibung'})).toBeTruthy();
  expect(screen.getByText('Der Bundestag hat beschlossen.')).toBeTruthy();
  expect(screen.getByRole('link',{name:'Studie ↗'}).getAttribute('href')).toBe('https://example.org/studie');
  expect(screen.getByRole('link',{name:'← Zurück zu den Themen'}).getAttribute('href')).toBe('/client/1/themen');
+ expect(screen.getByRole('navigation',{name:'Themenworkflow'}).querySelectorAll('button')).toHaveLength(8);
  expect(screen.queryByRole('tooltip')).toBeNull();
- fireEvent.click(screen.getByRole('button',{name:'Thema aktivieren'}));
- await waitFor(()=>expect(assign).toHaveBeenCalledWith('/client/1/assets?kind=developed&context=7'));
- expect(JSON.parse(calls.find(c=>c.method==='POST').body).speaker_person_id).toBeNull();
 });
 
 it('shows a centered writing dialog with indeterminate progress and a background option',()=>{

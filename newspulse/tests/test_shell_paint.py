@@ -377,8 +377,8 @@ def test_legacy_assistant_links_lead_to_ask_raute(web, mandate):
 
 
 def _strip(html: str) -> str:
-    assert 'class="subtabs"' in html, "no workspace strip on the page"
-    return html.split('class="subtabs"', 1)[1].split("</nav>", 1)[0]
+    assert 'aria-label="Mandant"' in html, "no workspace strip on the page"
+    return html.split('aria-label="Mandant"', 1)[1].split("</nav>", 1)[0]
 
 
 def test_the_primary_tabs_are_consolidated(web, mandate):
@@ -414,7 +414,7 @@ def test_specialist_views_select_their_primary_workspace(web, mandate, suffix, p
 ])
 def test_each_workspace_keeps_its_tools_reachable(web, mandate, suffix, options):
     body = rendered(web.get(f"/client/{mandate.id}{suffix}"))
-    tools = body.split('class="workspace-links"', 1)[1].split('</nav>', 1)[0]
+    tools = body.split('aria-label="Ansicht"', 1)[1].split('</nav>', 1)[0]
     targets = re.findall(r'<a href="([^"]+)"', tools)
     assert targets == [f"/client/{mandate.id}{path}" for path in options]
     for target in targets:

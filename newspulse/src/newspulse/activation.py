@@ -20,7 +20,8 @@ def fingerprint(session,workspace):
     contacts=[(c.id,c.updated_at.isoformat(),p.revision if (p:=session.get(JournalistProfile,c.id)) else 0)
         for c in session.scalars(select(Contact).where(Contact.id.in_(workspace.contact_ids)))]
     person=session.get(ClientPerson,workspace.speaker_person_id) if workspace.speaker_person_id else None
-    return hashlib.sha256(json.dumps(dict(revision=workspace.revision,guide=client.comms_guide,contacts=contacts,
+    return hashlib.sha256(json.dumps(dict(storyline=workspace.storyline,speaker_statement_id=workspace.speaker_statement_id,
+        selected_storylines=(workspace.data or {}).get('selected_storylines',[]),guide=client.comms_guide,contacts=contacts,
         speaker_person=(person.id,person.updated_at.isoformat()) if person else None,
         statements=[(r.id,r.revision) for r in twin.all_statements(session,client.id)]),sort_keys=True).encode()).hexdigest()
 
@@ -52,7 +53,14 @@ def context_for(session,workspace,*,contact_id=None,instruction=''):
         # Only the fields the writer needs; no addresses or unrelated private notes.
         person['contact']={k:person['contact'][k] for k in ('id','name','outlet','position','beat')}
         person['relationship']['timeline']=person['relationship']['timeline'][:20]
+    learnings=[]
+    for previous in session.scalars(select(OpportunityWorkspace).where(OpportunityWorkspace.client_id==client.id).order_by(OpportunityWorkspace.id.desc()).limit(30)):
+        flow=(previous.data or {}).get('workflow',{})
+        if flow.get('completed_at') and flow.get('result'):
+            learnings.append(dict(theme=previous.storyline, assessment=flow['result'], evidence_type='Human-confirmed retrospective; not an external fact'))
     sources=list(workspace.data.get('sources',[]))
+    for research in (workspace.data or {}).get('workflow',{}).get('research',{}).values():
+        sources += research.get('sources',[])
     angle=session.get(Angle,workspace.angle_id)
     if angle:
         from .models import Article
@@ -60,10 +68,10 @@ def context_for(session,workspace,*,contact_id=None,instruction=''):
     if person:sources+=person['articles']
     sources=list({s['url']:s for s in sources}.values())[:40]
     context=dict(workspace_id=workspace.id,workspace_revision=workspace.revision,client_id=client.id,
-        storyline=workspace.storyline,
+        storyline=workspace.storyline,selected_storylines=(workspace.data or {}).get('selected_storylines',[]),
         speaker=person_speaker(spokesperson) if spokesperson else twin.snapshot(speaker) if speaker else None,
         statements=[twin.snapshot(r) for r in all_facts],sources=sources,guide=client.comms_guide or '',
-        journalist=person,instruction=instruction,fingerprint=fingerprint(session,workspace))
+        journalist=person,learnings=learnings[:10],instruction=instruction,fingerprint=fingerprint(session,workspace))
     return json.loads(json.dumps(context,default=str)),target
 
 
@@ -226,5 +234,16 @@ def read(session,workspace):
             evidence_sources=job.context.get('sources',[]),
             evidence_statements=[r for r in job.context.get('statements',[]) if r['id'] in {identity for f in job.quality.get('findings',[]) for identity in f['statement_ids']+f['contradiction_ids']}],
             href=f'/client/{workspace.client_id}/advice?eintrag=anlass-{workspace.angle_id}#'+('asset-' if job.asset_id else 'outreach-')+str(row.id)))
+    # Existing drafts (for example the automatically prepared press release)
+    # belong to the same workspace even when no activation job created them.
+    if workspace.angle_id:
+        for model,text_type in ((Asset,'asset'),(Outreach,'outreach')):
+            for row in session.scalars(select(model).where(model.client_id==workspace.client_id,model.angle_id==workspace.angle_id).order_by(model.generated_at.desc())):
+                if (text_type,row.id) in seen:continue
+                title,body=text_parts(row)
+                texts.append(dict(id=row.id,type=text_type,kind=row.kind if text_type=='asset' else 'pitch',
+                    title=title,body=body,released_at=row.released_at,digest=asset_evidence.digest(title,body),
+                    quality={},quality_stale=True,contact_id=getattr(row,'contact_id',None),
+                    evidence_sources=[],evidence_statements=[],href=workspaces.text_href(session,row,text_type)))
     return dict(formats=[dict(key=k,label=v) for k,v in FORMATS],texts=texts,
         latest=dict(id=jobs[0].id,status=jobs[0].status,kind=jobs[0].kind,note=jobs[0].note,started_at=jobs[0].started_at) if jobs else None)
