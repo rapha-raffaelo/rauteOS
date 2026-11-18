@@ -12,7 +12,10 @@ keine sendefertigen Statements, belegten Produktversprechen oder fertigen Texte.
 Ein Thema darf als offene Frage formuliert sein. Beschreibe klar, was die Nachricht
 belegt, warum sie zum Mandat passt und was vor einer Veröffentlichung zu klären ist.
 Keine Verbindung zu Polizeimeldungen oder Börsenkursen konstruieren. Zwei Vorschläge
-müssen unterschiedliche Themen behandeln. Liefere möglichst ein bis zwei Vorschläge;
+müssen unterschiedliche Themen behandeln. Liefere bei Tagesnews mindestens einen aktuellen Vorschlag. Ist der Ansatz noch
+nicht tragfähig, formuliere eine ausdrücklich offene, quellengestützte Recherchefrage
+mit konkreten Prüfschritten. Behaupte dabei keinen ungesicherten Kundenbezug.
+Liefere möglichst ein bis zwei Vorschläge;
 wenn keine Quelle einen glaubwürdigen Bezug erlaubt, gib eine leere Liste mit Grund.
 
 Gib genau ein JSON-Objekt zurück:

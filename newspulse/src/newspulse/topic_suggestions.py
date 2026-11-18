@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field, StrictInt
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 
-from . import angles, brain, guide, quoting, prose, coverage_identity
+from . import angles, brain, guide, quoting, prose, coverage_identity, config
 from .models import Angle, Article, Client, OpportunityWorkspace, Setting, TopicHit, Analysis
 
 log = logging.getLogger(__name__)
@@ -63,10 +63,10 @@ def claim(session, client_id, now=None):
     if old.get('checked_at'):
         age = now - dt.datetime.fromisoformat(old['checked_at'])
         wait = dt.timedelta(minutes=15 if old['status'] == 'running' else 30 if old['status'] == 'failed' else 360)
-        same_input=old.get('input_signature')==signature and old.get('version')==2
+        same_input=old.get('input_signature')==signature and old.get('version')==3
         if age < wait and (old['status'] in {'running','failed'} or same_input):
             return None
-    job = dict(status='running', checked_at=now.isoformat(),input_signature=signature,version=2,note='RAUTE prüft die Meldungen der letzten vier Wochen.')
+    job = dict(status='running', checked_at=now.isoformat(),input_signature=signature,version=3,note='RAUTE prüft die Meldungen der letzten vier Wochen.')
     value = json.dumps(job)
     if row:
         changed = session.execute(update(Setting).where(Setting.key == key(client_id), Setting.value == previous).values(value=value)).rowcount
@@ -87,6 +87,21 @@ def finish(session, client_id, lease, status, note):
     session.execute(update(Setting).where(Setting.key == key(client_id), Setting.value == json.dumps(lease)).values(
         value=json.dumps({**lease, 'status': status, 'note': note})))
     session.commit()
+
+
+def _research_proposal(article):
+    """A transparent source-backed research question, never an invented pitch."""
+    title = prose.plain(article.title)[:400]
+    return Suggestions(topics=[TopicIdea(
+        title=f"Tagesanlass prüfen: {title}",
+        situation=f"{article.source} berichtet: {title}. Die Meldung ist ein Rechercheanlass; die Angaben sind noch zu prüfen.",
+        relevance="Die Meldung wurde diesem Mandat zugeordnet. Ob daraus ein tragfähiger Kommunikationsansatz entsteht, ist noch offen.",
+        pitch=f"Recherchefrage: Welche Bedeutung hat die Meldung ‘{title}’ für den Kunden und seine Zielgruppen?",
+        evidence=[0], next_steps=[
+            f"Originalmeldung ‘{title}’ lesen und belegte Aussagen sowie offene Fragen für eine kurze Faktennotiz festhalten.",
+            "Die Faktennotiz mit dem Kundenprofil abgleichen und einen konkreten Kundenbezug belegen oder den Anlass als nicht passend verwerfen.",
+            "Bei bestätigtem Bezug einen Themenwinkel mit Kernfrage und geeignetem Format zur Entscheidung vorbereiten.",
+        ])])
 
 
 def generate(session, client_id, lease, *, invoke=None):
@@ -110,6 +125,21 @@ def generate(session, client_id, lease, *, invoke=None):
         if not articles:
             finish(session, client_id, lease, 'empty', 'Noch keine neuen Meldungen der letzten vier Wochen für einen weiteren Themenvorschlag.')
             return
+        # Today's local news must not be displaced by older material.
+        today = now.astimezone(config.LOCAL_ZONE).date()
+        todays = [a for a in articles if a.published_at.astimezone(config.LOCAL_ZONE).date() == today]
+        if todays:
+            articles = todays
+        unavailable = {w.angle_id for w in session.scalars(select(OpportunityWorkspace).where(
+            OpportunityWorkspace.client_id == client_id)) if w.status == 'closed' or
+            (w.data or {}).get('workflow', {}).get('deactivated_at') or
+            (w.data or {}).get('workflow', {}).get('completed_at')}
+        used_today = {a.id for a in session.scalars(select(Article).where(Article.id.in_(used)))
+                      if a.published_at.astimezone(config.LOCAL_ZONE).date() == today}
+        has_current = any(not a.dismissed_at and a.id not in unavailable and
+                          used_today.intersection(a.article_ids or []) for a in previous)
+        needs_daily = bool(todays) and not has_current
+        fallback = False
         from .analyzer import invoke_with_fallback
         written_under = brain.version(session)
         template = resources.files('newspulse').joinpath('prompts/topic_suggestions.txt').read_text('utf-8')
@@ -120,15 +150,24 @@ def generate(session, client_id, lease, *, invoke=None):
         prompt += '\nBereits vorhandene oder archivierte Themen, nicht erneut vorschlagen:\n' + quoting.fence(json.dumps([a.subject for a in previous[-50:]],ensure_ascii=False),label='BISHERIGE THEMEN')
         call = invoke or invoke_with_fallback
         try:
-            result = _parse(call(prompt, timeout=300))
-        except ValueError:
-            result = _parse(call(prompt + "\nFORMAT: Genau ein JSON-Objekt nach dem Schema, mit topics und note, ohne weiteren Text.", timeout=300))
+            try:
+                result = _parse(call(prompt, timeout=300))
+            except ValueError:
+                result = _parse(call(prompt + "\nFORMAT: Genau ein JSON-Objekt nach dem Schema, mit topics und note, ohne weiteren Text.", timeout=300))
+            if any(any(i < 0 or i >= len(articles) for i in idea.evidence) for idea in result.topics):
+                raise ValueError('Proposal contains an unknown source reference')
+        except Exception:
+            if not needs_daily:
+                raise
+            log.exception('Using a source-backed daily research question for client %s', client_id)
+            result = _research_proposal(articles[0])
+            fallback = True
+        if not result.topics and needs_daily:
+            result = _research_proposal(articles[0])
+            fallback = True
         if not result.topics:
-            finish(session, client_id, lease, 'empty', result.note or 'Aus den aktuellen Meldungen ergibt sich noch kein belastbares Thema.')
+            finish(session, client_id, lease, 'empty', result.note or 'Aus den aktuellen Meldungen ergibt sich noch kein weiterer belastbarer Themenansatz.')
             return
-        # Validate every citation before saving any of the proposals.
-        if any(any(i < 0 or i >= len(articles) for i in idea.evidence) for idea in result.topics):
-            raise ValueError('Proposal contains an unknown source reference')
         for idea in result.topics:
             angle=Angle(client_id=client_id, subject=prose.plain(idea.title),
                 message=prose.plain(idea.pitch), thesis=prose.plain(idea.pitch),
@@ -138,7 +177,7 @@ def generate(session, client_id, lease, *, invoke=None):
             session.add(angle);session.flush()
             steps=[prose.plain(step.strip())[:1500] for step in idea.next_steps if step.strip()]
             session.add(OpportunityWorkspace(client_id=client_id,context_kind='developed',context_id=angle.id,
-                angle_id=angle.id,status='draft',data=dict(origin='pitch',situation=angle.context,relevance=angle.credibility,
+                angle_id=angle.id,status='draft',data=dict(origin='pitch',daily_research_question=fallback,situation=angle.context,relevance=angle.credibility,
                     storylines=[angle.thesis],next_steps=steps,
                     sources=[dict(article_id=articles[i].id,title=articles[i].title,url=articles[i].url,source=articles[i].source,
                         published_at=articles[i].published_at.isoformat()) for i in dict.fromkeys(idea.evidence)])))

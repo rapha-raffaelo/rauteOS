@@ -323,7 +323,9 @@ def test_suggestions_do_not_invent_news_and_report_model_failure(session, mandat
     lease = topic_suggestions.claim(session, mandate.id)
     topic_suggestions.generate(session, mandate.id, lease, invoke=lambda *a, **kw: pytest.fail('No news: no model call'))
     assert topic_suggestions.state(session, mandate.id)['status'] == 'empty'
-    _article(session, 'Neue Studie', 'https://ex.de/new-study', radar=mandate)
+    article = _article(session, 'Neue Studie', 'https://ex.de/new-study', radar=mandate)
+    article.published_at = dt.datetime.now(dt.UTC) - dt.timedelta(days=1)
+    session.commit()
     next_lease = topic_suggestions.claim(session, mandate.id, now=dt.datetime.now(dt.UTC)+dt.timedelta(hours=7))
     def fail(*args, **kwargs):
         raise RuntimeError('Provider unavailable')
@@ -344,7 +346,9 @@ def test_suggestions_retry_a_malformed_model_reply_once(session, mandate):
 @pytest.mark.parametrize('evidence,expected', [([0], 2), ([999], 0)])
 def test_suggestions_limit_two_ideas_and_require_real_sources(session, mandate, evidence, expected):
     from newspulse import topic_suggestions
-    _article(session, 'Neue Studie', 'https://ex.de/source-study', radar=mandate)
+    article = _article(session, 'Neue Studie', 'https://ex.de/source-study', radar=mandate)
+    article.published_at = dt.datetime.now(dt.UTC) - dt.timedelta(days=1)
+    session.commit()
     payload = {'topics': [dict(title=title, pitch='Eine offene Frage', situation='Neue Studie',
         relevance='Bezug und offene Recherche', evidence=evidence) for title in ['Thema eins', 'Thema zwei']]}
     lease = topic_suggestions.claim(session, mandate.id)
@@ -384,3 +388,42 @@ def test_new_news_bypasses_cooldown_and_existing_topics_with_actionable_agenda(s
     workspace.data = {**workspace.data, 'workflow': {'deactivated_at': dt.datetime.now(dt.UTC).isoformat()}}
     session.commit()
     assert topic_suggestions.agenda_steps(session, mandate.id) == []
+
+
+@pytest.mark.parametrize('reply', ['empty', 'failure', 'invalid'])
+def test_today_always_gets_a_source_backed_research_question(session, mandate, reply):
+    from newspulse import topic_suggestions, config
+    article = _article(session, 'Neue Entscheidung', 'https://ex.de/today', radar=mandate)
+    now = dt.datetime(2026, 11, 18, 12, tzinfo=dt.UTC)
+    article.published_at = now - dt.timedelta(hours=1)
+    session.commit()
+    def invoke(*args, **kwargs):
+        if reply == 'failure': raise RuntimeError('Provider unavailable')
+        if reply == 'invalid': return '{}'
+        return '{"topics": [], "note": "Kundenbezug offen"}'
+    lease = topic_suggestions.claim(session, mandate.id, now=now)
+    topic_suggestions.generate(session, mandate.id, lease, invoke=invoke)
+    angle = session.query(Angle).one()
+    assert angle.subject == 'Tagesanlass prüfen: Neue Entscheidung'
+    assert angle.article_ids == [article.id]
+    assert 'noch offen' in angle.credibility
+    assert len(topic_suggestions.agenda_steps(session, mandate.id)[0]['next_steps']) == 3
+    assert topic_suggestions.state(session, mandate.id)['status'] == 'ready'
+    # Refreshing cannot recreate it after the user dismisses it.
+    angle.dismissed_at = now
+    session.commit()
+    lease = topic_suggestions.claim(session, mandate.id, now=now+dt.timedelta(hours=7))
+    topic_suggestions.generate(session, mandate.id, lease, invoke=invoke)
+    assert session.query(Angle).count() == 1
+
+
+def test_topics_sort_by_visible_news_date_not_generation_time(session, mandate):
+    from newspulse import workspaces
+    now = dt.datetime.now(dt.UTC)
+    for days, title in [(0, 'Heute'), (2, 'Vorgestern'), (1, 'Gestern')]:
+        article = _article(session, title, f'https://ex.de/date-{days}', radar=mandate)
+        article.published_at = now-dt.timedelta(days=days)
+        session.add(Angle(client_id=mandate.id, subject=title, message='Pitch', context='Kontext',
+            generated_at=now+dt.timedelta(seconds=days), article_ids=[article.id]))
+    session.commit()
+    assert [row['title'] for row in workspaces.listings(session, mandate.id)] == ['Heute', 'Gestern', 'Vorgestern']

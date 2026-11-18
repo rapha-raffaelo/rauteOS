@@ -152,7 +152,7 @@ function ThemenList({clientId}){
      :<p className="themen-empty">{filter==='medien'?'Noch nichts aus Medien übernommen. Unter Medien macht der Stern einen Artikel zum Thema.':'Gerade kein offenes Thema.'}</p>}
     <p className="themen-hint"><a href={`/client/${clientId}/medien`}>Weitere Themen in Medien finden →</a></p>
    </main>
-   <Agenda clientId={clientId}/>
+   <Agenda key={`${clientId}-${suggestion?.checked_at}-${suggestion?.status}`} clientId={clientId}/>
   </div>}
  </section>;
 }

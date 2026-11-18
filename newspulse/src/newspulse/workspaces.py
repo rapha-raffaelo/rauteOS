@@ -185,4 +185,4 @@ def listings(session,client_id):
                 starred_by=(workspace.data or {}).get('starred_by','') if workspace else '',
                 summary=(row.reason if kind=='detected' else row.message or row.context or '')[:400],
                 occasion=dict(title=occasion.title,source=occasion.source,published_at=occasion.published_at,url=occasion.url) if occasion else None))
-    return sorted(result,key=lambda r:r['created_at'],reverse=True)
+    return sorted(result, key=lambda r: ((r.get('occasion') or {}).get('published_at') or r['created_at'], r['created_at'], r['context_id']), reverse=True)
