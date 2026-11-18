@@ -179,3 +179,13 @@ it('gives active topics individual tabs and identifies the currently open topic'
  expect(document.activeElement).toBe(secondTab);
  expect(window.location.search).toBe('?kind=developed&context=7');
 });
+
+
+it('shows concrete topic actions without inventing a scheduled date',async()=>{
+ routes({'/agenda':{items:[{id:'topic-4',kind:'topic',title:'Banklizenz einordnen',next_steps:['Umfang der Lizenz prüfen','Produktfragen für das Briefing sammeln'],month:'2026-11',day:null,format:'',state:'vorgeschlagen',href:'/client/1/themen?context=4'}],total:1}});
+ render(<Agenda clientId={1}/>);
+ expect(await screen.findByText('Umfang der Lizenz prüfen')).toBeTruthy();
+ expect(screen.getByText('Produktfragen für das Briefing sammeln')).toBeTruthy();
+ expect(screen.getByText('Aktueller Anlass')).toBeTruthy();
+ expect(screen.getByText('Termin noch offen')).toBeTruthy();
+});

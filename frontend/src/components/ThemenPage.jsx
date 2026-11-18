@@ -81,16 +81,17 @@ function Card({clientId,clientName,row,onChanged}){
 export function Agenda({clientId}){
  const [data,setData]=useState(null),[error,setError]=useState('');
  useEffect(()=>{request(`clients/${clientId}/agenda`).then(setData).catch(e=>setError(e.message));},[clientId]);
- const when=item=>item.day?`${String(item.day).padStart(2,'0')}.${item.month.slice(5)}.`:`${MONTHS[Number(item.month.slice(5))-1]} ${item.month.slice(0,4)}`;
+ const when=item=>item.kind==='topic'?'Aktueller Anlass':item.day?`${String(item.day).padStart(2,'0')}.${item.month.slice(5)}.`:`${MONTHS[Number(item.month.slice(5))-1]} ${item.month.slice(0,4)}`;
  const formatLabel=value=>({linkedin:'LinkedIn-Post',pressemitteilung:'Pressemitteilung',statement:'Statement',gastbeitrag:'Gastbeitrag',pitch:'Medienpitch',interviewangebot:'Interviewangebot',kundenmail:'Kundenmail',briefing:'Briefing'})[value]||value;
  return <aside className="themen-agenda" aria-labelledby="agenda-title">
   <header><h2 id="agenda-title">Agenda</h2><a href={data?.href||`/client/${clientId}/plan`}>Ganze Agenda →</a></header>
   {error&&<p role="alert">{error}</p>}
   {data&&!data.items.length&&<p className="themen-empty">Noch keine Termine. Die Agenda füllt sich aus Marktsignalen und Themen.</p>}
   {data?.items.length>0&&<ol className="themen-timeline">{data.items.map(item=><li key={item.id} className={`themen-timeline__item themen-timeline__item--${item.state}`}>
-   <div className="themen-agenda-meta"><span className="themen-timeline__when">{when(item)}</span><span className={`themen-agenda-status${item.state==='angenommen'?' themen-agenda-status--planned':''}`}>{item.state==='angenommen'?'Geplant':'Vorschlag'}</span></div>
+   <div className="themen-agenda-meta"><span className="themen-timeline__when">{when(item)}</span><span className={`themen-agenda-status${item.state==='angenommen'?' themen-agenda-status--planned':''}`}>{item.state==='angenommen'?(item.kind==='topic'?'Aktiv':'Geplant'):'Vorschlag'}</span></div>
    <h3 className="themen-agenda-topic"><a href={item.href}>{item.title||'Ohne Titel'}</a></h3>
    <p className="themen-agenda-caption">{item.format&&<span>{formatLabel(item.format)}</span>}{!item.day&&<span>Termin noch offen</span>}</p>
+   {item.next_steps?.length>0&&<div className="themen-agenda-actions"><strong>Nächste Schritte</strong><ol>{item.next_steps.map((step,index)=><li key={index}>{step}</li>)}</ol></div>}
    <a className="themen-agenda-detail-link" href={item.href}>Details ansehen →</a>
   </li>)}</ol>}
   <a className="btn btn--quiet themen-agenda__add" href={`/client/${clientId}/plan#agenda`}>Agenda bearbeiten</a>

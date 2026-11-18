@@ -399,6 +399,16 @@ def _topic_loop(stop):
             _log.exception("Topic follow-up research failed; retry on next tick")
 
 
+def _suggestions_loop(stop):
+    from .. import topic_suggestions
+    while not stop.wait(_TICK_SECONDS):
+        try:
+            with get_session() as session:
+                topic_suggestions.refresh(session)
+        except Exception:
+            _log.exception("Topic suggestions failed; retry on next tick")
+
+
 def start() -> threading.Event | None:
     """Start all three clocks. Returns the stop event they share, or ``None``
     if off.
@@ -442,6 +452,7 @@ def start() -> threading.Event | None:
         target=_linkedin_loop, args=(stop,), daemon=True, name="newspulse-linkedin"
     ).start()
     threading.Thread(target=_condense_at_start, daemon=True, name="newspulse-condense").start()
+    threading.Thread(target=_suggestions_loop, args=(stop,), daemon=True, name="newspulse-suggestions").start()
     threading.Thread(target=_topic_loop, args=(stop,), daemon=True, name="newspulse-topics").start()
     return stop
 

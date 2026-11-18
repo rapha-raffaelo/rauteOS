@@ -18,6 +18,20 @@
   </div>
 </div>
 
+{% if topic_steps %}
+<section aria-labelledby="topic-actions-title">
+  <h2 id="topic-actions-title">{{ t("Nächste Schritte aus aktuellen Themen") }}</h2>
+  <p>{{ t("Vorschläge zur Bearbeitung. Termine und Verantwortliche sind noch offen.") }}</p>
+  {% for item in topic_steps %}
+  <article class="hook">
+    <h3><a href="{{ item.href }}">{{ item.title }}</a></h3>
+    <ol>{% for step in item.next_steps %}<li>{{ step }}</li>{% endfor %}</ol>
+    <a class="btn btn--ghost" href="{{ item.href }}">{{ t("Thema öffnen") }} →</a>
+  </article>
+  {% endfor %}
+</section>
+{% endif %}
+
 {% if note %}
   <p class="notice">{{ t(note) }}</p>
 {% endif %}
@@ -107,7 +121,7 @@
               <span class="tag">{{ t("Angenommen") }}</span>
             {% endif %}
           </div>
-          {% if hook.reason %}<p class="hook__w">{{ hook.reason }}</p>{% endif %}
+          {% if hook.reason %}<p class="hook__w" style="white-space:pre-line">{{ hook.reason }}</p>{% endif %}
           <div class="hook__e">
             {% if view.evidence %}
               <a href="{{ view.evidence.href }}">{{ t("Beleg") }}: {{ view.evidence.label }}</a>

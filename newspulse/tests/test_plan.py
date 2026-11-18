@@ -1114,3 +1114,13 @@ def test_a_failing_recompute_does_not_cost_the_other_mandates(
 
     assert no_plan_recompute(session, [first, second], now=_NOW) == 1
     assert plan.due(session, second, now=_NOW) is False
+
+
+def test_generated_agenda_steps_survive_prose_storage():
+    from newspulse.plan import HookProse, _prose_fields, action_steps
+    entry = HookProse(ref='K1', relevant=True, reason='Konkreter Anlass', format='linkedin',
+        next_steps=['Zahlen für das Kundenbriefing prüfen', 'Einordnung zur Finanzierung entwerfen'])
+    reason, fmt = _prose_fields(entry)
+    assert fmt == 'linkedin'
+    assert action_steps(reason) == entry.next_steps
+    assert action_steps('Ein alter allgemeiner Vorschlag') == []

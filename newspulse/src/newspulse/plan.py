@@ -155,6 +155,7 @@ class HookProse(BaseModel):
     relevant: StrictBool = False
     reason: str = ""
     format: str = ""
+    next_steps: list[str] = Field(default_factory=list,max_length=4)
 
 
 class HookProseSet(BaseModel):
@@ -546,6 +547,8 @@ def _prose_fields(entry: HookProse | None) -> tuple[str, str]:
     if entry is None:
         return "", ""
     reason = prose.plain(entry.reason.strip())
+    steps=[prose.plain(step.strip())[:1500] for step in entry.next_steps if step.strip()]
+    if steps:reason += "\n\nNächste Schritte:\n" + "\n".join(f"{i}. {step}" for i,step in enumerate(steps,1))
     fmt = entry.format.strip()
     if fmt and fmt not in REGISTRY:
         _log.info("dropping unknown format suggestion %r", fmt)
@@ -823,3 +826,9 @@ __all__ = [
     "read",
     "recompute",
 ]
+
+
+def action_steps(reason):
+    """Read the concrete actions persisted with a generated agenda hook."""
+    _, marker, tail = (reason or "").partition("Nächste Schritte:\n")
+    return [line.split(". ", 1)[-1].strip() for line in tail.splitlines() if line.strip()] if marker else []

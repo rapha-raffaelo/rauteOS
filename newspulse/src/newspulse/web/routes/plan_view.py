@@ -728,8 +728,10 @@ def plan_view(client_id: int, request: Request, session: Session = Depends(get_d
     """The whole Agenda (formerly Redaktionsplan). The Themen show its next
     dates as a timeline and link here."""
     client = mandate_or_404(session, client_id)
-    return templates.TemplateResponse(request, "client_agenda.html",
-                                      _page_context(session, client, now=dt.datetime.now(dt.UTC)))
+    from ... import topic_suggestions
+    context = _page_context(session, client, now=dt.datetime.now(dt.UTC))
+    context["topic_steps"] = topic_suggestions.agenda_steps(session, client_id)
+    return templates.TemplateResponse(request, "client_agenda.html", context)
 
 
 def _back(client_id: int, month: str = "") -> RedirectResponse:

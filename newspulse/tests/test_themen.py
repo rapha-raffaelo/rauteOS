@@ -351,3 +351,36 @@ def test_suggestions_limit_two_ideas_and_require_real_sources(session, mandate, 
     topic_suggestions.generate(session, mandate.id, lease, invoke=lambda *a, **kw: json.dumps(payload))
     assert session.query(Angle).count() == expected
     assert topic_suggestions.state(session, mandate.id)['status'] == ('ready' if expected else 'failed')
+
+
+def test_new_news_bypasses_cooldown_and_existing_topics_with_actionable_agenda(session, mandate, web):
+    from newspulse import topic_suggestions
+    from newspulse.models import OpportunityWorkspace
+    older = _article(session, 'Bisheriges Thema', 'https://ex.de/older', radar=mandate)
+    session.add(Angle(client_id=mandate.id, subject='Vorhandener Vorschlag', message='Pitch', context='Kontext', article_ids=[older.id]))
+    session.commit()
+    lease = topic_suggestions.claim(session, mandate.id)
+    topic_suggestions.generate(session, mandate.id, lease, invoke=lambda *a, **k: pytest.fail('Already used'))
+    assert topic_suggestions.claim(session, mandate.id) is None
+    fresh = _article(session, 'Banklizenz heute', 'https://ex.de/license', radar=mandate)
+    steps = ['Umfang der Banklizenz anhand der Originalquelle prüfen', 'Fragen zu neuen Produkten für das Kundenbriefing sammeln']
+    lease = topic_suggestions.claim(session, mandate.id)
+    assert lease
+    def invoke(prompt, **kwargs):
+        assert 'Banklizenz heute' in prompt
+        return json.dumps(dict(topics=[dict(title='Banklizenz einordnen', pitch='Produktfragen klären',
+            evidence=[0], situation='Neue Lizenz', relevance='Neue Angebote', next_steps=steps)]))
+    topic_suggestions.generate(session, mandate.id, lease, invoke=invoke)
+    assert topic_suggestions.state(session, mandate.id)['status'] == 'ready'
+    assert session.query(Angle).count() == 2
+    workspace = session.query(OpportunityWorkspace).one()
+    assert workspace.status == 'draft'
+    assert workspace.data['sources'][0]['article_id'] == fresh.id
+    item = web.get(f'/api/v1/clients/{mandate.id}/agenda').json()['items'][0]
+    assert item['title'] == 'Banklizenz einordnen' and item['next_steps'] == steps
+    assert item['day'] is None
+    assert steps[0] in web.get(f'/client/{mandate.id}/plan').text
+    assert topic_suggestions.claim(session, mandate.id) is None
+    workspace.data = {**workspace.data, 'workflow': {'deactivated_at': dt.datetime.now(dt.UTC).isoformat()}}
+    session.commit()
+    assert topic_suggestions.agenda_steps(session, mandate.id) == []

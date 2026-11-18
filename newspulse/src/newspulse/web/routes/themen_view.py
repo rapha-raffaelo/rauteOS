@@ -81,10 +81,12 @@ def agenda(client_id: int, response: Response, session: Session = Depends(get_db
             if month == current and hook.day and hook.day < now.astimezone(_local_tz()).day:
                 continue
             items.append(dict(
-                id=hook.id, title=hook.title, reason=hook.reason, month=month, day=hook.day,
+                id=hook.id, title=hook.title, reason=hook.reason, next_steps=plan.action_steps(hook.reason), month=month, day=hook.day,
                 format=str(hook.format or ""), state=hook.state.value,
                 href=f"/client/{client_id}/plan#monat-{month}"))
     items.sort(key=lambda item: (item["month"], item["day"] or 99))
+    from ... import topic_suggestions
+    items = topic_suggestions.agenda_steps(session, client_id) + items
     return dict(items=items[:AGENDA_ITEMS], total=len(items), href=f"/client/{client_id}/plan")
 
 

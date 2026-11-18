@@ -27,6 +27,12 @@ Regeln für die Begründung:
 - "reason" ist ein bis zwei Sätze: warum ausgerechnet dieses Mandat zu diesem
   Termin etwas zu sagen hat. Ein Satz, der für jedes Unternehmen der Branche
   gälte, ist keine Begründung.
+- "next_steps" sind zwei bis vier konkrete Arbeitsschritte. Jeder nennt eine
+  überprüfbare Aufgabe, ihren konkreten Gegenstand und das gewünschte Ergebnis.
+  Leite sie aus der belegten Nachricht und dem Kundenprofil ab. "LinkedIn-Post
+  schreiben" oder "Thema prüfen" allein sind zu allgemein. Nenne z.B. welche
+  Zahl oder Ankündigung geprüft werden soll und welche Frage der Entwurf klärt.
+  Keine erfundenen Termine, Zuständigkeiten oder behaupteten Kundenzusagen.
 - "format" ist genau einer der folgenden Schlüssel, oder leer, wenn keiner
   passt: $formats
 - "relevant" ist nur dann true, wenn ein konkreter Bezug zu Produkten,
@@ -42,6 +48,6 @@ Gib AUSSCHLIESSLICH ein JSON-Objekt zurück. Kein weiterer Text, kein Markdown.
 
 {
   "hooks": [
-    {"ref": "K1", "relevant": true, "reason": "warum dieser Termin für dieses Mandat ein Anlass ist", "format": "pressemitteilung"}
+    {"ref": "K1", "relevant": true, "reason": "warum dieser Termin für dieses Mandat ein Anlass ist", "format": "pressemitteilung", "next_steps": ["Konkreten Sachverhalt mit Quelle prüfen", "Konkretes Kommunikationsangebot ausarbeiten"]}
   ]
 }
