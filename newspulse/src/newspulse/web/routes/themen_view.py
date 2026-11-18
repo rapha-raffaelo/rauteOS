@@ -308,3 +308,14 @@ def drive_thema(client_id: int, kind: Literal["detected", "developed"], identity
                 session: Session = Depends(get_db)):
     client = mandate_or_404(session, client_id)
     return _to_drive(_with_logo(_thema_document(session, client, kind, identity), client, body.logo), body.format)
+
+
+@router.get('/api/v1/news-alerts')
+def news_alerts(request: Request, response: Response, client_id: int | None = None, session: Session = Depends(get_db)):
+    import hashlib
+    from ... import alert_digest
+    if client_id is not None:
+        mandate_or_404(session, client_id)
+    response.headers['Cache-Control'] = 'no-store'
+    member = hashlib.sha256((request.scope.get('user_email') or 'session').encode()).hexdigest()[:16]
+    return dict(member=member, items=alert_digest.bundles(session, client_id))

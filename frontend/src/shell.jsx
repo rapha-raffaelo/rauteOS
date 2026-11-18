@@ -1,5 +1,6 @@
 import './workspace-navigation.css';
 import OverdueTasks from './components/OverdueTasks.jsx';
+import NewsAlerts from './components/NewsAlerts.jsx';
 import ClaudeLogin from './components/ClaudeLogin.jsx';
 import React, { useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
@@ -361,6 +362,7 @@ export function Shell({ data, portals = true }) {
       {createPortal(topbar, document.getElementById("react-topbar"))}
       <ClaudeLogin />
       <OverdueTasks />
+      <NewsAlerts path={path} />
     </>
   );
 }

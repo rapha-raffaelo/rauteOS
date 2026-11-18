@@ -427,3 +427,41 @@ def test_topics_sort_by_visible_news_date_not_generation_time(session, mandate):
             generated_at=now+dt.timedelta(seconds=days), article_ids=[article.id]))
     session.commit()
     assert [row['title'] for row in workspaces.listings(session, mandate.id)] == ['Heute', 'Gestern', 'Vorgestern']
+
+
+def test_alert_digest_bundles_one_event_per_client_and_ignores_dismissed_copies(session, mandate, web):
+    from newspulse import alert_digest
+    first = _article(session, 'Qonto erhält Banklizenz', 'https://ex.de/a', about=mandate)
+    second = _article(session, 'Qonto erhält die Banklizenz', 'https://other.de/b', about=mandate)
+    duplicate = _article(session, first.title, 'https://ex.de/other-section', about=mandate)
+    duplicate.published_at = first.published_at
+    unrelated = _article(session, 'Qonto startet neues Kartenangebot', 'https://third.de/c', about=mandate)
+    for row in session.query(Analysis).all(): row.is_alert = True
+    session.commit()
+    items = alert_digest.bundles(session, mandate.id)
+    assert len(items) == 1 and items[0]['count'] == 2
+    assert items[0]['title'] == 'Qonto erhält Banklizenz'
+    assert items[0]['client_id'] == mandate.id
+    assert unrelated.id not in [s['id'] for s in items[0]['sources']]
+    reply = web.get(f'/api/v1/news-alerts?client_id={mandate.id}')
+    assert reply.status_code == 200 and reply.headers['cache-control'] == 'no-store'
+    assert reply.json()['items'][0]['count'] == 2
+    assert alert_digest.bundles(session, 999) == []
+    session.query(Analysis).filter_by(article_id=second.id).one().dismissed_at = dt.datetime.now(dt.UTC)
+    session.commit()
+    assert alert_digest.bundles(session, mandate.id) == []
+
+
+def test_alert_digest_uses_shared_topic_sources_and_excludes_old_news(session, mandate):
+    from newspulse import alert_digest
+    first = _article(session, 'Banklizenz für Qonto und neue Pläne', 'https://a.de/one', about=mandate)
+    second = _article(session, 'Qonto erhält die Banklizenz', 'https://b.de/two', about=mandate)
+    for row in session.query(Analysis).all(): row.is_alert = True
+    angle = Angle(client_id=mandate.id, subject='Was ändert sich?', message='Pitch', context='Kontext', article_ids=[first.id,second.id])
+    session.add(angle);session.commit()
+    items = alert_digest.bundles(session, mandate.id)
+    assert len(items) == 1 and items[0]['href'].endswith(f'context={angle.id}')
+    assert items[0]['title'] == second.title
+    first.published_at -= dt.timedelta(days=2)
+    session.commit()
+    assert alert_digest.bundles(session, mandate.id) == []
