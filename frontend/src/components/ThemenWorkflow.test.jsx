@@ -95,7 +95,7 @@ it('requires explicit confirmation before documenting an already sent pitch',asy
 });
 it('preserves unsaved asset text while switching between workflow steps',async()=>{
  mount('assets',{assets:[{id:4,title:'Statement',kind:'statement',digest:'d'}],activation:{texts:[{id:4,type:'asset',title:'Statement',body:'Gespeicherte Fassung',kind:'statement',digest:'d'}],formats:[],latest:null}});
- fireEvent.click(within(await screen.findByRole('region',{name:'Assets zu diesem Thema'})).getByRole('button'));
+ fireEvent.click(within(await screen.findByRole('region',{name:'Assets zu diesem Thema'})).getByRole('button',{pressed:false}));
  fireEvent.change(screen.getByLabelText('Text'),{target:{value:'Noch nicht gespeicherte Änderung'}});
  fireEvent.click(within(screen.getByRole('navigation')).getByRole('button',{name:/Freigabe/}));
  fireEvent.click(within(screen.getByRole('navigation')).getByRole('button',{name:/Assets/}));

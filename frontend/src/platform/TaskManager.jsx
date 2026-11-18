@@ -197,7 +197,7 @@ function Details({ task, d, list, onSubtasksChange }) {
 
 // What the Desk counts as "Entscheidungen offen". They are settled where they
 // live (the letter, the impulse, the profile), so each row opens that place.
-const DECISION = { kundenfreigabe: "Kundenfreigabe", freigabe: "Freigabe", impuls: "Impuls", profil: "Profil" };
+const DECISION = { asset: "Asset", kundenfreigabe: "Kundenfreigabe", freigabe: "Freigabe", impuls: "Impuls", profil: "Profil" };
 
 const STATES = [["offen", "Offen"], ["in_arbeit", "In Arbeit"], ["review", "Review"], ["erledigt", "Done"]];
 

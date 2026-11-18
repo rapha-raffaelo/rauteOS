@@ -394,6 +394,8 @@ def _topic_loop(stop):
     while not stop.wait(_TICK_SECONDS):
         try:
             with get_session() as session:
+                from .. import recycle_bin
+                recycle_bin.purge(session)
                 topic_automation.tick(session)
         except Exception:
             _log.exception("Topic follow-up research failed; retry on next tick")

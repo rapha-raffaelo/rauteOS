@@ -475,7 +475,7 @@ def test_the_sidebar_keeps_its_rows_and_only_changes_how_they_look(web, mandate)
     assert rows[:9] == ["/desk", "/aufgaben", "/clients", "/gmail", "/today", "/assets", "/contacts", "/linkedin", "/sales"]
     assert '<a href="/" class="side__row' not in side
     # The archive moved into each client's Medien tab; the foot keeps "Neuer Kunde" and Einstellungen.
-    assert rows[-2:] == ["/mandant/neu", "/settings"]
+    assert rows[-3:] == ["/mandant/neu", "/trash", "/settings"]
     assert f"/client/{mandate.id}/overview" in side
     assert "/settings" in side
 

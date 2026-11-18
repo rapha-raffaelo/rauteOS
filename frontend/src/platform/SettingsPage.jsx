@@ -442,7 +442,7 @@ export function SettingsPage({ data: d, onData }) {
                 <div className="platform-archive-head">
                   <p>
                     {t(
-                      "Deaktivierte Mandanten bleiben 90 Tage im Archiv und werden danach mit allen Daten gelöscht.",
+                      "Deaktivierte Mandanten bleiben zwölf Wochen (84 Tage) im Papierkorb und werden danach mit allen Daten gelöscht.",
                     )}
                   </p>
                   <form method="post" action="/settings/archive/purge"

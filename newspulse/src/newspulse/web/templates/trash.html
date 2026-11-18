@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Papierkorb · RauteOS{% endblock %}
+{% block pagetitle %}Papierkorb{% endblock %}
+{% block content %}
+<section class="panel">
+<h1>Papierkorb</h1>
+<p>Gelöschte Daten bleiben bis zu zwölf Wochen (84 Tage) wiederherstellbar. Danach werden sie automatisch endgültig entfernt.</p>
+{% if not entries and not archived %}<p>Der Papierkorb ist leer.</p>{% endif %}
+{% for entry in entries %}
+<article class="panel" style="margin-top:16px;padding:20px">
+<h2>{{ entry.title }}</h2>
+<p>{{ {'assets':'Asset','outreach':'Pitch','tasks':'Aufgabe','contacts':'Kontakt','client_people':'Ansprechperson','client_stakeholders':'Stakeholder','linkedin_posts':'LinkedIn-Beitrag','deals':'Sales-Eintrag','customer_onboarding_audio':'Audioaufnahme'}.get(entry.record_type,entry.record_type) }}{% if entry.client_id %} · {{ client_names.get(entry.client_id,'Kunde nicht mehr vorhanden') }}{% endif %}</p>
+<p>Gelöscht am {{ entry.deleted_at.astimezone(local_zone).strftime('%d.%m.%Y') }} · Endgültige Löschung am {{ entry.expires_at.astimezone(local_zone).strftime('%d.%m.%Y') }}</p>
+<div style="display:flex;gap:12px;flex-wrap:wrap">
+<form method="post" action="/trash/{{ entry.id }}/restore"><button class="btn btn--go">Wiederherstellen</button></form>
+<form method="post" action="/trash/{{ entry.id }}/delete" onsubmit="return confirm('Diesen Eintrag endgültig löschen? Er kann danach nicht wiederhergestellt werden.')"><button class="btn btn--quiet">Endgültig löschen</button></form>
+</div>
+</article>
+{% endfor %}
+{% for client in archived %}
+<article class="panel" style="margin-top:16px;padding:20px"><h2>{{ client.name }}</h2><p>Archivierter Kunde mit zugehörigen Daten · Endgültige Löschung am {{ client.purge_on.strftime('%d.%m.%Y') if client.purge_on else '–' }}</p><form method="post" action="/trash/client/{{ client.id }}/restore"><button class="btn btn--go">Kunden wiederherstellen</button></form></article>
+{% endfor %}
+</section>
+{% endblock %}

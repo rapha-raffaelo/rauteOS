@@ -193,3 +193,43 @@ def test_without_a_second_model_the_writer_never_checks_its_own_text(web,db,monk
     row=db.get(OpportunityAssetRun,identity)
     assert len(calls)==1 and row.asset_id
     assert row.quality['status']=='failed' and 'Kein Zweitmodell' in row.quality['note']
+
+
+def test_asset_stage_is_shared_with_task_board_and_delete_is_recoverable(web,db):
+    from newspulse import worklists, recycle_bin
+    from newspulse.models import Task, TrashEntry
+    identity=launch(web)
+    activation.run(db,identity,invoke=draft,review_invoke=reviewer)
+    text=web.get(path()).json()['texts'][0]
+    task=db.get(Task,text['task_id'])
+    assert task.status==text['stage']=='offen'
+    assert task.board_id==next(b.id for b in worklists.task_boards(db) if b.system_key=='decisions')
+    response=web.put(f"{path()}/asset/{text['id']}/stage",json={'stage':'review'})
+    assert response.status_code==200
+    assert response.json()['texts'][0]['stage']=='review'
+    db.refresh(task)
+    assert task.status=='review'
+    worklists.set_task_status(task,'in_arbeit');db.commit()
+    assert web.get(path()).json()['texts'][0]['stage']=='in_arbeit'
+    assert db.get(Asset,text['id']).released_at is None
+    response=web.request('DELETE',f"{path()}/asset/{text['id']}",json={'digest':text['digest']})
+    assert response.status_code==200,response.text
+    assert response.json()['texts']==[]
+    entry=db.scalar(select(TrashEntry).where(TrashEntry.record_type=='assets'))
+    assert entry and entry.expires_at-entry.deleted_at==dt.timedelta(weeks=12)
+    assert db.get(Asset,text['id']) is None
+    assert len(db.scalars(select(TrashEntry)).all())==1
+    assert web.get('/trash').status_code==200
+    recycle_bin.restore(db,entry.id)
+    restored=web.get(path()).json()['texts'][0]
+    assert restored['body']==text['body'] and restored['stage']=='in_arbeit'
+
+
+def test_asset_delete_rejects_stale_text_and_other_client(web,db):
+    identity=launch(web)
+    activation.run(db,identity,invoke=draft,review_invoke=reviewer)
+    text=web.get(path()).json()['texts'][0]
+    response=web.request('DELETE',f"{path()}/asset/{text['id']}",json={'digest':'0'*64})
+    assert response.status_code==409
+    assert db.get(Asset,text['id']) is not None
+    assert web.put(f"{path(2)}/asset/{text['id']}/stage",json={'stage':'erledigt'}).status_code==404

@@ -503,6 +503,19 @@ def purge_archived(session: Session, now: dt.datetime | None = None, *, everythi
             *archived, *(() if everything else (Client.deactivated_at < cutoff,))
         )
     ).all()
+    if expired and everything:
+        from . import recycle_bin
+        from .models import TrashEntry
+        now_value = now or dt.datetime.now(dt.UTC)
+        for client_id, name in expired:
+            table = Client.__table__
+            row = session.connection().execute(select(table).where(table.c.id==client_id)).mappings().one()
+            expiry = (row['deactivated_at'] or now_value) + recycle_bin.RETENTION
+            if expiry > now_value:
+                payload, _ = recycle_bin.snapshot(session.connection(),table,row)
+                session.add(TrashEntry(title=name,record_type='clients',client_id=client_id,
+                    deleted_at=now_value,expires_at=expiry,payload=payload))
+        session.flush()
     if expired:
         session.execute(delete(Client).where(Client.id.in_([r.id for r in expired])))
         session.commit()

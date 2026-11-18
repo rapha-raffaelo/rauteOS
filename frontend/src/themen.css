@@ -199,3 +199,5 @@
 .themen-agenda-actions{font-size:13px;line-height:1.55}
 .themen-agenda-actions ol{padding-left:20px;margin:6px 0 0}
 .themen-agenda-actions li+li{margin-top:8px}
+
+.asset-card-wrap{position:relative;min-width:0}.asset-card-wrap .asset-card{width:100%;height:100%;padding-right:40px}.asset-trash{position:absolute;right:9px;top:9px;display:grid;place-items:center;width:28px;height:28px;border:1px solid var(--line);border-radius:7px;background:var(--card);color:var(--muted);cursor:pointer}.asset-trash:hover{color:var(--ink);border-color:var(--tint)}.asset-trash:disabled{opacity:.4;cursor:wait}.asset-stage{display:flex;align-items:center;gap:8px;font-size:13px}.asset-stage select{padding:8px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink)}

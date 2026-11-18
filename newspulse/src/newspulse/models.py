@@ -561,7 +561,7 @@ class Client(Base):
 
 #: How long a deactivated mandate stays in the archive before it is deleted
 #: with everything it holds.
-ARCHIVE_DAYS = 90
+ARCHIVE_DAYS = 84
 
 
 #: The confidence floor beneath :func:`visible_coverage`'s main question. It is
@@ -4804,3 +4804,25 @@ class ClientPerson(Base):
         Boolean, nullable=False, default=False, server_default=text("0"))
     created_at: Mapped[dt.datetime] = mapped_column(UTCDateTime(), nullable=False, default=_utcnow)
     updated_at: Mapped[dt.datetime] = mapped_column(UTCDateTime(), nullable=False, default=_utcnow)
+
+
+class TrashEntry(Base):
+    """Transactional snapshots of deleted application records, retained 84 days."""
+    __tablename__ = 'trash_entries'
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    title: Mapped[str] = mapped_column(Text)
+    record_type: Mapped[str] = mapped_column(String(100))
+    client_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    deleted_at: Mapped[dt.datetime] = mapped_column(UTCDateTime(), default=_utcnow)
+    expires_at: Mapped[dt.datetime] = mapped_column(UTCDateTime(), index=True)
+    payload: Mapped[dict] = mapped_column(JSON)
+
+
+from sqlalchemy import event
+from sqlalchemy.orm import Session as _TrashSession
+
+@event.listens_for(_TrashSession, 'before_flush')
+def _capture_deleted_records(session, flush_context, instances):
+    if session.deleted or session.dirty:
+        from .recycle_bin import capture_deleted
+        capture_deleted(session)

@@ -456,6 +456,8 @@ def create_app() -> FastAPI:
     # The long clock: six months of evidenced hooks, and the document a retainer
     # conversation is held over (DEC-5).
     app.include_router(plan_view.router)
+    from .routes import recycle_bin
+    app.include_router(recycle_bin.router)
     # One page per fast-lane opportunity (GEL-01): everything stored about one
     # story for one mandate, in one place. A read-only route — it is the page a
     # consultant opens repeatedly while a window closes, so looking at it must

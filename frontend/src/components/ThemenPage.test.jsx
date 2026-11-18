@@ -2,7 +2,7 @@ import React from 'react';
 import {render,screen,fireEvent,cleanup,waitFor} from '@testing-library/react';
 import {afterEach,beforeEach,it,expect,vi} from 'vitest';
 import {ThemenPage,Agenda,pitchOf} from './ThemenPage.jsx';
-import {AssetsPage,KINDS,WritingProgress} from './AssetsPage.jsx';
+import {AssetsPage,KINDS,WritingProgress,Editor,Workspace} from './AssetsPage.jsx';
 beforeEach(()=>{vi.stubGlobal('confirm',vi.fn(()=>true));HTMLDialogElement.prototype.showModal=function(){this.setAttribute('open','');};HTMLDialogElement.prototype.close=function(){this.removeAttribute('open');};});
 afterEach(()=>{cleanup();vi.unstubAllGlobals();window.history.replaceState(null,'','/');});
 
@@ -188,4 +188,26 @@ it('shows concrete topic actions without inventing a scheduled date',async()=>{
  expect(screen.getByText('Produktfragen für das Briefing sammeln')).toBeTruthy();
  expect(screen.getByText('Aktueller Anlass')).toBeTruthy();
  expect(screen.getByText('Termin noch offen')).toBeTruthy();
+});
+
+
+it('changes an asset stage without editing or releasing its text',async()=>{
+ const onSaved=vi.fn(),text={id:5,type:'asset',kind:'statement',title:'Statement',body:'Entwurf',digest:'d'.repeat(64),stage:'offen'};
+ const calls=routes({'/activation/asset/5/stage':{texts:[{...text,stage:'review'}]}});
+ render(<Editor text={text} path="clients/1/opportunities/developed/7/activation" onSaved={onSaved}/>);
+ fireEvent.change(screen.getByLabelText('Stadium des Assets'),{target:{value:'review'}});
+ await waitFor(()=>expect(onSaved).toHaveBeenCalledOnce());
+ expect(JSON.parse(calls[0].body)).toEqual({stage:'review'});
+});
+
+it('requires confirmation before moving an asset to the recycle bin',async()=>{
+ const text={id:5,type:'asset',kind:'statement',title:'Statement prüfen',body:'Entwurf',digest:'d'.repeat(64),stage:'offen'};
+ const calls=routes({'/opportunities/developed/7':detail,'/opportunities/developed/7/activation':{texts:[text],latest:null},'/activation/asset/5':{texts:[],latest:null}});
+ render(<Workspace clientId={1} kind="developed" identity={7}/>);
+ const trash=await screen.findByRole('button',{name:'Statement prüfen in den Papierkorb'});
+ confirm.mockReturnValue(false);fireEvent.click(trash);
+ expect(calls.some(c=>c.method==='DELETE')).toBe(false);
+ confirm.mockReturnValue(true);fireEvent.click(trash);
+ await waitFor(()=>expect(calls.some(c=>c.method==='DELETE')).toBe(true));
+ await waitFor(()=>expect(screen.queryByRole('button',{name:'Statement prüfen in den Papierkorb'})).toBeNull());
 });

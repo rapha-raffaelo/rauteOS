@@ -75,6 +75,7 @@ export function Editor({text,path,onSaved,exportBase,onCheck,checking=false,clie
  const released=Boolean(text.released_at),locked=released||readOnly;
  const label=LABEL[text.kind]||text.kind_label||text.kind;
  async function save(){setSaving(true);setError('');setNotice('');try{onSaved(await request(`${path}/${text.type}/${text.id}`,{method:'PUT',body:JSON.stringify({digest:text.digest,title,body})}));setNotice('Gespeichert.');}catch(e){setError(e.message);}finally{setSaving(false);}}
+ async function changeStage(stage){setError('');try{onSaved(await request(`${path}/${text.type}/${text.id}/stage`,{method:'PUT',body:JSON.stringify({stage})}));}catch(e){setError(e.message);}}
  async function copy(){try{await navigator.clipboard.writeText(title?`${title}\n\n${body}`:body);setNotice('Text kopiert.');}catch{setNotice('Bitte den Text im Feld markieren und kopieren.');}}
  function pickLogo(value){setLogo(value);keepLogo(logoKey,value);}
  const logoSrc=logo==='kunde'?client.logo:logo==='raute'?RAUTE_LOGO:'';
@@ -83,6 +84,7 @@ export function Editor({text,path,onSaved,exportBase,onCheck,checking=false,clie
    <div><h2>{label}</h2>
     <span className={`themen-tag${released?' themen-tag--on':' themen-tag--star'}`}>{released?'Freigegeben':readOnly?'Abgeschlossen':dirty?'Ungespeicherte Änderungen':'Entwurf'}</span></div>
    <div className="asset-editor__acts">
+    <label className="asset-stage">Stadium <select aria-label="Stadium des Assets" value={text.stage||'offen'} disabled={saving||checking} onChange={e=>changeStage(e.target.value)}><option value="offen">Offen</option><option value="in_arbeit">In Arbeit</option><option value="review">Review</option><option value="erledigt">Done</option></select></label>
     <div className="asset-logo-switch" role="group" aria-label="Logo">{LOGOS.map(([key,name])=>
      <button key={key} type="button" aria-pressed={logo===key} onClick={()=>pickLogo(key)}>{name}</button>)}</div>
     {exportBase&&<ExportBox base={exportBase} logo={logo}/>}
@@ -171,6 +173,12 @@ export function Workspace({clientId,client={},kind,identity,initialText='',embed
  }
  async function speaker(value){setError('');const [k,id]=value.split(':');
   try{await choose({speaker_person_id:k==='p'?Number(id):null,speaker_statement_id:null});}catch(e){setError(e.message);}}
+ async function trashText(text){
+  if(!window.confirm(`„${text.title||'Dieses Asset'}“ in den Papierkorb verschieben? Die gespeicherte Fassung bleibt zwölf Wochen wiederherstellbar.`))return;
+  setBusy(true);setError('');
+  try{const value=await request(`${path}/${text.type}/${text.id}`,{method:'DELETE',body:JSON.stringify({digest:text.digest})});setData(value);if(open===`${text.type}-${text.id}`)setOpen('');onCompleted?.();}
+  catch(e){setError(e.message);}finally{setBusy(false);}
+ }
  async function create(input){setBusy(true);setError('');setWritingKind(input.kind);setProgressHidden(false);try{
   if(detail.speaker_statement_id || (input.contact_id&&!detail.contact_ids.includes(input.contact_id)))await choose({contact_ids:input.contact_id?[...new Set([...detail.contact_ids,input.contact_id])]:detail.contact_ids});
   waiting.current=true;
@@ -197,9 +205,9 @@ export function Workspace({clientId,client={},kind,identity,initialText='',embed
   {(busy||running)&&progressHidden&&<p role="status">RAUTE schreibt {LABEL[busy?writingKind:data.latest.kind]||'den Text'}… <button className="btn btn--quiet" onClick={()=>setProgressHidden(false)}>Fortschritt anzeigen</button></p>}
   {data.latest?.status==='failed'&&<p role="alert" className="twin-error">{data.latest.note||'Der Entwurf ist fehlgeschlagen.'}</p>}
   {data.texts.length>0&&<section aria-labelledby={listId}><h2 id={listId} className="assets-section-title">Assets zu diesem Thema</h2>
-   <div className="assets-list">{data.texts.filter(text=>!allowedKinds||allowedKinds.includes(text.kind)).map(text=>{const key=`${text.type}-${text.id}`;return <button type="button" key={key} className="asset-card" aria-pressed={open===key} onClick={()=>setOpen(open===key?'':key)}>
+   <div className="assets-list">{data.texts.filter(text=>!allowedKinds||allowedKinds.includes(text.kind)).map(text=>{const key=`${text.type}-${text.id}`;return <div key={key} className="asset-card-wrap"><button type="button" className="asset-card" aria-pressed={open===key} onClick={()=>setOpen(open===key?'':key)}>
     <span>{LABEL[text.kind]||text.kind}<em className={`themen-tag${text.released_at?' themen-tag--on':''}`}>{text.released_at?'Freigegeben':'Entwurf'}</em></span>
-    <strong>{text.title||'Ohne Titel'}</strong></button>;})}</div></section>}
+    <strong>{text.title||'Ohne Titel'}</strong><small>{({offen:'Offen',in_arbeit:'In Arbeit',review:'Review',erledigt:'Done'})[text.stage||'offen']}</small></button><button type="button" className="asset-trash" aria-label={`${text.title||'Asset'} in den Papierkorb`} title="In den Papierkorb" disabled={busy||running} onClick={()=>trashText(text)}><svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 10v7m4-7v7"/></svg></button></div>;})}</div></section>}
   {current&&<Editor key={`${open}-${current.digest}`} client={client} readOnly={closed||inactive} text={current} path={path} exportBase={exportBase(current)} onSaved={value=>{setData(value);onCompleted?.();}}
    checking={running} onCheck={async t=>{setError('');try{const job=await request(`${path}/${t.type}/${t.id}/check`,{method:'POST'});setData(v=>({...v,latest:{...job,kind:t.kind,started_at:new Date().toISOString()}}));}catch(e){setError(e.message);}}}/>}
   {inactive?<p className="topic-notice">Das Thema ist deaktiviert. Assets und Verlauf bleiben erhalten. <a href={`/client/${clientId}/themen`}>Unter Themen wieder aktivieren →</a></p>:closed?<p className="topic-notice">Dieses Thema ist abgeschlossen. <a href={`/client/${clientId}/themen?kind=${kind}&context=${identity}&step=ergebnis`}>Ergebnis ansehen oder wieder öffnen →</a></p>:<NewAsset detail={detail} running={running||busy} onCreate={create} allowedKinds={allowedKinds} initialInstruction={initialInstruction} initialContact={initialContact}/>}

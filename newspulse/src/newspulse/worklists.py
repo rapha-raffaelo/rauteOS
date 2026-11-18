@@ -193,6 +193,15 @@ def sync_decision_tasks(session: Session, decisions, boards: list[TaskBoard]) ->
             task.source_open = True
             task.source_kind = decision.kind
             task.context_href = decision.href
+    from .models import Outreach, OutreachState
+    for model, text_type in ((Asset,'asset'),(Outreach,'outreach')):
+        for row in session.scalars(select(model).join(Client,Client.id==model.client_id).where(Client.active.is_(True),Client.is_competitor.is_(False))):
+            if text_type=='outreach' and row.state!=OutreachState.ENTWURF:
+                continue
+            task = asset_task(session,row,text_type,boards=boards)
+            if task is not None:
+                active.add(task.source_key)
+                task.source_open = True
     for key, task in by_key.items():
         if key not in active and task.source_open:
             task.source_open = False
@@ -561,3 +570,19 @@ def overdue_for(session, member, *, today=None):
     return [task for task in open_tasks(session)
             if member in (task.assignees or []) and task.due_on and task.due_on < today
             and task.source_open is not False]
+
+
+def asset_task(session, row, text_type='asset', *, boards=None):
+    """One shared work stage for an asset and its card on the decisions board."""
+    key = f'{text_type}:{row.id}'
+    task = session.scalar(select(Task).where(Task.source_key==key))
+    if task is not None: return task
+    if session.get(DismissedTaskSource,key): return None
+    from . import workspaces
+    boards = boards or task_boards(session)
+    board_id = next(b.id for b in boards if b.system_key=='decisions')
+    session.execute(sqlite_insert(Task).values(board_id=board_id, source_key=key, source_kind='asset',
+        source_open=True, client_id=row.client_id, title=(getattr(row,'title','') or getattr(row,'subject','') or 'Asset ohne Titel')[:200],
+        note='Asset bearbeiten und abstimmen.',priority='mittel',status='offen',owner='',assignees=[],
+        context_href=workspaces.text_href(session,row,text_type),created_at=_now()).on_conflict_do_nothing(index_elements=['source_key']))
+    return session.scalar(select(Task).where(Task.source_key==key))

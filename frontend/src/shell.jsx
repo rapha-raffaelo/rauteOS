@@ -268,6 +268,7 @@ export function Shell({ data, portals = true }) {
         })}
       </nav>
       <div id="workspace-account" className="side__foot">
+        {link("/trash", "Papierkorb")}
         {link("/settings", "Einstellungen")}
         {data.login && (
           <form method="post" action="/logout" className="side__out">

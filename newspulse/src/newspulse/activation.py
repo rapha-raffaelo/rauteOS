@@ -245,5 +245,12 @@ def read(session,workspace):
                     title=title,body=body,released_at=row.released_at,digest=asset_evidence.digest(title,body),
                     quality={},quality_stale=True,contact_id=getattr(row,'contact_id',None),
                     evidence_sources=[],evidence_statements=[],href=workspaces.text_href(session,row,text_type)))
+    from . import worklists
+    for item in texts:
+        row = session.get(Asset if item['type']=='asset' else Outreach,item['id'])
+        task = worklists.asset_task(session,row,item['type'])
+        item['stage'] = task.status if task else 'offen'
+        item['task_id'] = task.id if task else None
+    session.commit()
     return dict(formats=[dict(key=k,label=v) for k,v in FORMATS],texts=texts,
         latest=dict(id=jobs[0].id,status=jobs[0].status,kind=jobs[0].kind,note=jobs[0].note,started_at=jobs[0].started_at) if jobs else None)

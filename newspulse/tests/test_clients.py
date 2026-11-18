@@ -388,8 +388,8 @@ def test_deactivate_is_soft_and_keeps_articles_and_analyses(session):
     assert session.query(Analysis).filter_by(client_id=client.id).count() == 1
 
 
-def test_an_archived_mandate_is_deleted_with_its_data_after_ninety_days(session):
-    """Deactivation starts a 90-day archive; the purge then deletes the mandate
+def test_an_archived_mandate_is_deleted_with_its_data_after_twelve_weeks(session):
+    """Deactivation starts a 84-day archive; the purge then deletes the mandate
     and everything that cascades from it, and leaves live ones and competitors."""
     import datetime as dt
 
@@ -416,15 +416,15 @@ def test_an_archived_mandate_is_deleted_with_its_data_after_ninety_days(session)
     deactivate_client(session, rival.id)
     stamp = session.get(Client, gone.id).deactivated_at
     assert stamp is not None
-    assert session.get(Client, gone.id).purge_on == (stamp + dt.timedelta(days=90)).date()
+    assert session.get(Client, gone.id).purge_on == (stamp + dt.timedelta(days=84)).date()
     assert session.get(Client, rival.id).purge_on is None
 
     # Deactivating again must not push the deletion back.
     update_client(session, gone.id, active=False)
     assert session.get(Client, gone.id).deactivated_at == stamp
 
-    assert purge_archived(session, now=stamp + dt.timedelta(days=89)) == []
-    assert purge_archived(session, now=stamp + dt.timedelta(days=91)) == ["Weg AG"]
+    assert purge_archived(session, now=stamp + dt.timedelta(days=83)) == []
+    assert purge_archived(session, now=stamp + dt.timedelta(days=85)) == ["Weg AG"]
     assert {c.name for c in session.query(Client)} == {"Bleibt AG", "Rivale AG"}
     assert session.query(Analysis).count() == 0
     assert kept.active

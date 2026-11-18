@@ -160,3 +160,53 @@ def edit(client_id:int,kind:Kind,identity:int,text_type:Literal['asset','outreac
     session.add(OpportunityEvent(workspace_id=workspace.id,kind='text_edited',detail=dict(type=text_type,id=text_id)))
     session.commit();session.expire_all()
     return activation.read(session,workspace)
+
+
+class StageInput(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    stage: Literal['offen','in_arbeit','review','erledigt']
+
+@router.put('/{text_type}/{text_id}/stage')
+def set_stage(client_id:int,kind:Kind,identity:int,text_type:Literal['asset','outreach'],text_id:int,body:StageInput,session:Session=Depends(get_db)):
+    from ... import worklists
+    from ...models import DismissedTaskSource
+    workspace=workspace_or_404(session,client_id,kind,identity)
+    _,row=linked_text(session,workspace,text_type,text_id)
+    ignored=session.get(DismissedTaskSource,f'{text_type}:{row.id}')
+    if ignored is not None:
+        session.delete(ignored)
+        session.flush()
+    task=worklists.asset_task(session,row,text_type)
+    worklists.set_task_status(task,body.stage)
+    session.commit()
+    return activation.read(session,workspace)
+
+class DeleteInput(BaseModel):
+    digest: str = Field(min_length=64,max_length=64)
+
+@router.delete('/{text_type}/{text_id}')
+def delete_text(client_id:int,kind:Kind,identity:int,text_type:Literal['asset','outreach'],text_id:int,body:DeleteInput,session:Session=Depends(get_db)):
+    from ...models import Task
+    workspace=workspace_or_404(session,client_id,kind,identity)
+    _,row=linked_text(session,workspace,text_type,text_id)
+    if session.scalar(select(OpportunityAssetRun.id).where(OpportunityAssetRun.workspace_id==workspace.id,OpportunityAssetRun.status=='running')):
+        raise HTTPException(409,'Für dieses Thema läuft noch ein Arbeitsschritt. Bitte danach löschen.')
+    if text_type=='outreach' and (workspace.data or {}).get('workflow',{}).get('sending',{}).get(str(row.id)):
+        raise HTTPException(409,'Versand läuft oder ist noch ungeklärt. Bitte zuerst den Versandstatus klären.')
+    if asset_evidence.digest(*activation.text_parts(row))!=body.digest:
+        raise HTTPException(409,'Der Text wurde inzwischen geändert. Bitte neu laden.')
+    task=session.scalar(select(Task).where(Task.source_key==f'{text_type}:{row.id}'))
+    column=OpportunityAssetRun.asset_id if text_type=='asset' else OpportunityAssetRun.outreach_id
+    jobs=list(session.scalars(select(OpportunityAssetRun).where(column==row.id)))
+    workspace.revision += 1
+    try:
+        session.flush()
+    except StaleDataError:
+        session.rollback()
+        raise HTTPException(409,'Das Thema wurde inzwischen geändert. Bitte neu laden.')
+    if task is not None: session.delete(task)
+    for job in jobs: session.delete(job)
+    session.delete(row)
+    session.commit()
+    session.expire_all()
+    return activation.read(session,workspace)
