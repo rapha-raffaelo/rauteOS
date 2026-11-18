@@ -1,6 +1,7 @@
 import {journalistRequest as request} from './journalists-api.js';
 
 export async function setTopicActive(clientId,row,active){
+ if(!active&&!window.confirm(`Thema „${row.title||'dieses Thema'}“ wirklich deaktivieren?\n\nEs wird aus den aktiven Assets-Reitern entfernt. Vorhandene Assets, Freigaben und der Verlauf bleiben erhalten. Du kannst es später wieder aktivieren.`))return null;
  const base=`clients/${clientId}/opportunities/${row.context_kind}/${row.context_id}`;
  const detail=await request(base);
  const body=active?{revision:detail.revision,storyline:(detail.storyline||detail.storylines?.[0]||detail.title||row.title).trim(),

@@ -56,7 +56,7 @@ function Card({clientId,clientName,row,onChanged}){
  const o=row.occasion;
  const [busy,setBusy]=useState(false),[error,setError]=useState('');
  const active=row.status==='active'&&!row.workflow_summary?.completed;
- async function toggle(){setBusy(true);setError('');try{const next=await setTopicActive(clientId,row,!active);details.delete(`clients/${clientId}/opportunities/${row.context_kind}/${row.context_id}`);onChanged(next);}catch(e){setError(e.message);}finally{setBusy(false);}}
+ async function toggle(){setBusy(true);setError('');try{const next=await setTopicActive(clientId,row,!active);if(!next)return;details.delete(`clients/${clientId}/opportunities/${row.context_kind}/${row.context_id}`);onChanged(next);}catch(e){setError(e.message);}finally{setBusy(false);}}
  return <article id={`thema-${row.context_kind}-${row.context_id}`} className={`themen-card${active?' themen-card--active':''}`}>
   <div className="themen-card__meta"><span className={`themen-tag${fromMedien(row)?' themen-tag--star':''}`}>{ORIGIN[row.origin]||'Vorschlag von RAUTE'}{row.starred_by&&` · @${row.starred_by}`}</span>
    {active&&<span className="themen-tag themen-tag--on">✓ Aktiviert</span>}{!active&&row.workflow_summary?.label&&<span className="themen-tag">{row.workflow_summary.label}</span>}

@@ -3,7 +3,7 @@ import {render,screen,fireEvent,cleanup,waitFor} from '@testing-library/react';
 import {afterEach,beforeEach,it,expect,vi} from 'vitest';
 import {ThemenPage,Agenda,pitchOf} from './ThemenPage.jsx';
 import {AssetsPage,KINDS,WritingProgress} from './AssetsPage.jsx';
-beforeEach(()=>{HTMLDialogElement.prototype.showModal=function(){this.setAttribute('open','');};HTMLDialogElement.prototype.close=function(){this.removeAttribute('open');};});
+beforeEach(()=>{vi.stubGlobal('confirm',vi.fn(()=>true));HTMLDialogElement.prototype.showModal=function(){this.setAttribute('open','');};HTMLDialogElement.prototype.close=function(){this.removeAttribute('open');};});
 afterEach(()=>{cleanup();vi.unstubAllGlobals();window.history.replaceState(null,'','/');});
 
 const json=body=>({ok:true,headers:{get:()=>'application/json'},json:async()=>body});
