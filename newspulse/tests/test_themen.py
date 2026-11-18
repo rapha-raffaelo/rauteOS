@@ -465,3 +465,23 @@ def test_alert_digest_uses_shared_topic_sources_and_excludes_old_news(session, m
     first.published_at -= dt.timedelta(days=2)
     session.commit()
     assert alert_digest.bundles(session, mandate.id) == []
+
+
+def test_today_hides_section_url_duplicates_and_marks_both_copies(session, mandate, web):
+    from newspulse.web.routes.today import _fetch_items, _local_tz
+    from newspulse.models import TriageState
+    first = _article(session, 'Qonto erhält Banklizenz', 'https://ex.de/banken/a', about=mandate)
+    copy = _article(session, first.title, 'https://ex.de/unternehmen/a', about=mandate)
+    copy.published_at = first.published_at
+    other = _article(session, first.title, 'https://another.de/a', about=mandate)
+    session.commit()
+    day=first.published_at.astimezone(_local_tz()).date()
+    items=_fetch_items(session,day)
+    assert len(items)==2
+    assert {item.url for item in items} & {first.url,copy.url}
+    assert other.url in {item.url for item in items}
+    first_analysis=session.query(Analysis).filter_by(article_id=first.id).one()
+    response=web.post(f'/triage/{first_analysis.id}',data={'state':'gelesen','redirect_to':'/today'})
+    assert response.status_code==200
+    session.expire_all()
+    assert session.query(Analysis).filter_by(article_id=copy.id).one().triage_state==TriageState.GELESEN

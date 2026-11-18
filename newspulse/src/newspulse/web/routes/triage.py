@@ -52,9 +52,12 @@ def set_triage_state(
         if analysis is not None:
             # Clicking the state an item already has clears it back to NEU, so the
             # same button both marks and un-marks.
-            analysis.triage_state = (
+            next_state = (
                 TriageState.NEU if analysis.triage_state is new_state else new_state
             )
+            from ... import coverage_identity
+            for equivalent in coverage_identity.equivalents(session,analysis):
+                equivalent.triage_state = next_state
             session.commit()
 
     # Only ever redirect within this app: the target comes from a form field, so

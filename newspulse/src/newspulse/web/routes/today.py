@@ -477,6 +477,13 @@ def _fetch_items(session: Session, day: dt.date) -> list[TodayItem]:
             Article.published_at.desc(),
         )
     )
+    from ... import coverage_identity
+    rows, seen = [], set()
+    for analysis, article, client in session.execute(stmt):
+        key = (client.id, coverage_identity.identity(article))
+        if key not in seen:
+            seen.add(key)
+            rows.append((analysis, article, client))
     items = [
         TodayItem(
             analysis_id=analysis.id,
@@ -495,7 +502,7 @@ def _fetch_items(session: Session, day: dt.date) -> list[TodayItem]:
             client_name=client.name,
             is_alert=analysis.is_alert,
         )
-        for analysis, article, client in session.execute(stmt).all()
+        for analysis, article, client in rows
     ]
     # The SQL ORDER BY already settled alerts-first, importance, and the
     # published_at tiebreak. Re-sort to slot tier in *below* importance — a lower
