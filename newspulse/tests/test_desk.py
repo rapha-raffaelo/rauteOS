@@ -736,3 +736,13 @@ def test_top_news_respects_local_midnight_and_never_falls_back(session, monkeypa
     session.commit()
     assert [n.title for n in desk._top_news(session,{client.id:client},now)] == ['Local midnight']
     assert desk._top_news(session,{client.id:client},now+dt.timedelta(days=1)) == []
+
+
+def test_desk_retains_all_open_topics_for_scrolling_newest_first(session):
+    client = _mandate(session)
+    for index in range(12):
+        session.add(Angle(client_id=client.id,generated_at=_NOW-dt.timedelta(hours=index),
+            subject=f'Topic {index}',message='m',context='k'))
+    session.commit()
+    chances=desk.build(session,now=_NOW).chances
+    assert [chance.title for chance in chances]==[f'Topic {index}' for index in range(12)]

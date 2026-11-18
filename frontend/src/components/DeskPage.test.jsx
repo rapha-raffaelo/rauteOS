@@ -157,3 +157,14 @@ it('shows task priority and status on the prioritized card',async()=>{
  render(<DeskPage/>);await screen.findByText('Meine Aufgabe');
  expect(screen.getByText('⚑ Hoch')).toBeTruthy();expect(screen.getByText('Review')).toBeTruthy();
 });
+
+it('keeps topics beyond the fifth item in a keyboard-accessible scrolling region', async()=>{
+ const chances=Array.from({length:12},(_,i)=>({client:row.client,kind:'developed',status:'draft',title:`Thema ${i+1}`,since:i===0?'2026-11-18T12:00:00Z':'2026-11-17T12:00:00Z',href:`/client/7/themen#${i}`}));
+ vi.stubGlobal('fetch',vi.fn().mockResolvedValue(reply({...empty,rows:[row],chances})));
+ render(<DeskPage/>);
+ await screen.findByText('Thema 12');
+ const region=screen.getByRole('region',{name:'Potenzielle Themen – neueste zuerst'});
+ expect(region.tabIndex).toBe(0);
+ expect(region.querySelectorAll('a')).toHaveLength(12);
+ expect(region.querySelector('time').dateTime).toBe('2026-11-18T12:00:00Z');
+});

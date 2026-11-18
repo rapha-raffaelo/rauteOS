@@ -156,3 +156,7 @@ button.task__box:hover{border-color:var(--tint);background:var(--tint-wash)}
 
 .task__review{flex:none;white-space:nowrap;font-size:12px;font-weight:600;color:var(--tint)}
 .task__badges{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:12px}.task__priority{font-weight:600;color:var(--muted)}.task__priority--mittel{color:var(--tint)}.task__priority--hoch,.task__priority--urgent{color:var(--alert-ink)}.task__priority--urgent{font-weight:800}.task__status{padding:4px 8px;border-radius:6px;background:var(--fill-2);color:var(--ink-2)}
+
+.chance-list{max-height:600px;overflow-y:auto;scrollbar-gutter:stable;overscroll-behavior-y:contain;padding-right:8px}
+.chance-list:focus-visible{outline:2px solid var(--tint);outline-offset:4px;border-radius:6px}
+.chance-list__hint{color:var(--muted);font-size:var(--t-footnote);margin:0 0 10px}

@@ -245,15 +245,17 @@ def today_news(session, client_id, *, now=None):
     day = (now or dt.datetime.now(_local_tz())).astimezone(_local_tz()).date()
     start, end = _day_bounds_utc(day)
     where = (Analysis.client_id == client_id, visible_coverage(), Article.published_at >= start, Article.published_at < end)
-    total = session.scalar(select(func.count()).select_from(Analysis).join(Article).where(*where))
+    from ... import coverage_identity
     rows = session.execute(select(Article, Analysis).join(Analysis, Analysis.article_id == Article.id).where(*where)
         .order_by(Article.published_at.desc(), Article.id.desc()))
     # The archive's newest rows before today, so a quiet morning still shows
     # what the press wrote last; the Überblick tops today up to RECENT_SHOWN.
     earlier = session.execute(select(Article, Analysis).join(Analysis, Analysis.article_id == Article.id)
         .where(Analysis.client_id == client_id, visible_coverage(), Article.published_at < start)
-        .order_by(Article.published_at.desc(), Article.id.desc()).limit(RECENT_SHOWN))
-    return dict(date=day, total=total, items=[_news(a, v) for a, v in rows],
+        .order_by(Article.published_at.desc(), Article.id.desc()))
+    rows=coverage_identity.unique(rows)
+    earlier=coverage_identity.unique(earlier,limit=RECENT_SHOWN)
+    return dict(date=day, total=len(rows), items=[_news(a, v) for a, v in rows],
                 earlier=[_news(a, v) for a, v in earlier])
 
 

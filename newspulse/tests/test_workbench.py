@@ -330,3 +330,26 @@ def test_news_refresh_reuses_guard_and_existing_worker(web, monkeypatch):
     guard.acquire.return_value = False
     assert web.post('/api/v1/news-run').status_code == 409
     assert start.call_count == 1
+
+
+def test_news_collapse_section_copies_but_keep_other_publishers_and_dates(web,db):
+    from newspulse.models import Article, Analysis, Category
+    from newspulse.web.routes.workbench import today_news
+    now=dt.datetime(2026,11,18,12,tzinfo=dt.timezone.utc)
+    cases=[('https://paper.example/banking/story',now,1),('https://paper.example/companies/story',now,1),
+           ('https://other.example/story',now,1),('https://paper.example/earlier/story',now-dt.timedelta(hours=1),1),
+           ('https://paper.example/companies/story-other-client',now,2)]
+    ids=[]
+    for i,(url,published,cid) in enumerate(cases):
+        article=Article(title='Qonto erhält Banklizenz',url=url,source='Paper',title_hash=f'copy{i}',published_at=published)
+        db.add(article);db.flush()
+        value=Analysis(article_id=article.id,client_id=cid,is_relevant=True,category=next(iter(Category)),relevance_score=8,importance_score=9)
+        db.add(value);db.flush();ids.append(value.id)
+    db.commit()
+    result=today_news(db,1,now=now)
+    assert result['total']==len(result['items'])==3
+    web.post(f'/coverage/{ids[0]}/dismiss',data={'redirect_to':'/client/1/overview'},follow_redirects=False)
+    assert today_news(db,1,now=now)['total']==2
+    assert today_news(db,2,now=now)['total']==1
+    web.post(f'/coverage/{ids[0]}/restore',follow_redirects=False)
+    assert today_news(db,1,now=now)['total']==3

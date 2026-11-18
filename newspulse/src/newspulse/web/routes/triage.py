@@ -83,7 +83,10 @@ def dismiss_coverage(
     """
     analysis = session.get(Analysis, analysis_id)
     if analysis is not None and analysis.dismissed_at is None:
-        analysis.dismissed_at = dt.datetime.now(dt.UTC)
+        from ...coverage_identity import equivalents
+        now=dt.datetime.now(dt.UTC)
+        for copy in equivalents(session,analysis):
+            copy.dismissed_at=now
         session.commit()
     return RedirectResponse(_safe_back(redirect_to), status_code=_SEE_OTHER)
 
@@ -97,7 +100,9 @@ def restore_coverage(
     """Undo a dismissal. The scores were never touched, so nothing to rebuild."""
     analysis = session.get(Analysis, analysis_id)
     if analysis is not None:
-        analysis.dismissed_at = None
+        from ...coverage_identity import equivalents
+        for copy in equivalents(session,analysis):
+            copy.dismissed_at=None
         session.commit()
     return RedirectResponse(_safe_back(redirect_to), status_code=_SEE_OTHER)
 

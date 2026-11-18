@@ -85,7 +85,7 @@ export function DeskPage({ translations = {}, language = 'de' }) {
   const waiting = board.in_flight.filter((item) => item.state === 'raus');
   const chances = board.chances || [];
   // Spec 12: what could become communication and is not activated yet.
-  const potential = chances.filter((c) => c.status !== 'active').slice(0, 5);
+  const potential = chances.filter((c) => c.status !== 'active');
   const brief = briefing(board, t);
   const written = ai || board.briefing_ai;
   async function phrase() {
@@ -166,13 +166,16 @@ export function DeskPage({ translations = {}, language = 'de' }) {
       </div>
       <div className="desk-col">
         <Card title={t('Potenzielle Themen')}>
+          {!!potential.length && <p className="chance-list__hint">{potential.length} {t('Themen')} · {t('Neueste zuerst')}</p>}
+          <div className="chance-list" role="region" aria-label={t('Potenzielle Themen – neueste zuerst')} tabIndex={0}>
           {potential.map((c) => <a className="chance" href={c.href} key={c.href}>
             <span className="chance__ico" aria-hidden="true"><svg className="ico"><use href="#ico-intel" /></svg></span>
             <span className="task__b"><span className="task__t" title={c.title}>{c.title}</span>
               <span className="task__m">{c.client.name} · {t(ORIGIN[c.origin] || (c.kind === 'detected' ? 'Anlass aus dem Radar' : 'Vorschlag von RAUTE'))}</span></span>
-            {c.since && <span className="info-row__age">{date(c.since)}</span>}
+            {c.since && <time className="info-row__age" dateTime={c.since} title={`${t('Erkannt am')} ${date(c.since)}`}>{date(c.since)}</time>}
           </a>)}
           {!potential.length && <p className="pane__empty">{t('Gerade kein offenes Thema. Unter Medien macht der Stern einen Artikel zum Thema.')}</p>}
+          </div>
         </Card>
         <Tile icon="profil" title={t('Kundenfreigaben')} note={t('Warten auf Abstimmungen')}
           count={customer.length} unit={t('offen')} href="/aufgaben?workspace=decisions" />

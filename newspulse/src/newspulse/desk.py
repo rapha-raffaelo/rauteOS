@@ -582,7 +582,7 @@ def build(session: Session, *, now: dt.datetime | None = None, member: str | Non
         rows=rows,
         decisions=_personal_decisions(session, _decisions(session, by_id), member),
         in_flight=_in_flight(session, by_id),
-        chances=_chances(session, by_id, listed=listed),
+        chances=_chances(session, by_id, listed=listed, limit=None),
         top_news=_top_news(session, by_id, moment),
         tasks=open_tasks[:TASKS_SHOWN],
         tasks_open=len(open_tasks),
@@ -599,22 +599,22 @@ TOP_NEWS_SHOWN = 6
 
 def _top_news(session: Session, clients: dict[int, Client], now: dt.datetime) -> list[NewsItem]:
     from .models import visible_coverage
+    from . import coverage_identity
 
     if not clients:
         return []
     local_day = now.astimezone(config.local_zone()).date()
     start = dt.datetime.combine(local_day, dt.time.min, tzinfo=config.local_zone()).astimezone(dt.UTC)
     rows = session.execute(
-        select(Analysis, Article).join(Article, Analysis.article_id == Article.id)
+        select(Article, Analysis).join(Analysis, Analysis.article_id == Article.id)
         .where(visible_coverage(), Analysis.client_id.in_(clients),
                Article.published_at >= start, Article.published_at <= now)
         .order_by(Analysis.importance_score.desc(), Article.published_at.desc())
-        .limit(TOP_NEWS_SHOWN)
-    ).all()
+    )
     return [NewsItem(client=clients[analysis.client_id], title=article.title, source=article.source,
                      url=article.url, published_at=article.published_at, importance=analysis.importance_score,
                      href=f"/client/{analysis.client_id}/medien")
-            for analysis, article in rows]
+            for article, analysis in coverage_identity.unique(rows,limit=TOP_NEWS_SHOWN)]
 
 
 #: How many open tasks "Heute priorisiert" carries before the decisions.
@@ -652,7 +652,7 @@ def _personal_decisions(session, decisions, member):
 CHANCES_SHOWN = 6
 
 
-def _chances(session: Session, clients: dict[int, Client], limit: int = CHANCES_SHOWN, *,
+def _chances(session: Session, clients: dict[int, Client], limit: int | None = CHANCES_SHOWN, *,
              listed: dict[int, list[dict]] | None = None, kind: str | None = None) -> list[Chance]:
     """The newest open opportunities across every mandate.
 
