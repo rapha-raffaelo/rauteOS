@@ -47,7 +47,10 @@ def summary(session, workspace, *, assets=None, letters=None):
     exclusive=flow.get('exclusive',{})
     if exclusive.get('until') and not exclusive.get('released_at') and dt.datetime.fromisoformat(exclusive['until']) <= dt.datetime.now(dt.UTC):
         return dict(step='pitches',label='Exklusivfrist abgelaufen',completed=False)
-    if any(research.get('status')=='ready' for research in flow.get('research',{}).values()):
+    if any(flow.get('research',{}).get(str(row.id),{}).get('status')=='ready'
+           and row.state==OutreachState.RAUS and flow.get('followups',{}).get(str(row.id),{}).get('status') not in {'done','closed'}
+           and not any(other.id>row.id and other.journalist==row.journalist and other.outlet==row.outlet for other in letters)
+           for row in letters):
         return dict(step='followup',label='Follow-up bereit',completed=False)
     if any(row.released_at for row in letters):
         return dict(step='followup', label='In Ansprache', completed=False)

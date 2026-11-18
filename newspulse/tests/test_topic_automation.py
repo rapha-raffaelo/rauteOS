@@ -100,3 +100,12 @@ def test_reconciliation_records_a_lost_confirmation_without_resending(web,db,mon
     r=write(web,w.revision,action='send_reconcile',text_id=a.id)
     assert r.status_code==200,r.text
     db.refresh(a);assert a.released_at and a.gmail_message_id=='already-sent'
+
+
+def test_confirmed_reply_does_not_keep_old_research_as_next_step(web,db):
+    d,a,b=letters(web,db)
+    a.released_at=dt.datetime.now(dt.UTC);a.state=OutreachState.ANTWORT
+    w=db.get(OpportunityWorkspace,d['id'])
+    w.data={**w.data,'workflow':{'research':{str(a.id):{'status':'ready'}}}}
+    db.commit()
+    assert topic_workflow.summary(db,w)['label']!='Follow-up bereit'
