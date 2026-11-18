@@ -36,12 +36,19 @@ it('filters Themen and links to a dedicated detail page without hover',async()=>
  expect(screen.getByRole('link',{name:'Weiterarbeiten →'}).getAttribute('href')).toBe('/client/1/themen?kind=detected&context=3&step=assets');
 });
 
-it('opens the angle selection before activating a topic',async()=>{
- const calls=routes({'/opportunities':board,'/agenda':{items:[],total:0}});
+it('activates from the topic card, retains choices and offers deactivation and Assets',async()=>{
+ const calls=routes({'/opportunities':board,'/agenda':{items:[]},'/opportunities/developed/7':detail,
+ '/opportunities/developed/7/activate':{...detail,status:'active',workflow_summary:{label:'In Entwicklung'}},
+ '/opportunities/developed/7/workflow':{...detail,status:'draft',workflow_summary:{label:'Deaktiviert'}}});
  render(<ThemenPage clientId={1}/>);
- const link=await screen.findByRole('link',{name:'Thema entwickeln →'});
- expect(link.getAttribute('href')).toBe('/client/1/themen?kind=developed&context=7&step=blickwinkel');
- expect(calls.some(c=>c.url.endsWith('/activate'))).toBe(false);
+ fireEvent.click(await screen.findByRole('button',{name:'Thema aktivieren'}));
+ await waitFor(()=>expect(document.getElementById('thema-developed-7').classList.contains('themen-card--active')).toBe(true));
+ expect(JSON.parse(calls.find(c=>c.url.endsWith('/activate')).body)).toMatchObject({revision:2,storyline:detail.storylines[0],contact_ids:[]});
+ const card=document.getElementById('thema-developed-7');
+ expect(card.querySelector('a[href="/client/1/assets?kind=developed&context=7"]')).toBeTruthy();
+ fireEvent.click([...card.querySelectorAll('button')].find(b=>b.textContent==='Thema deaktivieren'));
+ await waitFor(()=>expect(card.classList.contains('themen-card--active')).toBe(false));
+ expect(JSON.parse(calls.find(c=>c.url.endsWith('/workflow')).body).action).toBe('deactivate');
 });
 
 it('draws the Agenda with a detail link instead of a hover note',async()=>{
@@ -152,4 +159,23 @@ it('shows a press release as its page with the client logo, and exports with the
  fireEvent.click(screen.getByRole('button',{name:'Exportieren'}));
  expect(screen.getByRole('link',{name:'Herunterladen'}).getAttribute('href')).toBe('/api/v1/clients/1/assets/asset/8/export.docx?logo=raute');
  expect(localStorage.getItem('asset-logo:asset-8')).toBe('raute');
+});
+
+it('gives active topics individual tabs and identifies the currently open topic',async()=>{
+ const second={...board.opportunities[0],status:'active'};
+ routes({'/opportunities':{...board,opportunities:[board.opportunities[1],second]},
+  '/opportunities/detected/3':{...detail,status:'active',title:'Preise fallen'},
+  '/opportunities/developed/7':{...detail,status:'active'},
+  '/opportunities/detected/3/activation':{texts:[],latest:null},
+  '/opportunities/developed/7/activation':{texts:[],latest:null}});
+ render(<AssetsPage clientId={1}/>);
+ const first=await screen.findByRole('tab',{name:/Preise fallen/});
+ expect(first.getAttribute('aria-selected')).toBe('true');
+ expect(screen.getByText('Du arbeitest an')).toBeTruthy();
+ fireEvent.keyDown(first,{key:'ArrowRight'});
+ const secondTab=screen.getByRole('tab',{name:/Online-Verschreibung/});
+ expect(secondTab.getAttribute('aria-selected')).toBe('true');
+ expect(first.getAttribute('aria-selected')).toBe('false');
+ expect(document.activeElement).toBe(secondTab);
+ expect(window.location.search).toBe('?kind=developed&context=7');
 });

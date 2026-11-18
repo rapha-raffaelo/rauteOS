@@ -1,4 +1,5 @@
 import React,{useEffect,useRef,useState} from 'react';
+import {setTopicActive} from '../topic-actions.js';
 import {ThemenWorkflow} from './ThemenWorkflow.jsx';
 import {PageHeading} from './PageHeading.jsx';
 import {journalistRequest as request} from '../journalists-api.js';
@@ -51,34 +52,45 @@ export function DeepDive({clientId,clientName,row}){
  </div>;
 }
 
-function Card({clientId,clientName,row}){
+function Card({clientId,clientName,row,onChanged}){
  const o=row.occasion;
- return <article id={`thema-${row.context_kind}-${row.context_id}`} className={`themen-card${row.status==='active'?' themen-card--active':''}`}>
+ const [busy,setBusy]=useState(false),[error,setError]=useState('');
+ const active=row.status==='active'&&!row.workflow_summary?.completed;
+ async function toggle(){setBusy(true);setError('');try{const next=await setTopicActive(clientId,row,!active);details.delete(`clients/${clientId}/opportunities/${row.context_kind}/${row.context_id}`);onChanged(next);}catch(e){setError(e.message);}finally{setBusy(false);}}
+ return <article id={`thema-${row.context_kind}-${row.context_id}`} className={`themen-card${active?' themen-card--active':''}`}>
   <div className="themen-card__meta"><span className={`themen-tag${fromMedien(row)?' themen-tag--star':''}`}>{ORIGIN[row.origin]||'Vorschlag von RAUTE'}{row.starred_by&&` · @${row.starred_by}`}</span>
-   {row.workflow_summary?.label&&<span className="themen-tag themen-tag--on">{row.workflow_summary.label}</span>}
+   {active&&<span className="themen-tag themen-tag--on">✓ Aktiviert</span>}{!active&&row.workflow_summary?.label&&<span className="themen-tag">{row.workflow_summary.label}</span>}
    {o&&<span className="themen-card__source">{o.source}{o.published_at&&` · ${day(o.published_at)}`}</span>}</div>
   <h2>{row.title}</h2>
   {o?.url&&<p className="themen-hint">Auslöser: <a href={o.url} target="_blank" rel="noopener noreferrer">{o.title||o.source} ↗</a></p>}
   <div className="themen-card__acts">
    <span className="themen-card__left"><DeepDive clientId={clientId} clientName={clientName} row={row}/>
     <a className="themen-card__more" href={`/client/${clientId}/themen?kind=${row.context_kind}&context=${row.context_id}`}>Details ansehen</a></span>
-   <a className="btn btn--go" href={`/client/${clientId}/themen?kind=${row.context_kind}&context=${row.context_id}&step=${row.workflow_summary?.step||(row.status==='active'?'assets':'blickwinkel')}`}>{row.workflow_summary?.completed?'Ergebnis ansehen':row.status==='active'?'Weiterarbeiten':'Thema entwickeln'} →</a>
+   <div className="topic-actions">
+   {row.workflow_summary?.completed?<a className="btn btn--go" href={`/client/${clientId}/themen?kind=${row.context_kind}&context=${row.context_id}&step=ergebnis`}>Ergebnis ansehen →</a>:<>
+    {active&&<a className="btn btn--quiet" href={`/client/${clientId}/themen?kind=${row.context_kind}&context=${row.context_id}&step=${row.workflow_summary?.step||'assets'}`}>Weiterarbeiten →</a>}
+    <button type="button" className={`btn ${active?'btn--quiet':'btn--go'}`} disabled={busy} onClick={toggle}>{busy?'Wird gespeichert…':active?'Thema deaktivieren':'Thema aktivieren'}</button>
+    {active&&<a className="btn btn--go" href={`/client/${clientId}/assets?kind=${row.context_kind}&context=${row.context_id}`}>Zu den Assets →</a>}
+   </>}
+   </div>
   </div>
+  {error&&<p role="alert" className="topic-error">{error}</p>}
  </article>;
 }
 
 export function Agenda({clientId}){
  const [data,setData]=useState(null),[error,setError]=useState('');
  useEffect(()=>{request(`clients/${clientId}/agenda`).then(setData).catch(e=>setError(e.message));},[clientId]);
- const when=item=>item.day?`${String(item.day).padStart(2,'0')}.${item.month.slice(5)}.`:MONTHS[Number(item.month.slice(5))-1];
+ const when=item=>item.day?`${String(item.day).padStart(2,'0')}.${item.month.slice(5)}.`:`${MONTHS[Number(item.month.slice(5))-1]} ${item.month.slice(0,4)}`;
+ const formatLabel=value=>({linkedin:'LinkedIn-Post',pressemitteilung:'Pressemitteilung',statement:'Statement',gastbeitrag:'Gastbeitrag',pitch:'Medienpitch',interviewangebot:'Interviewangebot',kundenmail:'Kundenmail',briefing:'Briefing'})[value]||value;
  return <aside className="themen-agenda" aria-labelledby="agenda-title">
   <header><h2 id="agenda-title">Agenda</h2><a href={data?.href||`/client/${clientId}/plan`}>Ganze Agenda →</a></header>
   {error&&<p role="alert">{error}</p>}
   {data&&!data.items.length&&<p className="themen-empty">Noch keine Termine. Die Agenda füllt sich aus Marktsignalen und Themen.</p>}
   {data?.items.length>0&&<ol className="themen-timeline">{data.items.map(item=><li key={item.id} className={`themen-timeline__item themen-timeline__item--${item.state}`}>
-   <span className="themen-timeline__dot" aria-hidden="true"/>
-   <div><span className="themen-timeline__when">{when(item)}</span><a href={item.href}>{item.title||'Ohne Titel'}</a>
-    <span className="themen-timeline__state">{item.state==='angenommen'?'geplant':'Vorschlag'}{item.format&&` · ${item.format}`}</span></div>
+   <div className="themen-agenda-meta"><span className="themen-timeline__when">{when(item)}</span><span className={`themen-agenda-status${item.state==='angenommen'?' themen-agenda-status--planned':''}`}>{item.state==='angenommen'?'Geplant':'Vorschlag'}</span></div>
+   <h3 className="themen-agenda-topic"><a href={item.href}>{item.title||'Ohne Titel'}</a></h3>
+   <p className="themen-agenda-caption">{item.format&&<span>{formatLabel(item.format)}</span>}{!item.day&&<span>Termin noch offen</span>}</p>
    <a className="themen-agenda-detail-link" href={item.href}>Details ansehen →</a>
   </li>)}</ol>}
   <a className="btn btn--quiet themen-agenda__add" href={`/client/${clientId}/plan#agenda`}>Agenda bearbeiten</a>
@@ -135,7 +147,7 @@ function ThemenList({clientId}){
     <p className="themen-hint">RAUTE schlägt Themen aus den Meldungen der letzten vier Wochen vor.</p>
     {suggestion?.note&&<p role={suggestion.status==='failed'?'alert':'status'}>{suggestion.note}</p>}
     <div className="themen-filters" role="group" aria-label="Themen filtern">{FILTERS.map(([key,label])=><button key={key} type="button" aria-pressed={filter===key} onClick={()=>setFilter(key)}>{label} · {counts[key]}</button>)}</div>
-    {shown.length?shown.map(row=><Card key={`${row.context_kind}-${row.context_id}`} clientId={clientId} clientName={board.client.name} row={row}/>)
+    {shown.length?shown.map(row=><Card key={`${row.context_kind}-${row.context_id}`} clientId={clientId} clientName={board.client.name} row={row} onChanged={next=>setBoard(current=>({...current,opportunities:current.opportunities.map(item=>item.context_kind===row.context_kind&&item.context_id===row.context_id?{...item,status:next.status,workflow_summary:next.workflow_summary}:item)}))}/>)
      :<p className="themen-empty">{filter==='medien'?'Noch nichts aus Medien übernommen. Unter Medien macht der Stern einen Artikel zum Thema.':'Gerade kein offenes Thema.'}</p>}
     <p className="themen-hint"><a href={`/client/${clientId}/medien`}>Weitere Themen in Medien finden →</a></p>
    </main>

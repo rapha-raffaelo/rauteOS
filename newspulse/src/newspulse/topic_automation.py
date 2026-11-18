@@ -22,6 +22,8 @@ def gate(session, row):
     for workspace in session.scalars(select(OpportunityWorkspace).where(
             OpportunityWorkspace.client_id == row.client_id, OpportunityWorkspace.angle_id == row.angle_id)):
         flow = (workspace.data or {}).get('workflow', {})
+        if flow.get('deactivated_at'):
+            raise ValueError('Das Thema ist deaktiviert. Bitte zuerst wieder aktivieren.')
         if flow.get('completed_at'):
             raise ValueError('Das Thema ist abgeschlossen.')
         exclusive = flow.get('exclusive', {})

@@ -38,6 +38,8 @@ def summary(session, workspace, *, assets=None, letters=None):
     if not workspace:
         return dict(step='anlass', label='Neu', completed=False)
     flow = read(session, workspace, assets=assets)
+    if workspace.status!='active' and flow.get('deactivated_at'):
+        return dict(step='blickwinkel',label='Deaktiviert',completed=False)
     if flow.get('completed_at'):
         return dict(step='ergebnis', label='Abgeschlossen', completed=True)
     if assets is None:
@@ -73,6 +75,8 @@ def record(session, workspace, body, actor):
     stamp = now.isoformat()
     if flow.get('completed_at') and body.action != 'reopen':
         raise ValueError('Das Thema ist abgeschlossen. Bitte zuerst wieder öffnen.')
+    if workspace.status!='active' and flow.get('deactivated_at') and body.action!='reopen':
+        raise ValueError('Das Thema ist deaktiviert. Bitte zuerst wieder aktivieren.')
     if body.action in {'approval', 'pitch_approval', 'sent', 'followup', 'outcome'} and body.text_id is None:
         raise ValueError('Bitte einen Text angeben.')
     if body.action == 'approval':
@@ -171,6 +175,17 @@ def record(session, workspace, body, actor):
                 exclusive['released_at'] = stamp
     elif body.action == 'pitch_plan':
         flow['master_pitch'] = body.note
+    elif body.action == 'deactivate':
+        if workspace.status!='active':
+            raise ValueError('Dieses Thema ist nicht aktiviert.')
+        if any(attempt.get('status') in {'sending','uncertain'} for attempt in flow.get('sending',{}).values()):
+            raise ValueError('Bitte zuerst den offenen Versandstatus mit Gmail abgleichen.')
+        running=session.scalar(select(OpportunityAssetRun.id).where(OpportunityAssetRun.workspace_id==workspace.id,
+            OpportunityAssetRun.status=='running',OpportunityAssetRun.started_at>now-dt.timedelta(minutes=20)))
+        if running:
+            raise ValueError('Bitte die laufende Texterstellung oder Prüfung abwarten.')
+        workspace.status='draft'
+        flow.update(deactivated_at=stamp,deactivated_by=actor)
     elif body.action == 'complete':
         if any(attempt.get('status') in {'sending','uncertain'} for attempt in flow.get('sending',{}).values()):
             raise ValueError('Bitte den offenen Versandstatus vor dem Abschluss mit Gmail abgleichen.')

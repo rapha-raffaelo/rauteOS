@@ -1,4 +1,5 @@
 import React,{useEffect,useId,useRef,useState} from 'react';
+import {setTopicActive} from '../topic-actions.js';
 import {PageHeading} from './PageHeading.jsx';
 import {journalistRequest as request} from '../journalists-api.js';
 import {EvidenceReview} from './ActivationPanel.jsx';
@@ -128,30 +129,32 @@ function NewAsset({detail,running,onCreate,allowedKinds,initialInstruction='',in
 }
 
 export function AssetsPage({clientId,params=new URLSearchParams(window.location.search)}){
- const [board,setBoard]=useState(null),[error,setError]=useState('');
+ const [board,setBoard]=useState(null),[error,setError]=useState(''),[changing,setChanging]=useState(false);
  const [selected,setSelected]=useState(params.get('context')?{kind:params.get('kind')||'developed',id:Number(params.get('context'))}:null);
  useEffect(()=>{request(`clients/${clientId}/opportunities`).then(v=>{setBoard(v);
-  if(!selected){const first=v.opportunities.find(r=>r.status==='active');if(first)setSelected({kind:first.context_kind,id:first.context_id});}}).catch(e=>setError(e.message));},[clientId]);
- const active=(board?.opportunities||[]).filter(r=>r.status==='active');
+  if(!selected){const first=v.opportunities.find(r=>r.status==='active'&&!r.workflow_summary?.completed);if(first)setSelected({kind:first.context_kind,id:first.context_id});}}).catch(e=>setError(e.message));},[clientId]);
+ const active=(board?.opportunities||[]).filter(r=>r.status==='active'&&!r.workflow_summary?.completed);
  function pick(row){setSelected({kind:row.context_kind,id:row.context_id});history.replaceState(null,'',`?kind=${row.context_kind}&context=${row.context_id}`);}
  return <section className="themen-page assets-page">
   <PageHeading eyebrow={board?.client.name} title="Assets" description="Aktivierte Themen ausarbeiten: Kundenmail, Statement, Pressemitteilung, Gastbeitrag, Pitch oder eigenes Format."/>
   {error&&<p className="twin-error" role="alert">{error}</p>}
   {!board&&!error&&<p role="status">Assets werden geladen…</p>}
   {board&&<div className="assets-layout">
-   <aside className="assets-themes" aria-labelledby="assets-themes-title"><h2 id="assets-themes-title">Aktivierte Themen</h2>
-    {active.map(row=><button type="button" key={`${row.context_kind}-${row.context_id}`} aria-current={selected?.kind===row.context_kind&&selected?.id===row.context_id?'true':undefined}
-     onClick={()=>pick(row)}><strong>{row.title}</strong><span>{row.created_at&&new Date(row.created_at).toLocaleDateString('de-DE')}</span></button>)}
+   <div className="assets-themes" aria-labelledby="assets-themes-title"><h2 id="assets-themes-title">Aktivierte Themen</h2>
+    <div className="assets-theme-tabs" role="tablist" aria-label="Aktivierte Themen">{active.map((row,index)=>{const chosen=selected?.kind===row.context_kind&&selected?.id===row.context_id;const key=`${row.context_kind}-${row.context_id}`;return <button type="button" role="tab" id={`theme-tab-${key}`} aria-controls={chosen?`theme-panel-${key}`:undefined} aria-selected={chosen} tabIndex={chosen?0:-1} key={key} onClick={()=>pick(row)} onKeyDown={e=>{const offset=e.key==='ArrowRight'?1:e.key==='ArrowLeft'?-1:0;if(offset||e.key==='Home'||e.key==='End'){e.preventDefault();const next=e.key==='Home'?0:e.key==='End'?active.length-1:(index+offset+active.length)%active.length;pick(active[next]);document.getElementById(`theme-tab-${active[next].context_kind}-${active[next].context_id}`)?.focus();}}}>
+     <strong>{row.title}</strong><span>{chosen?'✓ Aktuell geöffnet':'Aktiviertes Thema'}</span></button>;})}</div>
     {!active.length&&<p className="themen-empty">Noch kein Thema aktiviert.</p>}
     <a href={`/client/${clientId}/themen`}>Themen aktivieren →</a>
-   </aside>
-   <main>{selected?<Workspace key={`${selected.kind}-${selected.id}`} clientId={clientId} client={board.client} kind={selected.kind} identity={selected.id} initialText={params.get('text')||''}/>
-    :<p className="themen-empty">Wähle links ein aktiviertes Thema oder aktiviere eines unter Themen.</p>}</main>
+   </div>
+   <main>{selected?<>
+    {active.some(r=>r.context_kind===selected.kind&&r.context_id===selected.id)&&<div className="assets-current-topic"><div><span>Du arbeitest an</span><strong>{active.find(r=>r.context_kind===selected.kind&&r.context_id===selected.id)?.title}</strong><p>Neue Assets werden diesem Thema zugeordnet.</p></div><button className="btn btn--quiet" disabled={changing} onClick={async()=>{setChanging(true);setError('');try{await setTopicActive(clientId,{context_kind:selected.kind,context_id:selected.id},false);const next=await request(`clients/${clientId}/opportunities`);setBoard(next);const first=next.opportunities.find(r=>r.status==='active'&&!r.workflow_summary?.completed);if(first)pick(first);else{setSelected(null);history.replaceState(null,'',`/client/${clientId}/assets`);}}catch(e){setError(e.message);}finally{setChanging(false);}}}>{changing?'Wird deaktiviert…':'Thema deaktivieren'}</button></div>}
+    <div role="tabpanel" id={`theme-panel-${selected.kind}-${selected.id}`} aria-labelledby={active.some(r=>r.context_kind===selected.kind&&r.context_id===selected.id)?`theme-tab-${selected.kind}-${selected.id}`:undefined}><Workspace key={`${selected.kind}-${selected.id}`} clientId={clientId} client={board.client} kind={selected.kind} identity={selected.id} showTitle={!active.some(r=>r.context_kind===selected.kind&&r.context_id===selected.id)} initialText={params.get('text')||''}/></div></>
+    :<p className="themen-empty">Aktiviere ein Thema unter Themen. Es erhält hier einen eigenen Reiter.</p>}</main>
   </div>}
  </section>;
 }
 
-export function Workspace({clientId,client={},kind,identity,initialText='',embedded=false,allowedKinds,onCompleted,initialInstruction='',initialContact='',visible=true,contextRevision}){
+export function Workspace({clientId,client={},kind,identity,initialText='',embedded=false,allowedKinds,onCompleted,initialInstruction='',initialContact='',visible=true,contextRevision,showTitle=true}){
  const listId=useId();
  const base=`clients/${clientId}/opportunities/${kind}/${identity}`,path=`${base}/activation`;
  const [detail,setDetail]=useState(null),[data,setData]=useState(null),[error,setError]=useState(''),[busy,setBusy]=useState(false);
@@ -175,15 +178,15 @@ export function Workspace({clientId,client={},kind,identity,initialText='',embed
   setData(v=>({...v,latest:{...job,kind:input.kind,started_at:new Date().toISOString()}}));
  }catch(e){waiting.current=false;setError(e.message);}finally{setBusy(false);}}
  if(!detail||!data)return error?<p className="twin-error" role="alert">{error}</p>:<p role="status">Thema wird geladen…</p>;
- const closed=Boolean(detail.workflow?.completed_at);
+ const inactive=detail.status==='draft',closed=Boolean(detail.workflow?.completed_at);
  const current=data.texts.find(t=>`${t.type}-${t.id}`===open);
  const exportBase=text=>`/api/v1/clients/${clientId}/assets/${text.type}/${text.id}`;
  return <div className="assets-workspace">
   {!embedded&&<header className="assets-workspace__head">
-   <div><span className="themen-tag themen-tag--on">{closed?'Abgeschlossen':'Thema aktiv'}</span><h2>{detail.title}</h2>{detail.storyline&&<p>Pitch: {detail.storyline}</p>}</div>
+   <div>{showTitle&&<><span className="themen-tag themen-tag--on">{closed?'Abgeschlossen':inactive?'Thema deaktiviert':'Thema aktiv'}</span><h2>{detail.title}</h2></>}{detail.storyline&&<p>Pitch: {detail.storyline}</p>}</div>
    <div className="assets-workspace__side">
    <ExportBox base={`/api/v1/clients/${clientId}/themen/${kind}/${identity}`} label="Thema exportieren"/>
-   <label className="assets-speaker">Ansprechperson (optional)<select aria-label="Ansprechperson (optional)" value={speakerValue(detail)} onChange={e=>speaker(e.target.value)}>
+   <label className="assets-speaker">Ansprechperson (optional)<select aria-label="Ansprechperson (optional)" value={speakerValue(detail)} disabled={closed||inactive} onChange={e=>speaker(e.target.value)}>
     <option value="">Keine Ansprechperson</option>
     {(detail.people||[]).map(p=><option key={`p${p.id}`} value={`p:${p.id}`}>{p.label}</option>)}
     </select></label>
@@ -197,8 +200,8 @@ export function Workspace({clientId,client={},kind,identity,initialText='',embed
    <div className="assets-list">{data.texts.filter(text=>!allowedKinds||allowedKinds.includes(text.kind)).map(text=>{const key=`${text.type}-${text.id}`;return <button type="button" key={key} className="asset-card" aria-pressed={open===key} onClick={()=>setOpen(open===key?'':key)}>
     <span>{LABEL[text.kind]||text.kind}<em className={`themen-tag${text.released_at?' themen-tag--on':''}`}>{text.released_at?'Freigegeben':'Entwurf'}</em></span>
     <strong>{text.title||'Ohne Titel'}</strong></button>;})}</div></section>}
-  {current&&<Editor key={`${open}-${current.digest}`} client={client} readOnly={closed} text={current} path={path} exportBase={exportBase(current)} onSaved={value=>{setData(value);onCompleted?.();}}
+  {current&&<Editor key={`${open}-${current.digest}`} client={client} readOnly={closed||inactive} text={current} path={path} exportBase={exportBase(current)} onSaved={value=>{setData(value);onCompleted?.();}}
    checking={running} onCheck={async t=>{setError('');try{const job=await request(`${path}/${t.type}/${t.id}/check`,{method:'POST'});setData(v=>({...v,latest:{...job,kind:t.kind,started_at:new Date().toISOString()}}));}catch(e){setError(e.message);}}}/>}
-  {closed?<p className="topic-notice">Dieses Thema ist abgeschlossen. <a href={`/client/${clientId}/themen?kind=${kind}&context=${identity}&step=ergebnis`}>Ergebnis ansehen oder wieder öffnen →</a></p>:<NewAsset detail={detail} running={running||busy} onCreate={create} allowedKinds={allowedKinds} initialInstruction={initialInstruction} initialContact={initialContact}/>}
+  {inactive?<p className="topic-notice">Das Thema ist deaktiviert. Assets und Verlauf bleiben erhalten. <a href={`/client/${clientId}/themen`}>Unter Themen wieder aktivieren →</a></p>:closed?<p className="topic-notice">Dieses Thema ist abgeschlossen. <a href={`/client/${clientId}/themen?kind=${kind}&context=${identity}&step=ergebnis`}>Ergebnis ansehen oder wieder öffnen →</a></p>:<NewAsset detail={detail} running={running||busy} onCreate={create} allowedKinds={allowedKinds} initialInstruction={initialInstruction} initialContact={initialContact}/>}
  </div>;
 }

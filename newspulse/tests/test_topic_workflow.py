@@ -125,3 +125,24 @@ def test_preexisting_assets_are_editable_inside_the_topic_without_a_generation_j
     result=web.put(path+f'/asset/{a.id}',json={'digest':text['digest'],'title':text['title'],'body':'Updated existing text'})
     assert result.status_code==200,result.text
     assert result.json()['texts'][0]['body']=='Updated existing text'
+
+
+def test_deactivation_preserves_assets_and_choices_then_reactivation_restores_access(web,db):
+    d,asset=setup(web,db)
+    before=db.get(OpportunityWorkspace,d['id']).storyline
+    response=write(web,d['revision'],action='deactivate')
+    assert response.status_code==200,response.text
+    inactive=response.json()
+    assert inactive['status']=='draft'
+    assert inactive['workflow_summary']['label']=='Deaktiviert'
+    assert db.get(Asset,asset.id).body=='Current text'
+    assert inactive['storyline']==before
+    denied=web.post(base()+'/developed/1/activation',json={'kind':'statement','instruction':''})
+    assert denied.status_code==409
+    body=choice();body['revision']=inactive['revision'];body['storyline']=before
+    response=web.post(base()+'/developed/1/activate',json=body)
+    assert response.status_code==200,response.text
+    active=response.json()
+    assert active['status']=='active'
+    assert 'deactivated_at' not in active['workflow']
+    assert any(row['id']==asset.id for row in active['assets'])

@@ -82,6 +82,7 @@ def generate(client_id:int,kind:Kind,identity:int,body:DraftInput,session:Sessio
     workspace=workspace_or_404(session,client_id,kind,identity)
     anchor=workspaces.anchor(session,client_id,kind,identity)
     if workspaces.ended(anchor,kind,dt.datetime.now(dt.UTC),active=workspace.status=='active'):raise HTTPException(409,'Gelegenheit ist abgeschlossen.')
+    if (workspace.data or {}).get('workflow',{}).get('deactivated_at'):raise HTTPException(409,'Das Thema ist deaktiviert. Bitte zuerst wieder aktivieren.')
     if (workspace.data or {}).get('workflow',{}).get('completed_at'):raise HTTPException(409,'Das Thema ist abgeschlossen. Bitte zuerst wieder öffnen.')
     if body.kind not in dict(activation.FORMATS):raise HTTPException(422,'Unbekanntes Format.')
     if workspace.angle_id is None:raise HTTPException(409,'Bitte die Gelegenheit zuerst aktivieren.')
@@ -121,6 +122,7 @@ def linked_text(session,workspace,text_type,text_id):
 @router.post('/{text_type}/{text_id}/check',status_code=202)
 def recheck(client_id:int,kind:Kind,identity:int,text_type:Literal['asset','outreach'],text_id:int,session:Session=Depends(get_db)):
     workspace=workspace_or_404(session,client_id,kind,identity)
+    if (workspace.data or {}).get('workflow',{}).get('deactivated_at'):raise HTTPException(409,'Das Thema ist deaktiviert. Bitte zuerst wieder aktivieren.')
     if (workspace.data or {}).get('workflow',{}).get('completed_at'):raise HTTPException(409,'Das Thema ist abgeschlossen. Bitte zuerst wieder öffnen.')
     previous,row=linked_text(session,workspace,text_type,text_id)
     if row.released_at:raise HTTPException(409,'Ein freigegebener Text ist unveränderlich.')
@@ -131,6 +133,7 @@ def recheck(client_id:int,kind:Kind,identity:int,text_type:Literal['asset','outr
 @router.put('/{text_type}/{text_id}')
 def edit(client_id:int,kind:Kind,identity:int,text_type:Literal['asset','outreach'],text_id:int,body:TextInput,session:Session=Depends(get_db)):
     workspace=workspace_or_404(session,client_id,kind,identity)
+    if (workspace.data or {}).get('workflow',{}).get('deactivated_at'):raise HTTPException(409,'Das Thema ist deaktiviert. Bitte zuerst wieder aktivieren.')
     if (workspace.data or {}).get('workflow',{}).get('completed_at'):raise HTTPException(409,'Das Thema ist abgeschlossen. Bitte zuerst wieder öffnen.')
     previous,row=linked_text(session,workspace,text_type,text_id)
     if row.released_at:raise HTTPException(409,'Ein freigegebener Text ist unveränderlich.')

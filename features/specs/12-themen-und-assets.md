@@ -225,3 +225,17 @@ nicht Teil der Anwendung.
 - Der zentrale Schalter `NEWSPULSE_SCHEDULER=0` deaktiviert auch diese Recherche.
   Ohne konfigurierte Rechercheanbieter wird die fehlende Abdeckung angezeigt.
   Für den direkten Versand braucht das verbundene Gmail-Postfach Sendeberechtigung.
+
+### Sichtbare Aktivierung und Agenda-Highlights
+
+Themen lassen sich direkt auf ihrer Karte aktivieren und deaktivieren. Die Aktivierung
+übernimmt die gespeicherte Storyline beziehungsweise den ersten vorhandenen Pitch;
+Personen und Kontakte bleiben erhalten. Aktive Themen sind grün hinterlegt. Assets
+zeigt pro aktivem Thema einen eigenen, per Tastatur bedienbaren Reiter und benennt
+das gerade geöffnete Thema über dem Arbeitsbereich.
+
+Deaktivierung entfernt den aktiven Reiter, bewahrt jedoch Texte, Freigaben und
+Verlauf. Neue Texterstellung und Versand bleiben bis zur Reaktivierung gesperrt.
+Laufende Textjobs und ungeklärte Versandversuche müssen vorher abgeschlossen werden.
+Agenda-Highlights trennen Thema, Zeitraum, Status und Format. Ein fehlender Tag
+wird ausdrücklich als „Termin noch offen“ gekennzeichnet.

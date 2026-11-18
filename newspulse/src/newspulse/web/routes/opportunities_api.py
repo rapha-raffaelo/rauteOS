@@ -102,7 +102,7 @@ def save_choices(session,client_id,kind,identity,body,actor,activate=False):
     anchor=workspaces.anchor(session,client_id,kind,identity)
     if anchor is None:raise HTTPException(404,'Gelegenheit nicht gefunden.')
     row=workspaces.stored(session,client_id,kind,identity)
-    if workspaces.ended(anchor,kind,dt.datetime.now(dt.UTC),active=bool(row and row.status=='active')):
+    if workspaces.ended(anchor,kind,dt.datetime.now(dt.UTC),active=bool(row and (row.status=='active' or (row.data or {}).get('workflow',{}).get('deactivated_at')))):
         raise HTTPException(409,'Diese Gelegenheit ist abgeschlossen.')
     row=workspaces.stored(session,client_id,kind,identity)
     if row and (row.data or {}).get('workflow',{}).get('completed_at'):
@@ -143,7 +143,13 @@ def save_choices(session,client_id,kind,identity,body,actor,activate=False):
     row.speaker_statement_id=None if body.speaker_person_id else body.speaker_statement_id
     row.contact_ids=list(dict.fromkeys(body.contact_ids))
     if angle:row.angle_id=angle.id
-    if activate:row.status='active'
+    if activate:
+        row.status='active'
+        data=dict(row.data or {});flow=dict(data.get('workflow',{}))
+        flow.pop('deactivated_at',None);flow.pop('deactivated_by',None)
+        if flow:data['workflow']=flow
+        else:data.pop('workflow',None)
+        row.data=data
     try:
         session.flush()
         session.add(OpportunityEvent(workspace_id=row.id,kind='activated' if activate and not was_active else 'choices_saved',actor=actor,
@@ -169,7 +175,7 @@ def activate_workspace(client_id:int,kind:Kind,identity:int,body:Choices,request
 class WorkflowInput(BaseModel):
     model_config=ConfigDict(extra='forbid',str_strip_whitespace=True)
     revision:int=Field(ge=1)
-    action:Literal['approval','followup','outcome','complete','reopen','pitch_plan','pitch_approval','sent','exclusive','exclusive_release','exclusive_extend','send','send_reconcile']
+    action:Literal['approval','followup','outcome','complete','reopen','pitch_plan','pitch_approval','sent','exclusive','exclusive_release','exclusive_extend','send','send_reconcile','deactivate']
     text_id:int|None=Field(default=None,gt=0)
     digest:str=Field(default='',max_length=64)
     status:str=Field(default='',max_length=40)
