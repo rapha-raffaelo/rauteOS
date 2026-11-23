@@ -244,7 +244,7 @@ const gmailNotices = {
 const brainLabels = {
   comms_guide: "RAUTE Communications Guide", comms_formats: "Formate",
   crisis_discipline: "Krisenkommunikation", evidence: "Belege & Nachweise", false_alarm: "Fehlalarme vermeiden",
-  house_style: "Sprache & Hausstil", journalistic_value: "Journalistischer Mehrwert", no_invention: "Fakten statt Erfindungen",
+  house_style: "Sprache & Hausstil", kundenmail_muster: "Kundenmail: Lucas' Mustermail", journalistic_value: "Journalistischer Mehrwert", no_invention: "Fakten statt Erfindungen",
   pitch_angle: "Blickwinkel für Pitches", pitch_shape: "Aufbau von Pitches", position: "Positionierung",
   press_relevance: "Presserelevanz", quellenordnung: "Quellenordnung", quoted_material: "Zitate & Fremdmaterial",
   refusal: "Grenzen & Ablehnung", scenario_discipline: "Szenarien", standing: "Haltung & Glaubwürdigkeit"
@@ -258,6 +258,7 @@ const brainSources = {
   evidence: "Quality & Verification Engine · Claims, Zahlen, Studien",
   false_alarm: "Quality & Verification Engine · Befunde einordnen",
   house_style: "Quality & Verification Engine · KI-Sprache, Werblichkeit",
+  kundenmail_muster: "Lucas' eigene Kundenmail als Vorbild · nur im Format Kundenmail",
   journalistic_value: "Market & Opportunity Engine · Warum jetzt, warum dieser Absender",
   no_invention: "Communication Asset Engine · Quality & Verification Engine",
   pitch_angle: "Market & Opportunity Engine · Spannungsfelder",

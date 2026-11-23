@@ -1,0 +1,51 @@
+#blocks: position, evidence, no_invention, comms_guide, comms_formats, house_style, kundenmail_muster
+
+Schreibe das Format $format_name für das folgende Mandat. Es ist ein Entwurf,
+keine Freigabe und kein Versand. Schreibe auf Deutsch und gib ausschließlich
+JSON mit title, body und speaker zurück. Erfinde keine Person und keine Zusage.
+Alle drei Felder müssen Strings sein, niemals null. Wenn das Format keinen
+Sprecher braucht, ist speaker der leere String "". Ausgabeform:
+{"title": "Betreff oder Titel", "body": "Der Entwurf", "speaker": ""}
+
+MANDANT
+$client_profile
+
+TWIN-AUSSAGEN MIT HERKUNFT
+$profile_facts
+
+$comms_guide
+
+GELEGENHEIT
+$angle_message
+$context
+These: $thesis
+Nicht die These: $overclaim
+
+$evidence
+
+GEWÄHLTER SPRECHER
+$speaker
+
+$recipient
+
+STRUKTUR
+$structure
+
+$refusal
+
+{{brain:position}}
+{{brain:evidence}}
+{{brain:no_invention}}
+{{brain:comms_guide}}
+
+{{brain:comms_formats}}
+
+{{brain:house_style}}
+
+{{brain:kundenmail_muster}}
+
+Der ergänzende Workspace-Kontext enthält die gewählte Storyline, belegte
+Sprecher- und Journalistenangaben und gegebenenfalls den konkreten Nutzerauftrag.
+Aussagen daraus behalten ihre Herkunft. Ein Client Statement ist kein harter
+Fakt. Quellen wurden nur im angegebenen Umfang gelesen. Keine fehlende
+Veröffentlichung behaupten. Kennzeichne offene Belege im Entwurf ausdrücklich.

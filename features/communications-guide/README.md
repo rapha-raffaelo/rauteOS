@@ -26,6 +26,7 @@ nächsten erzeugten Text.
 | Journalistischer Mehrwert | `journalistic_value.txt` | Market & Opportunity: Warum jetzt, warum dieser Absender |
 | Blickwinkel für Pitches | `pitch_angle.txt` | Market & Opportunity: Spannungsfelder |
 | Aufbau von Pitches | `pitch_shape.txt` | Communication Asset: Betreffzeile, Nachfassen |
+| Kundenmail: Lucas' Mustermail | `kundenmail_muster.txt` | Kein Engine-Dokument: Lucas' eigene Kundenmail als Vorbild für Aufbau, Ton und Wortwahl. Nur im Prompt `kundenmail.txt` und im Lektorat der Kundenmail |
 | Positionierung | `position.txt` | Positioning: eine Kernbotschaft zuerst, Gegenpositionen |
 | Quellenordnung | `quellenordnung.txt` | Quality & Verification: Primärquellen |
 | Zitate & Fremdmaterial | `quoted_material.txt` | Quality & Verification: Zitat- und Urheberrecht |

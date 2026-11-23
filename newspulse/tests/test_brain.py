@@ -413,6 +413,8 @@ CARRIED_BEFORE = {
     "decision_packet.txt": set(),
     # New workspace formats have no predecessor.
     "workspace_asset.txt": set(),
+    # The client mail split off the workspace prompt to carry Lucas' own mail.
+    "kundenmail.txt": set(),
     # Spec 12: the Deep Dive of a starred article. New, nothing to carry.
     "themen_deep_dive.txt": set(),
     # Spec 12: RAUTE's own topic proposals from the last four weeks. New.
@@ -428,6 +430,11 @@ ADDED_IN_MIGRATION = {
     # Workspace drafts use the same positioning, evidence and prose standards
     # as existing assets; the format-specific refusal remains supplied by caller.
     "workspace_asset.txt": {"position", "evidence", "no_invention", "house_style"},
+    # The client mail writes like the workspace drafts, and additionally shows
+    # the model Lucas' real mail: rules derived from it alone kept producing
+    # the agency memo he rejected. Only this prompt carries the example, so a
+    # LinkedIn post or a press release never borrows the shape of a mail.
+    "kundenmail.txt": {"position", "evidence", "no_invention", "house_style", "kundenmail_muster"},
     # The Deep Dive argues why a mandate may speak (position), names only what
     # the article and profile carry (evidence, no_invention) and is read by the
     # consultant as prose (house_style), like a workspace draft.
@@ -652,7 +659,7 @@ for _name, _keys in CARRIED_BEFORE.items():
 FORMAT_PROMPTS = {
     "gastbeitrag.txt", "holding_statement.txt", "interview_briefing.txt", "krisen_qa.txt",
     "pressemitteilung.txt", "qa.txt", "statement.txt", "talking_points.txt",
-    "workspace_asset.txt", "crosscheck.txt",
+    "workspace_asset.txt", "kundenmail.txt", "crosscheck.txt",
 }
 for _name in FORMAT_PROMPTS:
     ADDED_IN_MIGRATION[_name] = ADDED_IN_MIGRATION.get(_name, set()) | {"comms_formats"}
@@ -2963,3 +2970,13 @@ def test_the_builders_actually_put_the_fence_around_the_material():
         PitchTarget(outlet="Welt", journalist=None, reason="", evidence=("Eine Schlagzeile",), about_client=0)
     )
     assert quoting.OPEN in work and quoting.CLOSE in work
+
+
+def test_only_the_client_mail_carries_lucas_example_mail():
+    """The example is a voice for one format. In any other prompt it would pull
+    a LinkedIn post or a press release into the shape of a mail."""
+    carriers = {p.name for p in _prompt_files() if "kundenmail_muster" in brain.included(p.read_text("utf-8"))}
+    assert carriers == {"kundenmail.txt"}
+    composed = brain.compose((PROMPTS / "kundenmail.txt").read_text("utf-8"))
+    assert "Was mir dabei aufgefallen ist" in composed
+    assert "Wie schätzt Ihr den Ansatz ein" in composed

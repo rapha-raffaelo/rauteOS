@@ -1497,8 +1497,8 @@ FORMATS: tuple[FormatDef, ...] = (
 # and crisis pickers keep their established contracts and format groups.
 WORKSPACE_FORMATS: tuple[FormatDef, ...] = (
     FormatDef(kind="kundenmail", name="Kundenmail", description="Die Chance erklären und einen nächsten Schritt zur Freigabe vorschlagen.",
-        prompt="prompts/workspace_asset.txt", requires=(), structure=(
-            "Kundenmail-Muster aus dem zentralen Formatstandard anwenden.",
+        prompt="prompts/kundenmail.txt", requires=(), structure=(
+            "Aufbau, Wortwahl und Ton der Mustermail von Lucas übernehmen, nie ihren Inhalt.",
             "Beobachtung, kommunikative Chance und konkrete Vorschläge nachvollziehbar verbinden.",
             "Mit einer Rückfrage und einem passenden nächsten Schritt enden."),title_label="Betreff"),
     FormatDef(kind="linkedin", name="LinkedIn-Post", description="Eine belegte Position für LinkedIn.",
@@ -2477,6 +2477,9 @@ def _proofread(fmt: FormatDef, draft: AssetDraft, given: Given) -> AssetDraft:
         sent = {"title": draft.title, "body": draft.body}
         raw = ai_models.ask("lektor", _PROOFREAD + f"\nFORMAT: {fmt.key}\n"
                             + brain.compose("{{brain:house_style}}")
+                            # The Lektor rewrites sentences; without the pattern it smooths
+                            # a client mail back into the agency tone Lucas rejected.
+                            + (brain.compose("\n{{brain:kundenmail_muster}}") if fmt.key == "kundenmail" else "")
                             + "\nDer bestehende Inhalt, die Ansprache und die Absenderidentität bleiben erhalten."
                             + "\nTEXT ZUR SPRACHLICHEN ÜBERARBEITUNG\n"
                             + json.dumps(sent, ensure_ascii=False),
