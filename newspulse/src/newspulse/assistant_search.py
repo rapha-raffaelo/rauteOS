@@ -63,7 +63,7 @@ def build(session, question, *, client_id=None, previous_question=''):
         (m.GuideSource, ('filename','text'), ('uploaded_at',), {'dokument','dokumente','guide'}, 8),
         (m.Task, ('title','note','owner'), ('status','due_on','priority'), {'aufgaben','aufgabe','tasks'}, 15),
         (m.OpportunityWorkspace, ('storyline','data'), ('status','context_kind','context_id'), {'chancen','opportunities','story'}, 12),
-        (m.Angle, ('subject','message','context'), ('generated_at','dismissed_at'), {'ideen','impulse'}, 12),
+        (m.Angle, ('subject','message','context'), ('generated_at','dismissed_at'), {'ideen','themen','impulse'}, 12),
         (m.Asset, ('title','body'), ('kind','released_at'), {'texte','entwürfe','texts'}, 12),
         (m.Outreach, ('subject','message','journalist','outlet'), ('state','released_at'), {'pitch','pitches','ansprache'}, 12),
         (m.MarketSignal, ('title','summary','publisher'), ('url','kind','effective_at','deadline_at'), {'markt','marktsignale'}, 12),

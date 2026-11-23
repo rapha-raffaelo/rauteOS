@@ -1,4 +1,4 @@
-"""Impulse content: a default press release, custom messages and stored texts.
+"""Topic content: a default press release, custom messages and stored texts.
 
 This module owns package views and the existing write/edit/check/release actions.
 Custom messages stream through custom_drafts and use the same writer, asset
@@ -637,7 +637,7 @@ def _impulse_or_404(session: Session, client_id: int, angle_id: int) -> Angle:
     """
     angle = session.get(Angle, angle_id)
     if angle is None or angle.client_id != client_id:
-        raise HTTPException(status_code=404, detail="Impulse not found")
+        raise HTTPException(status_code=404, detail="Thema nicht gefunden")
     return angle
 
 

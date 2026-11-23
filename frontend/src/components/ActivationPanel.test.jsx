@@ -14,7 +14,7 @@ it('defaults to the customer email and does not write on load',async()=>{
  vi.stubGlobal('fetch',fetch);render(<ActivationPanel clientId={1} kind="developed" identity={1}/>);
  expect((await screen.findByLabelText('Format')).value).toBe('kundenmail');expect(fetch).toHaveBeenCalledTimes(1);
  fireEvent.click(screen.getByRole('button',{name:'Entwurf erstellen'}));await screen.findByText('In Arbeit');
- expect(JSON.parse(fetch.mock.calls[1][1].body)).toEqual({kind:'kundenmail',contact_id:null,instruction:''});
+ expect(JSON.parse(fetch.mock.calls[1][1].body)).toEqual({kind:'kundenmail',contact_id:null,instruction:'',topic_ids:[1]});
 });
 it('shows the client-claim warning alongside its source',async()=>{
  vi.stubGlobal('fetch',vi.fn().mockResolvedValue(response(data)));render(<ActivationPanel clientId={1} kind="developed" identity={1}/>);
@@ -110,4 +110,17 @@ it('keeps the additional instruction available after a rejected creation',async(
  await screen.findByRole('alert');
  expect(input.value).toBe('Für einen erneuten Versuch');
  expect(input.disabled).toBe(false);
+});
+
+
+it('requires a topic selection and passes selected tiles to asset generation',async()=>{
+ const topics=[{id:21,title:'Regulierung'},{id:22,title:'Finanzierung'}];
+ const fetch=vi.fn().mockResolvedValueOnce(response({...data,texts:[],topics,default_topic_id:21})).mockResolvedValue(response({id:2,status:'running'}));
+ vi.stubGlobal('fetch',fetch);render(<ActivationPanel clientId={1} kind="developed" identity={1}/>);
+ fireEvent.click(await screen.findByRole('checkbox',{name:'Regulierung'}));
+ expect(screen.getByRole('button',{name:'Entwurf erstellen'}).disabled).toBe(true);
+ fireEvent.click(screen.getByRole('checkbox',{name:'Finanzierung'}));
+ fireEvent.click(screen.getByRole('button',{name:'Entwurf erstellen'}));
+ await screen.findByText('In Arbeit');
+ expect(JSON.parse(fetch.mock.calls[1][1].body).topic_ids).toEqual([22]);
 });

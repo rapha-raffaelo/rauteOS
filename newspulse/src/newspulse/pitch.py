@@ -347,7 +347,7 @@ def targets_for(
                 PitchTarget(
                     outlet=outlet,
                     journalist=author,
-                    reason="hat die Meldung geschrieben, auf die sich dieser Impuls bezieht",
+                    reason="hat die Meldung geschrieben, auf die sich dieses Thema bezieht",
                     evidence=(headline,),
                     about_client=covered.get(outlet, 0),
                 )

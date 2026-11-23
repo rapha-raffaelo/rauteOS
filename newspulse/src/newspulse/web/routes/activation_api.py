@@ -2,7 +2,7 @@
 import datetime as dt
 from types import SimpleNamespace
 from sqlalchemy.orm.exc import StaleDataError
-from typing import Literal
+from typing import Annotated,Literal
 from fastapi import APIRouter,Depends,HTTPException,Response
 from pydantic import BaseModel,ConfigDict,Field
 from sqlalchemy import select,update
@@ -23,6 +23,7 @@ class DraftInput(BaseModel):
     kind:str=Field(max_length=40)
     contact_id:int|None=Field(default=None,gt=0)
     instruction:str=Field(default='',max_length=5000)
+    topic_ids:list[Annotated[int,Field(gt=0)]]|None=Field(default=None,min_length=1,max_length=100)
 
 
 class TextInput(BaseModel):
@@ -93,16 +94,14 @@ def generate(client_id:int,kind:Kind,identity:int,body:DraftInput,session:Sessio
         raise HTTPException(422,'Journalist ist nicht im Workspace ausgewählt.')
     if body.contact_id and body.kind not in {'pitch','interviewangebot','interview_briefing'}:
         raise HTTPException(422,'Dieses Format hat keinen Journalisten als Empfänger.')
-    try:context,target=activation.context_for(session,workspace,contact_id=body.contact_id,instruction=body.instruction)
+    try:context,target=activation.context_for(session,workspace,contact_id=body.contact_id,instruction=body.instruction,topic_ids=body.topic_ids,require_active_topics=True)
     except ValueError as exc:raise HTTPException(422,str(exc))
     if body.kind!='pitch':
-        fmt=assets.REGISTRY[body.kind]
-        if fmt.speaker_key and not context['speaker']:
-            raise HTTPException(422,'Bitte zuerst einen Sprecher im Workspace auswählen.')
-        ready=assets.requirements_met(session,fmt,session.get(Client,client_id),session.get(Angle,workspace.angle_id),
+        fmt=assets.workspace_format(body.kind)
+        ready=assets.requirements_met(session,fmt,session.get(Client,client_id),activation.topic_angle(session,workspace,context['topic_ids']),
             facts=activation.writing_facts(session,workspace,context),target=target)
         if not ready.ok:raise HTTPException(422,ready.reason)
-    return launch(session,workspace,body.kind,body.model_dump())
+    return launch(session,workspace,body.kind,{**body.model_dump(),'topic_ids':context['topic_ids']})
 
 
 def linked_text(session,workspace,text_type,text_id):
@@ -126,7 +125,7 @@ def recheck(client_id:int,kind:Kind,identity:int,text_type:Literal['asset','outr
     if (workspace.data or {}).get('workflow',{}).get('completed_at'):raise HTTPException(409,'Das Thema ist abgeschlossen. Bitte zuerst wieder öffnen.')
     previous,row=linked_text(session,workspace,text_type,text_id)
     if row.released_at:raise HTTPException(409,'Ein freigegebener Text ist unveränderlich.')
-    return launch(session,workspace,previous.kind,dict(operation='check',contact_id=previous.context.get('contact_id')),
+    return launch(session,workspace,previous.kind,dict(operation='check',contact_id=previous.context.get('contact_id'),topic_ids=previous.context.get('topic_ids')),
         asset_id=row.id if text_type=='asset' else None,outreach_id=row.id if text_type=='outreach' else None)
 
 

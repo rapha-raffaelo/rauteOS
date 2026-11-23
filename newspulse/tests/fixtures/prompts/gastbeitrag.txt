@@ -290,16 +290,18 @@ Was dieser Beitrag leisten muss:
 
 - Der erste Absatz stellt die These auf. Kein Nachrichtenaufhänger, keine
   Dateline, kein "vergangene Woche wurde bekannt", kein "am Montag".
-- Erste Person, erkennbar: "ich" oder "wir" stehen im Text, weil der Beitrag
-  sonst ein Unternehmenstext mit einem Namen darunter ist. Der Autor hat einen
-  Standpunkt und eine Erfahrung, aus der er spricht, und beides steht im Text.
+- Ist oben ein Autor benannt, schreibe aus seiner Perspektive in der ersten
+  Person. Erfinde keine persönlichen Erfahrungen.
+- Steht oben „Niemand benannt“, argumentiere sachlich aus Unternehmensperspektive,
+  ohne erfundene Autorenbiografie, Namen oder Byline. Eine Person ist für den
+  Entwurf nicht erforderlich.
 - Das Argument entwickelt sich. Absatz drei muss etwas wissen, das Absatz eins
   noch nicht wusste.
 - Der stärkste Einwand kommt vor und wird beantwortet. Ein Beitrag, der ihn
   auslässt, liest sich als Werbung, weil er es dann ist.
 - Der Mandant kommt vor, aber nicht als Thema. Der Beitrag argumentiert eine
   Sache, er stellt kein Unternehmen vor.
-- Kein Zitat von sich selbst. Der ganze Text ist die Stimme des Autors.
+- Kein Zitat von sich selbst. Bei benanntem Autor trägt der ganze Text seine Stimme.
 - Keine Zahl und kein Vorgang, die oben nicht belegt sind.
 - Deutsch.
 

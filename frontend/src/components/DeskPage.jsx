@@ -5,9 +5,9 @@ import { fetchDesk, writeBriefing } from '../api.js';
 // What the Desk calls each kind of decision, in a list and in the briefing.
 const PRIORITY = {niedrig:'Niedrig',mittel:'Mittel',hoch:'Hoch',urgent:'Urgent'};
 const STATUS = {offen:'Offen',in_arbeit:'In Arbeit',review:'Review',erledigt:'Done'};
-const KIND = {kundenfreigabe: 'Kundenfreigabe', freigabe: 'Freigabe', impuls: 'Impuls', profil: 'Profil'};
+const KIND = {kundenfreigabe: 'Kundenfreigabe', freigabe: 'Freigabe', impuls: 'Thema', profil: 'Profil'};
 const WAITS = {kundenfreigabe: 'wartet auf eine Kundenfreigabe', freigabe: 'wartet auf die Freigabe',
-  impuls: 'hat einen neuen Impuls', profil: 'braucht eine Profil-Entscheidung'};
+  impuls: 'hat ein neues Thema', profil: 'braucht eine Profil-Entscheidung'};
 
 // The first name Google gave at sign-in. Failing that, one read off the
 // address only when it starts with one ("lucas@…"): never initials

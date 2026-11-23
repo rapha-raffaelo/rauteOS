@@ -1132,7 +1132,7 @@ def _refresh_impulses(
 
     :func:`_generate_angles` drafts from *fresh* radar items, which is right for
     "react to what arrived this morning" and wrong as the only source of drafts: a
-    mandate whose field was quiet for a fortnight had an empty Impulse column for a
+    mandate whose field was quiet for a fortnight had an empty topic column for a
     fortnight, and that is exactly the mandate whose consultant most needs
     something to say. So after the sweep, any mandate whose newest draft has aged
     out gets one built from everything the radar has stored in the window.
@@ -1169,8 +1169,8 @@ def _refresh_impulses(
         if not material:
             _note(
                 "Kein Marktmaterial — das Radar fand nichts, was nicht schon "
-                "Berichterstattung über den Mandanten selbst ist. Ein Impuls "
-                "braucht ein Thema, über das auch ohne ihn geschrieben wird."
+                "Berichterstattung über den Mandanten selbst ist. Ein Thema "
+                "braucht einen Anlass, über den auch ohne ihn geschrieben wird."
             )
             continue
         try:
@@ -1841,7 +1841,7 @@ def _settle_themes(session: Session, clients: Sequence[Client], fetch: FetchFeed
     A mandate with no themes has no radar, and every downstream feature reads off
     that radar. It was only ever filled in at onboarding, so every mandate created
     before that existed sat permanently in the state the onboarding step prevents
-    — reported three times as "hier wird immer noch kein Impuls angezeigt".
+    — reported three times as "hier wird immer noch kein Thema angezeigt".
     Self-limiting: the call returns immediately once a radar is in place.
     """
     settled = 0
@@ -2101,7 +2101,7 @@ def _post_run(
         _log.info("linked %d archived article(s) as market material", linked)
     outcome.angles = _generate_angles(session, topic_pairs, errors)
     # And then top up the mandates the radar did not move today. Drafting only from
-    # fresh material meant a quiet fortnight showed an empty Impulse column for a
+    # fresh material meant a quiet fortnight showed an empty topic column for a
     # fortnight — for exactly the mandate whose consultant most needs something to
     # say.
     outcome.angles += _refresh_impulses(session, clients, errors, now=now_fn())
@@ -2501,7 +2501,7 @@ def draft_impulse(
         _log.info("no themes for %r; nothing to draft from", client.name)
         _say(
             "Für diesen Mandanten sind keine Themen hinterlegt — ohne Themen gibt "
-            "es kein Marktumfeld, aus dem ein Impuls entstehen könnte."
+            "es kein Marktumfeld, aus dem ein Thema entstehen könnte."
         )
         return False
 
@@ -2530,8 +2530,8 @@ def draft_impulse(
             "schon Berichterstattung über den Mandanten selbst ist — auch außerhalb "
             "der letzten "
             f"{IMPULSE_LOOKBACK.days} Tage nicht. Meist sind die hinterlegten Themen "
-            "zu eng am Unternehmen formuliert: ein Impuls braucht ein Thema, über "
-            "das auch ohne den Mandanten geschrieben wird."
+            "zu eng am Unternehmen formuliert: ein Thema braucht einen Anlass, über "
+            "den auch ohne den Mandanten geschrieben wird."
         )
         return False
 

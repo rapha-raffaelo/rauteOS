@@ -289,13 +289,10 @@ _EN: dict[str, str] = {
     "Wirkung auf die Reputation des Mandanten":
         "Effect on the client's reputation",
     # --- Today: the impulse column (positioning drafts) ----------------------
-    # "Impuls" is the consultant's own word for this: a prompt to say something,
-    # not a task. "Opening" carries the same sense in English — a moment that has
-    # opened up — where a literal "impulse" would read as a mood.
-    "Impulse": "Openings",
+    # User-facing positioning drafts are consistently called Themen.
     "Kein Anlass heute.": "No opening today.",
-    "Mandant ohne Impuls": "client with no opening",
-    "Mandanten ohne Impuls": "clients with no opening",
+    "Mandant ohne Thema": "client with no topic",
+    "Mandanten ohne Thema": "clients with no topic",
     "Marktmeldung(en) gesichtet — keine davon gab einen Anlass her.":
         "market item(s) \u2014 none of them held up.",
     "Kein Themen-Radar — ohne hinterlegte Themen lässt sich nicht bestimmen, welche Marktmeldung ihn angeht.":
@@ -357,11 +354,11 @@ _EN: dict[str, str] = {
         "of your own.",
     "Reagieren auf das, was über den Mandanten geschrieben wurde.":
         "Responding to what was written about the client.",
-    "Impuls erzeugen": "Draft an opening",
-    "Neuen Impuls erzeugen": "Draft another opening",
+    "Thema erzeugen": "Create a topic",
+    "Neues Thema erzeugen": "Create another topic",
     "Aus dem Themen-Radar der letzten": "From the topic radar of the last",
     "Dafür braucht dieser Mandant Themen.": "This client needs themes for that.",
-    "Impuls wird erzeugt — das dauert etwa eine Minute. Seite neu laden.":
+    "Thema wird erzeugt — das dauert etwa eine Minute. Seite neu laden.":
         "Drafting — this takes about a minute. Reload the page.",
     "Das Themen-Radar für diesen Mandanten hat noch nichts gesammelt — der nächste Lauf holt es.":
         "The topic radar has collected nothing for this client yet — the next "
@@ -519,7 +516,7 @@ _EN: dict[str, str] = {
     "im Zeitraum": "in period",
     "Wird erzeugt — die Seite aktualisiert sich, sobald der Entwurf steht.":
         "Generating — the page will refresh itself once the draft is ready.",
-    "Impuls wird erzeugt — die Seite aktualisiert sich, sobald er steht.":
+    "Thema wird erzeugt — die Seite aktualisiert sich, sobald es steht.":
         "Drafting — the page will refresh itself once it is ready.",
     "Wird erzeugt — das dauert etwa eine Minute. Seite neu laden.":
         "Generating — this takes about a minute. Reload the page.",
@@ -537,10 +534,9 @@ _EN: dict[str, str] = {
     "Über diesen Mandanten wurde im Zeitraum nichts geschrieben — es gibt also nichts zu empfehlen.":
         "Nothing was written about this client in the period, so there is nothing "
         "to recommend.",
-    "Eine Empfehlung reagiert auf eigene Berichterstattung. Was ohne sie trägt, ist ein Impuls: eine Positionierung zu dem, was im Markt passiert.":
+    "Eine Empfehlung reagiert auf eigene Berichterstattung. Was ohne sie trägt, ist ein Thema: eine Positionierung zu dem, was im Markt passiert.":
         "A recommendation responds to a client's own coverage. What works without "
         "it is an opening: a position on what is happening in the market.",
-    "Impuls": "Opening",
     "Marktmeldung(en) für diesen Mandanten gesammelt, aber noch keinen Anlass daraus gemacht.":
         "market item(s) for this client, but has not made an opening of them yet.",
     # --- From a position to a message ----------------------------------------
@@ -618,8 +614,8 @@ _EN: dict[str, str] = {
     "Formaten geschrieben": "formats written",
     "Vorhandener Text": "Existing text",
     "Pressemitteilung erstellen": "Create press release",
-    "Neue Impulse erhalten automatisch eine Pressemitteilung als Entwurf. Hier kann ein fehlender Entwurf erstellt werden.":
-        "New ideas automatically receive a draft press release. You can create a missing draft here.",
+    "Neue Themen erhalten automatisch eine Pressemitteilung als Entwurf. Hier kann ein fehlender Entwurf erstellt werden.":
+        "New topics automatically receive a draft press release. You can create a missing draft here.",
     "noch nichts geschrieben": "nothing written yet",
     # The three stages of one impulse card: the occasion, the texts written from
     # it, and what left the house. Rubrics, so they stay short in both languages.
@@ -777,7 +773,7 @@ _EN: dict[str, str] = {
     # The strip above the impulses: which mailbox this is and what it may do.
     # A band under it used to argue that granting the send permission reverses
     # the product's founding sentence. True, and it belonged to whoever grants
-    # it — but the strip renders on every mandate's Impulse page, so once the
+    # it — but the strip renders on every mandate's Themen page, so once the
     # permission was granted the argument was repeated at a reader who had
     # already made the decision, in red, where red means something is wrong.
     "Postfach verbunden": "Mailbox connected",
@@ -886,7 +882,7 @@ _EN: dict[str, str] = {
     # angle. Not a block — the consultant may have a reason — but the date, so
     # the second approach is a decision rather than an accident.
     "schon angeschrieben am": "already written to on",
-    "Zu diesem Impuls ging an diese Adresse bereits ein freigegebenes Anschreiben raus. Ein zweites zum selben Thema ist das, was eine Beziehung kostet.":
+    "Zu diesem Thema ging an diese Adresse bereits ein freigegebenes Anschreiben raus. Ein zweites zum selben Thema ist das, was eine Beziehung kostet.":
         "A released letter about this very opening already went to this "
         "recipient. A second one on the same subject is what costs you the "
         "relationship.",
@@ -895,7 +891,7 @@ _EN: dict[str, str] = {
         "themselves. Check it against the item before sending.",
     "Treffer gesammelt. Jeder davon ist entweder älter als":
         "hits. Every one of them is either older than",
-    "Tage oder Berichterstattung über den Mandanten selbst — und gegen die eigene Presse lässt sich nicht positionieren. Ein Impuls braucht ein Thema, über das auch ohne den Mandanten geschrieben wird.":
+    "Tage oder Berichterstattung über den Mandanten selbst — und gegen die eigene Presse lässt sich nicht positionieren. Ein Thema braucht einen Anlass, über den auch ohne den Mandanten geschrieben wird.":
         "days or coverage of the client itself — and there is no positioning "
         "against your own press. An opening needs a theme the press writes about "
         "without them.",
@@ -920,16 +916,16 @@ _EN: dict[str, str] = {
     "Betreff": "Subject",
     "Fachredaktion": "trade desk",
     "Warum diese:r": "Why them",
-    "verwertbare Marktmeldung(en) für diesen Mandanten — daraus ist noch kein Impuls entstanden. Der Knopf oben fragt direkt.":
+    "verwertbare Marktmeldung(en) für diesen Mandanten — daraus ist noch kein Thema entstanden. Der Knopf oben fragt direkt.":
         "usable market item(s) for this client — no opening has been made of them "
         "yet. The button above asks directly.",
     "Kein verwertbares Marktmaterial.": "No usable market material.",
     "Treffer gesammelt, aber keiner davon liegt in den letzten":
         "hits, but none of them falls within the last",
-    "Tagen und handelt von etwas anderem als vom Mandanten selbst. Ein Impuls braucht ein Thema, über das auch ohne ihn geschrieben wird.":
+    "Tagen und handelt von etwas anderem als vom Mandanten selbst. Ein Thema braucht einen Anlass, über den auch ohne ihn geschrieben wird.":
         "days while being about something other than the client itself. An opening "
         "needs a theme the press writes about without them.",
-    "Für diesen Mandanten läuft noch kein Themen-Radar — ohne hinterlegte Themen entsteht auch kein Impuls.":
+    "Für diesen Mandanten läuft noch kein Themen-Radar — ohne hinterlegte Themen entsteht auch kein Thema.":
         "No topic radar is running for this client — without themes there is no "
         "opening either.",
     "Noch keine Empfehlungen erzeugt.": "No recommendations generated yet.",
@@ -1032,7 +1028,7 @@ _EN: dict[str, str] = {
     "Notizen": "Notes",
     "Löschen": "Delete",
     "Name, Medium oder Themengebiet": "Name, outlet or beat",
-    "Noch keine Kontakte. Unter jedem Impuls stehen die Journalisten, die zum Thema geschrieben haben — ein Klick auf einen Namen legt hier einen Eintrag an.":
+    "Noch keine Kontakte. Unter jedem Thema stehen die Journalisten, die zum Thema geschrieben haben — ein Klick auf einen Namen legt hier einen Eintrag an.":
         "No contacts yet. Under every opening are the journalists who wrote about "
         "the subject \u2014 clicking a name starts an entry here.",
     "Noch keine Empfängerliste: kein Medium berichtet regelmäßig genug über dieses Themenfeld, als dass eine Empfehlung belastbar wäre.":
@@ -1063,14 +1059,14 @@ _EN: dict[str, str] = {
     "Keine Themen vorgeschlagen.": "No themes proposed.",
     "Einrichtung wartet auf den laufenden Lauf": "Setup is waiting for the current run",
     "wird eingerichtet": "being set up",
-    "Impuls und Empfehlung werden erzeugt": "drafting an opening and a recommendation",
+    "Thema und Empfehlung werden erzeugt": "drafting a topic and a recommendation",
     "eingerichtet": "set up",
     "Einrichtung fehlgeschlagen": "Setup failed",
     "Kürzel oder Name — „DE“ oder „Deutschland“. Bestimmt die Nachrichtenausgabe.":
         "Code or name \u2014 \u201cDE\u201d or \u201cGermany\u201d. Selects the news edition.",
     "Für das Logo und als Kontext für Vorschläge.":
         "For the logo, and as context for suggestions.",
-    "Beide Felder speisen außerdem das Themen-Radar, aus dem die Impulse entstehen. Ein Thema taugt dafür nur, wenn die Presse darüber schreibt, ohne den Mandanten zu nennen.":
+    "Beide Felder speisen außerdem das Themen-Radar, aus dem die Themen entstehen. Ein Thema taugt dafür nur, wenn die Presse darüber schreibt, ohne den Mandanten zu nennen.":
         "Both fields also feed the topic radar the openings are drawn from. A theme "
         "only works there if the press writes about it without naming the client.",
     "entscheiden, was gefunden wird": "decide what gets found",
@@ -1204,8 +1200,8 @@ _EN: dict[str, str] = {
         "The last weeks of coverage are fetched and analysed.",
     "Das Profil wird von der Website gelesen und eingetragen.":
         "The profile is read from the website and filled in.",
-    "Ein erster Impuls und ein Anschreiben dazu entstehen.":
-        "A first impulse and a letter to go with it are drafted.",
+    "Ein erstes Thema und ein Anschreiben dazu entstehen.":
+        "A first topic and a letter to go with it are drafted.",
     "Das dauert ein paar Minuten. Alles davon lässt sich danach von Hand ändern, und was Sie ändern, fasst die Recherche nie wieder an.":
         "This takes a few minutes. All of it can be changed by hand afterwards, "
         "and what you change the research never touches again.",
@@ -1216,7 +1212,7 @@ _EN: dict[str, str] = {
     "Der Fragensatz wird vorgeschlagen — die Seite aktualisiert sich, sobald er steht.":
         "The question set is being proposed — the page refreshes as soon as it "
         "is ready.",
-    "Vergleichsunternehmen. Hier steht seine Berichterstattung — Impulse, Berichte und Profil führt RauteOS nur für Mandanten.":
+    "Vergleichsunternehmen. Hier steht seine Berichterstattung — Themen, Berichte und Profil führt RauteOS nur für Mandanten.":
         "A benchmark company. What is here is its coverage — openings, reports "
         "and profiles are kept for mandates only.",
     "noch nicht erzeugt": "not drafted yet",
@@ -1759,7 +1755,7 @@ _EN: dict[str, str] = {
     "Krisenkontakt": "Crisis contact",
     "wird in jedem Anschreiben verwendet": "used in every letter",
     "jeder Text wird dagegen geprüft": "every text is checked against it",
-    "Material für Impulse": "material for the openings",
+    "Material für Themen": "material for topics",
     # The three states of a question, and the controls that move between them.
     "gespeichert": "saved",
     "übergangen": "passed over",
@@ -1807,7 +1803,7 @@ _EN: dict[str, str] = {
     # The profile's proposal list, which now carries two kinds of proposal and
     # says on every row which one it is.
     "Vorschläge für das Profil": "Proposals for the profile",
-    "Was dieses Unternehmen ist, Zeile für Zeile. Jede Zeile speist die Impulse, die Anschreiben und Ask RAUTE — und jede sagt, woher sie stammt.":
+    "Was dieses Unternehmen ist, Zeile für Zeile. Jede Zeile speist die Themen, die Anschreiben und Ask RAUTE — und jede sagt, woher sie stammt.":
         "What this company is, line by line. Every line feeds the openings, the "
         "letters and Ask RAUTE, and every line says where it came from.",
     "Kickoff-Fragebogen": "Kick-off questionnaire",
@@ -2740,7 +2736,7 @@ _EN: dict[str, str] = {
     "Kundenprofil": "Client profile",
     "MONITORING & CHANCEN": "MONITORING & OPPORTUNITIES",
     "Was passiert. Was es bedeutet. Wo wir ansetzen.": "What is happening. What it means. Where to act.",
-    "Chancen und Impulse": "Opportunities and ideas",
+    "Chancen und Themen": "Opportunities and topics",
     "Ansätze für die nächste Geschichte. Zum Weiterentwickeln öffnen.": "Angles for the next story. Open to develop further.",
     "Chance öffnen": "Open opportunity",
     "Weitere Chancen anzeigen": "Show more opportunities",
@@ -2771,7 +2767,7 @@ _EN: dict[str, str] = {
     "Nichts blockiert": "Nothing blocked",
     "davon beim Kunden": "with the client",
     "braucht eine Profil-Entscheidung": "needs a profile decision",
-    "hat einen neuen Impuls": "has a new impulse",
+    "hat ein neues Thema": "has a new topic",
     "wartet auf die Freigabe": "is waiting on approval",
     "wartet auf eine Kundenfreigabe": "is waiting on client approval",
     "wartet auf eine Entscheidung": "is waiting on a decision",

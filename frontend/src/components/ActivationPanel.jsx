@@ -1,6 +1,7 @@
 import React,{useEffect,useRef,useState} from 'react';
 import {useAssetInstruction} from '../asset-instruction.js';
 import {useAssetRunData} from '../asset-run-data.js';
+import {AssetTopicPicker,useAssetTopics} from './AssetTopicPicker.jsx';
 import {journalistRequest as request} from '../journalists-api.js';
 
 export function EvidenceReview({text}){
@@ -57,10 +58,12 @@ export function ActivationPanel({clientId,kind,identity,angleId=null,existingAss
  const [data,setData,acceptRead]=useAssetRunData(path);
  const [format,setFormat]=useState('kundenmail'),[contact,setContact]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false);
  const [instruction,setInstruction,clearInstruction]=useAssetInstruction({scope:path,format,contact});
+ const topics=data?.topics??[{id:identity,title:'Aktuelles Thema'}];
+ const [topicIds,toggleTopic]=useAssetTopics({scope:path,format,contact,topics,defaultTopicId:data?.default_topic_id??identity});
  useEffect(()=>{let active=true;request(path).then(v=>{if(active)acceptRead(v);}).catch(e=>{if(active)setError(e.message);});return()=>{active=false;};},[path,acceptRead]);
  const running=data?.latest?.status==='running'&&Date.now()-new Date(data.latest.started_at).getTime()<1200000;
  useEffect(()=>{if(!running)return;let active=true;const timer=setInterval(()=>request(path).then(v=>{if(active&&acceptRead(v)){if(v.latest?.status!=='running'){if(awaitingText.current && v.latest?.status==='complete' && v.texts[0])setSelectedText(`${v.texts[0].type}-${v.texts[0].id}`);awaitingText.current=false;onCompleted?.();}}}).catch(e=>{if(active)setError(e.message);}),2500);return()=>{active=false;clearInterval(timer);};},[path,running,acceptRead]);
- async function generate(event){event.preventDefault();awaitingText.current=true;setBusy(true);setError('');try{const job=await request(path,{method:'POST',body:JSON.stringify({kind:format,contact_id:needsContact&&contact?Number(contact):null,instruction})});setData(v=>({...v,latest:{...job,kind:format,started_at:new Date().toISOString()}}));clearInstruction();}catch(e){awaitingText.current=false;setError(e.message);}finally{setBusy(false);}}
+ async function generate(event){event.preventDefault();if(!topicIds.length)return;awaitingText.current=true;setBusy(true);setError('');try{const job=await request(path,{method:'POST',body:JSON.stringify({kind:format,contact_id:needsContact&&contact?Number(contact):null,instruction,topic_ids:topicIds})});setData(v=>({...v,latest:{...job,kind:format,started_at:new Date().toISOString()}}));clearInstruction();}catch(e){awaitingText.current=false;setError(e.message);}finally{setBusy(false);}}
  async function check(text){setBusy(true);setError('');try{const job=await request(`${path}/${text.type}/${text.id}/check`,{method:'POST'});setData(v=>({...v,latest:{...job,started_at:new Date().toISOString()}}));}catch(e){setError(e.message);}finally{setBusy(false);}}
  const needsContact=['pitch','interviewangebot','interview_briefing'].includes(format);
  const requiresContact=needsContact&&format!=='pitch';
@@ -83,11 +86,12 @@ export function ActivationPanel({clientId,kind,identity,angleId=null,existingAss
     <details className="format-more"><summary>Weitere Formate{!['kundenmail','pitch','custom'].includes(format)?` · ${formatLabel}`:''}</summary>
      <label>Format<select aria-label="Format" disabled={busy||running} value={format} onChange={e=>setFormat(e.target.value)}>{data.formats.map(f=><option key={f.key} value={f.key}>{f.label}</option>)}</select></label>
     </details>
+    <AssetTopicPicker topics={topics} selected={topicIds} onToggle={toggleTopic} disabled={busy||running}/>
     {needsContact&&<label>Journalist für diesen Text{format==='pitch'?' (optional)':''}<select aria-label="Journalist für diesen Text" disabled={busy||running} required={requiresContact} value={contact} onChange={e=>setContact(e.target.value)}><option value="">{format==='pitch'?'Ohne Journalist:in':'Bitte wählen'}</option>{contacts.map(c=><option key={c.id} value={c.id}>{c.name} · {c.outlet}</option>)}</select></label>}
     {requiresContact&&!contacts.length&&<p>Wähle unter „Storyline & Kontakte“ einen Kontakt aus.</p>}
     {format==='custom'?<label>Dein Auftrag<textarea aria-label="Ergänzender Auftrag" disabled={busy||running} required value={instruction} onChange={e=>setInstruction(e.target.value)} placeholder="Was soll der Text sagen — und für wen?"/></label>:<details className="editor-details"><summary>Auftrag ergänzen{instruction?' · hinterlegt':''}</summary><label>Ergänzender Auftrag (optional)<textarea aria-label="Ergänzender Auftrag" disabled={busy||running} value={instruction} onChange={e=>setInstruction(e.target.value)}/></label></details>}
     <small>Der zusätzliche Auftrag gilt nur für diesen Entwurf.</small>
-    <div className="editor-actions"><button className="btn btn--go" disabled={busy||running||contextDirty||(requiresContact&&!contact)}>{running?'Text wird erstellt…':'Entwurf erstellen'}</button><span>Auf Basis von Profil, Anlass und Quellen.</span></div>
+    <div className="editor-actions"><button className="btn btn--go" disabled={busy||running||contextDirty||!topicIds.length||(requiresContact&&!contact)}>{running?'Text wird erstellt…':'Entwurf erstellen'}</button><span>Auf Basis von Profil, Anlass und Quellen.</span></div>
    </form></details>
    {data.latest&&<p role="status">{data.latest.status==='running'?'In Arbeit':data.latest.status==='complete'?'Arbeitsschritt abgeschlossen':data.latest.status==='stale'?'Prüfung veraltet':'Arbeitsschritt fehlgeschlagen'}{data.latest.note&&` · ${data.latest.note}`}</p>}
 

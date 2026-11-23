@@ -235,7 +235,7 @@ def _impulse_frame(
     Bounded by the report's own period and not by a count. ``days`` was accepted
     and then ignored, so the sheet held the newest five under a heading that
     says "letzte 30 Tage" — a mandate with fourteen impulses in the window
-    shipped five of them, and the "Vorliegende Impulse" figure beside it was
+    shipped five of them, and the "Vorliegende Themen" figure beside it was
     really min(total, 5).
     """
     since = (now or dt.datetime.now(dt.UTC)) - dt.timedelta(days=days)
@@ -324,7 +324,7 @@ def client_workbook(
                 "Wert": _share_of_voice_cell(voice),
             },
             {"Kennzahl": "Medien ohne Kontakt (Pitch-Lücken)", "Wert": len(gaps)},
-            {"Kennzahl": "Vorliegende Impulse", "Wert": len(impulses)},
+            {"Kennzahl": "Vorliegende Themen", "Wert": len(impulses)},
         ],
         columns=["Kennzahl", "Wert"],
     )
@@ -347,7 +347,7 @@ def client_workbook(
         summary.to_excel(writer, sheet_name="Überblick", index=False)
         voice.to_excel(writer, sheet_name="Share of Voice", index=False)
         gaps.to_excel(writer, sheet_name="Pitch-Lücken", index=False)
-        impulses.to_excel(writer, sheet_name="Impulse", index=False)
+        impulses.to_excel(writer, sheet_name="Themen", index=False)
         frame.to_excel(writer, sheet_name="Berichterstattung", index=False)
         by_category.to_excel(writer, sheet_name="Nach Kategorie", index=False)
         by_publisher.to_excel(writer, sheet_name="Nach Publisher", index=False)
@@ -357,7 +357,7 @@ def client_workbook(
             ("Überblick", (("A", 34), ("B", 30))),
             ("Share of Voice", (("A", 26), ("B", 14), ("C", 12), ("D", 9), ("E", 9))),
             ("Pitch-Lücken", (("A", 34), ("B", 20), ("C", 20), ("D", 52))),
-            ("Impulse", (("A", 12), ("B", 60), ("C", 90), ("D", 70), ("E", 50))),
+            ("Themen", (("A", 12), ("B", 60), ("C", 90), ("D", 70), ("E", 50))),
             (
                 "Berichterstattung",
                 (("A", 17), ("B", 22), ("C", 20), ("D", 70), ("E", 70), ("F", 14),

@@ -99,18 +99,18 @@ it('requests an automatic recent-news proposal and links the triggering report',
  expect(calls.some(c=>c.url.endsWith('/themen/suggestions')&&c.method==='POST')).toBe(true);
 });
 
-it('offers an optional profile contact without researched free-text speakers',async()=>{
- routes({'/opportunities':{...board,opportunities:[{...board.opportunities[1]}]},
+it('creates an asset without a person selector or a preparatory person update',async()=>{
+ const calls=routes({'/opportunities':{...board,opportunities:[{...board.opportunities[1]}]},
   '/opportunities/detected/3':{...detail,storyline:'Ein Thema',speaker_statement_id:99,
     speakers:[{id:99,value:'Die PR betreut eine Agentur'}],people:[{id:4,label:'Anna Beispiel, Marketing'}]},
-  '/opportunities/detected/3/activation':{formats:[],texts:[],latest:null}});
+  '/opportunities/detected/3/activation':o=>o.method==='POST'?{id:9,status:'running'}:{formats:[],texts:[],latest:null}});
  window.history.replaceState(null,'','/client/1/assets?kind=detected&context=3');
  render(<AssetsPage clientId={1}/>);
- const select=await screen.findByRole('combobox',{name:'Ansprechperson (optional)'});
- expect(select.value).toBe('');
- expect(screen.getByRole('option',{name:'Keine Ansprechperson'})).toBeTruthy();
- expect(screen.getByRole('option',{name:'Anna Beispiel, Marketing'})).toBeTruthy();
- expect(screen.queryByRole('option',{name:'Die PR betreut eine Agentur'})).toBeNull();
+ fireEvent.click(await screen.findByRole('button',{name:/^Kundenmail/}));
+ expect(screen.queryByRole('combobox',{name:'Ansprechperson (optional)'})).toBeNull();
+ fireEvent.click(screen.getByRole('button',{name:'Kundenmail schreiben lassen'}));
+ await waitFor(()=>expect(calls.some(c=>c.method==='POST')).toBe(true));
+ expect(calls.some(c=>c.method==='PUT')).toBe(false);
 });
 
 it('opens a bookmarked topic with all workflow steps and sources',async()=>{
@@ -340,4 +340,44 @@ it('keeps a rejected second asset visible and lets the user correct and retry',a
  await waitFor(()=>expect(attempts).toBe(2));
  expect(within(progress).getByRole('progressbar')).toBeTruthy();
  expect(screen.queryByRole('alert')).toBeNull();
+});
+
+
+it('selects at least one topic tile for each asset format and sends only those topics',async()=>{
+ const topics=[{id:7,title:'Banklizenz',summary:'Folgen für KMU'},{id:12,title:'Liquiditätsplanung',summary:'Konkrete Maßnahmen'}];
+ const calls=routes({'/opportunities/developed/7':{...detail,id:7},
+  '/opportunities/developed/7/activation':o=>o.method==='POST'?{id:2,status:'running'}:{topics,default_topic_id:7,texts:[],latest:null}});
+ render(<Workspace clientId={1} kind="developed" identity={7}/>);
+ fireEvent.click(await screen.findByRole('button',{name:/^Kundenmail/}));
+ expect(screen.getByRole('checkbox',{name:'Banklizenz'}).checked).toBe(true);
+ fireEvent.click(screen.getByRole('checkbox',{name:'Banklizenz'}));
+ expect(screen.getByText('Wähle mindestens ein Thema aus.')).toBeTruthy();
+ expect(screen.getByRole('button',{name:'Kundenmail schreiben lassen'}).disabled).toBe(true);
+ fireEvent.click(screen.getByRole('checkbox',{name:'Liquiditätsplanung'}));
+ fireEvent.click(screen.getByRole('button',{name:/^Statement/}));
+ expect(screen.getByRole('checkbox',{name:'Banklizenz'}).checked).toBe(true);
+ expect(screen.getByRole('checkbox',{name:'Liquiditätsplanung'}).checked).toBe(false);
+ fireEvent.click(screen.getByRole('checkbox',{name:'Liquiditätsplanung'}));
+ fireEvent.click(screen.getByRole('button',{name:/^Kundenmail/}));
+ expect(screen.getByRole('checkbox',{name:'Banklizenz'}).checked).toBe(false);
+ expect(screen.getByRole('checkbox',{name:'Liquiditätsplanung'}).checked).toBe(true);
+ fireEvent.click(screen.getByRole('button',{name:/^Statement/}));
+ fireEvent.click(screen.getByRole('button',{name:'Statement schreiben lassen'}));
+ await waitFor(()=>expect(calls.some(c=>c.method==='POST')).toBe(true));
+ expect(JSON.parse(calls.find(c=>c.method==='POST').body).topic_ids).toEqual([7,12]);
+ expect(screen.getByRole('checkbox',{name:'Banklizenz'}).disabled).toBe(true);
+});
+
+it('keeps pitch topic choices separate for each journalist',async()=>{
+ const topics=[{id:7,title:'Thema A'},{id:12,title:'Thema B'}];
+ routes({'/opportunities/developed/7':{...detail,id:7,contact_ids:[10,11],contacts:[{id:10,name:'Anna'},{id:11,name:'Ben'}]},
+  '/opportunities/developed/7/activation':{topics,default_topic_id:7,texts:[],latest:null}});
+ render(<Workspace clientId={1} kind="developed" identity={7}/>);
+ fireEvent.click(await screen.findByRole('button',{name:/^Pitch/}));
+ fireEvent.change(screen.getByLabelText('Journalist:in'),{target:{value:'10'}});
+ fireEvent.click(screen.getByRole('checkbox',{name:'Thema B'}));
+ fireEvent.change(screen.getByLabelText('Journalist:in'),{target:{value:'11'}});
+ expect(screen.getByRole('checkbox',{name:'Thema B'}).checked).toBe(false);
+ fireEvent.change(screen.getByLabelText('Journalist:in'),{target:{value:'10'}});
+ expect(screen.getByRole('checkbox',{name:'Thema B'}).checked).toBe(true);
 });

@@ -120,7 +120,7 @@ describe('Briefing', () => {
       rows: [{...row, client: {id: 9, name: 'Qonto'}, status: 'krise'}],
       decisions: [decision(1, 'Zenchef', 'kundenfreigabe'), decision(1, 'Zenchef', 'freigabe'), decision(2, 'Qonto', 'impuls')]}, t);
     expect(text.lead).toBe('3 offene Entscheidungen');
-    expect(text.rest).toBe('Krise offen bei Qonto. Zenchef wartet auf eine Kundenfreigabe. Qonto hat einen neuen Impuls. 2 Chancen sind offen.');
+    expect(text.rest).toBe('Krise offen bei Qonto. Zenchef wartet auf eine Kundenfreigabe. Qonto hat ein neues Thema. 2 Chancen sind offen.');
     expect(text.rest).not.toMatch(/\u2014/);
   });
   it('names tasks that are due', () => {

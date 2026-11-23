@@ -223,7 +223,7 @@
             <span class="tag tag--{{ 'kunde' if item.kind == 'kundenfreigabe' else ('agentur' if item.kind == 'freigabe' else item.kind) }}">
               {% if item.kind == 'kundenfreigabe' %}{{ t("Kundenabstimmung") }}
               {% elif item.kind == 'freigabe' %}{{ t("Freigabe") }}
-              {% elif item.kind == 'impuls' %}{{ t("Impuls") }}
+              {% elif item.kind == 'impuls' %}{{ t("Thema") }}
               {% else %}{{ t("Profil") }}{% endif %}
             </span>
           </div>

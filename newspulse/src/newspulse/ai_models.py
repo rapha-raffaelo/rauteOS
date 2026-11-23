@@ -50,7 +50,7 @@ PROVIDERS: dict[str, dict[str, str]] = {
 }
 
 ROLES: dict[str, tuple[str, str]] = {
-    "designer": ("Designer", "Schreibt Entwürfe, Impulse und Recherche-Antworten."),
+    "designer": ("Designer", "Schreibt Entwürfe, Themen und Recherche-Antworten."),
     "reviewer": ("Reviewer", "Prüft fertige Texte gegen Quellen und Profil. Nie das erste Modell des Designers."),
     "lektor": ("Lektor", "Glättet Sprache und Stil fertiger Texte, ohne Inhalte zu ändern."),
 }

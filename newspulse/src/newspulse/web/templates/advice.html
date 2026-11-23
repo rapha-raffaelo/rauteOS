@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{{ translator(request)("Impulse") }} · {{ client.name }} · RauteOS{% endblock %}
+{% block title %}{{ translator(request)("Themen") }} · {{ client.name }} · RauteOS{% endblock %}
 
 {% block pagetitle %}{% include "partials/client_title.html" %}{% endblock %}
 
@@ -228,7 +228,7 @@
 {% import "partials/brain_stamp.html" as provenance %}
 
 <div class="client-profile">
-  <h1>{{ t("Impulse") }}</h1>
+  <h1>{{ t("Themen") }}</h1>
   <p class="panel-hint">
     {{ t("Was dieser Mandant sagen sollte, wenn sich sein Markt bewegt — und als Nachricht an die Journalisten, die darüber schreiben.") }}
     <strong>{{ t("Entwurf, keine Entscheidung") }}</strong> — {{ t("jede Aussage nennt die Meldungen, auf die sie sich stützt, damit die Begründung nachprüfbar bleibt.") }}
@@ -271,7 +271,7 @@
   <div class="sect__act">
     <form method="post" action="/client/{{ client.id }}/impulse">
       <button type="submit" class="btn"{% if drafting or not has_themes %} disabled{% endif %}>
-        {% if angles %}{{ t("Neuen Impuls erzeugen") }}{% else %}{{ t("Impuls erzeugen") }}{% endif %}
+        {% if angles %}{{ t("Neues Thema erzeugen") }}{% else %}{{ t("Thema erzeugen") }}{% endif %}
       </button>
     </form>
     <span class="panel-hint">
@@ -296,7 +296,7 @@
          hx-select="#positioning"
          hx-target="#positioning"
          hx-swap="outerHTML">
-      <span class="spinner" aria-hidden="true"></span>{{ t("Impuls wird erzeugt — die Seite aktualisiert sich, sobald er steht.") }}
+      <span class="spinner" aria-hidden="true"></span>{{ t("Thema wird erzeugt — die Seite aktualisiert sich, sobald es steht.") }}
     </div>
   {% endif %}
 
@@ -1208,7 +1208,7 @@
                      about this very thing. Dated rather than hidden: the reader
                      decides, and a second approach may well be the right call —
                      it just must not happen by accident. #}
-                  {% if target.already_pitched_at %}<span class="pitchlist__seen" title="{{ t('Zu diesem Impuls ging an diese Adresse bereits ein freigegebenes Anschreiben raus. Ein zweites zum selben Thema ist das, was eine Beziehung kostet.') }}">{{ t("schon angeschrieben am") }} {{ target.already_pitched_at | de_date }}</span>{% endif %}
+                  {% if target.already_pitched_at %}<span class="pitchlist__seen" title="{{ t('Zu diesem Thema ging an diese Adresse bereits ein freigegebenes Anschreiben raus. Ein zweites zum selben Thema ist das, was eine Beziehung kostet.') }}">{{ t("schon angeschrieben am") }} {{ target.already_pitched_at | de_date }}</span>{% endif %}
                   {# One recipient, one message: the same position reads
                      differently to the reporter who covered the story it answers
                      than to a trade title that never has. #}
@@ -1249,7 +1249,7 @@
          describes what actually happened rather than what is stored. #}
       {% if impulse_refusal %}
         <p class="sect__empty sect__refusal">
-          <strong>{{ t("Kein Impuls erzeugt.") }}</strong> {{ impulse_refusal }}
+          <strong>{{ t("Kein Thema erzeugt.") }}</strong> {{ impulse_refusal }}
           {% if impulse_checked_at %}
             <span class="sect__when">{{ t("Zuletzt geprüft") }}: {{ impulse_checked_at | de_datetime }}</span>
           {% endif %}
@@ -1300,13 +1300,13 @@
         {% endif %}
       {% elif not has_themes %}
         <p class="handover__act">
-          {{ t("Für diesen Mandanten läuft noch kein Themen-Radar — ohne hinterlegte Themen entsteht auch kein Impuls.") }}
+          {{ t("Für diesen Mandanten läuft noch kein Themen-Radar — ohne hinterlegte Themen entsteht auch kein Thema.") }}
           <a href="/settings?edit={{ client.id }}">{{ t("Themen hinterlegen") }} →</a>
         </p>
       {% elif market_usable %}
         <p class="sect__empty">
           {{ t("Das Themen-Radar hat") }} {{ market_usable }}
-          {{ t("verwertbare Marktmeldung(en) für diesen Mandanten — daraus ist noch kein Impuls entstanden. Der Knopf oben fragt direkt.") }}
+          {{ t("verwertbare Marktmeldung(en) für diesen Mandanten — daraus ist noch kein Thema entstanden. Der Knopf oben fragt direkt.") }}
           <a href="/client/{{ client.id }}/market">{{ t("Marktumfeld ansehen") }} →</a>
         </p>
       {% elif market_seen %}
@@ -1316,7 +1316,7 @@
         <p class="sect__empty sect__refusal">
           <strong>{{ t("Kein verwertbares Marktmaterial.") }}</strong>
           {{ t("Das Themen-Radar hat") }} {{ market_seen }} {{ t("Treffer gesammelt. Jeder davon ist entweder älter als") }}
-          {{ impulse_days }} {{ t("Tage oder Berichterstattung über den Mandanten selbst — und gegen die eigene Presse lässt sich nicht positionieren. Ein Impuls braucht ein Thema, über das auch ohne den Mandanten geschrieben wird.") }}
+          {{ impulse_days }} {{ t("Tage oder Berichterstattung über den Mandanten selbst — und gegen die eigene Presse lässt sich nicht positionieren. Ein Thema braucht einen Anlass, über den auch ohne den Mandanten geschrieben wird.") }}
         </p>
         <form method="post" action="/client/{{ client.id }}/themes" class="sect__act" style="border:0;padding:0;margin-top:10px">
           <button type="submit" class="btn btn--ghost">{{ t("Passende Themen vorschlagen") }}</button>

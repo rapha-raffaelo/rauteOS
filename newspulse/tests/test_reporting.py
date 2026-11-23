@@ -192,7 +192,7 @@ def test_workbook_leads_with_the_answers_then_the_evidence(session, portfolio):
         "Überblick",
         "Share of Voice",
         "Pitch-Lücken",
-        "Impulse",
+        "Themen",
         "Berichterstattung",
         "Nach Kategorie",
         "Nach Publisher",
@@ -358,7 +358,7 @@ def test_the_impulse_sheet_covers_the_period_it_claims(session, portfolio):
 
     ``_impulse_frame`` took a ``days`` argument and never used it, so a mandate
     with more than five impulses in the window shipped five of them — and the
-    "Vorliegende Impulse" figure beside them was really min(total, 5), which is
+    "Vorliegende Themen" figure beside them was really min(total, 5), which is
     not a measurement of anything.
     """
     from newspulse.models import Angle
@@ -387,7 +387,7 @@ def test_the_impulse_sheet_covers_the_period_it_claims(session, portfolio):
     session.commit()
 
     book = load_workbook(io.BytesIO(client_workbook(session, mandate, days=30, now=now)))
-    sheet = book["Impulse"]
+    sheet = book["Themen"]
     subjects = [row[1].value for row in sheet.iter_rows(min_row=2) if row[1].value]
 
     assert len(subjects) == 8, "every impulse in the period, not the newest five"
@@ -396,7 +396,7 @@ def test_the_impulse_sheet_covers_the_period_it_claims(session, portfolio):
 
 def test_the_impulse_sheet_still_lists_a_draft_a_person_declined(session):
     """A draft written in the period was written in it. The rail hides a
-    declined occasion; the report must not, or the "Vorliegende Impulse" figure
+    declined occasion; the report must not, or the "Vorliegende Themen" figure
     shrinks whenever somebody tidies a list — a KPI that is not a measurement."""
     from newspulse.models import Angle
     from openpyxl import load_workbook
@@ -418,7 +418,7 @@ def test_the_impulse_sheet_still_lists_a_draft_a_person_declined(session):
     session.commit()
 
     book = load_workbook(io.BytesIO(client_workbook(session, mandate, days=30)))
-    subjects = [row[1] for row in book["Impulse"].iter_rows(min_row=2, values_only=True)]
+    subjects = [row[1] for row in book["Themen"].iter_rows(min_row=2, values_only=True)]
 
     assert "Der Anlass, der bleibt" in subjects
     assert "Der Anlass, der verworfen wurde" in subjects

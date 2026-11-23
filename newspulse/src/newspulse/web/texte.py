@@ -1,6 +1,6 @@
 """The one list behind the Texte tab.
 
-Impulses and monthly reports were two tabs and read as two products. They are the
+Topics and monthly reports were two tabs and read as two products. They are the
 same act at two rhythms: RauteOS drafts, the consultant keeps, changes or
 discards, and what is left is what gets handed over. Reported as "irgendwie ist
 das ganz schön überlappend".
@@ -60,14 +60,14 @@ def _occasion_label(angle) -> str:
     """The occasion's headline, or the first sentence of its text.
 
     An impulse always has a message and not always a subject, and a rail entry
-    reading "Impuls 3" tells the reader nothing about which one it is.
+    reading "Thema 3" tells the reader nothing about which one it is.
     """
     subject = (getattr(angle, "subject", "") or "").strip()
     if subject:
         return subject
     text = (getattr(angle, "message", "") or "").strip()
     first = text.split(". ")[0].strip()
-    return (first[:70] + "…") if len(first) > 70 else (first or "Impuls")
+    return (first[:70] + "…") if len(first) > 70 else (first or "Thema")
 
 
 def rail(session: Session, client: Client, *, active: str = "") -> list[Entry]:

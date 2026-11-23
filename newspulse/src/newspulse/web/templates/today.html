@@ -410,7 +410,7 @@
   {# The third column: what to send a mandate, drafted by the daily run off market
      coverage the mandate is not in. Advisory — nothing is sent from here. The
      reader copies, edits, decides. #}
-  <aside class="anglecol" aria-label="{{ t('Chancen und Impulse') }}">
+  <aside class="anglecol" aria-label="{{ t('Chancen und Themen') }}">
     {% include "partials/reputation_band.html" %}
     {% if chances %}
     <section class="intel-chances" aria-label="{{ t('Offene Chancen') }}">
@@ -431,7 +431,7 @@
     </section>
     {% endif %}
     {% if angles or not chances %}
-    <div class="colhead">{{ t("Impulse") }} <span class="n">{{ angles | length }}</span></div>
+    <div class="colhead">{{ t("Themen") }} <span class="n">{{ angles | length }}</span></div>
     {# One line per mandate, opened on demand.
 
        Every card used to render its full message — two paragraphs of prose in a
@@ -515,7 +515,7 @@
       <details class="quietfold">
         <summary>
           {{ quiet_clients | length }}
-          {% if quiet_clients | length == 1 %}{{ t("Mandant ohne Impuls") }}{% else %}{{ t("Mandanten ohne Impuls") }}{% endif %}
+          {% if quiet_clients | length == 1 %}{{ t("Mandant ohne Thema") }}{% else %}{{ t("Mandanten ohne Thema") }}{% endif %}
         </summary>
         {% for quiet in quiet_clients %}
           <div class="quietrow">

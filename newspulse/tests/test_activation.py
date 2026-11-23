@@ -302,3 +302,63 @@ def test_deleting_and_restoring_one_variant_keeps_other_drafts(web,db):
     entry=db.scalar(select(TrashEntry))
     recycle_bin.restore(db,entry.id)
     assert {t['id'] for t in web.get(path()).json()['texts']}=={t['id'] for t in texts}
+
+
+def add_topic(db,*,client_id=1,status='active'):
+    angle=Angle(client_id=client_id,subject='Ausgewähltes zweites Thema',message='SECOND_TOPIC_ONLY',context='Belegte Ausgangslage',thesis='')
+    db.add(angle);db.flush()
+    row=OpportunityWorkspace(client_id=client_id,context_kind='developed',context_id=angle.id,angle_id=angle.id,storyline='Zweiter Blickwinkel',status=status)
+    db.add(row);db.commit()
+    return row
+
+
+def test_topic_selection_requires_at_least_one_active_same_client_topic(web,db):
+    selected=add_topic(db)
+    foreign=add_topic(db,client_id=2)
+    inactive=add_topic(db,status='draft')
+    data=web.get(path()).json()
+    assert data['default_topic_id']==1
+    assert {t['id'] for t in data['topics']}=={1,selected.id}
+    for ids in ([],[foreign.id],[inactive.id],[999]):
+        assert web.post(path(),json={'kind':'kundenmail','topic_ids':ids}).status_code==422
+    assert db.scalar(select(func.count()).select_from(OpportunityAssetRun))==0
+
+
+def test_selected_topics_drive_asset_content_and_rechecks_without_mutating_themes(web,db):
+    selected=add_topic(db)
+    prompts=[]
+    identity=launch(web,'kundenmail',topic_ids=[selected.id])
+    def write(prompt,**kwargs):
+        prompts.append(prompt);return draft()
+    activation.run(db,identity,invoke=write,review_invoke=reviewer)
+    assert 'SECOND_TOPIC_ONLY' in prompts[0]
+    assert 'Study proposal' not in prompts[0]
+    job=db.get(OpportunityAssetRun,identity)
+    assert job.context['topic_ids']==[selected.id]
+    assert job.context['topics'][0]['title']=='Ausgewähltes zweites Thema'
+    assert db.get(Angle,1).message=='Study proposal'
+    asset=db.get(Asset,job.asset_id)
+    assert asset.angle_id==1  # Filed in the open theme, with chosen content recorded.
+    assert web.get(path()).json()['texts'][0]['quality_stale'] is False
+    assert web.post(path()+f'/asset/{asset.id}/check').status_code==202
+    check=db.scalar(select(OpportunityAssetRun).order_by(OpportunityAssetRun.id.desc()))
+    assert check.context['topic_ids']==[selected.id]
+    activation.run(db,check.id,review_invoke=reviewer)
+    db.get(Angle,selected.angle_id).overclaim='A changed rejected claim';db.commit()
+    assert web.get(path()).json()['texts'][0]['quality_stale'] is True
+
+
+def test_multiple_topics_are_combined_and_an_author_is_not_required(web,db):
+    selected=add_topic(db)
+    db.get(OpportunityWorkspace,1).speaker_statement_id=None;db.commit()
+    identity=launch(web,'statement',topic_ids=[1,selected.id])
+    prompts=[]
+    def write(prompt,**kwargs):
+        prompts.append(prompt)
+        return json.dumps(dict(title='Einordnung',body='Unternehmen brauchen verlässliche Rahmenbedingungen. Klare Regeln helfen bei der Planung. Wir setzen uns für eine sachliche Debatte ein.',speaker=''))
+    activation.run(db,identity,invoke=write,review_invoke=reviewer)
+    job=db.get(OpportunityAssetRun,identity)
+    assert job.status=='complete'
+    assert 'SECOND_TOPIC_ONLY' in prompts[0] and 'Study proposal' in prompts[0]
+    assert db.get(Asset,job.asset_id).speaker==''
+    assert len(job.context['topics'])==2

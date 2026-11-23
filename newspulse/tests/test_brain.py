@@ -692,7 +692,7 @@ RESTATEMENT_TELLS = {
     "refusal": ["leere Antwort die richtige", "mehr Zeit als eine leere Spalte",
                 "keine Fehlleistung", "erfinde keinen Anlass"],
     "false_alarm": ["nach dem dritten Mal ignoriert", "Ist etwas in Ordnung, sag das"],
-    "press_relevance": ["ohnehin nicht schreibt", "Eigenwerbung, kein Impuls"],
+    "press_relevance": ["ohnehin nicht schreibt", "Eigenwerbung, kein Thema"],
     # UHR-02's acceptance in guard form: the crisis rules live in the block and
     # in neither prompt. A prompt that writes one of these clauses out again has
     # forked the standard the block exists to hold in one place.

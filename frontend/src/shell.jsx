@@ -37,7 +37,7 @@ export function ClientTabs({ data, path = window.location.pathname }) {
     return (
       <p className="panel-hint">
         {t(
-          "Vergleichsunternehmen. Hier steht seine Berichterstattung — Impulse, Berichte und Profil führt RauteOS nur für Mandanten.",
+          "Vergleichsunternehmen. Hier steht seine Berichterstattung — Themen, Berichte und Profil führt RauteOS nur für Mandanten.",
         )}
       </p>
     );

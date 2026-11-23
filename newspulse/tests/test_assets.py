@@ -1966,3 +1966,50 @@ def test_explicit_asset_creation_preserves_variants_and_legacy_refresh_slot(sess
     assert variants[0].body=='Von Hand bearbeitet'
     assert variants[1].body=='Eigener Text 1' and variants[1].released_at
     assert len(list(session.scalars(select(Asset).where(Asset.angle_id==angle.id))))==4
+
+
+@pytest.mark.parametrize('kind',['statement','pressemitteilung','gastbeitrag'])
+def test_user_asset_can_be_written_without_person_but_preserves_format(kind,session):
+    client,angle=_mandate(session,facts={'sitz':'Berlin','geschaeftsfeld':'Verwahrung'},articles=0)
+    fmt=assets.workspace_format(kind)
+    assert assets.requirements_met(session,fmt,client,angle).ok
+    if kind=='statement':
+        body=_statement_body().split('\n\n')[0]
+    elif kind=='pressemitteilung':
+        body='\n\n'.join([f'Berlin, {assets.today()}. Alpha AG erweitert ihr Angebot.',
+            'Die Verwahrung stellt hohe Anforderungen an die Verfügbarkeit.',
+            'Das Angebot richtet sich an Banken.', 'Über Alpha AG: Sie bietet Verwahrung an.'])
+    else:
+        body=_gastbeitrag_body(opening='Die Debatte über Verwahrung greift zu kurz.').replace('Wir sehen','Es zeigt sich')
+    result=assets.write(session,fmt,client,angle,invoke=lambda *a,**k:json.dumps({'title':'Ein Thema','body':body,'speaker':''}))
+    assert result.body==body and result.speaker==''
+    # Automated production still has its explicit person/source contract.
+    assert not assets.requirements_met(session,assets.REGISTRY[kind],client,angle).ok
+
+
+def test_optional_person_does_not_allow_an_invented_quote_or_byline(session):
+    client,angle=_mandate(session,facts={'sitz':'Berlin','geschaeftsfeld':'Verwahrung'})
+    for kind,body in [('statement',_statement_body()),('pressemitteilung',_release_body())]:
+        fmt=assets.workspace_format(kind)
+        with pytest.raises(assets.Malformed):
+            assets.write(session,fmt,client,angle,invoke=lambda *a,**k:json.dumps({'title':'Thema','body':body,'speaker':''}))
+    with pytest.raises(assets.Malformed):
+        assets.write(session,assets.workspace_format('statement'),client,angle,
+            invoke=lambda *a,**k:json.dumps({'title':'Thema','body':_statement_body().split('\n\n')[0],'speaker':'Dr. Erfunden'}))
+
+
+def test_workspace_keeps_attribution_when_a_person_is_provided(session):
+    client,angle=_mandate(session)
+    fmt=assets.workspace_format('statement')
+    result=assets.write(session,fmt,client,angle,invoke=lambda *a,**k:_drafted(fmt))
+    assert result.speaker==_SPEAKER and _SPEAKER in result.body
+    given=assets._given(fmt,client,profile.stored(session,client.id),None,())
+    assert assets.validate(fmt,AssetDraft(title='Thema',body=_statement_body().split('\n\n')[0],speaker=''),given)
+
+
+def test_guest_article_workspace_requires_topic_thesis_but_not_two_news_items(session):
+    client,angle=_mandate(session,facts={},articles=0)
+    assert assets.requirements_met(session,assets.workspace_format('gastbeitrag'),client,angle).ok
+    assert not assets.requirements_met(session,assets.REGISTRY['gastbeitrag'],client,angle).ok
+    angle.thesis=''
+    assert not assets.requirements_met(session,assets.workspace_format('gastbeitrag'),client,angle).ok

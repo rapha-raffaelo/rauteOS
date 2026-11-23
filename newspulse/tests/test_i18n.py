@@ -175,7 +175,7 @@ def test_the_impulse_column_translates_its_chrome_but_not_the_draft(client, fact
     client.cookies.set(i18n.COOKIE_NAME, "en")
     body = rendered(client.get("/today"))
 
-    assert "Openings" in body
+    assert "Themes" in body
     assert "Copy" in body
     assert "Not the thesis" in body
     assert "Impulse" not in body.split('class="anglecol"', 1)[1].split("</aside>")[0]

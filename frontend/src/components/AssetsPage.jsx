@@ -5,6 +5,7 @@ import {setTopicActive} from '../topic-actions.js';
 import {PageHeading} from './PageHeading.jsx';
 import {journalistRequest as request} from '../journalists-api.js';
 import {EvidenceReview} from './ActivationPanel.jsx';
+import {AssetTopicPicker,useAssetTopics} from './AssetTopicPicker.jsx';
 
 // Spec 12: an activated Thema is written here. RAUTE drafts each asset from
 // Thema, pitch and profile; the text is edited in place. Sending comes later.
@@ -14,7 +15,6 @@ export const KINDS=[['kundenmail','Kundenmail','Abstimmung mit dem Kunden'],['st
  ['interviewangebot','Interviewangebot','Mit konkretem Gesprächsanlass'],['interview_briefing','Gesprächsbriefing','Vorbereitung für die Sprecherperson'],['custom','Custom','Eigene Vorgabe, eigenes Format']];
 const LABEL=Object.fromEntries(KINDS.map(([k,l])=>[k,l]));
 const NEEDS_CONTACT=new Set(['pitch','interviewangebot','interview_briefing']);
-const speakerValue=d=>d.speaker_person_id?`p:${d.speaker_person_id}`:'';
 
 export function WritingProgress({kind,onDismiss,error,failed=false}){
  const dialog=useRef(null);
@@ -110,10 +110,11 @@ export function Editor({text,path,onSaved,exportBase,onCheck,checking=false,clie
  </article>;
 }
 
-function NewAsset({scope,detail,running,onCreate,error,allowedKinds,initialInstruction='',initialContact=''}){
+function NewAsset({scope,detail,topics,defaultTopicId,running,onCreate,error,allowedKinds,initialInstruction='',initialContact=''}){
  const headingId=useId();
  const [kind,setKind]=useState(''),[contact,setContact]=useState(''),[startFailed,setStartFailed]=useState(false);
  const [instruction,setInstruction,clearInstruction]=useAssetInstruction({scope,format:kind,contact,initialInstruction,initialContact});
+ const [topicIds,toggleTopic]=useAssetTopics({scope,format:kind,contact,topics,defaultTopicId});
  useEffect(()=>{if(initialContact){setContact(String(initialContact));setKind('pitch');}},[initialContact,initialInstruction]);
  const needsContact=NEEDS_CONTACT.has(kind);
  const requiresContact=needsContact&&kind!=='pitch';
@@ -124,12 +125,13 @@ function NewAsset({scope,detail,running,onCreate,error,allowedKinds,initialInstr
   <div className="asset-kinds" role="group" aria-label="Asset wählen">{KINDS.filter(([key])=>!allowedKinds||allowedKinds.includes(key)).map(([key,label,note])=>
    <button key={key} type="button" className={`asset-kind${key==='custom'?' asset-kind--custom':''}`} aria-pressed={kind===key} disabled={running} onClick={()=>setKind(key)}>
     <strong>{label}</strong><span>{note}</span></button>)}</div>
-  {kind&&<form className="asset-new__form" onSubmit={async e=>{e.preventDefault();setStartFailed(false);if(await onCreate({kind,contact_id:needsContact&&contact?Number(contact):null,instruction}))clearInstruction();else setStartFailed(true);}}>
+  {kind&&<form className="asset-new__form" onSubmit={async e=>{e.preventDefault();if(!topicIds.length)return;setStartFailed(false);if(await onCreate({kind,contact_id:needsContact&&contact?Number(contact):null,instruction,topic_ids:topicIds}))clearInstruction();else setStartFailed(true);}}>
+   <AssetTopicPicker topics={topics} selected={topicIds} onToggle={toggleTopic} disabled={running}/>
    {needsContact&&<label>Journalist:in{kind==='pitch'?' (optional)':''}<select aria-label="Journalist:in" disabled={running} required={requiresContact} value={contact} onChange={e=>setContact(e.target.value)}>
     <option value="">{kind==='pitch'?'Ohne Journalist:in':'Bitte wählen'}</option>{(detail.contacts||[]).filter(c=>!allowedKinds||detail.contact_ids.includes(c.id)||String(c.id)===String(initialContact)).map(c=><option key={c.id} value={c.id}>{c.name}{c.outlet?` · ${c.outlet}`:''}</option>)}</select></label>}
    <label>{kind==='custom'?'Dein Auftrag':'Zusätzlicher Auftrag (optional)'}<textarea aria-label="Auftrag" disabled={running} required={kind==='custom'} value={instruction} onChange={e=>setInstruction(e.target.value)}
     placeholder={kind==='custom'?'Was soll der Text sagen, und für wen?':'Zum Beispiel: kürzer, mit Fokus auf Apotheken'}/></label>
-   <button className="btn btn--go" disabled={running||(requiresContact&&!contact)}>{running?'RAUTE schreibt…':`${LABEL[kind]} schreiben lassen`}</button>
+   <button className="btn btn--go" disabled={running||!topicIds.length||(requiresContact&&!contact)}>{running?'RAUTE schreibt…':`${LABEL[kind]} schreiben lassen`}</button>
    {error&&!startFailed&&<p className="twin-error" role="alert">{error}</p>}
    <small>Der zusätzliche Auftrag gilt nur für diesen Entwurf.</small>
   </form>}
@@ -179,8 +181,6 @@ export function Workspace({clientId,client={},kind,identity,initialText='',embed
   const next={revision:detail.revision,storyline:detail.storyline,speaker_statement_id:null,speaker_person_id:detail.speaker_person_id,contact_ids:detail.contact_ids,...changes};
   const value=await request(base,{method:'PUT',body:JSON.stringify(next)});setDetail(value);onCompleted?.();return value;
  }
- async function speaker(value){setError('');const [k,id]=value.split(':');
-  try{await choose({speaker_person_id:k==='p'?Number(id):null,speaker_statement_id:null});}catch(e){setError(e.message);}}
  async function trashText(text){
   if(!window.confirm(`„${text.title||'Dieses Asset'}“ in den Papierkorb verschieben? Die gespeicherte Fassung bleibt zwölf Wochen wiederherstellbar.`))return;
   setBusy(true);setError('');
@@ -188,7 +188,7 @@ export function Workspace({clientId,client={},kind,identity,initialText='',embed
   catch(e){setError(e.message);}finally{setBusy(false);}
  }
  async function create(input){setBusy(true);setError('');setCreationError('');setWritingKind(input.kind);setProgressHidden(false);try{
-  if(detail.speaker_statement_id || (input.contact_id&&!detail.contact_ids.includes(input.contact_id)))await choose({contact_ids:input.contact_id?[...new Set([...detail.contact_ids,input.contact_id])]:detail.contact_ids});
+  if(input.contact_id&&!detail.contact_ids.includes(input.contact_id))await choose({contact_ids:input.contact_id?[...new Set([...detail.contact_ids,input.contact_id])]:detail.contact_ids});
   waiting.current=true;
   const job=await request(path,{method:'POST',body:JSON.stringify(input)});
   setData(v=>({...v,latest:{...job,kind:input.kind,started_at:new Date().toISOString()}}));
@@ -203,10 +203,7 @@ export function Workspace({clientId,client={},kind,identity,initialText='',embed
    <div>{showTitle&&<><span className="themen-tag themen-tag--on">{closed?'Abgeschlossen':inactive?'Thema deaktiviert':'Thema aktiv'}</span><h2>{detail.title}</h2></>}{detail.storyline&&<p>Pitch: {detail.storyline}</p>}</div>
    <div className="assets-workspace__side">
    <ExportBox base={`/api/v1/clients/${clientId}/themen/${kind}/${identity}`} label="Thema exportieren"/>
-   <label className="assets-speaker">Ansprechperson (optional)<select aria-label="Ansprechperson (optional)" value={speakerValue(detail)} disabled={closed||inactive} onChange={e=>speaker(e.target.value)}>
-    <option value="">Keine Ansprechperson</option>
-    {(detail.people||[]).map(p=><option key={`p${p.id}`} value={`p:${p.id}`}>{p.label}</option>)}
-    </select></label>
+
    </div>
   </header>}
   {error&&<p className="twin-error" role="alert">{error}</p>}
@@ -219,6 +216,6 @@ export function Workspace({clientId,client={},kind,identity,initialText='',embed
     <strong>{text.title||'Ohne Titel'}</strong><small>{({offen:'Offen',in_arbeit:'In Arbeit',review:'Review',erledigt:'Done'})[text.stage||'offen']}</small></button><button type="button" className="asset-trash" aria-label={`${text.title||'Asset'} in den Papierkorb`} title="In den Papierkorb" disabled={busy||running} onClick={()=>trashText(text)}><svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 10v7m4-7v7"/></svg></button></div>;})}</div></section>}
   {current&&<Editor key={`${open}-${current.digest}`} client={client} readOnly={closed||inactive} text={current} path={path} exportBase={exportBase(current)} onSaved={value=>{setData(value);onCompleted?.();}}
    checking={running} onCheck={async t=>{setError('');try{const job=await request(`${path}/${t.type}/${t.id}/check`,{method:'POST'});setData(v=>({...v,latest:{...job,kind:t.kind,started_at:new Date().toISOString()}}));}catch(e){setError(e.message);}}}/>}
-  {inactive?<p className="topic-notice">Das Thema ist deaktiviert. Assets und Verlauf bleiben erhalten. <a href={`/client/${clientId}/themen`}>Unter Themen wieder aktivieren →</a></p>:closed?<p className="topic-notice">Dieses Thema ist abgeschlossen. <a href={`/client/${clientId}/themen?kind=${kind}&context=${identity}&step=ergebnis`}>Ergebnis ansehen oder wieder öffnen →</a></p>:<NewAsset scope={base} detail={detail} running={running||busy} error={creationError} onCreate={create} allowedKinds={allowedKinds} initialInstruction={initialInstruction} initialContact={initialContact}/>}
+  {inactive?<p className="topic-notice">Das Thema ist deaktiviert. Assets und Verlauf bleiben erhalten. <a href={`/client/${clientId}/themen`}>Unter Themen wieder aktivieren →</a></p>:closed?<p className="topic-notice">Dieses Thema ist abgeschlossen. <a href={`/client/${clientId}/themen?kind=${kind}&context=${identity}&step=ergebnis`}>Ergebnis ansehen oder wieder öffnen →</a></p>:<NewAsset scope={base} detail={detail} topics={data.topics??[{id:detail.id||identity,title:detail.title,summary:detail.storyline||detail.situation}]} defaultTopicId={data.default_topic_id??detail.id??identity} running={running||busy} error={creationError} onCreate={create} allowedKinds={allowedKinds} initialInstruction={initialInstruction} initialContact={initialContact}/>}
  </div>;
 }

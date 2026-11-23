@@ -54,7 +54,7 @@ _TABS: tuple[tuple[str, str, str], ...] = (
     ("Heute", "/heute", "ico-heute"),
     # Renamed on main while this branch was open: the page under it is headed
     # "Impulse", and a tab that names its page is easier to find.
-    ("Impulse", "/advice", "ico-texte"),
+    ("Themen", "/advice", "ico-texte"),
     ("Issues", "/issues", "ico-issues"),
     ("Plan", "/plan", "ico-plan"),
     ("Wettbewerb", "/wettbewerb", "ico-wettbewerb"),

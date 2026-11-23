@@ -166,7 +166,7 @@ def status(session, angle_id):
     if state == 'running' and job.lease_until < dt.datetime.now(dt.UTC):
         state = 'queued'
     if state == 'skipped':
-        return dict(status='blocked', reason='Dieser Impuls ist nicht mehr aktiv.')
+        return dict(status='blocked', reason='Dieses Thema ist nicht mehr aktiv.')
     return dict(status=state, stage=job.stage, preview=job.preview,
                 words=len(job.preview.split()), reason=job.note)
 

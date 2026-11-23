@@ -1,4 +1,4 @@
-"""The Impulse view: what one client should be saying, and to whom.
+"""The topics view: what one client should be saying, and to whom.
 
 The page held two panels for a while — a positioning draft from the market and a
 "recommendation" from the client's own press — and the difference between them
@@ -334,9 +334,9 @@ def advice_view(
 
 
 def new_flow_href(session: Session, client_id: int, eintrag: str = "") -> str:
-    """Where an old Impuls link belongs since Spec 12: its Thema, or its Assets once active.
+    """Where a legacy advice link belongs since Spec 12: its Thema, or its Assets once active.
 
-    The Impuls page stacked occasion, analysis, texts and the send on one long
+    The old advice page stacked occasion, analysis, texts and the send on one long
     page, which Lucas found confusing (12.11.2026). A person who opens an old
     link (Medien, Desk, a bookmark, a redirect after an action) lands in the
     new flow instead. Only a top-level navigation is sent on, so the page's
@@ -584,7 +584,7 @@ def dismiss_impulse(
     client = mandate_or_404(session, client_id)
     angle = session.get(Angle, angle_id)
     if angle is None or angle.client_id != client_id:
-        raise HTTPException(status_code=404, detail="Impulse not found")
+        raise HTTPException(status_code=404, detail="Thema nicht gefunden")
     if angle.dismissed_at is None:
         angle.dismissed_at = dt.datetime.now(dt.UTC)
         session.commit()
@@ -612,7 +612,7 @@ def write_message(
     client = session.get(Client, client_id)
     angle = session.get(Angle, angle_id)
     if client is None or angle is None or angle.client_id != client_id:
-        raise HTTPException(status_code=404, detail="Impulse not found")
+        raise HTTPException(status_code=404, detail="Thema nicht gefunden")
     # The name the browser sent wins. The index behind it is the fallback for a
     # reader with no JavaScript, resolved against the same list in the same order —
     # and deliberately not the primary path, because a list rebuilt a second later

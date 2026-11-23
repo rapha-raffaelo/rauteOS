@@ -29,7 +29,7 @@
                   {% elif state == 'läuft' %}
                     <span class="setup setup--busy"><span class="spinner" aria-hidden="true"></span>{{ t("wird eingerichtet") }}</span>
                   {% elif state == 'entwürfe' %}
-                    <span class="setup setup--busy"><span class="spinner" aria-hidden="true"></span>{{ t("Impuls und Empfehlung werden erzeugt") }}</span>
+                    <span class="setup setup--busy"><span class="spinner" aria-hidden="true"></span>{{ t("Thema und Empfehlung werden erzeugt") }}</span>
                   {% elif state and state.startswith('fertig:') %}
                     <span class="setup setup--done">{{ t("eingerichtet") }} · {{ state.split(':', 1)[1] }} {{ t("Artikel") }}</span>
                   {% elif state and state.startswith('fehler:') %}
@@ -591,7 +591,7 @@
             </div>
           </div>
           <p class="panel-hint">
-            {{ t("Beide Felder speisen außerdem das Themen-Radar, aus dem die Impulse entstehen. Ein Thema taugt dafür nur, wenn die Presse darüber schreibt, ohne den Mandanten zu nennen.") }}
+            {{ t("Beide Felder speisen außerdem das Themen-Radar, aus dem die Themen entstehen. Ein Thema taugt dafür nur, wenn die Presse darüber schreibt, ohne den Mandanten zu nennen.") }}
           </p>
           <button type="submit">{{ t("+ Mandant hinzufügen") }}</button>
         </form>

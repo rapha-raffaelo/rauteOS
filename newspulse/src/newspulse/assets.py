@@ -53,7 +53,7 @@ import json
 import logging
 import re
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import StrEnum
 from functools import lru_cache
 from importlib import resources
@@ -268,7 +268,7 @@ class Source(StrEnum):
 #: pointing at a name the page no longer shows.
 _MANDATE_LABELS = {"comms_guide": "Kommunikations-Guide"}
 _ANGLE_LABELS = {
-    "thesis": "These des Impulses",
+    "thesis": "These des Themas",
     "overclaim": "Die ausdrücklich nicht vertretene Lesart",
     "statements": "Ableitbare Aussagen",
     "article_ids": "Belegte Meldungen",
@@ -278,7 +278,7 @@ _RECIPIENT_LABELS = {"outlet": "Ein belegtes Medium für das Gespräch"}
 _WHERE = {
     Source.PROFIL: "im Profil",
     Source.MANDAT: "beim Mandanten",
-    Source.IMPULS: "am Impuls",
+    Source.IMPULS: "am Thema",
     Source.EMPFAENGER: "in der Berichterstattung zum Themenfeld",
 }
 
@@ -383,6 +383,8 @@ class Given:
 
     #: The profile's spokesperson, for the formats that quote one.
     speaker: str = ""
+    #: User-created drafts may be written without a named author or spokesperson.
+    person_optional: bool = False
     #: The sentences of the mandate's guide that name something it never says.
     #: A Q&A that avoids them is decoration, so they are checkable input.
     nogos: tuple[str, ...] = ()
@@ -804,7 +806,11 @@ def _release_contract(draft: AssetDraft, given: Given) -> list[str]:
             f"Der Text hat {len(paragraphs)} Absätze. Lead, Fließtext und "
             f"Boilerplate sind mindestens {_MIN_RELEASE_PARAGRAPHS}."
         )
-    faults.extend(_quote_faults(draft.body, given.speaker))
+    if given.person_optional and not given.speaker:
+        if any(quote.spoken for quote in _quotations(draft.body)):
+            faults.append("Ohne benannte Person darf die Meldung kein Personenzitat enthalten.")
+    else:
+        faults.extend(_quote_faults(draft.body, given.speaker))
     if not paragraphs or not _BOILERPLATE_START.match(paragraphs[-1]):
         faults.append(f'Die Boilerplate fehlt: kein Absatz beginnt mit "{_BOILERPLATE}".')
     return faults
@@ -987,7 +993,13 @@ def _statement_contract(draft: AssetDraft, given: Given) -> list[str]:
     lines = _lines(draft.body)
     attribution = lines[-1] if lines else ""
     spoken = " ".join(lines[:-1]) if len(lines) > 1 else ""
-    if not _names(attribution, given.speaker):
+    if given.person_optional and not given.speaker:
+        spoken = draft.body
+        if any(quote.spoken for quote in _quotations(draft.body)):
+            faults.append("Ohne benannte Person darf das Statement kein Personenzitat enthalten.")
+        if len(lines)>1 and not re.search(r'[.!?][»”"“]?$', attribution):
+            faults.append("Ohne benannte Person steht keine Namenszuschreibung unter dem Statement.")
+    elif not _names(attribution, given.speaker):
         faults.append(
             f"Unter dem Statement steht keine Zuschreibung an "
             f"{given.speaker or 'die im Profil genannte Person'}."
@@ -1127,7 +1139,7 @@ def _gastbeitrag_contract(draft: AssetDraft, given: Given) -> list[str]:
             f'Der Beitrag beginnt mit einem Nachrichtenaufhänger ("{hook}") '
             "statt mit der These."
         )
-    if not _FIRST_PERSON.search(draft.body):
+    if not (given.person_optional and not given.speaker) and not _FIRST_PERSON.search(draft.body):
         faults.append("Der Beitrag steht nicht in der ersten Person.")
     length = len(draft.body)
     if not _MIN_GASTBEITRAG_CHARS <= length <= _MAX_GASTBEITRAG_CHARS:
@@ -1324,6 +1336,8 @@ class FormatDef:
     #: Which profile field names the person a quote may be attributed to. Empty
     #: for the formats that quote nobody.
     speaker_key: str = ""
+    #: Only explicit user drafts may omit a named person in person-based formats.
+    person_optional: bool = False
     #: The machine-checkable half of ``structure``, run on the model's answer
     #: before anything is stored. ``None`` means the contract is stated in the
     #: prompt and taken on trust, which is what a seventh format starts as.
@@ -1499,6 +1513,33 @@ WORKSPACE_FORMATS: tuple[FormatDef, ...] = (
         prompt="prompts/workspace_asset.txt", requires=(), structure=("Den zusätzlichen Nutzerauftrag erfüllen, innerhalb der Evidenz- und Freigabegrenzen.",)),
 )
 REGISTRY: dict[str, FormatDef] = {fmt.key: fmt for fmt in (*FORMATS, *WORKSPACE_FORMATS)}
+
+
+def workspace_format(kind: str) -> FormatDef:
+    """A user-created asset needs a topic, not a named person.
+
+    Keep automatic/crisis contracts as declared. When a usable person is selected,
+    the existing attribution and quote checks remain in force.
+    """
+    fmt=REGISTRY[kind]
+    if not fmt.speaker_key:
+        return fmt
+    structure=tuple(
+        "Wenn oben eine Person benannt ist, genau ein ihr zugeschriebenes Zitat; sonst keine Personenzitate."
+        if line.startswith('Genau ein Zitat') else
+        "Bei benannter Person: Name und Funktion als letzte Zeile. Ohne Person: keine Namenszuschreibung."
+        if line.startswith('Die Zuschreibung als letzte Zeile') else
+        "Bei benannter Person ihre Perspektive, sonst eine sachliche Unternehmensperspektive ohne erfundene persönliche Erfahrungen."
+        if line.startswith('Erste Person, ein Argument') else
+        "Thema und redaktionellen Nutzen nennen; nur eine ausdrücklich benannte Person anbieten. Ohne Person ein Gespräch über das Thema vorschlagen."
+        if line.startswith('Belegte Person, Thema') else line
+        for line in fmt.structure)
+    return replace(fmt, person_optional=True,
+        requires=tuple(req for req in fmt.requires
+            if not (req.source is Source.PROFIL and req.key==fmt.speaker_key)
+            and not (fmt.key=='gastbeitrag' and req.source is Source.IMPULS and req.key=='article_ids')),
+        structure=structure)
+
 
 
 #: The two crisis formats (UHR-02): the same :class:`FormatDef` contract, in a
@@ -2273,6 +2314,7 @@ def _given(
     seat = facts.get(_SEAT_KEY)
     return Given(
         speaker=_speaker(fmt, facts),
+        person_optional=fmt.person_optional,
         nogos=nogos(client),
         recipient=target,
         seat=seat.value.strip() if seat else "",
@@ -2308,7 +2350,10 @@ def _drafted(
     for attempt in range(1, _MAX_ATTEMPTS + 1):
         try:
             raw = invoke(prompt + _correction(fault), timeout=config.ANALYZER_TIMEOUT)
-            draft = _attributed(_parse(raw), fmt, facts)
+            parsed = _parse(raw)
+            if fmt.person_optional and not given.speaker and parsed.speaker.strip():
+                raise ParseError("Personenloser Entwurf enthält eine erfundene Sprecherangabe")
+            draft = _attributed(parsed, fmt, facts)
         except ParseError as exc:
             # The parser's own message keeps its offsets and its English, in the
             # log, where they are what somebody debugging this needs. What travels
@@ -3389,7 +3434,7 @@ def _recheck_item(session: Session, client: Client, asset: Asset) -> Checkable:
         return crisis_checkable(session, fmt, client, crisis, draft)
     angle = session.get(Angle, asset.angle_id)
     if angle is None:  # pragma: no cover - the FK cascades, so only a race
-        raise Refused("Der Impuls zu diesem Text existiert nicht mehr.")
+        raise Refused("Das Thema zu diesem Text existiert nicht mehr.")
     return checkable(session, fmt, angle, draft)
 
 

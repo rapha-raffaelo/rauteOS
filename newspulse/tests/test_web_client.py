@@ -445,7 +445,7 @@ def test_clients_index_lists_portfolio_with_counts(factory, client):
     beta_row = table.split("Beta AG", 1)[1]
     assert _counts(beta_row) == ["0", "0", "0"]
     header = table.split('phead-row', 1)[1].split("</div>", 1)[0]
-    for label in ("Mandant", "Heute", "Warnungen", "Impulse"):
+    for label in ("Mandant", "Heute", "Warnungen", "Themen"):
         assert label in header
 
 

@@ -53,7 +53,9 @@ Was diese Meldung leisten muss:
   lautet exakt "$dateline." (nur der Ort, ohne Land oder weitere Standorte).
   Danach in einem Satz, was passiert ist. Wer, was,
   warum jetzt.
-- Das Zitat steht in Anführungszeichen und im selben Satz wie seine
+- Nur wenn oben eine Person benannt ist, enthält die Meldung ein Personenzitat.
+  Ohne benannte Person entfällt der Zitatabsatz; erfinde keine Person oder Aussage.
+  Ein vorhandenes Zitat steht in Anführungszeichen und im selben Satz wie seine
   Zuschreibung ("...", sagt <Name>, <Funktion>.), damit erkennbar bleibt, wer
   spricht. Ein Name im nächsten Satz schreibt nichts zu. Es sagt etwas, das der
   Fließtext nicht schon gesagt hat. Ein Zitat, das die Meldung wiederholt, wird
@@ -68,9 +70,10 @@ Gib AUSSCHLIESSLICH ein gültiges JSON-Objekt zurück. Kein weiterer Text, kein 
 Maskiere Zeilenumbrüche innerhalb von JSON-Strings als \n. Keine unmaskierten
 Zeilenumbrüche innerhalb der Anführungszeichen. Bei mehreren genannten Personen
 wähle genau eine davon und übernimm ihren Namen und ihre Funktion aus dem Profil.
+Ist niemand benannt, bleibt speaker leer und die Mitteilung enthält kein Personenzitat.
 
 {
   "title": "Die Schlagzeile. Eine Zeile, höchstens 90 Zeichen.",
-  "body": "Die vollständige Mitteilung: Dateline und Lead.\n\nFließtext.\n\nGenau ein Zitat mit Zuschreibung.\n\nÜber den Mandanten: belegte Boilerplate.",
-  "speaker": "Name und Funktion der zitierten Person, exakt wie oben angegeben."
+  "body": "Die vollständige Mitteilung: Dateline und Lead.\n\nFließtext.\n\nNur bei benannter Person ein Zitat mit Zuschreibung.\n\nÜber den Mandanten: belegte Boilerplate.",
+  "speaker": "Bei benannter Person Name und Funktion exakt wie oben; sonst leerer String."
 }

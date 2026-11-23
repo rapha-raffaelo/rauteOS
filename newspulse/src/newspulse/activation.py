@@ -26,19 +26,75 @@ def fingerprint(session,workspace):
         statements=[(r.id,r.revision) for r in twin.all_statements(session,client.id)]),sort_keys=True).encode()).hexdigest()
 
 
-def context_for(session,workspace,*,contact_id=None,instruction=''):
+
+def topic_rows(session,workspace,topic_ids=None,*,require_active=True):
+    ids=list(dict.fromkeys([workspace.id] if topic_ids is None else topic_ids))
+    if not ids:raise ValueError('Bitte mindestens ein Thema auswählen.')
+    rows=[]
+    for identity in ids:
+        row=session.get(OpportunityWorkspace,identity)
+        if row is None or row.client_id!=workspace.client_id or not row.angle_id:
+            raise ValueError('Ein ausgewähltes Thema ist für diesen Kunden nicht verfügbar.')
+        flow=(row.data or {}).get('workflow',{})
+        if require_active and (row.status!='active' or flow.get('deactivated_at') or flow.get('completed_at')):
+            raise ValueError('Bitte nur aktive Themen auswählen.')
+        rows.append(row)
+    return rows
+
+
+def topic_choices(session,workspace):
+    choices=[]
+    for row,angle in session.execute(select(OpportunityWorkspace,Angle).join(Angle,Angle.id==OpportunityWorkspace.angle_id)
+        .where(OpportunityWorkspace.client_id==workspace.client_id,OpportunityWorkspace.status=='active')
+        .order_by(Angle.generated_at.desc(),OpportunityWorkspace.id.desc())):
+        flow=(row.data or {}).get('workflow',{})
+        if flow.get('deactivated_at') or flow.get('completed_at'):continue
+        choices.append(dict(id=row.id,title=angle.subject,summary=row.storyline or angle.thesis))
+    return choices
+
+
+def topic_fingerprint(session,workspace,topic_ids=None):
+    if topic_ids is None:return fingerprint(session,workspace)
+    rows=topic_rows(session,workspace,topic_ids,require_active=False)
+    parts=[fingerprint(session,workspace)]
+    for row in rows:
+        angle=session.get(Angle,row.angle_id)
+        parts.append(dict(id=row.id,context=fingerprint(session,row),status=row.status,
+            title=angle.subject,message=angle.message,context_text=angle.context,thesis=angle.thesis,
+            overclaim=angle.overclaim,credibility=angle.credibility,statements=angle.statements,
+            article_ids=angle.article_ids,sources=(row.data or {}).get('sources',[]),
+            research=(row.data or {}).get('workflow',{}).get('research',{})))
+    return hashlib.sha256(json.dumps(parts,sort_keys=True,default=str).encode()).hexdigest()
+
+
+def topic_angle(session,workspace,topic_ids=None):
+    """Compose selected topic content without editing their stored records.
+
+    The resulting asset is still filed in the open workspace. Only selected
+    topics supply the writer's subject, arguments and source articles.
+    """
+    rows=topic_rows(session,workspace,topic_ids,require_active=False)
+    angles=[session.get(Angle,row.angle_id) for row in rows]
+    join=lambda values:'\n\n'.join(value for value in values if value)
+    return Angle(id=workspace.angle_id,client_id=workspace.client_id,
+        subject=join([a.subject for a in angles]),message=join([a.message for a in angles]),
+        context=join([a.context for a in angles]),credibility=join([a.credibility for a in angles]),
+        thesis=join([row.storyline or a.thesis or a.subject for row,a in zip(rows,angles)]),
+        overclaim=join([a.overclaim for a in angles]),
+        statements=list(dict.fromkeys(value for a in angles for value in (a.statements or []))),
+        article_ids=list(dict.fromkeys(value for a in angles for value in (a.article_ids or []))))
+
+
+def context_for(session,workspace,*,contact_id=None,instruction='',topic_ids=None,require_active_topics=False):
+    selected=topic_rows(session,workspace,topic_ids,require_active=require_active_topics)
     client=session.get(Client,workspace.client_id)
     all_facts=twin.all_statements(session,client.id)
     available={r.id:r for r in workspaces.speakers(session,client.id)}
     speaker=available.get(workspace.speaker_statement_id)
-    if workspace.speaker_statement_id and speaker is None:
-        raise ValueError('Der gewählte Sprecher ist nicht mehr verwendbar. Auswahl im Workspace prüfen.')
     from . import people
     spokesperson=None
     if workspace.speaker_person_id:
         spokesperson={p.id:p for p in people.book(session,client.id)}.get(workspace.speaker_person_id)
-        if spokesperson is None:
-            raise ValueError('Die gewählte Ansprechperson ist nicht mehr im Kundenprofil vorhanden. Bitte Auswahl prüfen.')
     target=None;person=None
     if contact_id:
         contact=session.get(Contact,contact_id)
@@ -58,20 +114,23 @@ def context_for(session,workspace,*,contact_id=None,instruction=''):
         flow=(previous.data or {}).get('workflow',{})
         if flow.get('completed_at') and flow.get('result'):
             learnings.append(dict(theme=previous.storyline, assessment=flow['result'], evidence_type='Human-confirmed retrospective; not an external fact'))
-    sources=list(workspace.data.get('sources',[]))
-    for research in (workspace.data or {}).get('workflow',{}).get('research',{}).values():
-        sources += research.get('sources',[])
-    angle=session.get(Angle,workspace.angle_id)
-    if angle:
-        from .models import Article
-        sources += [journalists.article_dict(a) for a in session.scalars(select(Article).where(Article.id.in_(angle.article_ids))) if journalists.public_url(a.url)]
+    sources=[];topics=[]
+    from .models import Article
+    for selected_workspace in selected:
+        sources+=list((selected_workspace.data or {}).get('sources',[]))
+        for research in (selected_workspace.data or {}).get('workflow',{}).get('research',{}).values():
+            sources+=research.get('sources',[])
+        angle=session.get(Angle,selected_workspace.angle_id)
+        sources += [journalists.article_dict(a) for a in session.scalars(select(Article).where(Article.id.in_(angle.article_ids or []))) if journalists.public_url(a.url)]
+        topics.append(dict(id=selected_workspace.id,title=angle.subject,storyline=selected_workspace.storyline or angle.thesis or angle.subject))
     if person:sources+=person['articles']
     sources=list({s['url']:s for s in sources}.values())[:40]
     context=dict(workspace_id=workspace.id,workspace_revision=workspace.revision,client_id=client.id,
-        storyline=workspace.storyline,selected_storylines=(workspace.data or {}).get('selected_storylines',[]),
+        storyline='\n\n'.join(t['storyline'] for t in topics),topics=topics,topic_ids=[t.id for t in selected],
+        selected_storylines=[line for t in selected for line in (t.data or {}).get('selected_storylines',[])],
         speaker=person_speaker(spokesperson) if spokesperson else twin.snapshot(speaker) if speaker else None,
         statements=[twin.snapshot(r) for r in all_facts],sources=sources,guide=client.comms_guide or '',
-        journalist=person,learnings=learnings[:10],instruction=instruction,fingerprint=fingerprint(session,workspace))
+        journalist=person,learnings=learnings[:10],instruction=instruction,fingerprint=topic_fingerprint(session,workspace,[t.id for t in selected]))
     return json.loads(json.dumps(context,default=str)),target
 
 
@@ -131,7 +190,9 @@ def run(session,identity,*,invoke=invoke_with_fallback,review_invoke=None):
     options=dict(job.context)
     # A retried worker must not create a second asset for the same accepted run.
     if options.get('operation','generate')!='check' and (job.asset_id or job.outreach_id):return
-    context,target=context_for(session,workspace,contact_id=options.get('contact_id'),instruction=options.get('instruction',''))
+    context,target=context_for(session,workspace,contact_id=options.get('contact_id'),instruction=options.get('instruction',''),
+        topic_ids=options.get('topic_ids'),require_active_topics=options.get('operation','generate')=='generate')
+    writing_angle=topic_angle(session,workspace,context['topic_ids'])
     context['contact_id']=options.get('contact_id')
     context['operation']=options.get('operation','generate')
     job.context=context
@@ -152,11 +213,11 @@ def run(session,identity,*,invoke=invoke_with_fallback,review_invoke=None):
         expected=asset_evidence.digest(title,body)
     else:
         if job.kind=='pitch':
-            drafted=outreach.draft(session,client,angle,target,invoke=call_model,extra_context=writing_context(context))
+            drafted=outreach.draft(session,client,writing_angle,target,invoke=call_model,extra_context=writing_context(context))
         else:
-            fmt=assets.REGISTRY[job.kind]
+            fmt=assets.workspace_format(job.kind)
             facts=writing_facts(session,workspace,context)
-            drafted=assets.write(session,fmt,client,angle,invoke=call_model,facts=facts,target=target,
+            drafted=assets.write(session,fmt,client,writing_angle,invoke=call_model,facts=facts,target=target,
                 headlines=target.evidence if target else (),extra_context=writing_context(context))
         session.expire_all()
         # A delayed worker cannot create output after its request was replaced.
@@ -207,7 +268,6 @@ def run(session,identity,*,invoke=invoke_with_fallback,review_invoke=None):
 def read(session,workspace):
     jobs=list(session.scalars(select(OpportunityAssetRun).where(OpportunityAssetRun.workspace_id==workspace.id)
         .order_by(OpportunityAssetRun.id.desc()).limit(100)))
-    current_fingerprint=fingerprint(session,workspace)
     texts=[];seen=set()
     for job in jobs:
         row=text_row(session,job)
@@ -216,10 +276,12 @@ def read(session,workspace):
         if key in seen:continue
         seen.add(key)
         title,body=text_parts(row)
+        try:current_fingerprint=topic_fingerprint(session,workspace,job.context.get('topic_ids'))
+        except ValueError:current_fingerprint=None
         texts.append(dict(id=row.id,type=key[0],kind=job.kind,title=title,body=body,released_at=row.released_at,
             digest=asset_evidence.digest(title,body),quality=job.quality,
             quality_stale=job.text_digest!=asset_evidence.digest(title,body) or job.context.get('fingerprint')!=current_fingerprint,
-            contact_id=job.context.get('contact_id'),
+            contact_id=job.context.get('contact_id'),topics=job.context.get('topics',[]),
             evidence_sources=job.context.get('sources',[]),
             evidence_statements=[r for r in job.context.get('statements',[]) if r['id'] in {identity for f in job.quality.get('findings',[]) for identity in f['statement_ids']+f['contradiction_ids']}],
             href=f'/client/{workspace.client_id}/advice?eintrag=anlass-{workspace.angle_id}#'+('asset-' if job.asset_id else 'outreach-')+str(row.id)))
@@ -242,4 +304,5 @@ def read(session,workspace):
         item['task_id'] = task.id if task else None
     session.commit()
     return dict(formats=[dict(key=k,label=v) for k,v in FORMATS],texts=texts,
+        topics=topic_choices(session,workspace),default_topic_id=workspace.id,
         latest=dict(id=jobs[0].id,status=jobs[0].status,kind=jobs[0].kind,note=jobs[0].note,started_at=jobs[0].started_at) if jobs else None)
