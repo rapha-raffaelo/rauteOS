@@ -237,19 +237,15 @@ _NO_FACTS = (
 
 
 @lru_cache(maxsize=None)
-def _template(resource: str) -> Template:
-    """One prompt file, read once per process.
+def _prompt_source(resource: str) -> str:
+    """Cache packaged source, never the agency's editable writing standards."""
+    return resources.files("newspulse").joinpath(resource).read_text("utf-8")
 
-    Writing all six formats off one impulse is six prompt files plus two checker
-    prompts per text, and these are packaged resources: they cannot change under
-    a running process, so re-reading them is a syscall per model call for a
-    string that is already known.
-    """
-    # Composed, not just read: a prompt names the standards it is written under
-    # in a `#blocks:` line, and brain.compose expands them (with any override
-    # the agency has stored). Reading the file raw would send that line to the
-    # model as text.
-    return Template(brain.compose(resources.files("newspulse").joinpath(resource).read_text("utf-8")))
+
+def _template(resource: str) -> Template:
+    # Resolve the current Brain on every generation: an edited house style must
+    # reach the next asset, even when this format was already used in the process.
+    return Template(brain.compose(_prompt_source(resource)))
 
 
 class Source(StrEnum):
@@ -1488,9 +1484,9 @@ FORMATS: tuple[FormatDef, ...] = (
 WORKSPACE_FORMATS: tuple[FormatDef, ...] = (
     FormatDef(kind="kundenmail", name="Kundenmail", description="Die Chance erklären und einen nächsten Schritt zur Freigabe vorschlagen.",
         prompt="prompts/workspace_asset.txt", requires=(), structure=(
-            "Persönliche oder neutrale Anrede ohne erfundenen Namen.",
-            "Die Chance, ihre Relevanz und einen konkreten Vorschlag knapp erklären.",
-            "Eine klare Bitte um Rückmeldung oder Freigabe, keine behauptete Zusage."),title_label="Betreff"),
+            "Kundenmail-Muster aus dem zentralen Formatstandard anwenden.",
+            "Beobachtung, kommunikative Chance und konkrete Vorschläge nachvollziehbar verbinden.",
+            "Mit einer Rückfrage und einem passenden nächsten Schritt enden."),title_label="Betreff"),
     FormatDef(kind="linkedin", name="LinkedIn-Post", description="Eine belegte Position für LinkedIn.",
         prompt="prompts/workspace_asset.txt", requires=(), structure=(
             "Ein klarer Einstieg und eine nachvollziehbare Position.",
@@ -2434,7 +2430,11 @@ def _proofread(fmt: FormatDef, draft: AssetDraft, given: Given) -> AssetDraft:
         if not ai_models.has_role("lektor"):
             return draft
         sent = {"title": draft.title, "body": draft.body}
-        raw = ai_models.ask("lektor", _PROOFREAD + json.dumps(sent, ensure_ascii=False),
+        raw = ai_models.ask("lektor", _PROOFREAD + f"\nFORMAT: {fmt.key}\n"
+                            + brain.compose("{{brain:house_style}}")
+                            + "\nDer bestehende Inhalt, die Ansprache und die Absenderidentität bleiben erhalten."
+                            + "\nTEXT ZUR SPRACHLICHEN ÜBERARBEITUNG\n"
+                            + json.dumps(sent, ensure_ascii=False),
                             timeout=config.ANALYZER_TIMEOUT)
         payload = json.loads(strip_code_fence(raw))
         polished = draft.model_copy(update={

@@ -7,10 +7,14 @@ Eine Position sagt etwas, das der Leser ohne den Mandanten nicht sähe.
 - Sie berührt den Kern dessen, was der Mandant tut. Nur dann klingt sie nicht wie
   eine angehängte Meinung, und nur dann kann er glaubwürdig dazu sprechen.
 - Zu jeder Position gehört die zu pauschale Lesart, die sie ausdrücklich NICHT
-  ist: die, die ein schlechter Berater verschicken würde. Formuliere sie zuerst,
-  dann die belastbare, die tatsächlich vertreten wird. Der Text steht auf der
-  zweiten. Eine These, die ihre eigene Übertreibung nicht benennen kann, ist
-  meistens selbst die Übertreibung.
+  ist: die, die ein schlechter Berater verschicken würde. Prüfe sie intern,
+  bevor du die belastbare These formulierst. Der fertige Empfängertext steht auf
+  dieser These. Er führt die verworfene Lesart nicht vor und erklärt nicht den
+  eigenen Prüfprozess. Keine Abschnitte wie „Warum wir die naheliegende Antwort
+  nicht empfehlen“ oder „Die belastbare Fassung“. Nur in ausdrücklich verlangten
+  internen Analysen oder separaten These/Überclaim-Feldern werden beide benannt.
+  Eine These, die ihre eigene Übertreibung nicht benennen kann, ist meistens
+  selbst die Übertreibung.
 - Sie differenziert: was bleibt bestehen, was verschiebt sich? Ein Text, der eine
   Entwicklung zum Umbruch erklärt, ist in vier Wochen widerlegt.
 - Der Mandant steht nicht im Mittelpunkt. Der Text erklärt eine Marktmechanik;

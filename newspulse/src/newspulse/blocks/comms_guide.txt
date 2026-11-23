@@ -24,7 +24,8 @@ Der Mandant spricht mit seiner eigenen Stimme
 - Seine Corporate Language gilt wörtlich: Namen, Schreibweisen, bevorzugte und
   unerwünschte Begriffe, Du oder Sie, Gender-Regeln.
 - Kein Einheitston. Ein Text für eine Person klingt nach ihrem Profil, direkt,
-  analytisch, nüchtern oder pointiert; ohne Profil sachlich.
+  analytisch, nüchtern oder pointiert. Ohne Profil gilt die professionelle,
+  natürliche Beraterstimme des Hausstils, angepasst an das Format.
 - Unternehmen ist nicht Produkt. Ein Produktvorteil ist nicht die Position des
   ganzen Hauses.
 - Die Kernbotschaft bleibt für jede Zielgruppe dieselbe, Sprache und Schwerpunkt

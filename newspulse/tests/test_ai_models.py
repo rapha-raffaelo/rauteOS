@@ -301,3 +301,28 @@ def test_expired_claude_login_uses_configured_fallback(session, monkeypatch):
     monkeypatch.setattr(ai_models, 'call', fake)
     assert ai_models.ask('designer', 'test', timeout=1, session=session) == 'ok'
     assert calls == ['claude', 'gemini']
+
+
+def test_lektor_receives_current_style_and_sender_constraints_and_keeps_speaker(session, monkeypatch):
+    from newspulse import assets, brain
+    from newspulse.schemas import AssetDraft
+
+    monkeypatch.setattr(brain, '_override_source', lambda: brain.stored(session))
+    style = brain.shipped()['house_style'] + '\nAKTUELLER LEKTOR-STIL.'
+    brain.edit(session, 'house_style', style)
+    monkeypatch.setattr(ai_models, 'has_role', lambda role: role == 'lektor')
+    draft = AssetDraft(title='Vorschlag', body='Hallo zusammen,\n\nEin konkreter Vorschlag.\n\nViele Grüße\nRaphael', speaker='Anna Beispiel')
+    prompts = []
+
+    def polish(role, prompt, timeout):
+        prompts.append(prompt)
+        return json.dumps({'title': draft.title, 'body': draft.body, 'speaker': 'Lucas'})
+
+    monkeypatch.setattr(ai_models, 'ask', polish)
+    result = assets._proofread(assets.REGISTRY['kundenmail'], draft, None)
+    assert style in prompts[0]
+    assert 'FORMAT: kundenmail' in prompts[0]
+    assert 'Ansprache und die Absenderidentität bleiben erhalten' in prompts[0]
+    assert 'Raphael' in prompts[0]
+    assert result.body == draft.body
+    assert result.speaker == 'Anna Beispiel'

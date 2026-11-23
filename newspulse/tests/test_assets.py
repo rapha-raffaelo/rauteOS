@@ -1892,3 +1892,56 @@ def test_role_only_clause_cannot_approve_a_quote_from_an_unknown_person(role):
     assert assets._speaker_entries(allowed) == [allowed]
     assert not assets._names(f'sagt Dr. Erfunden, {role}', allowed)
     assert assets._names(f'sagt Michael Lang, {role}', allowed)
+
+
+@pytest.mark.parametrize('kind', list(assets.REGISTRY))
+def test_every_asset_prompt_uses_the_current_central_writing_style(session, monkeypatch, kind):
+    """Exercise the real format loaders, including edits after their first read."""
+    from newspulse import brain
+
+    client, angle = _mandate(session)
+    target = PitchTarget(outlet=_OUTLET, journalist=_BYLINE, reason='Fixture',
+                         evidence=(_HEADLINE,), about_client=None)
+    monkeypatch.setattr(brain, '_override_source', lambda: brain.stored(session))
+    fmt = assets.REGISTRY[kind]
+    before = assets.prompt_for(session, fmt, client, angle, target=target)
+    assert brain.shipped()['house_style'] in before
+    assert "Stilreferenz ist Lucas' beratende Kundenmail" in before
+    assert 'im Ton einer Fachanalyse' not in before
+
+    updated = brain.shipped()['house_style'] + '\nEDITIERTER HAUSSTIL: Persönlich und präzise.'
+    brain.edit(session, 'house_style', updated)
+    after = assets.prompt_for(session, fmt, client, angle, target=target)
+    assert updated in after
+    assert after != before
+
+
+def test_client_mail_and_pitch_send_the_current_style_to_the_writer(session, monkeypatch):
+    from newspulse import ai_models, brain, outreach
+
+    client, angle = _mandate(session, comms_guide='Empfänger mit Sie ansprechen.')
+    monkeypatch.setattr(brain, '_override_source', lambda: brain.stored(session))
+    monkeypatch.setattr(ai_models, 'has_role', lambda role: False)
+    style = brain.shipped()['house_style'] + '\nAKTUELLE REDAKTIONELLE STIMME.'
+    brain.edit(session, 'house_style', style)
+    prompts = []
+
+    def write_mail(prompt, **kwargs):
+        prompts.append(prompt)
+        return json.dumps({'title': 'Unser Vorschlag', 'body': 'Hallo zusammen,\n\nwie schätzen Sie den Ansatz ein?\n\nViele Grüße', 'speaker': ''})
+
+    assets.write(session, assets.REGISTRY['kundenmail'], client, angle, invoke=write_mail)
+    assert style in prompts[-1]
+    assert brain.shipped()['comms_formats'] in prompts[-1]
+    assert brain.shipped()['position'] in prompts[-1]
+    assert 'Empfänger mit Sie ansprechen.' in prompts[-1]
+    assert 'Formuliere sie zuerst' not in prompts[-1]
+
+    def write_pitch(prompt, **kwargs):
+        prompts.append(prompt)
+        return json.dumps({'subject': 'Ein Vorschlag', 'message': 'Hier ist ein konkretes Thema.', 'hook': 'Konkreter Anlass'})
+
+    outreach.draft(session, client, angle, invoke=write_pitch)
+    assert style in prompts[-1]
+    assert 'Kein konkreter Empfänger.' in prompts[-1]
+    assert 'KUNDENMAIL: BERATENDER VORSCHLAG' not in prompts[-1]
