@@ -123,3 +123,13 @@ it('hands researched evidence and the intended recipient to follow-up creation',
  expect(instruction.value).toContain('https://example.org/study');
  expect(screen.getByLabelText('Journalist:in').value).toBe('10');
 });
+it('lets a pitch be written before any journalist is selected',async()=>{
+ HTMLDialogElement.prototype.showModal=function(){this.setAttribute('open','');};HTMLDialogElement.prototype.close=function(){this.removeAttribute('open');};
+ const calls=mount('pitches',{activation:{texts:[],formats:[],latest:null}});
+ expect(await screen.findByText(/Noch keine Journalisten ausgewählt/)).toBeTruthy();
+ fireEvent.click(await screen.findByRole('button',{name:/^Pitch/}));
+ expect(screen.getByLabelText('Journalist:in').required).toBe(false);
+ fireEvent.click(screen.getByRole('button',{name:'Pitch schreiben lassen'}));
+ await waitFor(()=>expect(calls.some(c=>c.method==='POST'&&c.url.endsWith('/activation'))).toBe(true));
+ expect(JSON.parse(calls.find(c=>c.method==='POST'&&c.url.endsWith('/activation')).body)).toMatchObject({kind:'pitch',contact_id:null});
+});
