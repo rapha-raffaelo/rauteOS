@@ -6,6 +6,7 @@ import {PageHeading} from './PageHeading.jsx';
 import {journalistRequest as request} from '../journalists-api.js';
 import {EvidenceReview} from './ActivationPanel.jsx';
 import {AssetTopicPicker,useAssetTopics} from './AssetTopicPicker.jsx';
+import {copyAsset} from '../asset-clipboard.js';
 
 // Spec 12: an activated Thema is written here. RAUTE drafts each asset from
 // Thema, pitch and profile; the text is edited in place. Sending comes later.
@@ -69,8 +70,9 @@ function Grow({className,...props}){
 }
 
 export function Editor({text,path,onSaved,exportBase,onCheck,checking=false,client={},readOnly=false}){
+ const logoImage=useRef(null);
  const [title,setTitle]=useState(text.title),[body,setBody]=useState(text.body);
- const [error,setError]=useState(''),[notice,setNotice]=useState(''),[saving,setSaving]=useState(false);
+ const [error,setError]=useState(''),[notice,setNotice]=useState(''),[saving,setSaving]=useState(false),[copying,setCopying]=useState(false);
  const logoKey=`asset-logo:${text.type}-${text.id}`;
  const [logo,setLogo]=useState(()=>storedLogo(logoKey,text.kind==='pressemitteilung'?(client.logo?'kunde':'raute'):'keiner'));
  const dirty=title!==text.title||body!==text.body;
@@ -78,7 +80,10 @@ export function Editor({text,path,onSaved,exportBase,onCheck,checking=false,clie
  const label=LABEL[text.kind]||text.kind_label||text.kind;
  async function save(){setSaving(true);setError('');setNotice('');try{onSaved(await request(`${path}/${text.type}/${text.id}`,{method:'PUT',body:JSON.stringify({digest:text.digest,title,body})}));setNotice('Gespeichert.');}catch(e){setError(e.message);}finally{setSaving(false);}}
  async function changeStage(stage){setError('');try{onSaved(await request(`${path}/${text.type}/${text.id}/stage`,{method:'PUT',body:JSON.stringify({stage})}));}catch(e){setError(e.message);}}
- async function copy(){try{await navigator.clipboard.writeText(title?`${title}\n\n${body}`:body);setNotice('Text kopiert.');}catch{setNotice('Bitte den Text im Feld markieren und kopieren.');}}
+ async function copy(){setCopying(true);setNotice('');try{
+  const result=await copyAsset({title,body,logoSrc,logoAlt:logo==='kunde'?`Logo ${client.name||''}`:'raute+kopf',logoSize:{width:logoImage.current?.naturalWidth,height:logoImage.current?.naturalHeight}});
+  setNotice(result.withLogo?'Text mit Logo kopiert.':logo!=='keiner'?'Text kopiert. Das Logo konnte nicht mitkopiert werden. Nutze dafür den Word- oder PDF-Export.':result.rich?'Formatierter Text kopiert.':'Text kopiert.');
+ }catch{setNotice('Kopieren nicht möglich. Bitte den Text im Feld markieren und kopieren.');}finally{setCopying(false);}}
  function pickLogo(value){setLogo(value);keepLogo(logoKey,value);}
  const logoSrc=logo==='kunde'?client.logo:logo==='raute'?RAUTE_LOGO:'';
  return <article className="asset-editor" aria-label={`${label} bearbeiten`}>
@@ -91,7 +96,7 @@ export function Editor({text,path,onSaved,exportBase,onCheck,checking=false,clie
      <button key={key} type="button" aria-pressed={logo===key} onClick={()=>pickLogo(key)}>{name}</button>)}</div>
     {exportBase&&<ExportBox base={exportBase} logo={logo}/>}
     {!locked&&onCheck&&<button type="button" className="btn btn--quiet" disabled={dirty||checking} title={dirty?'Erst speichern, dann prüfen':''} onClick={()=>onCheck(text)}>{checking?'Wird geprüft…':'Aussagen prüfen'}</button>}
-    <button type="button" className="btn btn--quiet" onClick={copy}>Kopieren</button>
+    <button type="button" className="btn btn--quiet" disabled={copying} onClick={copy}>{copying?'Wird kopiert…':'Kopieren'}</button>
     <button type="button" className="btn" disabled title="Kommt später">Senden · bald</button>
     <button type="button" className="btn btn--go" disabled={locked||!dirty||saving} onClick={save}>{saving?'Wird gespeichert…':'Speichern'}</button>
    </div>
@@ -99,7 +104,7 @@ export function Editor({text,path,onSaved,exportBase,onCheck,checking=false,clie
   {error&&<p className="twin-error" role="alert">{error}</p>}{notice&&<p role="status">{notice}</p>}
   <div className="asset-doc">
    <div className="asset-doc__head">
-    {logo==='keiner'?<span/>:logoSrc?<img className="asset-doc__logo" src={logoSrc} alt={logo==='kunde'?`Logo ${client.name||''}`:'raute+kopf'}/>
+    {logo==='keiner'?<span/>:logoSrc?<img ref={logoImage} className="asset-doc__logo" src={logoSrc} alt={logo==='kunde'?`Logo ${client.name||''}`:'raute+kopf'}/>
      :<span className="asset-doc__logo-missing">Kein Kunden-Logo hinterlegt</span>}
     <span className="asset-doc__kicker">{label.toUpperCase()} · {new Date().toLocaleDateString('de-DE')}</span>
    </div>
