@@ -147,17 +147,19 @@ def test_market_material_stays_out_of_the_clients_own_archive(factory, client):
     """The distinction the whole second table exists for.
 
     A story that never names the mandate must not inflate the number the agency is
-    judged on, so it appears in the market view and nowhere else.
+    judged on. The combined media view includes it, but own coverage excludes it.
     """
     with factory() as session:
         subject = _client(session)
         _market(session, subject, _article(session, "BitMEX stellt Betrieb ein"))
         subject_id = subject.id
 
-    archive = rendered(client.get(f"/client/{subject_id}"))
+    archive = rendered(client.get(f"/client/{subject_id}?quelle=kunde"))
+    combined = rendered(client.get(f"/client/{subject_id}"))
     market = rendered(client.get(f"/client/{subject_id}/market"))
 
     assert "BitMEX stellt Betrieb ein" not in archive
+    assert "BitMEX stellt Betrieb ein" in combined
     assert "BitMEX stellt Betrieb ein" in market
 
 
