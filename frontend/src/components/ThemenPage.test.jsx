@@ -1,5 +1,5 @@
 import React from 'react';
-import {render,screen,fireEvent,cleanup,waitFor} from '@testing-library/react';
+import {render,screen,fireEvent,cleanup,waitFor,within} from '@testing-library/react';
 import {afterEach,beforeEach,it,expect,vi} from 'vitest';
 import {ThemenPage,Agenda,pitchOf} from './ThemenPage.jsx';
 import {AssetsPage,KINDS,WritingProgress,Editor,Workspace} from './AssetsPage.jsx';
@@ -255,6 +255,7 @@ it('keeps additional asset instructions separate by format, recipient and topic'
  fireEvent.click(screen.getByRole('button',{name:/^Kundenmail/}));
  expect(screen.getByLabelText('Auftrag').value).toBe('Kurz und kollegial');
  rerender(<Workspace clientId={1} kind="developed" identity={8}/>);
+ fireEvent.click(await screen.findByRole('button',{name:/^Kundenmail/}));
  expect(screen.getByLabelText('Auftrag').value).toBe('');
 });
 it('seeds master and follow-up prompts only into their intended pitches',async()=>{
@@ -307,4 +308,36 @@ it('retains an asset prompt when its creation request fails',async()=>{
  await screen.findByRole('alert');
  expect(screen.getByLabelText('Auftrag').value).toBe('Diesen Auftrag beim Fehler behalten');
  expect(screen.getByLabelText('Auftrag').disabled).toBe(false);
+});
+
+
+it('keeps a rejected second asset visible and lets the user correct and retry',async()=>{
+ const first={id:21,type:'asset',kind:'kundenmail',title:'Erste Kundenmail',body:'Bestehender Entwurf',digest:'a'.repeat(64)};
+ let attempts=0;
+ vi.stubGlobal('fetch',vi.fn(async(url,options={})=>{
+  if(options.method==='POST'){
+   attempts++;
+   return attempts===1?{...json({detail:'Bitte zuerst einen Sprecher im Workspace auswählen.'}),ok:false,status:422}:json({id:2,status:'running'});
+  }
+  return json(url.endsWith('/activation')?{texts:[first],latest:{id:1,kind:'kundenmail',status:'complete'}}:detail);
+ }));
+ render(<Workspace clientId={1} kind="developed" identity={7} initialText="asset-21"/>);
+ await screen.findByLabelText('Text');
+ fireEvent.click(screen.getByRole('button',{name:/^Statement/}));
+ fireEvent.change(screen.getByLabelText('Auftrag'),{target:{value:'Eine kurze Einordnung'}});
+ fireEvent.click(screen.getByRole('button',{name:'Statement schreiben lassen'}));
+ const failure=await screen.findByRole('dialog',{name:'Asset konnte nicht gestartet werden'});
+ expect(within(failure).getByRole('alert').textContent).toContain('Sprecher');
+ expect(within(failure).queryByRole('progressbar')).toBeNull();
+ expect(screen.getByLabelText('Text').value).toBe('Bestehender Entwurf');
+ expect(screen.getByLabelText('Auftrag').value).toBe('Eine kurze Einordnung');
+ fireEvent.click(within(failure).getByRole('button',{name:'Schließen'}));
+ expect(screen.queryByRole('dialog')).toBeNull();
+ expect(screen.getByRole('alert').textContent).toContain('Sprecher');
+ fireEvent.click(within(screen.getByRole('group',{name:'Asset wählen'})).getByRole('button',{name:/^Kundenmail/}));
+ fireEvent.click(screen.getByRole('button',{name:'Kundenmail schreiben lassen'}));
+ const progress=await screen.findByRole('dialog',{name:'RAUTE schreibt Kundenmail…'});
+ await waitFor(()=>expect(attempts).toBe(2));
+ expect(within(progress).getByRole('progressbar')).toBeTruthy();
+ expect(screen.queryByRole('alert')).toBeNull();
 });

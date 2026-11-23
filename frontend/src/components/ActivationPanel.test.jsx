@@ -86,7 +86,7 @@ it('isolates unfinished additional instructions by format, recipient and topic',
  fireEvent.change(format,{target:{value:'kundenmail'}});
  expect(screen.getByLabelText('Ergänzender Auftrag').value).toBe('Für den Kunden');
  rerender(<ActivationPanel clientId={1} kind="developed" identity={2} contacts={contacts}/>);
- expect(screen.getByLabelText('Ergänzender Auftrag').value).toBe('');
+ expect((await screen.findByLabelText('Ergänzender Auftrag')).value).toBe('');
 });
 it('clears an accepted additional instruction and locks input while submitting',async()=>{
  let resolvePost;

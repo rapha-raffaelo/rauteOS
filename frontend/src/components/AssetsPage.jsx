@@ -1,5 +1,6 @@
 import React,{useEffect,useId,useRef,useState} from 'react';
 import {useAssetInstruction} from '../asset-instruction.js';
+import {useAssetRunData} from '../asset-run-data.js';
 import {setTopicActive} from '../topic-actions.js';
 import {PageHeading} from './PageHeading.jsx';
 import {journalistRequest as request} from '../journalists-api.js';
@@ -15,17 +16,17 @@ const LABEL=Object.fromEntries(KINDS.map(([k,l])=>[k,l]));
 const NEEDS_CONTACT=new Set(['pitch','interviewangebot','interview_briefing']);
 const speakerValue=d=>d.speaker_person_id?`p:${d.speaker_person_id}`:'';
 
-export function WritingProgress({kind,onDismiss,error}){
+export function WritingProgress({kind,onDismiss,error,failed=false}){
  const dialog=useRef(null);
  useEffect(()=>{const element=dialog.current;element.showModal();return()=>{if(element.open)element.close();};},[]);
  return <dialog ref={dialog} className="asset-writing-dialog" aria-labelledby="asset-writing-title" aria-describedby="asset-writing-description"
   onCancel={event=>{event.preventDefault();onDismiss();}}>
   <div className="asset-writing-symbol" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M6.1 6.1A8 8 0 0 1 20 12M4 12a8 8 0 0 0 13.9 5.9"/></svg></div>
-  <h2 id="asset-writing-title">RAUTE schreibt {LABEL[kind]||'deinen Entwurf'}…</h2>
-  <p id="asset-writing-description">Dein Entwurf entsteht aus Thema, Pitch und Kundenprofil.</p>
-  <div className="asset-writing-progress" role="progressbar" aria-label="Entwurf wird erstellt"><span/></div>
+  <h2 id="asset-writing-title">{failed?'Asset konnte nicht gestartet werden':`RAUTE schreibt ${LABEL[kind]||'deinen Entwurf'}…`}</h2>
+  <p id="asset-writing-description">{failed?'Bitte prüfe den folgenden Hinweis und starte die Erstellung danach erneut.':'Dein Entwurf entsteht aus Thema, Pitch und Kundenprofil.'}</p>
+  {!failed&&<div className="asset-writing-progress" role="progressbar" aria-label="Entwurf wird erstellt"><span/></div>}
   {error&&<p role="alert">{error}</p>}
-  <button className="btn btn--quiet" onClick={onDismiss}>Im Hintergrund weiterarbeiten</button>
+  <button type="button" className="btn btn--quiet" onClick={onDismiss}>{failed?'Schließen':'Im Hintergrund weiterarbeiten'}</button>
  </dialog>;
 }
 
@@ -109,25 +110,27 @@ export function Editor({text,path,onSaved,exportBase,onCheck,checking=false,clie
  </article>;
 }
 
-function NewAsset({scope,detail,running,onCreate,allowedKinds,initialInstruction='',initialContact=''}){
+function NewAsset({scope,detail,running,onCreate,error,allowedKinds,initialInstruction='',initialContact=''}){
  const headingId=useId();
- const [kind,setKind]=useState(''),[contact,setContact]=useState('');
+ const [kind,setKind]=useState(''),[contact,setContact]=useState(''),[startFailed,setStartFailed]=useState(false);
  const [instruction,setInstruction,clearInstruction]=useAssetInstruction({scope,format:kind,contact,initialInstruction,initialContact});
  useEffect(()=>{if(initialContact){setContact(String(initialContact));setKind('pitch');}},[initialContact,initialInstruction]);
  const needsContact=NEEDS_CONTACT.has(kind);
  const requiresContact=needsContact&&kind!=='pitch';
  return <section className="asset-new" aria-labelledby={headingId}>
   <h2 id={headingId}>Neues Asset</h2>
+  {startFailed&&<WritingProgress kind={kind} failed error={error||'Die Erstellung konnte nicht gestartet werden. Bitte erneut versuchen.'} onDismiss={()=>setStartFailed(false)}/>}
   <p>RAUTE schreibt einen Entwurf aus Thema, Pitch und Kundenprofil. Du bearbeitest ihn direkt im Fenster.</p>
   <div className="asset-kinds" role="group" aria-label="Asset wählen">{KINDS.filter(([key])=>!allowedKinds||allowedKinds.includes(key)).map(([key,label,note])=>
    <button key={key} type="button" className={`asset-kind${key==='custom'?' asset-kind--custom':''}`} aria-pressed={kind===key} disabled={running} onClick={()=>setKind(key)}>
     <strong>{label}</strong><span>{note}</span></button>)}</div>
-  {kind&&<form className="asset-new__form" onSubmit={async e=>{e.preventDefault();if(await onCreate({kind,contact_id:needsContact&&contact?Number(contact):null,instruction}))clearInstruction();}}>
+  {kind&&<form className="asset-new__form" onSubmit={async e=>{e.preventDefault();setStartFailed(false);if(await onCreate({kind,contact_id:needsContact&&contact?Number(contact):null,instruction}))clearInstruction();else setStartFailed(true);}}>
    {needsContact&&<label>Journalist:in{kind==='pitch'?' (optional)':''}<select aria-label="Journalist:in" disabled={running} required={requiresContact} value={contact} onChange={e=>setContact(e.target.value)}>
     <option value="">{kind==='pitch'?'Ohne Journalist:in':'Bitte wählen'}</option>{(detail.contacts||[]).filter(c=>!allowedKinds||detail.contact_ids.includes(c.id)||String(c.id)===String(initialContact)).map(c=><option key={c.id} value={c.id}>{c.name}{c.outlet?` · ${c.outlet}`:''}</option>)}</select></label>}
    <label>{kind==='custom'?'Dein Auftrag':'Zusätzlicher Auftrag (optional)'}<textarea aria-label="Auftrag" disabled={running} required={kind==='custom'} value={instruction} onChange={e=>setInstruction(e.target.value)}
     placeholder={kind==='custom'?'Was soll der Text sagen, und für wen?':'Zum Beispiel: kürzer, mit Fokus auf Apotheken'}/></label>
    <button className="btn btn--go" disabled={running||(requiresContact&&!contact)}>{running?'RAUTE schreibt…':`${LABEL[kind]} schreiben lassen`}</button>
+   {error&&!startFailed&&<p className="twin-error" role="alert">{error}</p>}
    <small>Der zusätzliche Auftrag gilt nur für diesen Entwurf.</small>
   </form>}
  </section>;
@@ -162,14 +165,16 @@ export function AssetsPage({clientId,params=new URLSearchParams(window.location.
 export function Workspace({clientId,client={},kind,identity,initialText='',embedded=false,allowedKinds,onCompleted,initialInstruction='',initialContact='',visible=true,contextRevision,showTitle=true}){
  const listId=useId();
  const base=`clients/${clientId}/opportunities/${kind}/${identity}`,path=`${base}/activation`;
- const [detail,setDetail]=useState(null),[data,setData]=useState(null),[error,setError]=useState(''),[busy,setBusy]=useState(false);
+ const [detail,setDetail]=useState(null),[error,setError]=useState(''),[creationError,setCreationError]=useState(''),[busy,setBusy]=useState(false);
+ const [data,setData,acceptRead]=useAssetRunData(path);
  const [open,setOpen]=useState(initialText);
  const [progressHidden,setProgressHidden]=useState(false),[writingKind,setWritingKind]=useState('');
  const waiting=useRef(false);
- useEffect(()=>{if(!visible)return;let active=true;request(base).then(v=>{if(active)setDetail(v);}).catch(e=>{if(active)setError(e.message);});request(path).then(v=>{if(active)setData(v);}).catch(e=>{if(active)setError(e.message);});return()=>{active=false;};},[base,path,visible,contextRevision]);
+ useEffect(()=>{if(!visible)return;let active=true;request(base).then(v=>{if(active)setDetail(v);}).catch(e=>{if(active)setError(e.message);});request(path).then(v=>{if(active)acceptRead(v);}).catch(e=>{if(active)setError(e.message);});return()=>{active=false;};},[base,path,visible,contextRevision,acceptRead]);
  const running=data?.latest?.status==='running'&&Date.now()-new Date(data.latest.started_at).getTime()<1200000;
- useEffect(()=>{if(!running)return;const timer=setInterval(()=>request(path).then(v=>{setData(v);
-  if(v.latest?.status!=='running'&&waiting.current){waiting.current=false;if(v.latest?.status==='complete'&&v.texts[0])setOpen(`${v.texts[0].type}-${v.texts[0].id}`);onCompleted?.();}}).catch(e=>setError(e.message)),2500);return()=>clearInterval(timer);},[path,running]);
+ useEffect(()=>{if(!running)return;let active=true;const timer=setInterval(()=>request(path).then(v=>{
+  if(!active||!acceptRead(v))return;
+  if(v.latest?.status!=='running'&&waiting.current){waiting.current=false;if(v.latest?.status==='complete'&&v.texts[0])setOpen(`${v.texts[0].type}-${v.texts[0].id}`);onCompleted?.();}}).catch(e=>{if(active)setError(e.message);}),2500);return()=>{active=false;clearInterval(timer);};},[path,running,acceptRead]);
  async function choose(changes){
   const next={revision:detail.revision,storyline:detail.storyline,speaker_statement_id:null,speaker_person_id:detail.speaker_person_id,contact_ids:detail.contact_ids,...changes};
   const value=await request(base,{method:'PUT',body:JSON.stringify(next)});setDetail(value);onCompleted?.();return value;
@@ -182,13 +187,13 @@ export function Workspace({clientId,client={},kind,identity,initialText='',embed
   try{const value=await request(`${path}/${text.type}/${text.id}`,{method:'DELETE',body:JSON.stringify({digest:text.digest})});setData(value);if(open===`${text.type}-${text.id}`)setOpen('');onCompleted?.();}
   catch(e){setError(e.message);}finally{setBusy(false);}
  }
- async function create(input){setBusy(true);setError('');setWritingKind(input.kind);setProgressHidden(false);try{
+ async function create(input){setBusy(true);setError('');setCreationError('');setWritingKind(input.kind);setProgressHidden(false);try{
   if(detail.speaker_statement_id || (input.contact_id&&!detail.contact_ids.includes(input.contact_id)))await choose({contact_ids:input.contact_id?[...new Set([...detail.contact_ids,input.contact_id])]:detail.contact_ids});
   waiting.current=true;
   const job=await request(path,{method:'POST',body:JSON.stringify(input)});
   setData(v=>({...v,latest:{...job,kind:input.kind,started_at:new Date().toISOString()}}));
   return true;
- }catch(e){waiting.current=false;setError(e.message);return false;}finally{setBusy(false);}}
+ }catch(e){waiting.current=false;setCreationError(e.message);return false;}finally{setBusy(false);}}
  if(!detail||!data)return error?<p className="twin-error" role="alert">{error}</p>:<p role="status">Thema wird geladen…</p>;
  const inactive=detail.status==='draft',closed=Boolean(detail.workflow?.completed_at);
  const current=data.texts.find(t=>`${t.type}-${t.id}`===open);
@@ -214,6 +219,6 @@ export function Workspace({clientId,client={},kind,identity,initialText='',embed
     <strong>{text.title||'Ohne Titel'}</strong><small>{({offen:'Offen',in_arbeit:'In Arbeit',review:'Review',erledigt:'Done'})[text.stage||'offen']}</small></button><button type="button" className="asset-trash" aria-label={`${text.title||'Asset'} in den Papierkorb`} title="In den Papierkorb" disabled={busy||running} onClick={()=>trashText(text)}><svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.7"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 10v7m4-7v7"/></svg></button></div>;})}</div></section>}
   {current&&<Editor key={`${open}-${current.digest}`} client={client} readOnly={closed||inactive} text={current} path={path} exportBase={exportBase(current)} onSaved={value=>{setData(value);onCompleted?.();}}
    checking={running} onCheck={async t=>{setError('');try{const job=await request(`${path}/${t.type}/${t.id}/check`,{method:'POST'});setData(v=>({...v,latest:{...job,kind:t.kind,started_at:new Date().toISOString()}}));}catch(e){setError(e.message);}}}/>}
-  {inactive?<p className="topic-notice">Das Thema ist deaktiviert. Assets und Verlauf bleiben erhalten. <a href={`/client/${clientId}/themen`}>Unter Themen wieder aktivieren →</a></p>:closed?<p className="topic-notice">Dieses Thema ist abgeschlossen. <a href={`/client/${clientId}/themen?kind=${kind}&context=${identity}&step=ergebnis`}>Ergebnis ansehen oder wieder öffnen →</a></p>:<NewAsset scope={base} detail={detail} running={running||busy} onCreate={create} allowedKinds={allowedKinds} initialInstruction={initialInstruction} initialContact={initialContact}/>}
+  {inactive?<p className="topic-notice">Das Thema ist deaktiviert. Assets und Verlauf bleiben erhalten. <a href={`/client/${clientId}/themen`}>Unter Themen wieder aktivieren →</a></p>:closed?<p className="topic-notice">Dieses Thema ist abgeschlossen. <a href={`/client/${clientId}/themen?kind=${kind}&context=${identity}&step=ergebnis`}>Ergebnis ansehen oder wieder öffnen →</a></p>:<NewAsset scope={base} detail={detail} running={running||busy} error={creationError} onCreate={create} allowedKinds={allowedKinds} initialInstruction={initialInstruction} initialContact={initialContact}/>}
  </div>;
 }

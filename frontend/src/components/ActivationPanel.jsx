@@ -1,5 +1,6 @@
 import React,{useEffect,useRef,useState} from 'react';
 import {useAssetInstruction} from '../asset-instruction.js';
+import {useAssetRunData} from '../asset-run-data.js';
 import {journalistRequest as request} from '../journalists-api.js';
 
 export function EvidenceReview({text}){
@@ -53,11 +54,12 @@ export function ActivationPanel({clientId,kind,identity,angleId=null,existingAss
  const path=`clients/${clientId}/opportunities/${kind}/${identity}/activation`;
  const awaitingText=useRef(false);
  const [selectedText,setSelectedText]=useState(()=>new URLSearchParams(window.location.search).get('text')||'');
- const [data,setData]=useState(null),[format,setFormat]=useState('kundenmail'),[contact,setContact]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false);
+ const [data,setData,acceptRead]=useAssetRunData(path);
+ const [format,setFormat]=useState('kundenmail'),[contact,setContact]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false);
  const [instruction,setInstruction,clearInstruction]=useAssetInstruction({scope:path,format,contact});
- useEffect(()=>{let active=true;request(path).then(v=>{if(active)setData(v);}).catch(e=>{if(active)setError(e.message);});return()=>{active=false;};},[path]);
+ useEffect(()=>{let active=true;request(path).then(v=>{if(active)acceptRead(v);}).catch(e=>{if(active)setError(e.message);});return()=>{active=false;};},[path,acceptRead]);
  const running=data?.latest?.status==='running'&&Date.now()-new Date(data.latest.started_at).getTime()<1200000;
- useEffect(()=>{if(!running)return;let active=true;const timer=setInterval(()=>request(path).then(v=>{if(active){setData(v);if(v.latest?.status!=='running'){if(awaitingText.current && v.latest?.status==='complete' && v.texts[0])setSelectedText(`${v.texts[0].type}-${v.texts[0].id}`);awaitingText.current=false;onCompleted?.();}}}).catch(e=>{if(active)setError(e.message);}),2500);return()=>{active=false;clearInterval(timer);};},[path,running]);
+ useEffect(()=>{if(!running)return;let active=true;const timer=setInterval(()=>request(path).then(v=>{if(active&&acceptRead(v)){if(v.latest?.status!=='running'){if(awaitingText.current && v.latest?.status==='complete' && v.texts[0])setSelectedText(`${v.texts[0].type}-${v.texts[0].id}`);awaitingText.current=false;onCompleted?.();}}}).catch(e=>{if(active)setError(e.message);}),2500);return()=>{active=false;clearInterval(timer);};},[path,running,acceptRead]);
  async function generate(event){event.preventDefault();awaitingText.current=true;setBusy(true);setError('');try{const job=await request(path,{method:'POST',body:JSON.stringify({kind:format,contact_id:needsContact&&contact?Number(contact):null,instruction})});setData(v=>({...v,latest:{...job,kind:format,started_at:new Date().toISOString()}}));clearInstruction();}catch(e){awaitingText.current=false;setError(e.message);}finally{setBusy(false);}}
  async function check(text){setBusy(true);setError('');try{const job=await request(`${path}/${text.type}/${text.id}/check`,{method:'POST'});setData(v=>({...v,latest:{...job,started_at:new Date().toISOString()}}));}catch(e){setError(e.message);}finally{setBusy(false);}}
  const needsContact=['pitch','interviewangebot','interview_briefing'].includes(format);
