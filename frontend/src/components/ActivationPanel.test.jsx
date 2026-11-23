@@ -1,6 +1,6 @@
 import React from 'react';
 import {afterEach,expect,it,vi} from 'vitest';
-import {fireEvent,render,screen} from '@testing-library/react';
+import {fireEvent,render,screen,waitFor} from '@testing-library/react';
 import {ActivationPanel} from './ActivationPanel.jsx';
 const response=(body,status=200)=>({ok:status<400,status,headers:new Headers({'content-type':'application/json'}),json:async()=>body});
 const formats=[{key:'kundenmail',label:'Kundenmail'},{key:'pitch',label:'Journalistenpitch'},{key:'custom',label:'Eigene Aktion'}];
@@ -67,4 +67,47 @@ it('creates a pitch without choosing a journalist',async()=>{
  expect(screen.getByRole('button',{name:'Entwurf erstellen'}).disabled).toBe(false);
  fireEvent.click(screen.getByRole('button',{name:'Entwurf erstellen'}));await screen.findByText('In Arbeit');
  expect(JSON.parse(fetch.mock.calls[1][1].body)).toMatchObject({kind:'pitch',contact_id:null});
+});
+
+it('isolates unfinished additional instructions by format, recipient and topic',async()=>{
+ vi.stubGlobal('fetch',vi.fn().mockResolvedValue(response({...data,texts:[]})));
+ const contacts=[{id:9,name:'Anna',outlet:'Paper'},{id:10,name:'Ben',outlet:'Magazine'}];
+ const {rerender}=render(<ActivationPanel clientId={1} kind="developed" identity={1} contacts={contacts}/>);
+ const format=await screen.findByLabelText('Format');
+ fireEvent.change(screen.getByLabelText('Ergänzender Auftrag'),{target:{value:'Für den Kunden'}});
+ fireEvent.change(format,{target:{value:'pitch'}});
+ expect(screen.getByLabelText('Ergänzender Auftrag').value).toBe('');
+ fireEvent.change(screen.getByLabelText('Journalist für diesen Text'),{target:{value:'9'}});
+ fireEvent.change(screen.getByLabelText('Ergänzender Auftrag'),{target:{value:'Für Anna'}});
+ fireEvent.change(screen.getByLabelText('Journalist für diesen Text'),{target:{value:'10'}});
+ expect(screen.getByLabelText('Ergänzender Auftrag').value).toBe('');
+ fireEvent.change(screen.getByLabelText('Journalist für diesen Text'),{target:{value:'9'}});
+ expect(screen.getByLabelText('Ergänzender Auftrag').value).toBe('Für Anna');
+ fireEvent.change(format,{target:{value:'kundenmail'}});
+ expect(screen.getByLabelText('Ergänzender Auftrag').value).toBe('Für den Kunden');
+ rerender(<ActivationPanel clientId={1} kind="developed" identity={2} contacts={contacts}/>);
+ expect(screen.getByLabelText('Ergänzender Auftrag').value).toBe('');
+});
+it('clears an accepted additional instruction and locks input while submitting',async()=>{
+ let resolvePost;
+ const fetch=vi.fn((url,options={})=>options.method==='POST'?new Promise(resolve=>{resolvePost=resolve;}):Promise.resolve(response({...data,texts:[]})));
+ vi.stubGlobal('fetch',fetch);
+ render(<ActivationPanel clientId={1} kind="developed" identity={1}/>);
+ const input=await screen.findByLabelText('Ergänzender Auftrag');
+ fireEvent.change(input,{target:{value:'Nur für diesen Entwurf'}});
+ fireEvent.click(screen.getByRole('button',{name:'Entwurf erstellen'}));
+ expect(input.disabled).toBe(true);
+ resolvePost(response({id:1,status:'running'}));
+ await waitFor(()=>expect(input.value).toBe(''));
+ expect(JSON.parse(fetch.mock.calls.find(([,o])=>o?.method==='POST')[1].body).instruction).toBe('Nur für diesen Entwurf');
+});
+it('keeps the additional instruction available after a rejected creation',async()=>{
+ vi.stubGlobal('fetch',vi.fn().mockResolvedValueOnce(response({...data,texts:[]})).mockResolvedValue(response({detail:'Erstellung nicht möglich.'},503)));
+ render(<ActivationPanel clientId={1} kind="developed" identity={1}/>);
+ const input=await screen.findByLabelText('Ergänzender Auftrag');
+ fireEvent.change(input,{target:{value:'Für einen erneuten Versuch'}});
+ fireEvent.click(screen.getByRole('button',{name:'Entwurf erstellen'}));
+ await screen.findByRole('alert');
+ expect(input.value).toBe('Für einen erneuten Versuch');
+ expect(input.disabled).toBe(false);
 });

@@ -226,3 +226,85 @@ it('creates a pitch asset without any journalist selected',async()=>{
  await waitFor(()=>expect(calls.some(c=>c.method==='POST'&&c.url.endsWith('/activation'))).toBe(true));
  expect(JSON.parse(calls.find(c=>c.method==='POST'&&c.url.endsWith('/activation')).body)).toMatchObject({kind:'pitch',contact_id:null});
 });
+
+const promptContacts=[{id:10,name:'Anna',outlet:'Zeitung'},{id:11,name:'Ben',outlet:'Magazin'}];
+function promptWorkspaceRoutes(){
+ return routes({'/opportunities/developed/7':{...detail,contacts:promptContacts,contact_ids:[10,11]},
+  '/opportunities/developed/7/activation':{texts:[],latest:null},
+  '/opportunities/developed/8':{...detail,contacts:promptContacts,contact_ids:[10,11]},
+  '/opportunities/developed/8/activation':{texts:[],latest:null}});
+}
+it('keeps additional asset instructions separate by format, recipient and topic',async()=>{
+ promptWorkspaceRoutes();
+ const {rerender}=render(<Workspace clientId={1} kind="developed" identity={7}/>);
+ fireEvent.click(await screen.findByRole('button',{name:/^Kundenmail/}));
+ fireEvent.change(screen.getByLabelText('Auftrag'),{target:{value:'Kurz und kollegial'}});
+ fireEvent.click(screen.getByRole('button',{name:/^Statement/}));
+ expect(screen.getByLabelText('Auftrag').value).toBe('');
+ fireEvent.change(screen.getByLabelText('Auftrag'),{target:{value:'Ein zitierfähiger Satz'}});
+ fireEvent.click(screen.getByRole('button',{name:/^Pitch/}));
+ fireEvent.change(screen.getByLabelText('Journalist:in'),{target:{value:'10'}});
+ fireEvent.change(screen.getByLabelText('Auftrag'),{target:{value:'An Annas Recherche anknüpfen'}});
+ fireEvent.change(screen.getByLabelText('Journalist:in'),{target:{value:'11'}});
+ expect(screen.getByLabelText('Auftrag').value).toBe('');
+ fireEvent.change(screen.getByLabelText('Auftrag'),{target:{value:'Für Bens Ressort'}});
+ fireEvent.change(screen.getByLabelText('Journalist:in'),{target:{value:'10'}});
+ expect(screen.getByLabelText('Auftrag').value).toBe('An Annas Recherche anknüpfen');
+ fireEvent.click(screen.getByRole('button',{name:/^Statement/}));
+ expect(screen.getByLabelText('Auftrag').value).toBe('Ein zitierfähiger Satz');
+ fireEvent.click(screen.getByRole('button',{name:/^Kundenmail/}));
+ expect(screen.getByLabelText('Auftrag').value).toBe('Kurz und kollegial');
+ rerender(<Workspace clientId={1} kind="developed" identity={8}/>);
+ expect(screen.getByLabelText('Auftrag').value).toBe('');
+});
+it('seeds master and follow-up prompts only into their intended pitches',async()=>{
+ promptWorkspaceRoutes();
+ const {rerender}=render(<Workspace clientId={1} kind="developed" identity={7} initialInstruction="Gemeinsamer Master-Pitch"/>);
+ fireEvent.click(await screen.findByRole('button',{name:/^Kundenmail/}));
+ expect(screen.getByLabelText('Auftrag').value).toBe('');
+ fireEvent.click(screen.getByRole('button',{name:/^Pitch/}));
+ fireEvent.change(screen.getByLabelText('Journalist:in'),{target:{value:'10'}});
+ expect(screen.getByLabelText('Auftrag').value).toBe('Gemeinsamer Master-Pitch');
+ fireEvent.change(screen.getByLabelText('Auftrag'),{target:{value:'Individuelle Ergänzung für Anna'}});
+ fireEvent.change(screen.getByLabelText('Journalist:in'),{target:{value:'11'}});
+ expect(screen.getByLabelText('Auftrag').value).toBe('Gemeinsamer Master-Pitch');
+ fireEvent.change(screen.getByLabelText('Journalist:in'),{target:{value:'10'}});
+ expect(screen.getByLabelText('Auftrag').value).toBe('Individuelle Ergänzung für Anna');
+ rerender(<Workspace clientId={1} kind="developed" identity={7} initialInstruction="Neue Studie für Anna" initialContact={10}/>);
+ await waitFor(()=>expect(screen.getByLabelText('Auftrag').value).toBe('Neue Studie für Anna'));
+ fireEvent.change(screen.getByLabelText('Journalist:in'),{target:{value:'11'}});
+ expect(screen.getByLabelText('Auftrag').value).not.toBe('Neue Studie für Anna');
+ fireEvent.click(screen.getByRole('button',{name:/^Interviewangebot/}));
+ expect(screen.getByLabelText('Auftrag').value).toBe('');
+});
+it('clears an accepted asset prompt and locks the inputs while the request is pending',async()=>{
+ let resolvePost;
+ const calls=[];
+ vi.stubGlobal('fetch',vi.fn((url,options={})=>{
+  calls.push({url,...options});
+  if(options.method==='POST')return new Promise(resolve=>{resolvePost=resolve;});
+  return Promise.resolve(json(url.endsWith('/activation')?{texts:[],latest:null}:{...detail,contacts:promptContacts,contact_ids:[10,11]}));
+ }));
+ render(<Workspace clientId={1} kind="developed" identity={7} initialInstruction="Follow-up nur für Anna" initialContact={10}/>);
+ const instruction=await screen.findByLabelText('Auftrag');
+ fireEvent.click(screen.getByRole('button',{name:'Pitch schreiben lassen'}));
+ await waitFor(()=>expect(resolvePost).toBeTypeOf('function'));
+ expect(instruction.disabled).toBe(true);
+ expect(screen.getByLabelText('Journalist:in').disabled).toBe(true);
+ resolvePost(json({id:9,status:'running'}));
+ await waitFor(()=>expect(screen.getByLabelText('Auftrag').value).toBe(''));
+ expect(JSON.parse(calls.find(c=>c.method==='POST').body)).toMatchObject({kind:'pitch',contact_id:10,instruction:'Follow-up nur für Anna'});
+});
+it('retains an asset prompt when its creation request fails',async()=>{
+ vi.stubGlobal('fetch',vi.fn(async(url,options={})=>{
+  if(options.method==='POST')return {...json({detail:'Bitte erneut versuchen.'}),ok:false,status:503};
+  return json(url.endsWith('/activation')?{texts:[],latest:null}:detail);
+ }));
+ render(<Workspace clientId={1} kind="developed" identity={7}/>);
+ fireEvent.click(await screen.findByRole('button',{name:/^Kundenmail/}));
+ fireEvent.change(screen.getByLabelText('Auftrag'),{target:{value:'Diesen Auftrag beim Fehler behalten'}});
+ fireEvent.click(screen.getByRole('button',{name:'Kundenmail schreiben lassen'}));
+ await screen.findByRole('alert');
+ expect(screen.getByLabelText('Auftrag').value).toBe('Diesen Auftrag beim Fehler behalten');
+ expect(screen.getByLabelText('Auftrag').disabled).toBe(false);
+});
