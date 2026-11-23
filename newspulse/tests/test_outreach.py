@@ -814,3 +814,22 @@ def test_no_fixed_recipient_is_a_valid_choice(factory, web, monkeypatch):
     )
 
     assert seen == [("", "")]
+
+
+@pytest.mark.parametrize('target', [None, _TARGET])
+def test_explicit_pitch_creation_keeps_same_recipient_drafts_independent(session,target):
+    client,angle=_mandate(session)
+    message=outreach.draft(session,client,angle,target,invoke=lambda *a,**k:_reply())
+    automatic=outreach.store(session,client,angle,message,target)
+    variants=[outreach.store(session,client,angle,message.model_copy(update={'message':f'Pitch {i}'}),
+        target,new_draft=True) for i in range(3)]
+    variants[0].message='Individuell bearbeitet'
+    variants[1].released_at=dt.datetime.now(dt.UTC)
+    session.commit()
+    refreshed=outreach.store(session,client,angle,message.model_copy(update={'message':'Automatisch neu'}),target)
+    assert refreshed.id==automatic.id and not refreshed.independent_draft
+    assert len({row.id for row in [automatic,*variants]})==4
+    assert all(row.independent_draft for row in variants)
+    assert variants[0].message=='Individuell bearbeitet'
+    assert variants[1].message=='Pitch 1' and variants[1].released_at
+    assert len(list(session.scalars(select(Outreach).where(Outreach.angle_id==angle.id))))==4

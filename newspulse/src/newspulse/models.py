@@ -1873,6 +1873,11 @@ class Outreach(Base):
     client_id: Mapped[int] = mapped_column(
         ForeignKey("clients.id", ondelete="CASCADE"), nullable=False, index=True
     )
+    #: Explicit workspace creations never replace a previous draft and are not
+    #: candidates for the automatic/legacy regeneration path.
+    independent_draft: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
     generated_at: Mapped[dt.datetime] = mapped_column(
         UTCDateTime(), nullable=False, default=_utcnow, index=True
     )
@@ -2180,21 +2185,15 @@ class Asset(Base):
 
     __tablename__ = "assets"
     __table_args__ = (
-        # One unreleased draft per format per impulse, enforced rather than
-        # assumed. newspulse.assets.store() looks for the draft it replaces and
-        # then inserts, and the daily run writes formats from a background
-        # worker: two writes that interleave between the read and the insert
-        # leave two drafts of the same release on one impulse, and the page
-        # renders both with no way to tell which one anybody meant. Partial, so
-        # the released rows beside them stay untouched: those are the record of
-        # what went out, and there can be several.
+        # Automated refreshes retain one replaceable draft per format. Explicit
+        # workspace creations are independent documents, outside this singleton.
         Index(
             "ux_assets_angle_kind_unreleased",
             "angle_id",
             "kind",
             unique=True,
-            sqlite_where=text("released_at IS NULL"),
-            postgresql_where=text("released_at IS NULL"),
+            sqlite_where=text("released_at IS NULL AND independent_draft = false"),
+            postgresql_where=text("released_at IS NULL AND independent_draft = false"),
         ),
         # The same rule for the crisis texts, which hang on no angle: one
         # unreleased draft per format per crisis. The ``crisis_id IS NOT NULL``
@@ -2236,6 +2235,11 @@ class Asset(Base):
     kind: Mapped[str] = mapped_column(String(40), nullable=False, index=True)
     # Indexed for the same reason as the letter's: a day's texts are asked for
     # on every render of the Today column.
+    #: Explicit workspace creations never replace a previous draft and are not
+    #: candidates for the automatic/legacy regeneration path.
+    independent_draft: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
     generated_at: Mapped[dt.datetime] = mapped_column(
         UTCDateTime(), nullable=False, default=_utcnow, index=True
     )

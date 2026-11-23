@@ -131,7 +131,9 @@ def test_existing_draft_edit_while_model_runs_is_preserved(web,db):
         return draft()
     activation.run(db,identity,invoke=concurrent,review_invoke=reviewer)
     assert db.get(Asset,1).body=='A human correction'
-    assert db.get(OpportunityAssetRun,identity).status=='failed'
+    job=db.get(OpportunityAssetRun,identity)
+    assert job.status=='complete' and job.asset_id!=1
+    assert db.scalar(select(func.count()).select_from(Asset))==2
 
 
 def test_review_requires_every_segment_and_rejects_invented_no_gos():
@@ -249,5 +251,54 @@ def test_pitch_without_recipient_is_saved_and_kept_separate_from_personal_pitch(
         assert row.contact_id is None and row.journalist=='' and row.outlet==''
         assert row.released_at is None
         assert job.context['journalist'] is None
-    assert db.scalar(select(func.count()).select_from(Outreach))==2
+    assert db.scalar(select(func.count()).select_from(Outreach))==3
     assert db.get(Outreach,db.get(OpportunityAssetRun,personal).outreach_id).journalist=='A Journalist'
+
+
+@pytest.mark.parametrize('kind',['kundenmail','linkedin','custom','pitch'])
+def test_repeated_asset_creation_keeps_every_draft_and_instruction(web,db,kind):
+    ids=[]
+    for i in range(3):
+        identity=launch(web,kind,instruction=f'Instruction {i}',**({'contact_id':1} if kind=='pitch' else {}))
+        def write(*args,**kwargs):
+            return json.dumps(dict(subject=f'Pitch {i}',message=f'Entwurf Nummer {i}.',hook='Research')) if kind=='pitch' else json.dumps(dict(title=f'Asset {i}',body=f'Entwurf Nummer {i}.',speaker=''))
+        activation.run(db,identity,invoke=write,review_invoke=reviewer)
+        job=db.get(OpportunityAssetRun,identity)
+        assert job.status=='complete'
+        assert job.context['instruction']==f'Instruction {i}'
+        ids.append(job.outreach_id if kind=='pitch' else job.asset_id)
+    assert len(set(ids))==3
+    texts=web.get(path()).json()['texts']
+    assert [t['id'] for t in texts]==list(reversed(ids))
+    assert [t['body'] for t in texts]==['Entwurf Nummer 2.','Entwurf Nummer 1.','Entwurf Nummer 0.']
+    model=Outreach if kind=='pitch' else Asset
+    assert all(db.get(model,i).independent_draft for i in ids)
+    # Re-delivering the same completed request is not another user request.
+    activation.run(db,identity,invoke=lambda *a,**kw:pytest.fail('Completed job repeated'))
+    assert db.scalar(select(func.count()).select_from(model))==3
+
+
+def test_duplicate_worker_during_review_cannot_append_another_asset(web,db):
+    identity=launch(web)
+    def check(*args,**kwargs):
+        activation.run(db,identity,invoke=lambda *a,**kw:pytest.fail('Already persisted job regenerated'))
+        return reviewer(*args,**kwargs)
+    activation.run(db,identity,invoke=draft,review_invoke=check)
+    assert db.get(OpportunityAssetRun,identity).status=='complete'
+    assert db.scalar(select(func.count()).select_from(Asset))==1
+
+
+def test_deleting_and_restoring_one_variant_keeps_other_drafts(web,db):
+    from newspulse.models import TrashEntry
+    from newspulse import recycle_bin
+    for _ in range(2):
+        identity=launch(web)
+        activation.run(db,identity,invoke=draft,review_invoke=reviewer)
+    texts=web.get(path()).json()['texts']
+    original=texts[1]
+    deleted=web.request('DELETE',f"{path()}/asset/{original['id']}",json={'digest':original['digest']})
+    assert deleted.status_code==200
+    assert [t['id'] for t in deleted.json()['texts']]==[texts[0]['id']]
+    entry=db.scalar(select(TrashEntry))
+    recycle_bin.restore(db,entry.id)
+    assert {t['id'] for t in web.get(path()).json()['texts']}=={t['id'] for t in texts}

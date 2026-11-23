@@ -1945,3 +1945,24 @@ def test_client_mail_and_pitch_send_the_current_style_to_the_writer(session, mon
     assert style in prompts[-1]
     assert 'Kein konkreter Empfänger.' in prompts[-1]
     assert 'KUNDENMAIL: BERATENDER VORSCHLAG' not in prompts[-1]
+
+
+def test_explicit_asset_creation_preserves_variants_and_legacy_refresh_slot(session):
+    client, angle = _mandate(session)
+    fmt = assets.REGISTRY['kundenmail']
+    draft = AssetDraft(title='Erster Text', body='Ursprünglicher Text', speaker='', brain_version=0)
+    automatic = assets.store(session, fmt, client, angle, draft)
+    variants = [assets.store(session, fmt, client, angle,
+        draft.model_copy(update={'title':f'Variante {i}', 'body':f'Eigener Text {i}'}), new_draft=True)
+        for i in range(3)]
+    variants[0].body='Von Hand bearbeitet'
+    variants[1].released_at=dt.datetime.now(dt.UTC)
+    session.commit()
+    refreshed=assets.store(session,fmt,client,angle,draft.model_copy(update={'body':'Automatisch aktualisiert'}))
+    assert refreshed.id==automatic.id
+    assert not refreshed.independent_draft
+    assert len({row.id for row in [automatic,*variants]})==4
+    assert all(row.independent_draft for row in variants)
+    assert variants[0].body=='Von Hand bearbeitet'
+    assert variants[1].body=='Eigener Text 1' and variants[1].released_at
+    assert len(list(session.scalars(select(Asset).where(Asset.angle_id==angle.id))))==4

@@ -2834,11 +2834,14 @@ def store(
     angle: Angle,
     draft: AssetDraft,
     checked: Checked | None = None,
-    *, commit: bool = True,
+    *, commit: bool = True, new_draft: bool = False,
 ) -> Asset:
     """Persist one generated text against the impulse it argues.
 
-    Re-writing a format for the same impulse replaces the draft: two attempts at
+    With ``new_draft=True``, create an independent document and preserve every
+    existing draft. The default keeps the legacy automatic-refresh behavior.
+
+    Re-writing a format for the same impulse replaces the automatic draft: two attempts at
     the same release are two attempts, not two releases. A *released* asset is
     never replaced, because its text is the record of what actually went out; a
     re-write becomes a new row beside it.
@@ -2856,8 +2859,8 @@ def store(
     tool that answered it by refusing to save his work would be wrong twice: about
     the text, and about who is accountable for it.
     """
-    row = _replaceable(session, angle.id, fmt.key) or Asset(
-        client_id=client.id, angle_id=angle.id, kind=fmt.key
+    row = (None if new_draft else _replaceable(session, angle.id, fmt.key)) or Asset(
+        client_id=client.id, angle_id=angle.id, kind=fmt.key, independent_draft=new_draft
     )
     return _persist(session, row, draft, checked, commit=commit)
 
@@ -3441,6 +3444,7 @@ def _replaceable(session: Session, angle_id: int, kind: str) -> Asset | None:
         .where(
             Asset.angle_id == angle_id,
             Asset.kind == kind,
+            Asset.independent_draft.is_(False),
             Asset.released_at.is_(None),
         )
         .order_by(Asset.generated_at.desc(), Asset.id.desc())

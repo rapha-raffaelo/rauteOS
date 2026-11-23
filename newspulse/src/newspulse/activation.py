@@ -121,17 +121,6 @@ def text_parts(row):
 
 
 
-def current_draft(session,workspace,kind,target):
-    if kind=='pitch':
-        row=session.scalar(select(Outreach).where(Outreach.angle_id==workspace.angle_id,
-            Outreach.journalist==((target.journalist or '') if target else ''),
-            Outreach.outlet==((target.outlet or '') if target else ''),Outreach.released_at.is_(None))
-            .order_by(Outreach.id.desc()).limit(1).with_for_update())
-    else:
-        row=session.scalar(select(Asset).where(Asset.angle_id==workspace.angle_id,Asset.kind==kind,
-            Asset.released_at.is_(None)).order_by(Asset.id.desc()).limit(1).with_for_update())
-    return [row.id,asset_evidence.digest(*text_parts(row))] if row else None
-
 def run(session,identity,*,invoke=invoke_with_fallback,review_invoke=None):
     job=session.get(OpportunityAssetRun,identity)
     if job is None or job.status!='running':return
@@ -140,10 +129,11 @@ def run(session,identity,*,invoke=invoke_with_fallback,review_invoke=None):
     angle=session.get(Angle,workspace.angle_id)
     if angle is None:raise ValueError('Aktivierung im Workspace fehlt.')
     options=dict(job.context)
+    # A retried worker must not create a second asset for the same accepted run.
+    if options.get('operation','generate')!='check' and (job.asset_id or job.outreach_id):return
     context,target=context_for(session,workspace,contact_id=options.get('contact_id'),instruction=options.get('instruction',''))
     context['contact_id']=options.get('contact_id')
     context['operation']=options.get('operation','generate')
-    prior=current_draft(session,workspace,job.kind,target) if context['operation']=='generate' else None
     job.context=context
     session.commit()
     def call_model(prompt,**kwargs):
@@ -171,16 +161,14 @@ def run(session,identity,*,invoke=invoke_with_fallback,review_invoke=None):
         session.expire_all()
         # A delayed worker cannot create output after its request was replaced.
         if not session.execute(update(OpportunityAssetRun).where(OpportunityAssetRun.id==identity,
-            OpportunityAssetRun.status=='running').values(status='running')).rowcount:
+            OpportunityAssetRun.status=='running',OpportunityAssetRun.asset_id.is_(None),
+            OpportunityAssetRun.outreach_id.is_(None)).values(status='running')).rowcount:
             session.rollback();return
-        if current_draft(session,workspace,job.kind,target)!=prior:
-            job.status='failed';job.note='Der vorhandene Entwurf wurde während der Erstellung geändert. Er bleibt erhalten.'
-            job.finished_at=dt.datetime.now(dt.UTC);session.commit();return
         if job.kind=='pitch':
-            row=outreach.store(session,client,angle,drafted,target,commit=False)
+            row=outreach.store(session,client,angle,drafted,target,commit=False,new_draft=True)
             job.outreach_id=row.id
         else:
-            row=assets.store(session,fmt,client,angle,drafted,commit=False)
+            row=assets.store(session,fmt,client,angle,drafted,commit=False,new_draft=True)
             job.asset_id=row.id
         title,body=text_parts(row)
         expected=asset_evidence.digest(title,body)

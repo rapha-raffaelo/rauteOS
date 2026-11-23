@@ -518,11 +518,14 @@ def store(
     reviewed_by: str = "",
     guide_verdict: GuideVerdict | None = None,
     guide_checked_by: str = "",
-    *, commit: bool = True,
+    *, commit: bool = True, new_draft: bool = False,
 ) -> Outreach:
     """Persist one message. Re-writing for the same recipient replaces the old
     one *while it is still a draft*: two drafts at the same journalist are two
     attempts, not two pitches.
+
+    ``new_draft=True`` creates an independent workspace document. Those documents
+    are never candidates for the default legacy regeneration path.
 
     Once a letter has been released that upsert would be data loss, and of the
     worst kind: it would overwrite the only record of the text a journalist
@@ -546,10 +549,11 @@ def store(
     )
     if target and target.contact_id:
         fields['contact_id'] = target.contact_id
-    draft_row = session.scalars(
+    draft_row = None if new_draft else session.scalars(
         select(Outreach)
         .where(
             Outreach.angle_id == angle.id,
+            Outreach.independent_draft.is_(False),
             Outreach.journalist == journalist,
             Outreach.outlet == outlet,
             # A draft is both things at once: the state says so and no release is
@@ -594,6 +598,7 @@ def store(
         client_id=client.id,
         journalist=journalist,
         outlet=outlet,
+        independent_draft=new_draft,
         **fields,
     )
     session.add(row)
