@@ -58,3 +58,13 @@ it('blocks generation until the changed storyline or recipients have been saved'
  expect((await screen.findByRole('button',{name:'Entwurf erstellen'})).disabled).toBe(true);
  expect(fetch).toHaveBeenCalledTimes(1);
 });
+
+it('creates a pitch without choosing a journalist',async()=>{
+ const fetch=vi.fn().mockResolvedValueOnce(response({...data,texts:[]})).mockResolvedValue(response({id:1,status:'running'}));
+ vi.stubGlobal('fetch',fetch);render(<ActivationPanel clientId={1} kind="developed" identity={1} contacts={[]}/>);
+ fireEvent.change(await screen.findByLabelText('Format'),{target:{value:'pitch'}});
+ expect(screen.getByLabelText('Journalist für diesen Text').required).toBe(false);
+ expect(screen.getByRole('button',{name:'Entwurf erstellen'}).disabled).toBe(false);
+ fireEvent.click(screen.getByRole('button',{name:'Entwurf erstellen'}));await screen.findByText('In Arbeit');
+ expect(JSON.parse(fetch.mock.calls[1][1].body)).toMatchObject({kind:'pitch',contact_id:null});
+});

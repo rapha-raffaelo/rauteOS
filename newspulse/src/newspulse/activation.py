@@ -124,7 +124,8 @@ def text_parts(row):
 def current_draft(session,workspace,kind,target):
     if kind=='pitch':
         row=session.scalar(select(Outreach).where(Outreach.angle_id==workspace.angle_id,
-            Outreach.journalist==target.journalist,Outreach.outlet==target.outlet,Outreach.released_at.is_(None))
+            Outreach.journalist==((target.journalist or '') if target else ''),
+            Outreach.outlet==((target.outlet or '') if target else ''),Outreach.released_at.is_(None))
             .order_by(Outreach.id.desc()).limit(1).with_for_update())
     else:
         row=session.scalar(select(Asset).where(Asset.angle_id==workspace.angle_id,Asset.kind==kind,

@@ -87,7 +87,7 @@ def generate(client_id:int,kind:Kind,identity:int,body:DraftInput,session:Sessio
     if body.kind not in dict(activation.FORMATS):raise HTTPException(422,'Unbekanntes Format.')
     if workspace.angle_id is None:raise HTTPException(409,'Bitte die Gelegenheit zuerst aktivieren.')
     if body.kind=='custom' and not body.instruction:raise HTTPException(422,'Bitte den eigenen Auftrag beschreiben.')
-    if body.kind in {'pitch','interviewangebot','interview_briefing'} and not body.contact_id:
+    if body.kind in {'interviewangebot','interview_briefing'} and not body.contact_id:
         raise HTTPException(422,'Bitte einen ausgewählten Journalisten angeben.')
     if body.contact_id and body.contact_id not in workspace.contact_ids:
         raise HTTPException(422,'Journalist ist nicht im Workspace ausgewählt.')

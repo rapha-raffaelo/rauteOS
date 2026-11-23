@@ -114,6 +114,7 @@ function NewAsset({detail,running,onCreate,allowedKinds,initialInstruction='',in
  useEffect(()=>setInstruction(initialInstruction),[initialInstruction]);
  useEffect(()=>{if(initialContact){setContact(String(initialContact));setKind('pitch');}},[initialContact,initialInstruction]);
  const needsContact=NEEDS_CONTACT.has(kind);
+ const requiresContact=needsContact&&kind!=='pitch';
  return <section className="asset-new" aria-labelledby={headingId}>
   <h2 id={headingId}>Neues Asset</h2>
   <p>RAUTE schreibt einen Entwurf aus Thema, Pitch und Kundenprofil. Du bearbeitest ihn direkt im Fenster.</p>
@@ -121,11 +122,11 @@ function NewAsset({detail,running,onCreate,allowedKinds,initialInstruction='',in
    <button key={key} type="button" className={`asset-kind${key==='custom'?' asset-kind--custom':''}`} aria-pressed={kind===key} disabled={running} onClick={()=>setKind(key)}>
     <strong>{label}</strong><span>{note}</span></button>)}</div>
   {kind&&<form className="asset-new__form" onSubmit={e=>{e.preventDefault();onCreate({kind,contact_id:needsContact&&contact?Number(contact):null,instruction});}}>
-   {needsContact&&<label>Journalist:in<select aria-label="Journalist:in" required value={contact} onChange={e=>setContact(e.target.value)}>
-    <option value="">Bitte wählen</option>{(detail.contacts||[]).filter(c=>!allowedKinds||detail.contact_ids.includes(c.id)||String(c.id)===String(initialContact)).map(c=><option key={c.id} value={c.id}>{c.name}{c.outlet?` · ${c.outlet}`:''}</option>)}</select></label>}
+   {needsContact&&<label>Journalist:in{kind==='pitch'?' (optional)':''}<select aria-label="Journalist:in" required={requiresContact} value={contact} onChange={e=>setContact(e.target.value)}>
+    <option value="">{kind==='pitch'?'Ohne Journalist:in':'Bitte wählen'}</option>{(detail.contacts||[]).filter(c=>!allowedKinds||detail.contact_ids.includes(c.id)||String(c.id)===String(initialContact)).map(c=><option key={c.id} value={c.id}>{c.name}{c.outlet?` · ${c.outlet}`:''}</option>)}</select></label>}
    <label>{kind==='custom'?'Dein Auftrag':'Zusätzlicher Auftrag (optional)'}<textarea aria-label="Auftrag" required={kind==='custom'} value={instruction} onChange={e=>setInstruction(e.target.value)}
     placeholder={kind==='custom'?'Was soll der Text sagen, und für wen?':'Zum Beispiel: kürzer, mit Fokus auf Apotheken'}/></label>
-   <button className="btn btn--go" disabled={running||(needsContact&&!contact)}>{running?'RAUTE schreibt…':`${LABEL[kind]} schreiben lassen`}</button>
+   <button className="btn btn--go" disabled={running||(requiresContact&&!contact)}>{running?'RAUTE schreibt…':`${LABEL[kind]} schreiben lassen`}</button>
   </form>}
  </section>;
 }

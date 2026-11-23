@@ -211,3 +211,18 @@ it('requires confirmation before moving an asset to the recycle bin',async()=>{
  await waitFor(()=>expect(calls.some(c=>c.method==='DELETE')).toBe(true));
  await waitFor(()=>expect(screen.queryByRole('button',{name:'Statement prüfen in den Papierkorb'})).toBeNull());
 });
+
+it('creates a pitch asset without any journalist selected',async()=>{
+ const calls=routes({'/opportunities':{...board,opportunities:[{...board.opportunities[1]}]},
+  '/opportunities/detected/3':{...detail,contacts:[],contact_ids:[],storyline:'Ein Thema'},
+  '/opportunities/detected/3/activation':o=>o.method==='POST'?{id:9,status:'running'}:{formats:[],texts:[],latest:null}});
+ render(<AssetsPage clientId={1} params={new URLSearchParams('kind=detected&context=3')}/>);
+ await screen.findByText('Pitch: Ein Thema');
+ fireEvent.click(screen.getByRole('button',{name:/^Pitch/}));
+ expect(screen.getByLabelText('Journalist:in').required).toBe(false);
+ const create=screen.getByRole('button',{name:'Pitch schreiben lassen'});
+ expect(create.disabled).toBe(false);
+ fireEvent.click(create);
+ await waitFor(()=>expect(calls.some(c=>c.method==='POST'&&c.url.endsWith('/activation'))).toBe(true));
+ expect(JSON.parse(calls.find(c=>c.method==='POST'&&c.url.endsWith('/activation')).body)).toMatchObject({kind:'pitch',contact_id:null});
+});

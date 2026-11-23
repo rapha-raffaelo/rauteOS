@@ -59,6 +59,7 @@ export function ActivationPanel({clientId,kind,identity,angleId=null,existingAss
  async function generate(event){event.preventDefault();awaitingText.current=true;setBusy(true);setError('');try{const job=await request(path,{method:'POST',body:JSON.stringify({kind:format,contact_id:needsContact&&contact?Number(contact):null,instruction})});setData(v=>({...v,latest:{...job,kind:format,started_at:new Date().toISOString()}}));}catch(e){setError(e.message);}finally{setBusy(false);}}
  async function check(text){setBusy(true);setError('');try{const job=await request(`${path}/${text.type}/${text.id}/check`,{method:'POST'});setData(v=>({...v,latest:{...job,started_at:new Date().toISOString()}}));}catch(e){setError(e.message);}finally{setBusy(false);}}
  const needsContact=['pitch','interviewangebot','interview_briefing'].includes(format);
+ const requiresContact=needsContact&&format!=='pitch';
  const prepared=angleId && existingAssets.find(a=>a.kind==='pressemitteilung'&&!data?.texts.some(t=>t.type==='asset'&&t.id===a.id));
  const selected=data?.texts.find(text=>selectedText===`${text.type}-${text.id}`);
  const showPrepared=prepared && (!selectedText || selectedText===`prepared-${prepared.id}` || !selected);
@@ -78,10 +79,10 @@ export function ActivationPanel({clientId,kind,identity,angleId=null,existingAss
     <details className="format-more"><summary>Weitere Formate{!['kundenmail','pitch','custom'].includes(format)?` · ${formatLabel}`:''}</summary>
      <label>Format<select aria-label="Format" disabled={busy||running} value={format} onChange={e=>setFormat(e.target.value)}>{data.formats.map(f=><option key={f.key} value={f.key}>{f.label}</option>)}</select></label>
     </details>
-    {needsContact&&<label>Journalist für diesen Text<select aria-label="Journalist für diesen Text" required value={contact} onChange={e=>setContact(e.target.value)}><option value="">Bitte wählen</option>{contacts.map(c=><option key={c.id} value={c.id}>{c.name} · {c.outlet}</option>)}</select></label>}
-    {needsContact&&!contacts.length&&<p>Wähle unter „Storyline & Kontakte“ einen Kontakt aus.</p>}
+    {needsContact&&<label>Journalist für diesen Text{format==='pitch'?' (optional)':''}<select aria-label="Journalist für diesen Text" required={requiresContact} value={contact} onChange={e=>setContact(e.target.value)}><option value="">{format==='pitch'?'Ohne Journalist:in':'Bitte wählen'}</option>{contacts.map(c=><option key={c.id} value={c.id}>{c.name} · {c.outlet}</option>)}</select></label>}
+    {requiresContact&&!contacts.length&&<p>Wähle unter „Storyline & Kontakte“ einen Kontakt aus.</p>}
     {format==='custom'?<label>Dein Auftrag<textarea aria-label="Ergänzender Auftrag" required value={instruction} onChange={e=>setInstruction(e.target.value)} placeholder="Was soll der Text sagen — und für wen?"/></label>:<details className="editor-details"><summary>Auftrag ergänzen{instruction?' · hinterlegt':''}</summary><label>Ergänzender Auftrag (optional)<textarea aria-label="Ergänzender Auftrag" value={instruction} onChange={e=>setInstruction(e.target.value)}/></label></details>}
-    <div className="editor-actions"><button className="btn btn--go" disabled={busy||running||contextDirty||(needsContact&&!contact)}>{running?'Text wird erstellt…':'Entwurf erstellen'}</button><span>Auf Basis von Profil, Anlass und Quellen.</span></div>
+    <div className="editor-actions"><button className="btn btn--go" disabled={busy||running||contextDirty||(requiresContact&&!contact)}>{running?'Text wird erstellt…':'Entwurf erstellen'}</button><span>Auf Basis von Profil, Anlass und Quellen.</span></div>
    </form></details>
    {data.latest&&<p role="status">{data.latest.status==='running'?'In Arbeit':data.latest.status==='complete'?'Arbeitsschritt abgeschlossen':data.latest.status==='stale'?'Prüfung veraltet':'Arbeitsschritt fehlgeschlagen'}{data.latest.note&&` · ${data.latest.note}`}</p>}
 

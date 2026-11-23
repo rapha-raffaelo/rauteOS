@@ -97,7 +97,7 @@ def test_pitch_uses_existing_outreach_and_persistent_journalist_context(web,db):
 
 
 def test_unknown_or_unselected_recipients_and_missing_custom_instruction_are_rejected(web):
-    assert web.post(path(),json={'kind':'pitch'}).status_code==422
+    assert web.post(path(),json={'kind':'interviewangebot'}).status_code==422
     assert web.post(path(),json={'kind':'pitch','contact_id':999}).status_code==422
     assert web.post(path(),json={'kind':'custom'}).status_code==422
     assert web.get(path(2)).status_code==404
@@ -233,3 +233,21 @@ def test_asset_delete_rejects_stale_text_and_other_client(web,db):
     assert response.status_code==409
     assert db.get(Asset,text['id']) is not None
     assert web.put(f"{path(2)}/asset/{text['id']}/stage",json={'stage':'erledigt'}).status_code==404
+
+
+def test_pitch_without_recipient_is_saved_and_kept_separate_from_personal_pitch(web,db):
+    def write(*args,**kwargs):
+        return json.dumps(dict(subject='Study offer',message='Eine Studie könnte neue Fragen beantworten.',hook='Research topic'))
+    personal=launch(web,'pitch',contact_id=1)
+    activation.run(db,personal,invoke=write,review_invoke=reviewer)
+    for _ in range(2):
+        identity=launch(web,'pitch')
+        activation.run(db,identity,invoke=write,review_invoke=reviewer)
+        job=db.get(OpportunityAssetRun,identity)
+        assert job.status=='complete'
+        row=db.get(Outreach,job.outreach_id)
+        assert row.contact_id is None and row.journalist=='' and row.outlet==''
+        assert row.released_at is None
+        assert job.context['journalist'] is None
+    assert db.scalar(select(func.count()).select_from(Outreach))==2
+    assert db.get(Outreach,db.get(OpportunityAssetRun,personal).outreach_id).journalist=='A Journalist'
